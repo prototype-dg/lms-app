@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { serveStatic } from 'hono/cloudflare-workers'
 
 // API route handlers
 import { productsApi } from './api/products'
@@ -16,6 +15,7 @@ import { seedApi } from './api/seed'
 
 type Bindings = {
   DB: D1Database
+  ASSETS: Fetcher
   OPENAI_API_KEY: string
   GOOGLE_VISION_API_KEY: string
   VPS_URL: string
@@ -64,8 +64,21 @@ app.get('/api/v1/customers/:id', async (c) => {
   return c.json({ customer })
 })
 
-// Serve all static files (index.html, portals/*, assets/*, etc.)
-// Cloudflare Pages serves public/ directory — serveStatic handles the rest
-app.use('*', serveStatic({ root: './' }))
+// Root → redirect to index.html (served natively by Cloudflare ASSETS binding)
+app.get('/', (c) => Response.redirect(new URL('/index.html', c.req.url).toString(), 302))
+
+// All other non-API paths: pass through to Cloudflare ASSETS binding via env.ASSETS
+// _routes.json already excludes /index.html, /portals/*, /assets/*, /static/* from the Worker.
+// Any remaining path (e.g. a typo URL) gets a clean 404.
+app.all('*', async (c) => {
+  // Try to serve via the ASSETS binding if available
+  if (c.env && (c.env as any).ASSETS) {
+    try {
+      const response = await (c.env as any).ASSETS.fetch(c.req.raw)
+      if (response.status !== 404) return response
+    } catch {}
+  }
+  return c.json({ error: 'Not found' }, 404)
+})
 
 export default app
