@@ -64,13 +64,8 @@ app.get('/api/v1/customers/:id', async (c) => {
   return c.json({ customer })
 })
 
-// Serve static files
-app.use('/assets/*', serveStatic({ root: './' }))
-
-// Root redirect to index.html (static file served by Pages)
-app.get('/', (c) => c.redirect('/index.html', 302))
-
-// All other non-API routes redirect to index.html
-app.get('*', (c) => c.redirect('/index.html', 302))
+// Serve all static files (index.html, portals/*, assets/*, etc.)
+// Cloudflare Pages serves public/ directory — serveStatic handles the rest
+app.use('*', serveStatic({ root: './' }))
 
 export default app
