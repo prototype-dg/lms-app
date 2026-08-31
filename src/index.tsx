@@ -64,21 +64,12 @@ app.get('/api/v1/customers/:id', async (c) => {
   return c.json({ customer })
 })
 
-// Root → redirect to index.html (served natively by Cloudflare ASSETS binding)
-app.get('/', (c) => Response.redirect(new URL('/index.html', c.req.url).toString(), 302))
-
-// All other non-API paths: pass through to Cloudflare ASSETS binding via env.ASSETS
-// _routes.json already excludes /index.html, /portals/*, /assets/*, /static/* from the Worker.
-// Any remaining path (e.g. a typo URL) gets a clean 404.
+// All non-API routes: serve via Cloudflare ASSETS binding.
+// This handles /, /index.html, /portals/*, /static/*, etc.
+// The ASSETS binding serves index.html for / automatically (no redirect needed).
 app.all('*', async (c) => {
-  // Try to serve via the ASSETS binding if available
-  if (c.env && (c.env as any).ASSETS) {
-    try {
-      const response = await (c.env as any).ASSETS.fetch(c.req.raw)
-      if (response.status !== 404) return response
-    } catch {}
-  }
-  return c.json({ error: 'Not found' }, 404)
+  const response = await c.env.ASSETS.fetch(c.req.raw)
+  return response
 })
 
 export default app
