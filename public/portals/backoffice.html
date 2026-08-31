@@ -346,7 +346,7 @@ async function openProductDetail(id) {
 function renderProductPanel(p, productRules) {
   document.getElementById('panelTitle').textContent = p.name;
   const tabs = ['general','pricing','eligibility','documents','workflow','ai_config','ai_assistant'];
-  const tabLabels = {general:'General',pricing:'Pricing',eligibility:'Eligibility',documents:'Document Requirements',workflow:'Workflow',ai_config:'AI Config',ai_assistant:'🤖 AI Assistant'};
+  const tabLabels = {general:'General',pricing:'Pricing',eligibility:'Eligibility',documents:'Document Requirements',workflow:'Workflow',ai_config:'AI Config',ai_assistant:'🤖 AI Studio'};
   
   const esgDocs = (() => { try { return JSON.parse(p.esg_required_docs||'[]'); } catch{return[];} })();
   const reqDocs = (() => { try { return JSON.parse(p.required_docs||'[]'); } catch{return[];} })();
@@ -530,34 +530,18 @@ function renderProductPanel(p, productRules) {
       <div class="ai-assistant">
         <div class="ai-header">
           <div class="ai-icon"><i class="fas fa-robot" style="color:var(--sea-glass)"></i></div>
-          <div>
-            <div style="font-weight:600;font-size:.9rem">AI Regulatory Assistant</div>
-            <div style="font-size:.75rem;color:rgba(255,255,255,.5)">Powered by GPT-4o · Knowledge Base: CBO, GSAS, PDPL, OEESC</div>
-          </div>
+          <div><div style="font-weight:600;font-size:.9rem">AI Product Studio</div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.5)">Multi-turn conversation &middot; Creates full product: name, rates, rules, schema</div></div>
+          <button class="btn btn-sm" style="margin-left:auto;background:rgba(255,255,255,.1);color:white;border:none" onclick="resetAiChat('${p.id}')"><i class="fas fa-redo"></i> New</button>
         </div>
-        <textarea class="ai-textarea" id="aiPromptTA" rows="4" placeholder="Describe a regulatory requirement or rule you want to configure…\n\nExample: The Central Bank of Oman requires that for all housing loans, the DBR shall not exceed 60%…"></textarea>
-        <div style="display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap">
-          <button class="btn btn-amber btn-sm" onclick="runAiAssistant('${p.id}')"><i class="fas fa-bolt"></i> Generate Rules</button>
-          <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none" onclick="fillDemoPrompt('dbr')">Example: DBR Rule</button>
-          <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none" onclick="fillDemoPrompt('gsas')">Example: GSAS Schema</button>
+        <div id="ai-chat-log" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:10px;padding:4px 0"></div>
+        <div style="display:flex;gap:.5rem;align-items:flex-end">
+          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="e.g. Create a Green Home Loan product for eco-certified properties with an ESG discount…" style="flex:1;min-height:0;resize:none"></textarea>
+          <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat('${p.id}')" style="height:48px;padding:0 18px"><i class="fas fa-paper-plane"></i></button>
         </div>
-        <div id="aiResponse"></div>
-      </div>
-      <div style="margin-top:1.5rem">
-        <h4 style="margin-bottom:.75rem">Related Regulations Detected</h4>
-        <div id="relatedRegs" style="display:flex;flex-direction:column;gap:.5rem">
-          <div style="background:var(--grey-100);border-radius:var(--radius-md);padding:.75rem 1rem;display:flex;justify-content:space-between;align-items:center;font-size:.82rem">
-            <span><strong>OS GSO 3000:2025</strong> – GSAS certification required for green products</span>
-            <button class="btn btn-primary btn-sm" onclick="toast('Applied to product','success')">Apply</button>
-          </div>
-          <div style="background:var(--grey-100);border-radius:var(--radius-md);padding:.75rem 1rem;display:flex;justify-content:space-between;align-items:center;font-size:.82rem">
-            <span><strong>OEESC §5.1</strong> – EPC rating minimum 'C' for energy efficiency incentives</span>
-            <button class="btn btn-primary btn-sm" onclick="toast('Applied to product','success')">Apply</button>
-          </div>
-          <div style="background:var(--grey-100);border-radius:var(--radius-md);padding:.75rem 1rem;display:flex;justify-content:space-between;align-items:center;font-size:.82rem">
-            <span><strong>Decision 107/2023</strong> – EIA clearance required for developments &gt;20 residential units</span>
-            <button class="btn btn-primary btn-sm" onclick="toast('Applied to product','success')">Apply</button>
-          </div>
+        <div id="ai-confirm-bar" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:8px;align-items:center;gap:10px">
+          <span style="font-size:.82rem;color:rgba(255,255,255,.85);flex:1">Product ready. Confirm to save and publish.</span>
+          <button class="btn btn-success btn-sm" onclick="confirmAiProduct('${p.id}')"><i class="fas fa-rocket"></i> Confirm &amp; Save</button>
         </div>
       </div>`
   };
@@ -579,74 +563,87 @@ function switchProductTab(tab, productId) {
   openProductDetail(productId);
 }
 
-/* ======================== AI ASSISTANT ======================== */
-const EXAMPLE_PROMPTS = {
-  dbr: 'The Central Bank of Oman requires that for all housing loans, the Debt Burden Ratio (DBR) shall not exceed 60% of the applicant\'s gross monthly income. For green financing products, banks are encouraged to apply a 5% buffer, effectively limiting DBR to 55%.',
-  gsas: 'GSAS certificates issued under OS GSO 3000:2025 must contain: Certificate Number (alphanumeric, 12 characters), Issuer (GORD or accredited body), Issue Date, Expiry Date (valid for 5 years), Overall Score (0-100), and Rating (Bronze/Silver/Gold/Platinum). The certificate must be valid for at least 90 days from the application date.'
-};
+/* ======================== AI PRODUCT STUDIO (multi-turn) ======================== */
+let aiThreadId = null;
+let aiProductDraft = null;
 
-function fillDemoPrompt(type) {
-  document.getElementById('aiPromptTA').value = EXAMPLE_PROMPTS[type];
+function resetAiChat(productId) {
+  aiThreadId = null; aiProductDraft = null;
+  const log = document.getElementById('ai-chat-log');
+  if (log) log.innerHTML = '';
+  const bar = document.getElementById('ai-confirm-bar');
+  if (bar) bar.style.display = 'none';
 }
 
-async function runAiAssistant(productId) {
-  const prompt = document.getElementById('aiPromptTA').value.trim();
-  if (!prompt) return toast('Please enter a regulatory text prompt','error');
-  
-  const resp = document.getElementById('aiResponse');
-  resp.innerHTML = `<div class="ai-response"><div class="ai-thinking"><div class="ai-thinking-dots"><span>●</span><span>●</span><span>●</span></div> Analyzing regulatory text… Extracting parameters… Generating rules…</div></div>`;
-  
+function appendChatBubble(role, html) {
+  const log = document.getElementById('ai-chat-log');
+  if (!log) return;
+  const isUser = role === 'user';
+  const el = document.createElement('div');
+  el.style.cssText = 'display:flex;justify-content:' + (isUser?'flex-end':'flex-start');
+  el.innerHTML = '<div style="max-width:85%;padding:9px 13px;border-radius:12px;font-size:.82rem;line-height:1.5;background:' + (isUser?'rgba(53,198,196,.2)':' rgba(255,255,255,.07)') + ';color:rgba(255,255,255,.9)">' + html + '</div>';
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function sendAiChat(productId) {
+  const input = document.getElementById('aiChatInput');
+  const msg = input ? input.value.trim() : '';
+  if (!msg) return;
+  appendChatBubble('user', msg);
+  if (input) input.value = '';
+  const btn = document.getElementById('aiChatSendBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
+  appendChatBubble('assistant', 'Thinking...');
   try {
-    const r = await fetch('/api/v1/ai/rules/generate', {
+    const r = await fetch('/api/v1/ai/products/chat', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text: prompt, product_id: productId, user_id:'u001', user_name:'Fatima Al-Rashdi' })
+      body: JSON.stringify({ message: msg, thread_id: aiThreadId, product_id: productId, user_id:'u001', user_name:'Product Manager' })
     });
     const d = await r.json();
-    renderAiResponse(d, productId);
+    const log2 = document.getElementById('ai-chat-log');
+    if (log2 && log2.lastChild) log2.removeChild(log2.lastChild);
+    if (d.thread_id) aiThreadId = d.thread_id;
+    let replyHtml = d.message || d.reply || 'Done.';
+    if (d.product_draft) {
+      aiProductDraft = d.product_draft;
+      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:6px;font-size:.78rem"><strong>Product Draft</strong><br><b>' + (d.product_draft.name||'') + '</b> &middot; ' + (d.product_draft.base_rate||'') + '% &middot; up to OMR ' + Number(d.product_draft.max_amount||0).toLocaleString() + '</div>';
+    }
+    if (d.rules_draft && d.rules_draft.length) {
+      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(0,127,134,.12);border:1px solid rgba(0,127,134,.3);border-radius:6px;font-size:.78rem"><strong>Rules Draft (' + d.rules_draft.length + ')</strong><br>' + d.rules_draft.map(function(x){return '&bull; '+(x.name||x.metric||'rule');}).join('<br>') + '</div>';
+    }
+    if (d.schema_draft) {
+      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(244,179,91,.1);border:1px solid rgba(244,179,91,.3);border-radius:6px;font-size:.78rem"><strong>GSAS Schema</strong> &mdash; ' + Object.keys(d.schema_draft).length + ' fields defined</div>';
+    }
+    appendChatBubble('assistant', replyHtml);
+    if (d.product_draft && (d.step === 'confirm' || d.ready_to_confirm)) {
+      const bar = document.getElementById('ai-confirm-bar');
+      if (bar) bar.style.display = 'flex';
+    }
   } catch(e) {
-    resp.innerHTML = '<div class="ai-response" style="color:rgba(255,255,255,.6)">Error calling AI. Check API key configuration.</div>';
+    const log3 = document.getElementById('ai-chat-log');
+    if (log3 && log3.lastChild) log3.removeChild(log3.lastChild);
+    appendChatBubble('assistant', 'Error: ' + e.message);
   }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>'; }
 }
 
-function renderAiResponse(data, productId) {
-  const rules = data.rules || [];
-  const resp = document.getElementById('aiResponse');
-  const colHeaders = '<tr style="background:rgba(255,255,255,.08)"><th style="padding:.4rem .5rem;text-align:left;font-size:.7rem;color:rgba(255,255,255,.5);font-weight:500">Parameter</th><th style="padding:.4rem .5rem;text-align:left;font-size:.7rem;color:rgba(255,255,255,.5);font-weight:500">Extracted Value</th><th style="padding:.4rem .5rem;text-align:left;font-size:.7rem;color:rgba(255,255,255,.5);font-weight:500">Source</th></tr>';
-  
-  const ruleRows = rules.map(r => `
-    <tr style="border-bottom:1px solid rgba(255,255,255,.05)">
-      <td style="padding:.5rem;color:rgba(255,255,255,.9);font-size:.8rem;font-weight:500">${r.name}</td>
-      <td style="padding:.5rem;font-size:.8rem;font-family:monospace;color:#35C6C4">${r.metric} ${r.operator} ${r.threshold_value ?? r.threshold_condition ?? '–'}</td>
-      <td style="padding:.5rem;font-size:.75rem;color:rgba(255,255,255,.5)">${r.regulatory_reference||'AI Analysis'}</td>
-    </tr>
-    <tr><td colspan="3" style="padding:.25rem .5rem .75rem"><span style="background:rgba(53,198,196,.1);color:#35C6C4;font-size:.7rem;padding:.15rem .5rem;border-radius:6px">AI Confidence: ${r.ai_confidence||'~92'}%</span> <span style="color:rgba(255,255,255,.4);font-size:.75rem">${r.description||''}</span></td></tr>
-  `).join('');
-
-  resp.innerHTML = `
-    <div class="ai-response fade-in">
-      <div style="font-size:.78rem;color:rgba(255,255,255,.6);margin-bottom:.75rem">${data.analysis_summary||'Analysis complete.'}</div>
-      <table style="width:100%;border-collapse:collapse">${colHeaders}${ruleRows}</table>
-      ${rules.length ? `
-      <div style="margin-top:.75rem;display:flex;gap:.5rem">
-        <button class="btn btn-success btn-sm" onclick="confirmAiRules()"><i class="fas fa-check"></i> Confirm & Apply Rules</button>
-        <div style="position:relative;flex:1">
-          <input id="aiFollowup" class="ai-textarea" style="min-height:0;padding:.4rem .625rem;font-size:.8rem;width:100%" placeholder="Follow-up: e.g. Apply the DBR rule only for amounts above OMR 100,000…">
-        </div>
-        <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:white;border:none" onclick="runFollowup('${productId}')">Send</button>
-      </div>` : ''}
-    </div>`;
-}
-
-async function runFollowup(productId) {
-  const followup = document.getElementById('aiFollowup')?.value;
-  if (!followup) return;
-  document.getElementById('aiPromptTA').value = followup;
-  await runAiAssistant(productId);
-}
-
-function confirmAiRules() {
-  toast('Rules confirmed and applied to product configuration','success');
-  logAuditEntry('AI_RULE_CONFIRMED', 'rule', 'r015', 'Manual override: threshold applied only to loans >OMR 100,000');
+async function confirmAiProduct(productId) {
+  if (!aiThreadId && !aiProductDraft) { toast('No product draft to confirm','error'); return; }
+  try {
+    const r = await fetch('/api/v1/ai/products/confirm', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ thread_id: aiThreadId, product_id: productId, user_id:'u001' })
+    });
+    const d = await r.json();
+    if (d.success || d.product_id) {
+      toast('Product saved and published!', 'success');
+      appendChatBubble('assistant', 'Product confirmed and published. It is now live on the customer portal.');
+      const bar = document.getElementById('ai-confirm-bar');
+      if (bar) bar.style.display = 'none';
+      aiThreadId = null; aiProductDraft = null;
+    } else { toast(d.error||'Confirm failed', 'error'); }
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 /* ======================== RULES PAGE ======================== */
@@ -1045,24 +1042,30 @@ function renderReport(d, container) {
 async function renderEscrow() {
   document.getElementById('pageTitle').textContent = 'Escrow & Disbursement';
   try {
-    const r = await fetch('/api/v1/applications/app003');
+    const appRef = localStorage.getItem('bo_active_app_ref') || '';
+    if (!appRef) {
+      document.getElementById('mainContent').innerHTML = '<div class="page"><div class="card"><div class="card-body" style="text-align:center;padding:3rem;color:var(--grey-500)"><i class="fas fa-file-invoice" style="font-size:2.5rem;margin-bottom:1rem;display:block"></i><p>No active application selected.</p><p style="font-size:.85rem;margin-top:.5rem">Select an application from the Applications list to view its escrow stages.</p></div></div></div>';
+      return;
+    }
+    const r = await fetch(`/api/v1/portal/applications/${appRef}/status`);
     const d = await r.json();
     const app = d.application || {};
-    const stages = d.stages || [];
+    const stages = d.construction_stages || [];
+    const appId = app.id || appRef;
     
     document.getElementById('mainContent').innerHTML = `<div class="page">
       <h2 style="margin-bottom:1.25rem">Escrow Management</h2>
       <div class="card" style="margin-bottom:1.5rem">
         <div class="card-header">
           <div>
-            <h4>GHL-250001 – Salim Al-Harthy</h4>
-            <div style="font-size:.78rem;color:var(--grey-500)">EcoVillage Muscat, Villa B1 · OMR 200,000 escrow</div>
+            <h4>${app.reference || appRef} – ${app.applicant_name || 'Applicant'}</h4>
+            <div style="font-size:.78rem;color:var(--grey-500)">${app.project_name || ''} · OMR ${(app.loan_amount||0).toLocaleString()} escrow</div>
           </div>
-          <span class="badge badge-active">Disbursed</span>
+          <span class="badge badge-active">${app.status || 'Active'}</span>
         </div>
         <div class="card-body">
           <div class="stage-timeline">
-            ${stages.map(stage => `
+            ${stages.length ? stages.map(stage => `
             <div class="stage-item ${stage.status}">
               <div class="stage-number ${stage.status}">${stage.status==='completed'||stage.status==='paid'?'✓':stage.stage_number}</div>
               <div class="stage-info">
@@ -1073,9 +1076,9 @@ async function renderEscrow() {
               <div style="text-align:right">
                 <div class="stage-amount">OMR ${(stage.tranche_amount||0).toLocaleString()}</div>
                 <div style="font-size:.75rem;color:var(--grey-500)">${stage.tranche_percentage||25}% of total</div>
-                ${stage.status==='active' ? `<button class="btn btn-success btn-sm" style="margin-top:.5rem" onclick="releaseTranche('${stage.id}','app003',${stage.tranche_amount||50000})"><i class="fas fa-money-bill-transfer"></i> Release</button>` : ''}
+                ${stage.status==='active' ? `<button class="btn btn-success btn-sm" style="margin-top:.5rem" onclick="releaseTranche('${stage.id}','${appId}',${stage.tranche_amount||50000})"><i class="fas fa-money-bill-transfer"></i> Release</button>` : ''}
               </div>
-            </div>`).join('')}
+            </div>`).join('') : '<p style="color:var(--grey-500);text-align:center;padding:2rem">No escrow stages found for this application.</p>'}
           </div>
         </div>
       </div>

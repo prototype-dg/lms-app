@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sohar International – Digital Ecosystem Demo</title>
+  <title>Sohar International – Digital Ecosystem</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Georgia:ital@0;1&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -90,13 +90,13 @@
       </svg>
       <div class="nav-wordmark">
         <h1>sohar international</h1>
-        <p>Digital Ecosystem · Demo v1.0</p>
+        <p>Digital Ecosystem</p>
       </div>
     </div>
-    <div class="nav-badge">RFP 76/2026 · Green Home Loan Demo</div>
+    <div class="nav-badge">RFP 76/2026 · Green Home Loan</div>
     <div class="nav-actions">
       <button class="btn-init" id="initBtn" onclick="initDb()">
-        <i class="fas fa-database"></i> Initialize Demo Data
+        <i class="fas fa-database"></i> Initialize System Data
       </button>
     </div>
   </nav>
@@ -104,7 +104,7 @@
   <div class="hero">
     <div class="hero-eyebrow">Andersen FZCO &amp; KUDO LABS FZCO · 31 August 2026</div>
     <h2>Banking made clear.<br>Progress made possible.</h2>
-    <p>A 42-minute live demonstration of AI-powered digital lending — from product configuration to first construction tranche. Select a portal to begin.</p>
+    <p>AI-powered digital lending — from product configuration to first construction tranche. Select a portal to begin.</p>
     <div class="acts-row">
       <div class="act-pill"><strong>Act 1</strong> Back-Office: Product Config</div>
       <div class="act-pill"><strong>Act 2</strong> Developer: Project Registration</div>
@@ -118,14 +118,14 @@
     <div class="portal-tile" onclick="openPortal('customer')">
       <div class="icon">🏡</div>
       <h3>Customer Portal</h3>
-      <p>Salim Al-Harthy applies for Green Home Loan on Villa B1</p>
-      <span class="chip chip-customer">Salim Al-Harthy</span>
+      <p>Browse properties, apply for a Green Home Loan, and track your application</p>
+      <span class="chip chip-customer">Customer</span>
     </div>
     <div class="portal-tile" onclick="openPortal('developer')">
       <div class="icon">🏗️</div>
       <h3>Developer Portal</h3>
-      <p>Al Madaen Real Estate registers EcoVillage Muscat, AI validates certificates</p>
-      <span class="chip chip-developer">Ahmed Al-Hinai</span>
+      <p>Register projects, upload green certificates, and publish listings</p>
+      <span class="chip chip-developer">Developer</span>
     </div>
     <div class="portal-tile" onclick="openPortal('backoffice')">
       <div class="icon">⚙️</div>
@@ -136,13 +136,13 @@
     <div class="portal-tile" onclick="openPortal('contractor')">
       <div class="icon">🔨</div>
       <h3>Contractor Portal</h3>
-      <p>Site supervisor completes Stage 1, AI validates invoice, tranche released</p>
-      <span class="chip chip-contractor">Rashid Al-Hassani</span>
+      <p>Track construction stages, submit invoices, and receive tranche payments</p>
+      <span class="chip chip-contractor">Contractor</span>
     </div>
   </div>
 
   <div class="init-status" id="initStatus"></div>
-  <div class="demo-version">WORKING DEMO SYSTEM · V1.0 · 31 AUGUST 2026 · SOHAR INTERNATIONAL</div>
+
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
@@ -165,15 +165,15 @@ async function initDb() {
   btn.innerHTML = '<span class="spinner"></span> Initializing…';
   btn.classList.add('loading');
   btn.disabled = true;
-  status.innerHTML = '<p><span class="spinner"></span> Seeding database with demo data…</p>';
+  status.innerHTML = '<p><span class="spinner"></span> Initializing system data…</p>';
   try {
     const r = await fetch('/api/v1/seed/run', { method:'POST' });
     const d = await r.json();
     if (d.success) {
-      status.innerHTML = '<p style="color:#4eda9e">✅ Demo data ready — ' + d.executed + ' statements executed. All portals are live.</p>';
+      status.innerHTML = '<p style="color:#4eda9e">✅ System ready — ' + d.executed + ' statements executed. All portals are live.</p>';
       btn.innerHTML = '<i class="fas fa-check"></i> Data Ready';
       btn.style.background = '#16845B';
-      toast('Demo database initialized successfully!', 'success');
+      toast('System initialized successfully!', 'success');
     } else {
       status.innerHTML = '<p style="color:#F4B35B">⚠️ ' + (d.error||'Partial init') + '</p>';
       btn.innerHTML = '<i class="fas fa-database"></i> Retry Init';

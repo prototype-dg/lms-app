@@ -195,8 +195,8 @@ body.ar .stage-amount{margin-left:0;margin-right:auto}
   <!-- LOAN SUMMARY -->
   <div class="loan-summary">
     <div class="loan-ref">Loan Reference</div>
-    <div class="loan-name">GHL-250001</div>
-    <div class="loan-unit" data-en="Villa B1 · EcoVillage Muscat · Salim Al-Harthy" data-ar="فيلا B1 · إيكو فيلاج مسقط · سالم الحارثي">Villa B1 · EcoVillage Muscat · Salim Al-Harthy</div>
+    <div class="loan-name" id="loan-ref-display">—</div>
+    <div class="loan-unit" id="loan-unit-display">—</div>
     <div class="loan-metrics">
       <div class="loan-metric">
         <div class="loan-metric-val">OMR 200K</div>
@@ -368,7 +368,6 @@ body.ar .stage-amount{margin-left:0;margin-right:auto}
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-const OPENAI_KEY = 'REDACTED_OPENAI_KEY';
 let isAr = false;
 
 const STAGES = [
@@ -622,7 +621,8 @@ function releaseTranche() {
   btn.disabled = true;
 
   // call API
-  fetch('/api/v1/escrow/app003/complete-stage', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({stage_number:2, invoice_amount:48750})})
+  const _appId = localStorage.getItem('ghl_application_id') || localStorage.getItem('ghl_application_ref') || '';
+  fetch(`/api/v1/escrow/${_appId}/complete-stage`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({stage_number:2, invoice_amount:48750})})
     .then(r => r.json())
     .catch(() => ({success:true}))
     .then(data => {
@@ -695,6 +695,12 @@ function toast(msg, type='info') {
 // INIT
 // ═══════════════════════
 document.addEventListener('DOMContentLoaded', () => {
+  // Populate loan ref from localStorage
+  const storedRef = localStorage.getItem('ghl_application_ref') || '';
+  const refEl = document.getElementById('loan-ref-display');
+  const unitEl = document.getElementById('loan-unit-display');
+  if (refEl) refEl.textContent = storedRef || 'No active application';
+  if (unitEl) unitEl.textContent = storedRef ? 'Green Home Loan' : 'Submit an application via the Customer Portal';
   renderStages();
   renderPayments();
 });

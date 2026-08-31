@@ -392,58 +392,8 @@ body.ar .toast-container{right:auto;left:24px}
         <div><div class="section-title" data-en="My Projects" data-ar="مشاريعي">My Projects</div><div class="section-sub" data-en="3 active projects · 96 total units" data-ar="3 مشاريع نشطة · 96 وحدة">3 active projects · 96 total units</div></div>
         <button class="btn btn-primary" onclick="showPage('newproject')">+ <span data-en="Register New Project" data-ar="تسجيل مشروع جديد">Register New Project</span></button>
       </div>
-      <div class="project-grid">
-        <div class="project-card active-project" onclick="openProjectPanel('ecovillage')">
-          <div class="project-img"><div class="project-img-overlay"></div><div class="project-img-icon">🌿</div><span class="project-status-badge badge-active">Active</span></div>
-          <div class="project-body">
-            <div class="project-name">EcoVillage Muscat</div>
-            <div class="project-location">📍 Al Mouj, Muscat</div>
-            <div class="project-meta">
-              <div class="project-meta-item"><div class="project-meta-label">Units</div><div class="project-meta-value">24</div></div>
-              <div class="project-meta-item"><div class="project-meta-label">GSAS Score</div><div class="project-meta-value" style="color:var(--success)">89</div></div>
-              <div class="project-meta-item"><div class="project-meta-label">Sold</div><div class="project-meta-value">12</div></div>
-              <div class="project-meta-item"><div class="project-meta-label">Avg Price</div><div class="project-meta-value">OMR 185K</div></div>
-            </div>
-            <div class="project-progress">
-              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-500)"><span data-en="Loan Coverage" data-ar="تغطية القروض">Loan Coverage</span><span>83%</span></div>
-              <div class="progress-bar-wrap"><div class="progress-bar" style="width:83%"></div></div>
-            </div>
-          </div>
-        </div>
-        <div class="project-card" onclick="openProjectPanel('greenpalms')">
-          <div class="project-img" style="background:linear-gradient(135deg,#1a4a2e,#2d7a50)"><div class="project-img-overlay"></div><div class="project-img-icon">🌴</div><span class="project-status-badge badge-active">Active</span></div>
-          <div class="project-body">
-            <div class="project-name">Green Palms Seeb</div>
-            <div class="project-location">📍 Seeb, Muscat</div>
-            <div class="project-meta">
-              <div class="project-meta-item"><div class="project-meta-label">Units</div><div class="project-meta-value">36</div></div>
-              <div class="project-meta-item"><div class="project-meta-label">GSAS Score</div><div class="project-meta-value" style="color:var(--teal)">74</div></div>
-              <div class="project-meta-item"><div class="project-meta-label">Sold</div><div class="project-meta-value">8</div></div>
-              <div class="project-meta-item"><div class="project-meta-label">Avg Price</div><div class="project-meta-value">OMR 145K</div></div>
-            </div>
-            <div class="project-progress">
-              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-500)"><span>Loan Coverage</span><span>44%</span></div>
-              <div class="progress-bar-wrap"><div class="progress-bar" style="width:44%"></div></div>
-            </div>
-          </div>
-        </div>
-        <div class="project-card" onclick="openProjectPanel('solarrise')">
-          <div class="project-img" style="background:linear-gradient(135deg,#4a3500,#c4860a)"><div class="project-img-overlay"></div><div class="project-img-icon">☀️</div><span class="project-status-badge badge-pending">Pending</span></div>
-          <div class="project-body">
-            <div class="project-name">Solar Rise Barka</div>
-            <div class="project-location">📍 Barka, Al Batinah</div>
-            <div class="project-meta">
-              <div class="project-meta-item"><div class="project-meta-label">Units</div><div class="project-meta-value">36</div></div>
-              <div class="project-meta-item"><div class="project-meta-label">GSAS Score</div><div class="project-meta-value" style="color:var(--amber)">Pending</div></div>
-              <div class="project-meta-item"><div class="project-meta-label">Sold</div><div class="project-meta-value">0</div></div>
-              <div class="project-meta-item"><div class="project-meta-label">Avg Price</div><div class="project-meta-value">OMR 120K</div></div>
-            </div>
-            <div class="project-progress">
-              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-500)"><span>Cert. Progress</span><span>25%</span></div>
-              <div class="progress-bar-wrap"><div class="progress-bar" style="width:25%;background:var(--amber)"></div></div>
-            </div>
-          </div>
-        </div>
+      <div class="project-grid" id="project-grid">
+        <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--gray-500)">Loading projects…</div>
       </div>
     </div>
 
@@ -548,8 +498,8 @@ body.ar .toast-container{right:auto;left:24px}
                 <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox"/> EV Charging Station</label>
               </div>
             </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="registerProject()">
-              <span data-en="Register & Continue" data-ar="تسجيل والمتابعة">Register & Continue</span>
+            <button class="btn btn-primary" style="width:100%;margin-top:8px" id="reg-btn" onclick="registerProject()">
+              <span>Register & Continue</span>
             </button>
           </div>
         </div>
@@ -959,17 +909,51 @@ function switchTab(btn, targetId) {
 // ACTIONS
 // ═══════════════════════════════════════════════════
 function publishInventory() { document.getElementById('publish-modal').classList.add('open'); }
-function confirmPublish() {
+async function confirmPublish() {
   closeModal('publish-modal');
-  toast('✅ Inventory published to Sohar International Green Home portal!', 'success');
-  toast('24 units now visible to bank customers', 'success');
+  const pid = window._activeProjectId;
+  if (!pid) { toast('Select a project first', 'error'); return; }
+  try {
+    const r = await fetch('/api/v1/portal/developer/projects/' + pid + '/publish', { method:'POST' });
+    const d = await r.json();
+    if (d.success || d.listing_visible) {
+      toast('✅ Project published — now visible to customers!', 'success');
+      loadProjects();
+    } else {
+      toast('⚠️ ' + (d.error || 'Publish failed'), 'error');
+    }
+  } catch(e) {
+    toast('⚠️ API error: ' + e.message, 'error');
+  }
 }
 
-function registerProject() {
-  const name = document.getElementById('reg-name').value || 'New Project';
-  toast(`🏗️ Project "${name}" registration submitted!`, 'success');
-  toast('Sohar International will review within 2 business days', 'info');
-  setTimeout(() => showPage('projects'), 1200);
+async function registerProject() {
+  const btn = document.getElementById('reg-btn');
+  const name = (document.getElementById('reg-name')||{}).value || '';
+  const city = (document.getElementById('reg-city')||{}).value || '';
+  const dev  = (document.getElementById('reg-developer')||{}).value || 'Developer';
+  if (!name.trim()) { toast('Project name is required', 'error'); return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Registering…';
+  try {
+    const r = await fetch('/api/v1/portal/developer/projects', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name, location: city, developer_name: dev, type:'Residential', total_units: 10, gsas_target_score: 85 })
+    });
+    const d = await r.json();
+    btn.disabled = false; btn.innerHTML = 'Register & Continue';
+    if (d.id || d.project_id || d.success) {
+      const pid = d.id || d.project_id;
+      toast(`🏗️ Project "${name}" registered!`, 'success');
+      toast('Next: Upload ESG certificates', 'info');
+      if (pid) window._activeProjectId = pid;
+      setTimeout(() => { loadProjects(); showPage('certificates'); }, 1200);
+    } else {
+      toast('⚠️ ' + (d.error || 'Registration failed'), 'error');
+    }
+  } catch(e) {
+    btn.disabled = false; btn.innerHTML = 'Register & Continue';
+    toast('⚠️ API error: ' + e.message, 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -987,7 +971,63 @@ function toast(msg, type='info') {
 // ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
+async function loadProjects() {
+  try {
+    const r = await fetch('/api/v1/portal/developer/projects');
+    const d = await r.json();
+    const projects = d.projects || [];
+    const total = projects.length;
+    const published = projects.filter(p => p.listing_visible === 1 || p.status === 'active').length;
+    const draft    = projects.filter(p => p.status === 'draft').length;
+    const units    = projects.reduce((s,p) => s + (p.total_units||0), 0);
+    const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+    set('stat-projects', total);
+    set('stat-units', units);
+    set('stat-published', published);
+    set('stat-status', draft > 0 ? draft + ' draft' : 'All live');
+    set('anal-total', total);
+    set('anal-published', published);
+    set('anal-draft', draft);
+    set('anal-units', units);
+    const nb = document.getElementById('nav-badge-projects');
+    if (nb) nb.textContent = total || 0;
+    const grid = document.getElementById('project-grid');
+    if (grid) {
+      if (!total) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--gray-500)">No projects yet. Register your first project.</div>';
+      } else {
+        grid.innerHTML = projects.map(p => {
+          const isLive = p.listing_visible === 1 || p.status === 'active';
+          return `<div class="project-card${isLive?' active-project':''}" onclick="selectProject('${p.id}')">
+            <div class="project-img"><div class="project-img-overlay"></div><div class="project-img-icon">🏗️</div>
+              <span class="project-status-badge badge-${isLive?'active':p.status||'draft'}">${isLive?'Live':p.status||'draft'}</span>
+            </div>
+            <div class="project-body">
+              <div class="project-name">${p.name}</div>
+              <div class="project-location">📍 ${p.location||p.city||'Muscat'}</div>
+              <div class="project-meta">
+                <div class="project-meta-item"><div class="project-meta-label">Units</div><div class="project-meta-value">${p.total_units||0}</div></div>
+                <div class="project-meta-item"><div class="project-meta-label">GSAS</div><div class="project-meta-value">${p.gsas_overall_score||p.gsas_target_score||'—'}</div></div>
+              </div>
+              <div class="project-progress"><div style="font-size:11px;color:var(--gray-500);margin-bottom:3px">${isLive?'Published':'Setup progress'}</div>
+                <div class="progress-bar-wrap"><div class="progress-bar" style="width:${isLive?100:40}%"></div></div>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+  } catch(e) { console.error('loadProjects', e); }
+}
+
+function selectProject(id) {
+  window._activeProjectId = id;
+  toast('Project selected — you can now upload certificates', 'info');
+  showPage('certificates');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  loadProjects();
   showPage('dashboard');
 });
 </script>

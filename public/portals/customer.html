@@ -313,7 +313,7 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
         <div onclick="showPage('tracking')" style="background:#fff;border-radius:var(--r16);padding:22px;box-shadow:var(--sh1);cursor:pointer;border:2px solid transparent;transition:var(--transition)" onmouseover="this.style.borderColor='var(--sea)'" onmouseout="this.style.borderColor='transparent'">
           <div style="font-size:28px;margin-bottom:10px">📋</div>
           <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" data-en="Track Application" data-ar="تتبع الطلب">Track Application</div>
-          <div style="font-size:12px;color:var(--g500)" data-en="GHL-250001 · ESG Review in progress" data-ar="GHL-250001 · مراجعة ESG جارية">GHL-250001 · ESG Review in progress</div>
+          <div style="font-size:12px;color:var(--g500)" id="track-nav-hint" data-en="View your active application" data-ar="عرض طلبك النشط">View your active application</div>
         </div>
         <div onclick="openWizard()" style="background:linear-gradient(135deg,var(--navy),var(--teal));border-radius:var(--r16);padding:22px;box-shadow:var(--sh2);cursor:pointer;transition:var(--transition)" onmouseover="this.style.opacity='.92'" onmouseout="this.style.opacity='1'">
           <div style="font-size:28px;margin-bottom:10px">🚀</div>
@@ -332,62 +332,7 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
       <div class="sec-eye" data-en="PARTNER DEVELOPMENTS" data-ar="مشاريع الشركاء">PARTNER DEVELOPMENTS</div>
       <h2 class="sec-h2" data-en="Green-Certified Properties" data-ar="عقارات معتمدة بيئياً">Green-Certified Properties</h2>
       <p class="sec-sub" data-en="All units pre-screened and GSAS-certified for instant Green Home Loan eligibility." data-ar="جميع الوحدات مفحوصة مسبقاً ومعتمدة GSAS للتأهل الفوري.">All units pre-screened and GSAS-certified for instant Green Home Loan eligibility.</p>
-      <div class="prop-grid">
-        <div class="prop-card featured" onclick="openWizardForUnit('B1')">
-          <div class="prop-img" style="background:linear-gradient(135deg,#003B5C,#007F86)">
-            🏡<div class="prop-ribbon">⭐ Saved</div>
-          </div>
-          <div class="prop-body">
-            <div class="prop-price">OMR 200,000</div>
-            <div class="prop-name" data-en="Villa B1 — EcoVillage Muscat" data-ar="فيلا B1 — إيكو فيلاج مسقط">Villa B1 — EcoVillage Muscat</div>
-            <div class="prop-loc">📍 <span data-en="Al Mouj, Muscat" data-ar="الموج، مسقط">Al Mouj, Muscat</span></div>
-            <div class="prop-tags">
-              <span class="tag">🏠 320m²</span><span class="tag">🛏 4 bed</span><span class="tag">☀️ 8.5kWp solar</span><span class="tag">💧 Greywater</span>
-            </div>
-            <div class="prop-foot">
-              <span class="gsas-badge">GSAS 89 🏆</span>
-              <span class="rate-badge">4.75% ✓</span>
-            </div>
-            <button class="prop-btn" onclick="event.stopPropagation();openWizardForUnit('B1')" data-en="Apply for Green Loan" data-ar="تقدم للقرض الأخضر">Apply for Green Loan</button>
-          </div>
-        </div>
-        <div class="prop-card" onclick="openWizardForUnit('A1')">
-          <div class="prop-img" style="background:linear-gradient(135deg,#1a4a2e,#35C6C4)">
-            🌿<div class="prop-ribbon" style="background:var(--sea);color:var(--navy)">GSAS 87</div>
-          </div>
-          <div class="prop-body">
-            <div class="prop-price">OMR 175,000</div>
-            <div class="prop-name">Villa A1 — EcoVillage Muscat</div>
-            <div class="prop-loc">📍 Al Mouj, Muscat</div>
-            <div class="prop-tags">
-              <span class="tag">🏠 280m²</span><span class="tag">🛏 3 bed</span><span class="tag">☀️ 7kWp solar</span>
-            </div>
-            <div class="prop-foot">
-              <span class="gsas-badge">GSAS 87</span>
-              <span class="rate-badge">4.75% ✓</span>
-            </div>
-            <button class="prop-btn" onclick="event.stopPropagation();openWizardForUnit('A1')">Apply for Green Loan</button>
-          </div>
-        </div>
-        <div class="prop-card" onclick="openWizardForUnit('GP12')">
-          <div class="prop-img" style="background:linear-gradient(135deg,#2d5016,#6aaa2a)">
-            🌴<div class="prop-ribbon" style="background:var(--amber);color:var(--navy)">GSAS 74</div>
-          </div>
-          <div class="prop-body">
-            <div class="prop-price">OMR 140,000</div>
-            <div class="prop-name">Unit 12 — Green Palms Seeb</div>
-            <div class="prop-loc">📍 Seeb, Muscat</div>
-            <div class="prop-tags">
-              <span class="tag">🏠 240m²</span><span class="tag">🛏 3 bed</span><span class="tag">☀️ 5kWp solar</span>
-            </div>
-            <div class="prop-foot">
-              <span class="gsas-badge" style="background:rgba(0,127,134,.08);color:var(--teal)">GSAS 74</span>
-              <span class="rate-badge" style="background:var(--warn-bg);color:var(--warn)">5.00%</span>
-            </div>
-            <button class="prop-btn" onclick="event.stopPropagation();openWizardForUnit('GP12')">Apply for Green Loan</button>
-          </div>
-        </div>
-      </div>
+      <div class="prop-grid" id="projects-grid"><div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--g500)"><span class="spin" style="border-color:rgba(0,127,134,.2);border-top-color:var(--teal)"></span> Loading properties…</div></div>
     </div>
   </section>
 </div>
@@ -454,73 +399,31 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
       <div class="sec-eye" data-en="APPLICATION STATUS" data-ar="حالة الطلب">APPLICATION STATUS</div>
       <h2 class="sec-h2" data-en="Track Your Application" data-ar="تتبع طلبك">Track Your Application</h2>
       <div class="track-card">
-        <div class="track-head">
+        <div id="track-content"><div style="padding:48px;text-align:center;color:var(--g500)"><span class="spin" style="border-color:rgba(0,127,134,.2);border-top-color:var(--teal)"></span> Loading application…</div></div>
+        <div class="track-head" id="track-head" style="display:none">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div>
-              <div class="track-ref">GHL-250001</div>
-              <div class="track-sub" data-en="Villa B1, EcoVillage Muscat · OMR 200,000 · 25 Years" data-ar="فيلا B1، إيكو فيلاج مسقط · 200,000 ريال · 25 سنة">Villa B1, EcoVillage Muscat · OMR 200,000 · 25 Years</div>
+              <div class="track-ref" id="track-ref">—</div>
+              <div class="track-sub" id="track-sub">—</div>
             </div>
             <div style="text-align:right">
-              <div style="font-size:10px;opacity:.6;margin-bottom:3px" data-en="Current Stage" data-ar="المرحلة الحالية">Current Stage</div>
-              <div style="font-size:13px;font-weight:700;color:var(--sea)" data-en="ESG Compliance Review" data-ar="مراجعة الامتثال البيئي">ESG Compliance Review</div>
+              <div style="font-size:10px;opacity:.6;margin-bottom:3px">Current Stage</div>
+              <div style="font-size:13px;font-weight:700;color:var(--sea)" id="track-stage">—</div>
             </div>
           </div>
-          <div class="savings-strip">
+          <div class="savings-strip" id="track-saving-strip" style="display:none">
             <div style="font-size:22px">💚</div>
             <div>
-              <div class="ss-num" data-en="OMR 31,560 lifetime saving" data-ar="31,560 ريال توفير مدى الحياة">OMR 31,560 lifetime saving</div>
-              <div class="ss-lbl" data-en="Green rate 4.75% vs 5.50% standard" data-ar="السعر الأخضر 4.75٪ مقابل 5.50٪ القياسي">Green rate 4.75% vs 5.50% standard</div>
+              <div class="ss-num" id="track-saving-num">—</div>
+              <div class="ss-lbl" id="track-saving-lbl">Green rate vs standard</div>
             </div>
           </div>
         </div>
-        <div class="track-body">
-          <div class="tl">
-            <div class="tl-item">
-              <div class="tl-dot done">✓</div>
-              <div class="tl-title" data-en="Application Submitted" data-ar="تم تقديم الطلب">Application Submitted<span class="tl-chip chip-ai">AI Scored</span></div>
-              <div class="tl-desc" data-en="All documents verified · DBR 28% · LTV 65.3% · GSAS 89" data-ar="تم التحقق من المستندات · نسبة الدين 28٪ · نسبة القرض 65.3٪ · GSAS 89">All documents verified · DBR 28% · LTV 65.3% · GSAS 89</div>
-              <div class="tl-date">24 Jan 2025 · 09:14</div>
-            </div>
-            <div class="tl-item">
-              <div class="tl-dot done">✓</div>
-              <div class="tl-title" data-en="Credit Bureau Check" data-ar="التحقق من مكتب الائتمان">Credit Bureau Check<span class="tl-chip chip-h">MALA'A</span></div>
-              <div class="tl-desc" data-en="Score 742/850 · No adverse history · Clear" data-ar="النقاط 742/850 · لا سجل سلبي">Score 742/850 · No adverse history · Clear</div>
-              <div class="tl-date">24 Jan 2025 · 10:32</div>
-            </div>
-            <div class="tl-item">
-              <div class="tl-dot done">✓</div>
-              <div class="tl-title" data-en="ESG Document Validation" data-ar="التحقق من وثائق ESG">ESG Document Validation<span class="tl-chip chip-ai">AI</span></div>
-              <div class="tl-desc" data-en="GSAS Certificate verified (96% confidence) · EPC flagged for manual review" data-ar="تم التحقق من شهادة GSAS (ثقة 96٪) · EPC مُشار للمراجعة">GSAS Certificate verified (96% confidence) · EPC flagged for manual review</div>
-              <div class="tl-date">24 Jan 2025 · 11:05</div>
-            </div>
-            <div class="tl-item">
-              <div class="tl-dot current">⏳</div>
-              <div class="tl-title" data-en="ESG Compliance Review" data-ar="مراجعة الامتثال البيئي">ESG Compliance Review<span class="tl-chip chip-h">In Progress</span></div>
-              <div class="tl-desc" data-en="Reviewing EPC report override · Awaiting Risk Officer sign-off" data-ar="مراجعة تقرير EPC · في انتظار توقيع مسؤول المخاطر">Reviewing EPC report override · Awaiting Risk Officer sign-off</div>
-              <div class="tl-date" data-en="In progress — est. 2 hours" data-ar="جارٍ — تقدير ساعتين">In progress — est. 2 hours</div>
-            </div>
-            <div class="tl-item tl-waiting">
-              <div class="tl-dot waiting">5</div>
-              <div class="tl-title" data-en="Final Approval" data-ar="الموافقة النهائية">Final Approval</div>
-              <div class="tl-desc" data-en="Credit committee decision pending" data-ar="في انتظار قرار لجنة الائتمان">Credit committee decision pending</div>
-              <div class="tl-date">—</div>
-            </div>
-            <div class="tl-item tl-waiting">
-              <div class="tl-dot waiting">6</div>
-              <div class="tl-title" data-en="Offer Letter Issued" data-ar="إصدار خطاب العرض">Offer Letter Issued</div>
-              <div class="tl-desc">—</div>
-              <div class="tl-date">—</div>
-            </div>
-            <div class="tl-item tl-waiting" style="padding-bottom:0">
-              <div class="tl-dot waiting">7</div>
-              <div class="tl-title" data-en="Disbursement" data-ar="الصرف">Disbursement</div>
-              <div class="tl-desc">—</div>
-              <div class="tl-date">—</div>
-            </div>
-          </div>
+        <div class="track-body" id="track-body" style="display:none">
+          <div class="tl" id="track-timeline"></div>
           <div style="display:flex;gap:10px;margin-top:22px;justify-content:flex-end">
-            <button class="btn btn-outline" onclick="toast('Document checklist downloaded','ok')" data-en="📥 Download Checklist" data-ar="📥 تنزيل القائمة">📥 Download Checklist</button>
-            <button class="btn btn-teal" onclick="openWizard()" data-en="📤 Upload Documents" data-ar="📤 رفع المستندات">📤 Upload Documents</button>
+            <button class="btn btn-outline" onclick="toast('Document checklist downloaded','ok')">📥 Download Checklist</button>
+            <button class="btn btn-teal" onclick="openWizard()">📤 Upload Documents</button>
           </div>
         </div>
       </div>
@@ -585,6 +488,7 @@ function showPage(id) {
   if (pg) { pg.classList.add('active'); window.scrollTo(0,0); }
   const nb = document.getElementById('nb-' + id);
   if (nb) nb.classList.add('active');
+  if (id === 'tracking') loadTracking();
 }
 
 /* ─── CALCULATOR ─── */
@@ -776,19 +680,178 @@ function wizNext() {
 }
 function wizBack() { if (wizStep > 0) { wizStep--; renderWiz(); } }
 
-function submitApp() {
+async function submitApp() {
   const btn = document.getElementById('wiz-next');
   btn.innerHTML = '<span class="spin"></span> Submitting…';
   btn.disabled = true;
-  setTimeout(() => {
+  try {
+    // Build payload from wizard fields
+    const amt = parseFloat((document.getElementById('wa-amt')||{value:'200000'}).value.replace(/[^0-9.]/g,'')) || 200000;
+    const ten = parseInt((document.getElementById('wa-ten')||{value:'25'}).value) || 25;
+    const payload = {
+      product_id: wizProductId || 'p001',
+      project_id: wizProjectId || null,
+      unit_id: wizUnitId || null,
+      applicant_name: 'Portal Customer',
+      applicant_civil_id: '8827364',
+      applicant_salary: 3200,
+      property_value: amt / 0.65,
+      loan_amount: amt,
+      tenure_years: ten,
+      gsas_score: 89
+    };
+    const r = await fetch('/api/v1/portal/applications', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
     closeWizard();
     btn.innerHTML = '🚀 Submit Application';
     btn.disabled = false;
-    toast('🎉 Application GHL-250001 submitted successfully!','ok');
-    setTimeout(()=>toast('✅ AI pre-screening complete — DBR 34% · GSAS 89 verified','ok'),1200);
-    setTimeout(()=>toast('📧 Confirmation sent to salim.alharthy@example.com','info'),2400);
-    setTimeout(()=>showPage('tracking'),3200);
-  }, 2400);
+    if (d.success && d.reference) {
+      localStorage.setItem('ghl_application_ref', d.reference);
+      localStorage.setItem('ghl_application_id', d.application_id);
+      toast('🎉 Application ' + d.reference + ' submitted!', 'ok');
+      setTimeout(()=>toast('✅ Rate: ' + d.applied_rate + '% · Monthly: OMR ' + d.monthly_payment,'ok'), 1200);
+      setTimeout(()=>{ loadTracking(); showPage('tracking'); }, 2000);
+    } else {
+      toast('⚠️ ' + (d.error || 'Submission failed'), 'err');
+    }
+  } catch(e) {
+    btn.innerHTML = '🚀 Submit Application';
+    btn.disabled = false;
+    toast('⚠️ Could not reach API — ' + e.message, 'err');
+  }
+}
+
+async function loadProjects() {
+  try {
+    const r = await fetch('/api/v1/portal/projects');
+    const d = await r.json();
+    const grid = document.getElementById('projects-grid');
+    if (!grid) return;
+    const projects = d.projects || [];
+    if (!projects.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--g500)">No green-certified properties available yet. Check back soon.</div>';
+      return;
+    }
+    const GRADIENTS = ['linear-gradient(135deg,#003B5C,#007F86)','linear-gradient(135deg,#1a4a2e,#35C6C4)','linear-gradient(135deg,#2d5016,#6aaa2a)','linear-gradient(135deg,#003B5C,#35C6C4)'];
+    grid.innerHTML = projects.map((p, i) => {
+      const units = p.units || [];
+      const firstUnit = units[0];
+      const price = firstUnit ? 'OMR ' + Number(firstUnit.price_omr||0).toLocaleString() : 'Price TBC';
+      const gsas = p.gsas_overall_score || p.gsas_score || '—';
+      const rate = gsas >= 85 ? '4.75' : gsas >= 70 ? '5.00' : '5.25';
+      return `<div class="prop-card${i===0?' featured':''}" onclick="openWizardForProject('${p.id}')">
+        <div class="prop-img" style="background:${GRADIENTS[i%GRADIENTS.length]}">
+          🏡<div class="prop-ribbon" style="background:var(--sea);color:var(--navy)">${p.type||'Green'}</div>
+        </div>
+        <div class="prop-body">
+          <div class="prop-price">${price}</div>
+          <div class="prop-name">${p.name}</div>
+          <div class="prop-loc">📍 ${p.location||p.city||'Muscat'}</div>
+          <div class="prop-tags">
+            <span class="tag">${units.length} units</span>
+            ${p.has_solar?'<span class="tag">☀️ Solar</span>':''}
+            ${p.has_greywater?'<span class="tag">💧 Greywater</span>':''}
+          </div>
+          <div class="prop-foot">
+            <span class="gsas-badge">GSAS ${gsas}</span>
+            <span class="rate-badge">${rate}%</span>
+          </div>
+          <button class="prop-btn" onclick="event.stopPropagation();openWizardForProject('${p.id}')">Apply for Green Loan</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    const grid = document.getElementById('projects-grid');
+    if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--g500)">Could not load properties.</div>';
+  }
+}
+
+async function loadTracking() {
+  const ref = localStorage.getItem('ghl_application_ref');
+  const trackContent = document.getElementById('track-content');
+  const trackHead = document.getElementById('track-head');
+  const trackBody = document.getElementById('track-body');
+  if (!ref) {
+    if (trackContent) trackContent.innerHTML = `<div style="padding:48px;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">📋</div>
+      <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:8px">No active application</div>
+      <div style="font-size:13px;color:var(--g500);margin-bottom:20px">Submit a loan application to track its progress here.</div>
+      <button class="btn btn-teal" onclick="openWizard()">Apply Now</button>
+    </div>`;
+    return;
+  }
+  if (trackContent) trackContent.innerHTML = '<div style="padding:48px;text-align:center;color:var(--g500)"><span class="spin" style="border-color:rgba(0,127,134,.2);border-top-color:var(--teal)"></span> Loading…</div>';
+  try {
+    const r = await fetch('/api/v1/portal/applications/' + ref + '/status');
+    const d = await r.json();
+    if (!d.application) { if(trackContent) trackContent.innerHTML='<div style="padding:48px;text-align:center;color:var(--g500)">Application not found.</div>'; return; }
+    const app = d.application;
+    // Update nav hint
+    const hint = document.getElementById('track-nav-hint');
+    if (hint) { hint.setAttribute('data-en', ref); hint.textContent = ref; }
+    if (trackContent) trackContent.style.display = 'none';
+    if (trackHead) {
+      trackHead.style.display = 'block';
+      document.getElementById('track-ref').textContent = ref;
+      document.getElementById('track-sub').textContent = 'OMR ' + Number(app.loan_amount).toLocaleString() + ' · ' + app.tenure_years + ' Years';
+      document.getElementById('track-stage').textContent = (app.status||'submitted').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+      if (app.lifetime_saving) {
+        document.getElementById('track-saving-num').textContent = 'OMR ' + Number(app.lifetime_saving).toLocaleString() + ' lifetime saving';
+        document.getElementById('track-saving-strip').style.display = 'flex';
+      }
+    }
+    if (trackBody) {
+      trackBody.style.display = 'block';
+      const tl = document.getElementById('track-timeline');
+      const STATUS_MAP = {submitted:'done',credit_check:'done',esg_review:'current',compliance_review:'current',approved:'done',rejected:'done'};
+      const STEPS_TL = [
+        {key:'submitted', label:'Application Submitted', desc: `DBR ${app.dbr_ratio||'—'}% · LTV ${app.ltv_ratio||'—'}% · GSAS ${app.gsas_score||'—'}`, date: app.submitted_at},
+        {key:'credit_check', label:'Credit Bureau Check', desc:"MALA'A verification", date:''},
+        {key:'esg_review', label:'ESG Document Validation', desc:'AI document verification', date:''},
+        {key:'compliance_review', label:'Compliance Review', desc:'Dual approval by Compliance & Risk', date:''},
+        {key:'approved', label:'Final Approval', desc:'Credit committee decision', date:''},
+        {key:'offer', label:'Offer Letter', desc:'', date:''},
+        {key:'disbursement', label:'Disbursement', desc:'', date:''}
+      ];
+      const cur = app.status||'submitted';
+      const ORDER = ['submitted','credit_check','esg_review','compliance_review','approved','offer','disbursement'];
+      const curIdx = ORDER.indexOf(cur);
+      if (tl) tl.innerHTML = STEPS_TL.map((s,i) => {
+        const st = i < curIdx ? 'done' : i === curIdx ? 'current' : 'waiting';
+        return `<div class="tl-item${st==='waiting'?' tl-waiting':''}">
+          <div class="tl-dot ${st}">${st==='done'?'✓':st==='current'?'⏳':String(i+1)}</div>
+          <div class="tl-title">${s.label}${st==='current'?'<span class="tl-chip chip-h">In Progress</span>':''}</div>
+          <div class="tl-desc">${s.desc||'—'}</div>
+          <div class="tl-date">${s.date||'—'}</div>
+        </div>`;
+      }).join('');
+    }
+    // construction stages
+    if (d.construction_stages && d.construction_stages.length) {
+      const cs = d.construction_stages;
+      // append to timeline
+      const tl = document.getElementById('track-timeline');
+      if (tl) tl.innerHTML += '<div style="font-size:11px;font-weight:700;color:var(--teal);margin:12px 0 6px">CONSTRUCTION STAGES</div>' +
+        cs.map((s,i) => `<div class="tl-item">
+          <div class="tl-dot ${s.status==='completed'?'done':s.status==='active'?'current':'waiting'}">${s.status==='completed'?'✓':String(i+1)}</div>
+          <div class="tl-title">Stage ${s.stage_number} — ${s.title||s.stage_name||'Construction'}</div>
+          <div class="tl-desc">OMR ${Number(s.tranche_amount).toLocaleString()}</div>
+          <div class="tl-date">${s.completed_at||s.status||'—'}</div>
+        </div>`).join('');
+    }
+  } catch(e) {
+    if (trackContent) trackContent.innerHTML = '<div style="padding:48px;text-align:center;color:var(--g500)">Could not load application data.</div>';
+  }
+}
+
+let wizProductId = null, wizProjectId = null, wizUnitId = null;
+function openWizardForProject(projectId) {
+  wizProjectId = projectId;
+  openWizard();
 }
 
 /* ─── TOAST ─── */
@@ -804,6 +867,7 @@ function toast(msg, type='info') {
 document.addEventListener('DOMContentLoaded', () => {
   showPage('home');
   calcUpdate();
+  loadProjects();
 });
 </script>
 </body>
