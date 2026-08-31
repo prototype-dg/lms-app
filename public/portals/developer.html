@@ -684,7 +684,6 @@ body.ar .toast-container{right:auto;left:24px}
 // ═══════════════════════════════════════════════════
 // STATE & DATA
 // ═══════════════════════════════════════════════════
-const OPENAI_KEY = 'REDACTED_OPENAI_KEY';
 let isAr = false;
 let leafletMap = null;
 let mapMarkers = [];
@@ -848,7 +847,7 @@ function renderCerts() {
     </div>
   `).join('');
 
-  // auto-show AI panel for the demo
+  // Auto-show AI panel for the first certificate to illustrate AI validation
   setTimeout(() => showAIPanel(CERT_CONFIG[0]), 600);
 }
 

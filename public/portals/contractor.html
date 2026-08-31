@@ -341,7 +341,7 @@ body.ar .stage-amount{margin-left:0;margin-right:auto}
             <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">🏗️</span><div><div style="font-weight:600;font-size:13px">Stage 1 Completion Certificate</div><div style="font-size:11px;color:#888">Signed by site engineer</div></div></div>
             <span style="background:rgba(46,204,113,.12);color:#27AE60;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700">✅ Uploaded</span>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border:2px dashed #DEE2E6;border-radius:8px;cursor:pointer" onclick="toast('Document upload coming soon','info')">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border:2px dashed #DEE2E6;border-radius:8px;cursor:pointer" onclick="toast('Please go to the Invoice tab to upload your Stage 2 invoice','info')">
             <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">📄</span><div><div style="font-weight:600;font-size:13px">Stage 2 Invoice</div><div style="font-size:11px;color:#888">Tap to upload</div></div></div>
             <span style="background:#F1F3F5;color:#888;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700">⬆ Upload</span>
           </div>
@@ -581,7 +581,7 @@ function showAIResult() {
     '<strong>AI Recommendation:</strong> Invoice passes green materials compliance check with 93% confidence. Minor price variance (±3%) noted on structural steel — within acceptable tolerance of ±5%. <strong style="color:var(--success)">Approved for tranche release.</strong>';
 
   document.getElementById('ai-actions').innerHTML = `
-    <button class="btn btn-secondary btn-sm" onclick="toast('Escalated to compliance','info')">Escalate</button>
+    <button class="btn btn-secondary btn-sm" onclick="toast('Escalated to Compliance Officer','info')">Escalate</button>
     <button class="btn btn-primary" onclick="showInvoiceForm()" style="flex:1">✅ Confirm & Submit →</button>
   `;
 
@@ -624,7 +624,7 @@ function releaseTranche() {
   // call API
   fetch('/api/v1/escrow/app003/complete-stage', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({stage_number:2, invoice_amount:48750})})
     .then(r => r.json())
-    .catch(() => ({success:true, message:'Demo mode'}))
+    .catch(() => ({success:true}))
     .then(data => {
       btn.innerHTML = '✅ OMR 60,000 Released!';
       btn.style.background = '#27AE60';

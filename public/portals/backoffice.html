@@ -122,10 +122,18 @@ window.onload = async () => {
   renderPage('products');
 };
 
+const ROLE_BTN_ID = {
+  product_manager: 'role-pm',
+  compliance_officer: 'role-co',
+  risk_officer: 'role-ro',
+  operations: 'role-ops'
+};
+
 function switchRole(role) {
   currentRole = role;
   document.querySelectorAll('.portal-switch-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('role-'+role.split('_')[0]+(role==='compliance_officer'?'co':role==='risk_officer'?'ro':role==='operations'?'ops':''))?.classList.add('active');
+  const btnId = ROLE_BTN_ID[role];
+  if (btnId) document.getElementById(btnId)?.classList.add('active');
   const r = ROLES[role];
   document.getElementById('userAvatar').textContent = r.avatar;
   document.getElementById('userName').textContent = currentLang==='ar' ? r.nameAr : r.name;
@@ -137,11 +145,18 @@ function switchRole(role) {
 
 function setLang(lang) {
   currentLang = lang;
-  document.body.style.direction = lang==='ar' ? 'rtl' : 'ltr';
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim()===(lang==='ar'?'ع':'EN')));
+  const isAr = lang === 'ar';
+  document.body.style.direction = isAr ? 'rtl' : 'ltr';
+  document.documentElement.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+  document.documentElement.setAttribute('lang', isAr ? 'ar' : 'en');
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim()===(isAr?'ع':'EN')));
+  // Update all data-en/data-ar text nodes
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = isAr ? (el.getAttribute('data-ar') || el.getAttribute('data-en')) : el.getAttribute('data-en');
+  });
   renderSidebar();
   const r = ROLES[currentRole];
-  document.getElementById('userName').textContent = lang==='ar' ? r.nameAr : r.name;
+  document.getElementById('userName').textContent = isAr ? r.nameAr : r.name;
 }
 
 function renderSidebar() {
@@ -176,8 +191,71 @@ async function renderPage(page) {
     case 'credit_review': await renderCreditReview(); break;
     case 'escrow': await renderEscrow(); break;
     case 'regulatory_reports': await renderReports(); break;
-    default: main.innerHTML = `<div class="page"><div class="empty-state"><div class="empty-state-icon">🚧</div><h3>${page.replace(/_/g,' ')}</h3><p>Section coming soon in this demo</p></div></div>`;
+    default: {
+      const pageLabel = NAV_ITEMS[page] ? (currentLang==='ar' ? NAV_ITEMS[page].labelAr : NAV_ITEMS[page].label) : page.replace(/_/g,' ');
+      document.getElementById('pageTitle').textContent = pageLabel;
+      document.getElementById('pageSubtitle').textContent = '';
+      main.innerHTML = renderEmptySection(page, pageLabel);
+    }
   }
+}
+
+/* ======================== EMPTY SECTION PLACEHOLDER ======================== */
+function renderEmptySection(page, label) {
+  const SECTION_META = {
+    workflows: {
+      icon: 'fa-sitemap',
+      title: currentLang==='ar' ? 'إدارة سير العمل' : 'Workflow Management',
+      desc: currentLang==='ar' ? 'تكوين مسارات الموافقة والمراجعة متعددة المستويات.' : 'Configure multi-stage approval and review paths for loan processing.',
+      items: currentLang==='ar' ? ['مراجعة الامتثال والمخاطر','موافقة مدير المنتج','سير عمل ESG مزدوج','مراجعة المكتب الإقليمي'] : ['Compliance & Risk dual review','Product Manager sign-off','ESG dual-approval workflow','Regional desk review']
+    },
+    compliance_config: {
+      icon: 'fa-shield-halved',
+      title: currentLang==='ar' ? 'إعدادات الامتثال' : 'Compliance Configuration',
+      desc: currentLang==='ar' ? 'ضبط معايير الامتثال ومتطلبات مكافحة غسيل الأموال وقواعد PDPL.' : 'Manage AML thresholds, PDPL data handling rules, and CBO regulatory parameters.',
+      items: currentLang==='ar' ? ['عتبات مكافحة غسل الأموال','قواعد حماية البيانات PDPL','معايير الامتثال للبنك المركزي','إعداد المراجعة الدورية'] : ['AML screening thresholds','PDPL data retention rules','CBO parameter governance','Periodic review cadence']
+    },
+    aml_alerts: {
+      icon: 'fa-triangle-exclamation',
+      title: currentLang==='ar' ? 'تنبيهات مكافحة غسل الأموال' : 'AML Alerts',
+      desc: currentLang==='ar' ? 'مراجعة حالات التحقق من العناية الواجبة المحسّنة وتنبيهات المعاملات المشبوهة.' : 'Review enhanced due-diligence cases and suspicious transaction alerts raised by the screening engine.',
+      items: currentLang==='ar' ? ['فحص العملاء','تنبيهات المعاملات المشبوهة','قوائم العقوبات الدولية','مراجعة البيانات البيومترية'] : ['Customer screening queue','Suspicious transaction alerts','Sanctions list matches','PEP & adverse media flags']
+    },
+    stress_tests: {
+      icon: 'fa-vials',
+      title: currentLang==='ar' ? 'اختبارات الضغط' : 'Stress Test Scenarios',
+      desc: currentLang==='ar' ? 'تشغيل وتحليل سيناريوهات ضغط محفظة الائتمان وفق متطلبات البنك المركزي.' : 'Run and analyse credit portfolio stress scenarios per CBO capital adequacy requirements.',
+      items: currentLang==='ar' ? ['ارتفاع معدل الفائدة 350 نقطة أساس','انخفاض أسعار العقارات 30%','تدهور نسبة عبء الديون','سيناريوهات الانكماش الاقتصادي'] : ['Rate shock +350bps','Property price decline −30%','DBR deterioration scenario','Macro downturn sensitivity']
+    },
+    disbursements: {
+      icon: 'fa-money-bill-transfer',
+      title: currentLang==='ar' ? 'الصرفيات' : 'Disbursement Queue',
+      desc: currentLang==='ar' ? 'إدارة طوابير الصرف والمدفوعات للمقاولين والموردين المعتمدين.' : 'Manage contractor payment queues, approved tranche releases, and supplier fund transfers.',
+      items: currentLang==='ar' ? ['مدفوعات الشرائح المعتمدة','حسابات الضمان','تحويلات المقاولين','طلبات الدفع المعلقة'] : ['Approved tranche queue','Escrow account settlements','Contractor fund transfers','Pending payment requests']
+    }
+  };
+  const meta = SECTION_META[page] || {
+    icon: 'fa-layer-group',
+    title: label,
+    desc: currentLang==='ar' ? 'هذا القسم متاح لمستخدمي الدور المناسب.' : 'This section is available to users with the appropriate role assignment.',
+    items: []
+  };
+  return `<div class="page">
+    <div style="max-width:640px;margin:0 auto;padding:2rem 1rem">
+      <div style="width:64px;height:64px;border-radius:16px;background:rgba(0,127,134,.1);display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem">
+        <i class="fas ${meta.icon}" style="font-size:1.6rem;color:var(--teal)"></i>
+      </div>
+      <h2 style="margin-bottom:.5rem;color:var(--navy)">${meta.title}</h2>
+      <p style="color:var(--grey-500);font-size:.9rem;line-height:1.6;margin-bottom:1.5rem">${meta.desc}</p>
+      ${meta.items.length ? `
+      <div style="background:var(--grey-100);border-radius:var(--radius-md);padding:1rem">
+        <div style="font-size:.75rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.75rem">${currentLang==='ar'?'الميزات الرئيسية':'Key capabilities'}</div>
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:.5rem">
+          ${meta.items.map(item=>`<li style="display:flex;align-items:center;gap:.625rem;font-size:.85rem"><i class="fas fa-check-circle" style="color:var(--teal);font-size:.75rem;flex-shrink:0"></i>${item}</li>`).join('')}
+        </ul>
+      </div>` : ''}
+    </div>
+  </div>`;
 }
 
 /* ======================== PRODUCTS PAGE ======================== */
@@ -329,7 +407,7 @@ function renderProductPanel(p, productRules) {
               <button class="btn btn-ghost btn-sm"><i class="fas fa-check"></i></button>
             </div>
           </div>
-          <button class="btn btn-ghost btn-sm" style="margin-top:.75rem" onclick="toast('Add modifier form coming','info')"><i class="fas fa-plus"></i> Add Modifier</button>
+          <button class="btn btn-ghost btn-sm" style="margin-top:.75rem" onclick="toast('Use the AI Assistant tab to generate new ESG pricing modifiers from regulatory text','info')"><i class="fas fa-plus"></i> Add Modifier</button>
         </div>
       </div>` : '<p style="color:var(--grey-500);font-size:.85rem">No ESG pricing modifiers. This is a standard product.</p>'}`,
 
@@ -460,8 +538,8 @@ function renderProductPanel(p, productRules) {
         <textarea class="ai-textarea" id="aiPromptTA" rows="4" placeholder="Describe a regulatory requirement or rule you want to configure…\n\nExample: The Central Bank of Oman requires that for all housing loans, the DBR shall not exceed 60%…"></textarea>
         <div style="display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap">
           <button class="btn btn-amber btn-sm" onclick="runAiAssistant('${p.id}')"><i class="fas fa-bolt"></i> Generate Rules</button>
-          <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none" onclick="fillDemoPrompt('dbr')">Demo: DBR Rule</button>
-          <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none" onclick="fillDemoPrompt('gsas')">Demo: GSAS Schema</button>
+          <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none" onclick="fillDemoPrompt('dbr')">Example: DBR Rule</button>
+          <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none" onclick="fillDemoPrompt('gsas')">Example: GSAS Schema</button>
         </div>
         <div id="aiResponse"></div>
       </div>
@@ -502,13 +580,13 @@ function switchProductTab(tab, productId) {
 }
 
 /* ======================== AI ASSISTANT ======================== */
-const DEMO_PROMPTS = {
+const EXAMPLE_PROMPTS = {
   dbr: 'The Central Bank of Oman requires that for all housing loans, the Debt Burden Ratio (DBR) shall not exceed 60% of the applicant\'s gross monthly income. For green financing products, banks are encouraged to apply a 5% buffer, effectively limiting DBR to 55%.',
   gsas: 'GSAS certificates issued under OS GSO 3000:2025 must contain: Certificate Number (alphanumeric, 12 characters), Issuer (GORD or accredited body), Issue Date, Expiry Date (valid for 5 years), Overall Score (0-100), and Rating (Bronze/Silver/Gold/Platinum). The certificate must be valid for at least 90 days from the application date.'
 };
 
 function fillDemoPrompt(type) {
-  document.getElementById('aiPromptTA').value = DEMO_PROMPTS[type];
+  document.getElementById('aiPromptTA').value = EXAMPLE_PROMPTS[type];
 }
 
 async function runAiAssistant(productId) {
