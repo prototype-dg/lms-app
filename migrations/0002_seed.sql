@@ -27,33 +27,33 @@ INSERT OR IGNORE INTO customers VALUES
 
 -- Products Library
 INSERT OR IGNORE INTO products VALUES
-  ('p001', 'Standard Home Loan', null, 'Standard Home Loan', 'Our flagship home financing product for Omani nationals and residents. Competitive rates with flexible terms.', 'home_loan', 'active', 5.5, 90, 60, 60, 5, 25, 10000, 500000, 0, 0, 0, 0, 90, 1, 1,
+  ('p001', 'Standard Home Loan', 'SHL-STANDARD', 'Our flagship home financing product for Omani nationals and residents. Competitive rates with flexible terms.', 'home_loan', 'active', 5.5, 90, 60, 60, 5, 25, 10000, 500000, 0, 0, 0, 0, 90, 1, 1,
    '["salary_cert","utility_bill","civil_id","property_deed","valuation_report"]',
    '[]', '[]', '[]',
    '{"features":["Fixed and variable rate options","Top-up facility available","Insurance bundled"]}',
    4847, 'u001', '2024-01-10', '2025-12-15'),
-  ('p002', 'Auto Finance – Personal', null, 'Auto Finance - Personal', 'Financing for personal vehicles including sedans, SUVs, and electric vehicles.', 'auto_loan', 'active', 4.9, 85, 55, 55, 1, 7, 3000, 80000, 0, 0, 0, 0, 90, 0, 0,
+  ('p002', 'Auto Finance – Personal', 'AFL-PERSONAL', 'Financing for personal vehicles including sedans, SUVs, and electric vehicles.', 'auto_loan', 'active', 4.9, 85, 55, 55, 1, 7, 3000, 80000, 0, 0, 0, 0, 90, 0, 0,
    '["salary_cert","civil_id","vehicle_proforma"]',
    '[]', '[]', '[]', '{}', 1923, 'u001', '2023-06-01', '2025-11-20'),
-  ('p003', 'Personal Loan', null, 'Personal Loan', 'Unsecured personal financing for salaried employees of approved employers.', 'personal_loan', 'active', 7.5, 0, 50, 50, 1, 5, 1000, 30000, 0, 0, 0, 0, 90, 0, 0,
+  ('p003', 'Personal Loan', 'PL-UNSECURED', 'Unsecured personal financing for salaried employees of approved employers.', 'personal_loan', 'active', 7.5, 0, 50, 50, 1, 5, 1000, 30000, 0, 0, 0, 0, 90, 0, 0,
    '["salary_cert","civil_id","employer_letter"]',
    '[]', '[]', '[]', '{}', 3241, 'u001', '2023-01-15', '2025-10-01'),
-  ('p004', 'SME Working Capital', null, 'SME Working Capital Finance', 'Short-term working capital facility for small and medium enterprises registered in Oman.', 'sme', 'active', 6.5, 70, 65, 65, 1, 3, 5000, 200000, 0, 0, 0, 0, 85, 0, 0,
+  ('p004', 'SME Working Capital', 'SME-WORKCAP', 'Short-term working capital facility for small and medium enterprises registered in Oman.', 'sme', 'active', 6.5, 70, 65, 65, 1, 3, 5000, 200000, 0, 0, 0, 0, 85, 0, 0,
    '["cr_certificate","audited_financials","bank_statements","cr_extract"]',
    '[]', '[]', '[]', '{}', 892, 'u001', '2023-08-10', '2025-09-15'),
-  ('p005', 'Home Equity Line', null, 'Home Equity Line of Credit', 'Revolving credit facility secured against existing property equity.', 'home_loan', 'active', 6.0, 75, 55, 55, 5, 15, 20000, 300000, 0, 0, 0, 0, 90, 0, 0,
+  ('p005', 'Home Equity Line', 'HELOC-STANDARD', 'Revolving credit facility secured against existing property equity.', 'home_loan', 'active', 6.0, 75, 55, 55, 5, 15, 20000, 300000, 0, 0, 0, 0, 90, 0, 0,
    '["property_title","valuation_report","civil_id","salary_cert"]',
    '[]', '[]', '[]', '{}', 567, 'u001', '2024-03-01', '2025-08-20'),
-  ('p006', 'Commercial Property Finance', null, 'Commercial Property Finance', 'Financing for commercial properties including offices, retail and warehouses.', 'commercial', 'active', 6.8, 70, 65, 65, 5, 20, 50000, 2000000, 0, 0, 0, 0, 85, 0, 0,
+  ('p006', 'Commercial Property Finance', 'CPF-COMMERCIAL', 'Financing for commercial properties including offices, retail and warehouses.', 'commercial', 'active', 6.8, 70, 65, 65, 5, 20, 50000, 2000000, 0, 0, 0, 0, 85, 0, 0,
    '["cr_certificate","audited_financials","property_title","valuation_report"]',
    '[]', '[]', '[]', '{}', 234, 'u001', '2023-09-01', '2025-07-10'),
-  ('p007', 'Expat Home Finance', null, 'Expatriate Home Finance', 'Home financing solutions for expatriate professionals working in Oman.', 'home_loan', 'active', 6.0, 75, 55, 55, 5, 20, 15000, 400000, 0, 0, 0, 0, 90, 0, 0,
+  ('p007', 'Expat Home Finance', 'EHL-EXPAT', 'Home financing solutions for expatriate professionals working in Oman.', 'home_loan', 'active', 6.0, 75, 55, 55, 5, 20, 15000, 400000, 0, 0, 0, 0, 90, 0, 0,
    '["work_permit","salary_cert","civil_id","property_deed","noc_employer"]',
    '[]', '[]', '[]', '{}', 1102, 'u001', '2024-01-20', '2025-12-01'),
-  ('p008', 'Education Finance', null, 'Education Finance', 'Financing for education expenses including tuition fees for approved universities.', 'education', 'archived', 8.0, 0, 45, 45, 1, 8, 500, 20000, 0, 0, 0, 0, 90, 0, 0,
+  ('p008', 'Education Finance', 'EDU-FINANCE', 'Financing for education expenses including tuition fees for approved universities.', 'education', 'archived', 8.0, 0, 45, 45, 1, 8, 500, 20000, 0, 0, 0, 0, 90, 0, 0,
    '["civil_id","university_offer_letter","salary_cert"]',
    '[]', '[]', '[]', '{}', 445, 'u001', '2022-01-01', '2024-06-01'),
-  ('p009', 'Green Home Loan – ESG', null, 'Green Home Loan – ESG', 'Preferential home financing for GSAS-certified green properties. Supports Oman Vision 2040 and the National ESG Strategy. Earn up to 0.75% rate discount based on sustainability score.', 'home_loan', 'active', 5.5, 90, 60, 55, 5, 25, 10000, 500000, 70, 85, 0.75, 0.5, 90, 1, 1,
+  ('p009', 'Green Home Loan – ESG', 'GHL-GREEN-PREMIUM', 'Preferential home financing for GSAS-certified green properties. Supports Oman Vision 2040 and the National ESG Strategy. Earn up to 0.75% rate discount based on sustainability score.', 'home_loan', 'active', 5.5, 90, 60, 55, 5, 25, 10000, 500000, 70, 85, 0.75, 0.5, 90, 1, 1,
    '["salary_cert","utility_bill","civil_id","property_deed","valuation_report"]',
    '["gsas_cert","epc_report","eia_approval"]',
    '["Green Concrete","Thermal Insulation","Solar Panels","Energy-Efficient Appliances","Low-E Glass","Recycled Steel"]',
@@ -101,13 +101,14 @@ INSERT OR IGNORE INTO projects VALUES
    'active', 1, 1, '2026-08-31', '2026-08-31');
 
 -- Units for EcoVillage Muscat (Villa B1 is Salim's saved property)
+-- Schema: id, project_id, unit_number, floor_number, type, area_sqm, bedrooms, bathrooms, price, lat, lng, status, features, created_at
 INSERT OR IGNORE INTO units VALUES
-  ('unit001', 'proj004', 'B1', 1, 'villa', 180, 4, 3, 185000, 23.6512, 58.1898, 'available', '["GSAS Gold","Private Pool","Smart Home","Solar Panels","EV Charging"]'),
-  ('unit002', 'proj004', 'B2', 1, 'villa', 175, 4, 3, 178000, 23.6518, 58.1905, 'available', '["GSAS Gold","Garden","Smart Home","Solar Panels"]'),
-  ('unit003', 'proj004', 'B3', 1, 'villa', 185, 1, 'villa', 192000, 23.6524, 58.1912, 'available', '["GSAS Gold","Private Pool","Smart Home","Solar Panels","Maid Room"]'),
-  ('unit004', 'proj004', 'B4', 1, 'villa', 180, 4, 3, 185000, 23.6530, 58.1919, 'reserved', '["GSAS Gold","Garden","Smart Home"]'),
-  ('unit005', 'proj004', 'B5', 1, 'villa', 190, 5, 4, 198000, 23.6536, 58.1926, 'available', '["GSAS Gold","Private Pool","Smart Home","Solar Panels","Home Office"]'),
-  ('unit006', 'proj004', 'B6', 1, 'villa', 175, 4, 3, 178000, 23.6542, 58.1933, 'available', '["GSAS Gold","Garden","Smart Home"]');
+  ('unit001', 'proj004', 'B1', 1, 'villa', 180, 4, 3, 185000, 23.6512, 58.1898, 'available', '["GSAS Gold","Private Pool","Smart Home","Solar Panels","EV Charging"]', '2026-08-31'),
+  ('unit002', 'proj004', 'B2', 1, 'villa', 175, 4, 3, 178000, 23.6518, 58.1905, 'available', '["GSAS Gold","Garden","Smart Home","Solar Panels"]', '2026-08-31'),
+  ('unit003', 'proj004', 'B3', 1, 'villa', 185, 4, 3, 192000, 23.6524, 58.1912, 'available', '["GSAS Gold","Private Pool","Smart Home","Solar Panels","Maid Room"]', '2026-08-31'),
+  ('unit004', 'proj004', 'B4', 1, 'villa', 180, 4, 3, 185000, 23.6530, 58.1919, 'reserved', '["GSAS Gold","Garden","Smart Home"]', '2026-08-31'),
+  ('unit005', 'proj004', 'B5', 1, 'villa', 190, 5, 4, 198000, 23.6536, 58.1926, 'available', '["GSAS Gold","Private Pool","Smart Home","Solar Panels","Home Office"]', '2026-08-31'),
+  ('unit006', 'proj004', 'B6', 1, 'villa', 175, 4, 3, 178000, 23.6542, 58.1933, 'available', '["GSAS Gold","Garden","Smart Home"]', '2026-08-31');
 
 -- Documents (pre-validated for EcoVillage)
 INSERT OR IGNORE INTO documents VALUES
@@ -122,10 +123,32 @@ INSERT OR IGNORE INTO documents VALUES
    95, 'auto_verified', 'Auto-verified: EIA clearance confirmed for 24 units. Issuer accredited.', null, null, '2026-08-31');
 
 -- Applications (pre-existing + GHL-250001 in progress)
+-- Schema (36 cols): id,reference,product_id,customer_id,customer_name,unit_id,project_id,
+--   loan_amount,loan_term,property_address,property_source,property_area_sqm,
+--   gsas_score,epc_rating,applied_rate,standard_rate,monthly_payment,standard_monthly_payment,
+--   lifetime_saving,dbr,ltv,stress_test_rate,stress_test_passed,malaa_score,status,
+--   esg_verification_status,compliance_approved_by,compliance_approved_at,
+--   risk_approved_by,risk_approved_at,escrow_amount,escrow_released,
+--   rejection_reason,tracking_url,created_at,updated_at
 INSERT OR IGNORE INTO applications VALUES
-  ('app001', 'HL-240892', 'p001', 'c002', 'Mariam Al-Siyabi', 'unit004', 'proj001', 250000, 20, 'Al Mouj Residences, Unit A12, Muscat', 'partner', 142, null, null, null, 5.5, 5.5, 1608.82, 1608.82, 0, 46, 78, 9.0, 1, 780, 'approved', 'verified', 'u002', '2024-09-15', 'u003', '2024-09-16', 250000, 0, null, null, '2024-09-14', '2024-09-16'),
-  ('app002', 'HL-241156', 'p001', 'c003', 'Hassan Al-Amri', null, null, 120000, 15, 'Plot 45, Al Ghubra North, Muscat', 'byop', 200, null, null, null, 5.5, 5.5, 980.12, 980.12, 0, 36, 72, 9.0, 1, 710, 'credit_review', 'pending', null, null, null, null, 120000, 0, null, null, '2024-12-01', '2024-12-03'),
-  ('app003', 'GHL-250001', 'p009', 'c001', 'Salim Al-Harthy', 'unit001', 'proj004', 200000, 25, 'EcoVillage Muscat, Villa B1, Seeb', 'partner', 180, 89, 'A', 4.75, 4.75, 5.5, 1139.13, 1224.42, 25500, 48, 80, 9.0, 1, 750, 'esg_review', 'pending', null, null, null, null, 200000, 0, null, 'https://sib.om/track/GHL-250001', '2026-08-31', '2026-08-31');
+  ('app001','HL-240892','p001','c002','Mariam Al-Siyabi','unit004','proj001',
+   250000,20,'Al Mouj Residences, Unit A12, Muscat','partner',
+   142,null,null,5.5,5.5,1608.82,1608.82,
+   0,46,78,9.0,1,780,'approved',
+   'verified','u002','2024-09-15','u003','2024-09-16',
+   250000,0,null,null,'2024-09-14','2024-09-16'),
+  ('app002','HL-241156','p001','c003','Hassan Al-Amri',null,null,
+   120000,15,'Plot 45, Al Ghubra North, Muscat','byop',
+   200,null,null,5.5,5.5,980.12,980.12,
+   0,36,72,9.0,1,710,'credit_review',
+   'pending',null,null,null,null,
+   120000,0,null,null,'2024-12-01','2024-12-03'),
+  ('app003','GHL-250001','p009','c001','Salim Al-Harthy','unit001','proj004',
+   200000,25,'EcoVillage Muscat, Villa B1, Seeb','partner',
+   180,89,'A',4.75,5.5,1139.13,1224.42,
+   25500,48,80,9.0,1,750,'esg_review',
+   'pending',null,null,null,null,
+   200000,0,null,'https://sib.om/track/GHL-250001','2026-08-31','2026-08-31');
 
 -- Construction Stages for GHL-250001
 INSERT OR IGNORE INTO construction_stages VALUES
