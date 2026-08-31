@@ -268,66 +268,144 @@ async function loadProducts() {
 }
 
 async function renderProducts() {
-  document.getElementById('pageTitle').textContent = currentLang==='ar' ? 'المنتجات' : 'Products';
+  document.getElementById('pageTitle').textContent = 'Products';
   document.getElementById('pageSubtitle').textContent = `${products.length} products`;
-  
+
   const statusColor = {active:'badge-active', draft:'badge-draft', archived:'badge-archived'};
-  const categoryIcon = {home_loan:'fa-house', auto_loan:'fa-car', personal_loan:'fa-user', sme:'fa-briefcase', commercial:'fa-building', education:'fa-graduation-cap'};
+  const catMeta = {
+    home_loan:     { icon:'fa-house',         label:'Home Loans',     color:'#007F86' },
+    auto_loan:     { icon:'fa-car',            label:'Auto Finance',   color:'#35C6C4' },
+    personal_loan: { icon:'fa-user',           label:'Personal Loans', color:'#F4B35B' },
+    sme:           { icon:'fa-briefcase',      label:'SME Finance',    color:'#003B5C' },
+    commercial:    { icon:'fa-building',       label:'Commercial',     color:'#6c757d' },
+    education:     { icon:'fa-graduation-cap', label:'Education',      color:'#a855f7' },
+  };
+  const catOrder = ['home_loan','auto_loan','personal_loan','sme','commercial','education'];
+  const groups = {};
+  for (const cat of catOrder) groups[cat] = [];
+  for (const p of products) {
+    if (!groups[p.category]) groups[p.category] = [];
+    groups[p.category].push(p);
+  }
 
-  const html = `<div class="page">
+  const productCard = p => {
+    const meta = catMeta[p.category] || {icon:'fa-file', label:p.category, color:'#aaa'};
+    const isEsg = p.esg_required_docs && p.esg_required_docs !== '[]';
+    return `<div class="product-card ${isEsg?'green':''}" onclick="openProductDetail('${p.id}')" style="cursor:pointer">
+        <div class="product-card-header">
+          <div>
+            <div class="product-card-title"><i class="fas ${meta.icon}" style="color:${meta.color};margin-right:.4rem;font-size:.8rem"></i>${p.name}</div>
+            <div class="product-card-meta">${meta.label}</div>
+          </div>
+          <span class="badge ${statusColor[p.status]||'badge-draft'}">${p.status}</span>
+        </div>
+        ${isEsg ? '<span class="badge badge-esg" style="margin-bottom:.5rem"><i class="fas fa-leaf"></i> ESG Product</span>' : ''}
+        <p style="font-size:.78rem;color:var(--grey-500);margin:.5rem 0;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.description||''}</p>
+        <div class="product-card-stats">
+          <div class="product-stat"><strong>${p.base_rate||5.5}%</strong>Base Rate</div>
+          <div class="product-stat"><strong>${(p.applications_ytd||0).toLocaleString()}</strong>Apps YTD</div>
+          <div class="product-stat"><strong>${p.max_ltv||90}%</strong>Max LTV</div>
+        </div>
+      </div>`;
+  };
+
+  const groupSections = catOrder.filter(cat => groups[cat] && groups[cat].length > 0).map(cat => {
+    const meta = catMeta[cat] || {icon:'fa-file', label:cat, color:'#aaa'};
+    return `<div style="margin-bottom:2rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.875rem;padding-bottom:.5rem;border-bottom:2px solid var(--grey-100)">
+          <i class="fas ${meta.icon}" style="color:${meta.color};font-size:.9rem"></i>
+          <span style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--grey-600)">${meta.label}</span>
+          <span style="font-size:.72rem;color:var(--grey-400);margin-left:.25rem">${groups[cat].length} product${groups[cat].length!==1?'s':''}</span>
+        </div>
+        <div class="product-grid">${groups[cat].map(productCard).join('')}</div>
+      </div>`;
+  }).join('');
+
+  const activeCount = products.filter(p=>p.status==='active').length;
+  const draftCount  = products.filter(p=>p.status==='draft').length;
+  const appsYtd    = products.reduce((s,p)=>s+(p.applications_ytd||0),0);
+  const catCount   = catOrder.filter(c=>groups[c]&&groups[c].length>0).length;
+
+  document.getElementById('mainContent').innerHTML = `<div class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <div>
-        <h2>${currentLang==='ar'?'مكتبة المنتجات':'Product Library'}</h2>
-        <p style="margin-top:.25rem">${currentLang==='ar'?'المنتجات المصرفية النشطة والمسودة':'Active and draft banking products'}</p>
-      </div>
-      <div style="display:flex;gap:.5rem;">
-        <div class="search-bar" style="width:220px">
-          <i class="fas fa-search"></i>
-          <input type="text" placeholder="Search products…" oninput="filterProducts(this.value)">
-        </div>
-        <button class="btn btn-primary" onclick="showCloneModal()"><i class="fas fa-copy"></i> Clone Product</button>
-        <button class="btn btn-navy" onclick="showNewProductModal()"><i class="fas fa-plus"></i> New Product</button>
+      <div><h2>Product Library</h2><p style="margin-top:.25rem">Active and draft banking products</p></div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <div class="search-bar" style="width:200px"><i class="fas fa-search"></i><input type="text" placeholder="Search…" oninput="filterProducts(this.value)"></div>
+        <button class="btn btn-ghost btn-sm" onclick="showCloneModal()"><i class="fas fa-copy"></i> Clone</button>
+        <button class="btn btn-ghost btn-sm" onclick="showNewProductModal()"><i class="fas fa-plus"></i> Manual</button>
+        <button class="btn btn-amber" onclick="openAiStudio()" style="font-weight:700"><i class="fas fa-robot"></i> Create with AI</button>
       </div>
     </div>
-
-    <!-- Metrics row -->
-    <div class="metric-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem;">
-      <div class="metric-card"><div class="metric-value">${products.filter(p=>p.status==='active').length}</div><div class="metric-label">Active Products</div></div>
-      <div class="metric-card"><div class="metric-value">${products.reduce((s,p)=>s+(p.applications_ytd||0),0).toLocaleString()}</div><div class="metric-label">Applications YTD</div></div>
-      <div class="metric-card"><div class="metric-value">${products.filter(p=>p.status==='draft').length}</div><div class="metric-label">In Draft</div></div>
-      <div class="metric-card"><div class="metric-value">15</div><div class="metric-label">CBO Rules Active</div></div>
+    <div onclick="openAiStudio()" style="background:linear-gradient(135deg,var(--navy-dark) 0%,var(--navy) 50%,#004d5c 100%);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1.75rem;cursor:pointer;display:flex;align-items:center;gap:1.25rem;border:1px solid rgba(53,198,196,.2);transition:opacity .2s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+      <div style="width:44px;height:44px;border-radius:50%;background:rgba(53,198,196,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-robot" style="color:var(--sea);font-size:1.1rem"></i></div>
+      <div style="flex:1"><div style="font-weight:700;color:#fff;font-size:.95rem;margin-bottom:.2rem">AI Product Studio</div><div style="font-size:.78rem;color:rgba(255,255,255,.6)">Launch a new regulated product in minutes — AI reads CBO circulars, generates rules, builds portal content, and publishes.</div></div>
+      <div style="color:rgba(255,255,255,.4);font-size:1.2rem"><i class="fas fa-chevron-right"></i></div>
     </div>
-
-    <div class="product-grid" id="productGrid">
-      ${products.map(p => `
-        <div class="product-card ${p.category==='home_loan'&&p.esg_required_docs&&p.esg_required_docs!=='[]'?'green':''}" onclick="openProductDetail('${p.id}')">
-          <div class="product-card-header">
-            <div>
-              <div class="product-card-title"><i class="fas ${categoryIcon[p.category]||'fa-file'}" style="color:var(--teal);margin-right:.4rem;font-size:.8rem"></i>${p.name}</div>
-              <div class="product-card-meta">${p.category.replace(/_/g,' ')}</div>
-            </div>
-            <span class="badge ${statusColor[p.status]||'badge-draft'}">${p.status}</span>
-          </div>
-          ${p.esg_required_docs && p.esg_required_docs!=='[]' ? '<span class="badge badge-esg" style="margin-bottom:.5rem"><i class="fas fa-leaf"></i> ESG Product</span>' : ''}
-          <p style="font-size:.78rem;color:var(--grey-500);margin:.5rem 0;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.description||''}</p>
-          <div class="product-card-stats">
-            <div class="product-stat"><strong>${p.base_rate||5.5}%</strong>Base Rate</div>
-            <div class="product-stat"><strong>${(p.applications_ytd||0).toLocaleString()}</strong>Apps YTD</div>
-            <div class="product-stat"><strong>${p.max_ltv||90}%</strong>Max LTV</div>
-          </div>
-        </div>
-      `).join('')}
+    <div class="metric-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.75rem;">
+      <div class="metric-card"><div class="metric-value">${activeCount}</div><div class="metric-label">Active Products</div></div>
+      <div class="metric-card"><div class="metric-value">${appsYtd.toLocaleString()}</div><div class="metric-label">Applications YTD</div></div>
+      <div class="metric-card"><div class="metric-value">${draftCount}</div><div class="metric-label">In Draft</div></div>
+      <div class="metric-card"><div class="metric-value">${catCount}</div><div class="metric-label">Categories</div></div>
     </div>
+    <div id="productGrid">${groupSections}</div>
   </div>`;
-  
-  document.getElementById('mainContent').innerHTML = html;
 }
 
 function filterProducts(q) {
+  const lq = q.toLowerCase();
   document.querySelectorAll('.product-card').forEach(card => {
-    const name = card.querySelector('.product-card-title').textContent.toLowerCase();
-    card.style.display = name.includes(q.toLowerCase()) ? '' : 'none';
+    const name = (card.querySelector('.product-card-title')||{textContent:''}).textContent.toLowerCase();
+    card.style.display = name.includes(lq) ? '' : 'none';
   });
+  // Hide category section headers when all their cards are hidden
+  document.querySelectorAll('#productGrid > div').forEach(section => {
+    const grid = section.querySelector('.product-grid');
+    if (!grid) return;
+    const visible = [...grid.querySelectorAll('.product-card')].some(c => c.style.display !== 'none');
+    section.style.display = visible ? '' : 'none';
+  });
+}
+
+/* ======================== AI PRODUCT STUDIO (standalone) ======================== */
+function openAiStudio() {
+  // Reset state
+  aiThreadId = null; aiProductDraft = null;
+  openPanel('AI Product Studio');
+  document.getElementById('panelBody').innerHTML = `
+    <div class="ai-assistant" style="border-radius:var(--radius-md);overflow:hidden">
+      <div class="ai-header" style="padding:1rem 1.25rem">
+        <div class="ai-icon"><i class="fas fa-robot" style="color:var(--sea-glass)"></i></div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:.95rem">AI Product Studio</div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.5)">Iterative conversation · Reads CBO regulations · Generates rules & portal content</div>
+        </div>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none" onclick="resetAiChat(null)"><i class="fas fa-redo"></i> Reset</button>
+      </div>
+      <div style="padding:1rem 1.25rem">
+        <div id="ai-chat-log" style="min-height:200px;max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;padding:4px 0"></div>
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;display:flex;gap:.5rem;align-items:flex-end">
+          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder='e.g. "I want to create a green home loan for GSAS-certified properties under CBO ESG guidelines"' style="flex:1;min-height:0;resize:none;background:transparent;border:none;color:rgba(255,255,255,.9);outline:none;font-size:.84rem"></textarea>
+          <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat(null)" style="height:44px;padding:0 16px;flex-shrink:0"><i class="fas fa-paper-plane"></i></button>
+        </div>
+        <div id="ai-confirm-bar" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:8px;align-items:center;gap:10px">
+          <span style="font-size:.82rem;color:rgba(255,255,255,.85);flex:1">Product ready. Review the draft above, then confirm to save and publish to portals.</span>
+          <button class="btn btn-success btn-sm" onclick="confirmAiProduct(null)"><i class="fas fa-rocket"></i> Confirm &amp; Publish</button>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.07)">
+      <div style="font-size:.72rem;color:rgba(255,255,255,.35);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">Try saying</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+        ${['Create a green home loan for GSAS-certified properties',
+           'Auto finance product with Islamic structure',
+           'Personal loan for SME owners with CBO DBR rules',
+           'Clone Standard Home Loan with ESG discount'].map(s=>`<span onclick="document.getElementById('aiChatInput').value='${s}'" style="font-size:.75rem;padding:4px 10px;border-radius:20px;background:rgba(53,198,196,.1);color:rgba(53,198,196,.8);cursor:pointer;border:1px solid rgba(53,198,196,.2)">${s}</span>`).join('')}
+      </div>
+    </div>`;
+  // Auto-send welcome context if first time
+  setTimeout(() => {
+    appendChatBubble('assistant', 'Hello, I\'m your AI Product Manager. I can help you create a new regulated banking product from scratch.<br><br>I\'ll ask you a series of questions, read the relevant CBO regulations from the knowledge base, generate the product configuration, eligibility rules, and portal marketing content — then present everything for your review before publishing.<br><br><strong>What type of product would you like to create?</strong>');
+  }, 200);
 }
 
 /* ======================== PRODUCT DETAIL PANEL ======================== */
@@ -368,9 +446,10 @@ function renderProductPanel(p, productRules) {
         <div class="form-group"><label class="form-label">Min Amount (OMR)</label><input class="form-control" type="number" value="${p.min_amount}"></div>
         <div class="form-group"><label class="form-label">Max Amount (OMR)</label><input class="form-control" type="number" value="${p.max_amount}"></div>
       </div>
-      <div style="display:flex;gap:.75rem;margin-top:.5rem">
+      <div style="display:flex;align-items:center;gap:.75rem;margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--grey-100)">
         <span class="badge ${p.status==='active'?'badge-active':'badge-draft'}">${p.status}</span>
         ${p.esg_required_docs&&p.esg_required_docs!=='[]'?'<span class="badge badge-esg"><i class="fas fa-leaf"></i> ESG Product</span>':''}
+        <button class="btn btn-navy btn-sm" style="margin-left:auto" onclick="saveProductChanges('${p.id}')"><i class="fas fa-save"></i> Save Changes</button>
       </div>`,
 
     pricing: `
@@ -379,8 +458,21 @@ function renderProductPanel(p, productRules) {
         <div class="card-body">
           <div class="form-row">
             <div class="form-group"><label class="form-label">Base Rate (%)</label><input class="form-control" type="number" step=".01" value="${p.base_rate||5.5}" id="pRate"></div>
-            <div class="form-group"><label class="form-label">Max DBR (%)</label><input class="form-control" type="number" value="${p.max_dbr||60}"></div>
+            <div class="form-group"><label class="form-label">Max DBR (%)</label><input class="form-control" type="number" value="${p.max_dbr||60}" id="pMaxDbr"></div>
           </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Max LTV (%)</label><input class="form-control" type="number" value="${p.max_ltv||90}" id="pMaxLtv"></div>
+            <div class="form-group"><label class="form-label">Green DBR (%)</label><input class="form-control" type="number" value="${p.green_dbr||p.max_dbr||60}" id="pGreenDbr"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">GSAS Min Score</label><input class="form-control" type="number" value="${p.gsas_min_score||0}" id="pGsasMin"></div>
+            <div class="form-group"><label class="form-label">GSAS Premium Score</label><input class="form-control" type="number" value="${p.gsas_premium_score||0}" id="pGsasPremium"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Green Discount Standard (%)</label><input class="form-control" type="number" step=".01" value="${p.green_discount_standard||0}" id="pGreenDiscStd"></div>
+            <div class="form-group"><label class="form-label">Green Discount Premium (%)</label><input class="form-control" type="number" step=".01" value="${p.green_discount_premium||0}" id="pGreenDiscPrem"></div>
+          </div>
+          <button class="btn btn-navy btn-sm" style="margin-top:.5rem" onclick="saveProductChanges('${p.id}')"><i class="fas fa-save"></i> Save Pricing</button>
         </div>
       </div>
       ${esgDocs.length ? `
@@ -596,9 +688,12 @@ async function sendAiChat(productId) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
   appendChatBubble('assistant', 'Thinking...');
   try {
+    const chatBody = { message: msg, thread_id: aiThreadId, user_id:'u001', user_name:'Product Manager' };
+    if (productId) chatBody.product_id = productId;
+    else chatBody.context = { purpose: 'product_creation' };
     const r = await fetch('/api/v1/ai/products/chat', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ message: msg, thread_id: aiThreadId, product_id: productId, user_id:'u001', user_name:'Product Manager' })
+      body: JSON.stringify(chatBody)
     });
     const d = await r.json();
     const log2 = document.getElementById('ai-chat-log');
@@ -630,20 +725,30 @@ async function sendAiChat(productId) {
 
 async function confirmAiProduct(productId) {
   if (!aiThreadId && !aiProductDraft) { toast('No product draft to confirm','error'); return; }
+  const btn = document.querySelector('#ai-confirm-bar .btn-success');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving…'; }
   try {
+    const body = { thread_id: aiThreadId, user_id:'u001' };
+    if (productId) body.product_id = productId;
     const r = await fetch('/api/v1/ai/products/confirm', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ thread_id: aiThreadId, product_id: productId, user_id:'u001' })
+      body: JSON.stringify(body)
     });
     const d = await r.json();
     if (d.success || d.product_id) {
-      toast('Product saved and published!', 'success');
-      appendChatBubble('assistant', 'Product confirmed and published. It is now live on the customer portal.');
+      const newId = d.product_id || productId;
+      toast('✅ Product published! Now live on customer portal.', 'success');
+      appendChatBubble('assistant', `<strong>Done!</strong> The product has been saved and published.<br><br>
+        ${newId ? `<span onclick="openProductDetail('${newId}')" style="color:var(--sea);cursor:pointer;text-decoration:underline">→ Open product configuration</span>` : ''}
+        <br><small style="opacity:.5">Customer portal will show it after refresh. Developer portal updated.</small>`);
       const bar = document.getElementById('ai-confirm-bar');
       if (bar) bar.style.display = 'none';
       aiThreadId = null; aiProductDraft = null;
+      // Reload products list in background so when user navigates back it's fresh
+      await loadProducts();
     } else { toast(d.error||'Confirm failed', 'error'); }
   } catch(e) { toast(e.message, 'error'); }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-rocket"></i> Confirm &amp; Publish'; }
 }
 
 /* ======================== RULES PAGE ======================== */
@@ -1114,22 +1219,88 @@ function showCloneModal() {
 }
 
 function showNewProductModal() {
-  showModal('New Product', `
+  showModal('Create Product Manually', `
+    <p style="font-size:.78rem;color:var(--grey-500);margin-bottom:.75rem">Creates a draft product. Open it to configure all rules, eligibility, documents, and portal content.</p>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Product Name</label><input class="form-control" id="newName" placeholder="e.g. Green Home Loan"></div>
-      <div class="form-group"><label class="form-label">Category</label><select class="form-control" id="newCat"><option value="home_loan">Home Loan</option><option value="auto_loan">Auto Loan</option><option value="personal_loan">Personal Loan</option></select></div>
+      <div class="form-group"><label class="form-label">Product Name *</label><input class="form-control" id="newName" placeholder="e.g. Premium Home Loan"></div>
+      <div class="form-group"><label class="form-label">Category *</label>
+        <select class="form-control" id="newCat">
+          <option value="home_loan">Home Loan</option>
+          <option value="auto_loan">Auto Finance</option>
+          <option value="personal_loan">Personal Loan</option>
+          <option value="sme">SME Finance</option>
+          <option value="commercial">Commercial</option>
+          <option value="education">Education</option>
+        </select>
+      </div>
     </div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="newDesc" rows="2" placeholder="Brief product description…"></textarea></div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Base Rate (%)</label><input class="form-control" type="number" id="newRate" value="5.5" step="0.01"></div>
-      <div class="form-group"><label class="form-label">Max LTV (%)</label><input class="form-control" type="number" id="newLTV" value="90"></div>
+      <div class="form-group"><label class="form-label">Max LTV (%)</label><input class="form-control" type="number" id="newLtv" value="90"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Max DBR (%)</label><input class="form-control" type="number" id="newDbr" value="60"></div>
+      <div class="form-group"><label class="form-label">Max Term (years)</label><input class="form-control" type="number" id="newTerm" value="25"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Min Amount (OMR)</label><input class="form-control" type="number" id="newMinAmt" value="10000"></div>
+      <div class="form-group"><label class="form-label">Max Amount (OMR)</label><input class="form-control" type="number" id="newMaxAmt" value="500000"></div>
     </div>
   `, async () => {
-    const name = document.getElementById('newName').value;
+    const name = document.getElementById('newName').value.trim();
     if (!name) return toast('Enter a product name','error');
-    const r = await fetch('/api/v1/products', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, category: document.getElementById('newCat').value, base_rate: parseFloat(document.getElementById('newRate').value), max_ltv: parseInt(document.getElementById('newLTV').value), status:'draft', created_by:'u001' }) });
+    const body = {
+      name, status:'draft', created_by:'u001', user_id:'u001', user_name:'Fatima Al-Rashdi',
+      category: document.getElementById('newCat').value,
+      description: document.getElementById('newDesc').value,
+      base_rate: parseFloat(document.getElementById('newRate').value)||5.5,
+      max_ltv: parseInt(document.getElementById('newLtv').value)||90,
+      max_dbr: parseInt(document.getElementById('newDbr').value)||60,
+      max_term: parseInt(document.getElementById('newTerm').value)||25,
+      min_term: 1,
+      min_amount: parseInt(document.getElementById('newMinAmt').value)||10000,
+      max_amount: parseInt(document.getElementById('newMaxAmt').value)||500000,
+    };
+    const r = await fetch('/api/v1/products', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
     const d = await r.json();
-    if (d.success) { toast(`Product "${name}" created`,'success'); await loadProducts(); await renderProducts(); closeModal(); }
+    if (d.success || d.product_id) {
+      toast(`Draft product "${name}" created — open it to configure rules and portal content`,'success');
+      await loadProducts();
+      await renderProducts();
+      closeModal();
+      if (d.product_id) setTimeout(() => openProductDetail(d.product_id), 300);
+    } else { toast(d.error||'Create failed','error'); }
   });
+}
+
+async function saveProductChanges(id) {
+  const get = (eid) => { const el = document.getElementById(eid); return el ? el.value : null; };
+  const payload = { user_id: 'u001', user_name: 'Fatima Al-Rashdi' };
+  const fields = {
+    name: get('pName'), description: get('pDesc'),
+    min_term: get('pMinTerm') ? parseInt(get('pMinTerm')) : null,
+    max_term: get('pMaxTerm') ? parseInt(get('pMaxTerm')) : null,
+    base_rate: get('pRate') ? parseFloat(get('pRate')) : null,
+    max_dbr: get('pMaxDbr') ? parseFloat(get('pMaxDbr')) : null,
+    max_ltv: get('pMaxLtv') ? parseFloat(get('pMaxLtv')) : null,
+    green_dbr: get('pGreenDbr') ? parseFloat(get('pGreenDbr')) : null,
+    gsas_min_score: get('pGsasMin') ? parseInt(get('pGsasMin')) : null,
+    gsas_premium_score: get('pGsasPremium') ? parseInt(get('pGsasPremium')) : null,
+    green_discount_standard: get('pGreenDiscStd') ? parseFloat(get('pGreenDiscStd')) : null,
+    green_discount_premium: get('pGreenDiscPrem') ? parseFloat(get('pGreenDiscPrem')) : null,
+  };
+  // Only include non-null changed fields
+  for (const [k,v] of Object.entries(fields)) { if (v !== null && v !== '') payload[k] = v; }
+  try {
+    const r = await fetch(`/api/v1/products/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const d = await r.json();
+    if (d.success) {
+      toast('Changes saved successfully', 'success');
+      await loadProducts();
+      await openProductDetail(id);
+    } else { toast(d.error||'Save failed', 'error'); }
+  } catch(e) { toast('Save failed: ' + e.message, 'error'); }
 }
 
 async function publishProduct(id) {
