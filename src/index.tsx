@@ -12,6 +12,7 @@ import { escrowApi } from './api/escrow'
 import { auditApi } from './api/audit'
 import { usersApi } from './api/users'
 import { seedApi } from './api/seed'
+import { portalApi } from './api/portal'
 
 type Bindings = {
   DB: D1Database
@@ -37,6 +38,7 @@ app.route('/api/v1/escrow', escrowApi)
 app.route('/api/v1/audit', auditApi)
 app.route('/api/v1/users', usersApi)
 app.route('/api/v1/seed', seedApi)
+app.route('/api/v1/portal', portalApi)
 
 // Standalone rules endpoint (all rules, or filter by product)
 app.get('/api/v1/rules', async (c) => {

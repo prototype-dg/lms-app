@@ -93,11 +93,62 @@ app.patch('/:id', async (c) => {
 
 app.post('/:id/publish', async (c) => {
   const id = c.req.param('id')
-  const body = await c.req.json().catch(() => ({}))
-  await c.env.DB.prepare('UPDATE products SET status = ?, updated_at = ? WHERE id = ?')
-    .bind('active', now(), id).run()
-  await logAudit(c.env.DB, { userId: body.user_id || 'u001', userName: body.user_name || 'Fatima Al-Rashdi', userRole: 'product_manager', action: 'PRODUCT_PUBLISHED', entityType: 'product', entityId: id, details: { status: 'active' } })
-  return c.json({ success: true, status: 'active' })
+  const body = await c.req.json().catch(() => ({})) as any
+  const ts = now()
+
+  const product = await c.env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(id).first() as any
+  if (!product) return c.json({ error: 'Not found' }, 404)
+
+  // Generate portal marketing content via AI
+  let portalHeroTitle = product.name
+  let portalHighlights: string[] = []
+  let portalBadge = ''
+
+  const apiKey = c.env.OPENAI_API_KEY
+  if (apiKey) {
+    try {
+      const esgDocs = JSON.parse(product.esg_required_docs || '[]')
+      const isGreen = esgDocs.length > 0
+      const prompt = `Generate marketing content for a bank loan product. Return JSON only, no markdown:
+{"hero_title":"short compelling tagline (max 6 words)","hero_subtitle":"one sentence benefit statement","card_badge":"2-3 word category badge","highlights":["benefit 1","benefit 2","benefit 3","benefit 4"]}
+Product: ${product.name}. Description: ${product.description}. Base rate: ${product.base_rate}%.${isGreen ? ` Green discount: up to ${product.green_discount_premium}% for GSAS score ≥${product.gsas_premium_score}. ESG/green product.` : ''}`
+
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: 0.6, max_tokens: 300 }),
+      })
+      const data = await resp.json() as any
+      if (resp.ok) {
+        const text = data.choices[0].message.content
+        const match = text.match(/\{[\s\S]*\}/)
+        if (match) {
+          const parsed = JSON.parse(match[0])
+          portalHeroTitle = parsed.hero_title || portalHeroTitle
+          portalHighlights = parsed.highlights || []
+          portalBadge = parsed.card_badge || ''
+        }
+      }
+    } catch (_) { /* use defaults */ }
+  }
+
+  if (!portalHighlights.length) {
+    const esgDocs = JSON.parse(product.esg_required_docs || '[]')
+    if (esgDocs.length > 0) {
+      portalHighlights = [`Up to ${product.green_discount_premium}% rate discount`, 'GSAS-certified properties only', 'Supports Oman Vision 2040', 'Maker-checker ESG approval']
+      portalBadge = 'ESG Premium'
+    } else {
+      portalHighlights = [`From ${product.base_rate}% per annum`, `Terms up to ${product.max_term} years`, `Up to OMR ${Math.round(product.max_amount / 1000)}K financing`]
+    }
+  }
+
+  const esgDocs = JSON.parse(product.esg_required_docs || '[]')
+  await c.env.DB.prepare(`UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,
+    portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, updated_at=? WHERE id=?`
+  ).bind(esgDocs.length > 0 ? 1 : 0, portalHeroTitle, JSON.stringify(portalHighlights), portalBadge, ts, ts, id).run()
+
+  await logAudit(c.env.DB, { userId: body.user_id || 'u001', userName: body.user_name || 'Fatima Al-Rashdi', userRole: 'product_manager', action: 'PRODUCT_PUBLISHED', entityType: 'product', entityId: id, details: { status: 'active', portal_visible: true, hero_title: portalHeroTitle } })
+  return c.json({ success: true, status: 'active', portal_visible: true, portal_hero_title: portalHeroTitle, portal_highlights: portalHighlights })
 })
 
 app.get('/:id/rules', async (c) => {

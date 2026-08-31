@@ -1,5 +1,8 @@
 -- ============================================================
--- Sohar International – Demo Seed Data
+-- Sohar International – Pre-Demo Seed Data
+-- NOTE: Green Home Loan (p009), r015, EcoVillage units/docs,
+-- GHL application (app003), and construction stages are NOT
+-- seeded here. They are created LIVE during the demonstration.
 -- ============================================================
 
 -- Back-office Users
@@ -52,14 +55,8 @@ INSERT OR IGNORE INTO products VALUES
    '[]', '[]', '[]', '{}', 1102, 'u001', '2024-01-20', '2025-12-01'),
   ('p008', 'Education Finance', 'EDU-FINANCE', 'Financing for education expenses including tuition fees for approved universities.', 'education', 'archived', 8.0, 0, 45, 45, 1, 8, 500, 20000, 0, 0, 0, 0, 90, 0, 0,
    '["civil_id","university_offer_letter","salary_cert"]',
-   '[]', '[]', '[]', '{}', 445, 'u001', '2022-01-01', '2024-06-01'),
-  ('p009', 'Green Home Loan – ESG', 'GHL-GREEN-PREMIUM', 'Preferential home financing for GSAS-certified green properties. Supports Oman Vision 2040 and the National ESG Strategy. Earn up to 0.75% rate discount based on sustainability score.', 'home_loan', 'active', 5.5, 90, 60, 55, 5, 25, 10000, 500000, 70, 85, 0.75, 0.5, 90, 1, 1,
-   '["salary_cert","utility_bill","civil_id","property_deed","valuation_report"]',
-   '["gsas_cert","epc_report","eia_approval"]',
-   '["Green Concrete","Thermal Insulation","Solar Panels","Energy-Efficient Appliances","Low-E Glass","Recycled Steel"]',
-   '["Oman Readymix LLC","Gulf Insulation Group","SunTech Oman","Green Build Oman","EcoMaterials Oman"]',
-   '{"esg_features":["GSAS score-based pricing","Maker-checker ESG approval","Construction escrow with green material validation"],"launched_by":"Fatima Al-Rashdi","launched_at":"2026-08-31"}',
-   127, 'u001', '2026-08-31', '2026-08-31');
+   '[]', '[]', '[]', '{}', 445, 'u001', '2022-01-01', '2024-06-01');
+-- NOTE: Green Home Loan (p009) is created LIVE by Product Manager during Act 1.
 
 -- Rules Library (15 pre-configured CBO rules)
 INSERT OR IGNORE INTO rules VALUES
@@ -76,8 +73,8 @@ INSERT OR IGNORE INTO rules VALUES
   ('r011', null, 'KYC Completeness Check', 'compliance', 'kyc_complete', '=', 1, null, 'reject', 'hard', 'CBO AML/CFT Rules 2022, Section 5.2', 'manual', null, 'All KYC documents must be verified and current', 1, 'system', '2024-01-01'),
   ('r012', null, 'GSAS Score – Green Entry', 'esg', 'gsas_score', '>=', 70, null, 'reject', 'hard', 'OS GSO 3000:2025, Section 4.2', 'manual', null, 'Minimum GSAS score 70 for Green Home Loan eligibility', 1, 'system', '2026-01-01'),
   ('r013', null, 'EPC Rating Minimum', 'esg', 'epc_rating', 'in', null, 'A,B,C', 'reject', 'hard', 'OEESC Section 5.1', 'manual', null, 'Energy Performance Certificate minimum rating C required', 1, 'system', '2026-01-01'),
-  ('r014', null, 'EIA Clearance – Large Projects', 'esg', 'eia_required', '=', 1, 'units>20', 'reject', 'hard', 'Environment Authority Decision 107/2023', 'manual', null, 'EIA clearance mandatory for developments >20 residential units', 1, 'system', '2026-01-01'),
-  ('r015', null, 'Green DBR Buffer', 'creditworthiness', 'green_dbr', '<=', 55, 'product=green', 'reject', 'soft', 'CBO Circular 2026-12, Section 3.2', 'ai_generated', 94, 'For green financing products with loan amount >OMR 100,000, effective DBR threshold is 55% (60% - 5% green buffer)', 1, 'u001', '2026-08-31');
+  ('r014', null, 'EIA Clearance – Large Projects', 'esg', 'eia_required', '=', 1, 'units>20', 'reject', 'hard', 'Environment Authority Decision 107/2023', 'manual', null, 'EIA clearance mandatory for developments >20 residential units', 1, 'system', '2026-01-01');
+-- NOTE: r015 (Green DBR Buffer) is generated LIVE by AI during Act 1.
 
 -- Developer Profiles
 INSERT OR IGNORE INTO developers VALUES
@@ -96,33 +93,14 @@ INSERT OR IGNORE INTO projects VALUES
   ('proj003', 'd001', 'Mabella View Apartments', 'MVA-2023', 'Mabella, Muscat', 'Muscat', 'apartment', 60, 0, 0, 60, null, null, null, null,
    '{"type":"FeatureCollection","features":[]}',
    'archived', 0, 0, '2023-05-01', '2025-06-30'),
-  ('proj004', 'd001', 'EcoVillage Muscat', 'EVM-2026', 'Seeb, Muscat Governorate', 'Muscat', 'villa', 24, 24, 0, 0, 89, 'Gold', 'A', 'EIA/2026/442',
-   '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"unit":"B1","status":"available","area":180},"geometry":{"type":"Point","coordinates":[58.1898,23.6512]}},{"type":"Feature","properties":{"unit":"B2","status":"available","area":175},"geometry":{"type":"Point","coordinates":[58.1905,23.6518]}},{"type":"Feature","properties":{"unit":"B3","status":"available","area":185},"geometry":{"type":"Point","coordinates":[58.1912,23.6524]}},{"type":"Feature","properties":{"unit":"B4","status":"reserved","area":180},"geometry":{"type":"Point","coordinates":[58.1919,23.6530]}},{"type":"Feature","properties":{"unit":"B5","status":"available","area":190},"geometry":{"type":"Point","coordinates":[58.1926,23.6536]}},{"type":"Feature","properties":{"unit":"B6","status":"available","area":175},"geometry":{"type":"Point","coordinates":[58.1933,23.6542]}}]}',
-   'active', 1, 1, '2026-08-31', '2026-08-31');
+  ('proj004', 'd001', 'EcoVillage Muscat', 'EVM-2026', 'Seeb, Muscat Governorate', 'Muscat', 'villa', 24, 0, 0, 0, null, null, null, null,
+   '{"type":"FeatureCollection","features":[]}',
+   'draft', 0, 0, '2026-08-31', '2026-08-31');
+-- NOTE: EcoVillage units, documents, and listing_visible=1 are set LIVE during Act 2.
 
--- Units for EcoVillage Muscat (Villa B1 is Salim's saved property)
--- Schema: id, project_id, unit_number, floor_number, type, area_sqm, bedrooms, bathrooms, price, lat, lng, status, features, created_at
-INSERT OR IGNORE INTO units VALUES
-  ('unit001', 'proj004', 'B1', 1, 'villa', 180, 4, 3, 185000, 23.6512, 58.1898, 'available', '["GSAS Gold","Private Pool","Smart Home","Solar Panels","EV Charging"]', '2026-08-31'),
-  ('unit002', 'proj004', 'B2', 1, 'villa', 175, 4, 3, 178000, 23.6518, 58.1905, 'available', '["GSAS Gold","Garden","Smart Home","Solar Panels"]', '2026-08-31'),
-  ('unit003', 'proj004', 'B3', 1, 'villa', 185, 4, 3, 192000, 23.6524, 58.1912, 'available', '["GSAS Gold","Private Pool","Smart Home","Solar Panels","Maid Room"]', '2026-08-31'),
-  ('unit004', 'proj004', 'B4', 1, 'villa', 180, 4, 3, 185000, 23.6530, 58.1919, 'reserved', '["GSAS Gold","Garden","Smart Home"]', '2026-08-31'),
-  ('unit005', 'proj004', 'B5', 1, 'villa', 190, 5, 4, 198000, 23.6536, 58.1926, 'available', '["GSAS Gold","Private Pool","Smart Home","Solar Panels","Home Office"]', '2026-08-31'),
-  ('unit006', 'proj004', 'B6', 1, 'villa', 175, 4, 3, 178000, 23.6542, 58.1933, 'available', '["GSAS Gold","Garden","Smart Home"]', '2026-08-31');
+-- NOTE: EcoVillage units and documents are uploaded LIVE during Act 2.
 
--- Documents (pre-validated for EcoVillage)
-INSERT OR IGNORE INTO documents VALUES
-  ('doc001', 'project', 'proj004', 'gsas_cert', 'GSAS_Cert_EcoVillage.pdf', null,
-   '{"certificate_number":"GSAS-2026-078","issuer":"GORD (Gulf Organisation for Research & Development)","issue_date":"2026-02-15","expiry_date":"2028-12-31","overall_score":89,"rating":"Gold","property":"EcoVillage Muscat, Seeb"}',
-   96, 'auto_verified', 'Auto-verified: All fields validated. Score 89 meets minimum threshold (70).', null, null, '2026-08-31'),
-  ('doc002', 'project', 'proj004', 'epc_report', 'EPC_Report_VillaB1.pdf', null,
-   '{"rating":"A","expiry_date":"2027-05-01","property_ref":"EVM-B1","energy_consumption":"85 kWh/m²/year","co2_rating":"A","assessor":"Green Build Oman"}',
-   88, 'approved', 'Manual override: Visual verification completed. Document legible. Rating A and expiry 2027 confirmed. Low confidence due to slight image skew.', 'u002', '2026-08-31', '2026-08-31'),
-  ('doc003', 'project', 'proj004', 'eia_approval', 'EIA_Approval_EnvAuth.pdf', null,
-   '{"reference":"EIA/2026/442","issuer":"Environment Authority","approval_date":"2026-03-10","valid_until":"2029-03-10","project":"EcoVillage Muscat","units":24,"status":"Approved"}',
-   95, 'auto_verified', 'Auto-verified: EIA clearance confirmed for 24 units. Issuer accredited.', null, null, '2026-08-31');
-
--- Applications (pre-existing + GHL-250001 in progress)
+-- Applications (2 background applications for context)
 -- Schema (36 cols): id,reference,product_id,customer_id,customer_name,unit_id,project_id,
 --   loan_amount,loan_term,property_address,property_source,property_area_sqm,
 --   gsas_score,epc_rating,applied_rate,standard_rate,monthly_payment,standard_monthly_payment,
@@ -131,7 +109,7 @@ INSERT OR IGNORE INTO documents VALUES
 --   risk_approved_by,risk_approved_at,escrow_amount,escrow_released,
 --   rejection_reason,tracking_url,created_at,updated_at
 INSERT OR IGNORE INTO applications VALUES
-  ('app001','HL-240892','p001','c002','Mariam Al-Siyabi','unit004','proj001',
+  ('app001','HL-240892','p001','c002','Mariam Al-Siyabi',null,'proj001',
    250000,20,'Al Mouj Residences, Unit A12, Muscat','partner',
    142,null,null,5.5,5.5,1608.82,1608.82,
    0,46,78,9.0,1,780,'approved',
@@ -142,20 +120,8 @@ INSERT OR IGNORE INTO applications VALUES
    200,null,null,5.5,5.5,980.12,980.12,
    0,36,72,9.0,1,710,'credit_review',
    'pending',null,null,null,null,
-   120000,0,null,null,'2024-12-01','2024-12-03'),
-  ('app003','GHL-250001','p009','c001','Salim Al-Harthy','unit001','proj004',
-   200000,25,'EcoVillage Muscat, Villa B1, Seeb','partner',
-   180,89,'A',4.75,5.5,1139.13,1224.42,
-   25500,48,80,9.0,1,750,'esg_review',
-   'pending',null,null,null,null,
-   200000,0,null,'https://sib.om/track/GHL-250001','2026-08-31','2026-08-31');
-
--- Construction Stages for GHL-250001
-INSERT OR IGNORE INTO construction_stages VALUES
-  ('stage001', 'app003', 1, 'Foundation & Groundwork', 'Complete foundation, groundwork, and underground utilities', 50000, 25, 'Green Concrete – C30 Grade', 'active', null, 0, null, null, null, null, '2026-08-31'),
-  ('stage002', 'app003', 2, 'Roof & Envelope', 'Roof structure, external walls, and thermal envelope', 60000, 30, 'Thermal Insulation (R-30+)', 'locked', null, 0, null, null, null, null, '2026-08-31'),
-  ('stage003', 'app003', 3, 'MEP & Solar Installation', 'Mechanical, electrical, plumbing, and solar panel installation', 50000, 25, 'Solar Panels (min 5kWp)', 'locked', null, 0, null, null, null, null, '2026-08-31'),
-  ('stage004', 'app003', 4, 'Finishing & Handover', 'Interior finishing, energy-efficient appliances, and final handover', 40000, 20, 'Energy-Efficient Appliances', 'locked', null, 0, null, null, null, null, '2026-08-31');
+   120000,0,null,null,'2024-12-01','2024-12-03');
+-- NOTE: GHL-250001 (app003) and construction stages are created LIVE during Acts 3-5.
 
 -- AI Knowledge Base
 INSERT OR IGNORE INTO knowledge_base VALUES
@@ -183,17 +149,9 @@ INSERT OR IGNORE INTO rule_templates VALUES
   ('rt004', 'AML Sanctions Screen', 'compliance', 'CBO AML Rules 2022', '{"screen_lists":["OFAC","UN","EU","CBO"]}', 1, '2022-01-01'),
   ('rt005', 'Credit Bureau Check', 'creditworthiness', 'CBO Circular 2023-05', '{"provider":"MALAA","min_score":650}', 1, '2023-01-01');
 
--- Audit Logs (pre-populated for Act 1 demonstration)
+-- Audit Logs (background history only; Acts 1-5 logs created live)
 INSERT OR IGNORE INTO audit_logs VALUES
-  ('al001', 'u001', 'Fatima Al-Rashdi', 'product_manager', 'PRODUCT_CLONED', 'product', 'p009', '{"from_product":"p001","to_product":"p009","action":"Standard Home Loan → Green Home Loan – ESG"}', 'manual', null, null, '10.10.50.15', '2026-08-31 10:23:00'),
-  ('al002', 'u001', 'Fatima Al-Rashdi', 'product_manager', 'PRODUCT_CONFIG_UPDATED', 'product', 'p009', '{"field":"pricing_modifier","value":"ESG Green Modifier","conditions":["GSAS>=85: 4.75%","GSAS>=70<85: 5.0%"]}', 'manual', null, null, '10.10.50.15', '2026-08-31 10:25:00'),
-  ('al003', 'u001', 'Fatima Al-Rashdi', 'product_manager', 'AI_RULE_GENERATED', 'rule', 'r015', '{"prompt":"CBO DBR Circular","extracted_params":{"metric":"DBR","threshold":55,"scope":"green housing loans"},"ai_model":"gpt-4o"}', 'ai_generated', 94, 'CBO Circular 2026-12, Section 3.2', '10.10.50.15', '2026-08-31 10:28:00'),
-  ('al004', 'u001', 'Fatima Al-Rashdi', 'product_manager', 'AI_RULE_CONFIRMED', 'rule', 'r015', '{"action":"manual_override","change":"Applied threshold only to loans >OMR 100,000"}', 'manual', null, 'CBO Circular 2026-12, Section 3.2', '10.10.50.15', '2026-08-31 10:30:00'),
-  ('al005', 'u001', 'Fatima Al-Rashdi', 'product_manager', 'AI_SCHEMA_GENERATED', 'product', 'p009', '{"schema_type":"gsas_validation","fields":["certificate_number","issuer","score","rating","expiry"],"ai_model":"gpt-4o"}', 'ai_generated', 96, 'OS GSO 3000:2025, Section 4.2', '10.10.50.15', '2026-08-31 10:32:00'),
-  ('al006', 'u001', 'Fatima Al-Rashdi', 'product_manager', 'PRODUCT_PUBLISHED', 'product', 'p009', '{"status":"active","product_name":"Green Home Loan – ESG"}', 'manual', null, null, '10.10.50.15', '2026-08-31 10:34:00'),
-  ('al007', 'u010', 'Ahmed Al-Hinai', 'developer', 'PROJECT_CREATED', 'project', 'proj004', '{"name":"EcoVillage Muscat","location":"Seeb","units":24}', 'manual', null, null, '41.22.33.44', '2026-08-31 11:05:00'),
-  ('al008', 'system', 'System AI', 'system', 'DOCUMENT_AUTO_VERIFIED', 'document', 'doc001', '{"doc_type":"gsas_cert","confidence":96,"status":"auto_verified","score":89}', 'ai_generated', 96, 'OS GSO 3000:2025', null, '2026-08-31 11:08:00'),
-  ('al009', 'system', 'System AI', 'system', 'DOCUMENT_FLAGGED_REVIEW', 'document', 'doc002', '{"doc_type":"epc_report","confidence":88,"status":"manual_review","reason":"Image slightly skewed"}', 'ai_generated', 88, 'OEESC', null, '2026-08-31 11:09:00'),
-  ('al010', 'u002', 'Aisha Al-Balushi', 'compliance_officer', 'DOCUMENT_OVERRIDE', 'document', 'doc002', '{"action":"Override AI Confidence","reason":"Visual verification completed. Document legible."}', 'manual', null, 'OEESC Section 5.1', '10.10.50.22', '2026-08-31 14:15:00'),
-  ('al011', 'u020', 'Salim Al-Harthy', 'customer', 'APPLICATION_SUBMITTED', 'application', 'app003', '{"reference":"GHL-250001","amount":200000,"term":25,"rate":4.75,"gsas_score":89}', 'manual', null, null, '91.241.11.55', '2026-08-31 15:30:00'),
-  ('al012', 'system', 'System AI', 'system', 'CREDIT_SCORING_COMPLETE', 'application', 'app003', '{"dbr":48,"ltv":80,"malaa_score":750,"stress_test":"passed","recommendation":"approve"}', 'ai_generated', 97, 'CBO Circular 2024-01', null, '2026-08-31 15:31:00');
+  ('al001', 'u001', 'Fatima Al-Rashdi', 'product_manager', 'PRODUCT_PUBLISHED', 'product', 'p001', '{"status":"active","product_name":"Standard Home Loan"}', 'manual', null, null, '10.10.50.15', '2024-01-10 09:00:00'),
+  ('al002', 'u001', 'Fatima Al-Rashdi', 'product_manager', 'PRODUCT_PUBLISHED', 'product', 'p002', '{"status":"active","product_name":"Auto Finance – Personal"}', 'manual', null, null, '10.10.50.15', '2023-06-01 10:00:00'),
+  ('al003', 'u002', 'Aisha Al-Balushi', 'compliance_officer', 'APPLICATION_APPROVED', 'application', 'app001', '{"reference":"HL-240892","customer":"Mariam Al-Siyabi","amount":250000}', 'manual', null, 'CBO Circular 2024-01', '10.10.50.22', '2024-09-15 14:30:00'),
+  ('al004', 'u003', 'Omar Al-Mantheri', 'risk_officer', 'CREDIT_REVIEW_APPROVED', 'application', 'app001', '{"reference":"HL-240892","dbr":46,"ltv":78,"stress_test":"passed"}', 'manual', null, 'CBO Circular 2024-01', '10.10.50.33', '2024-09-16 11:00:00');

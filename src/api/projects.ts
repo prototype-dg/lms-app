@@ -41,10 +41,13 @@ app.post('/', async (c) => {
 
 app.post('/:id/publish', async (c) => {
   const id = c.req.param('id')
-  const body = await c.req.json().catch(() => ({}))
-  await c.env.DB.prepare('UPDATE projects SET status = ?, updated_at = ? WHERE id = ?').bind('active', now(), id).run()
-  await logAudit(c.env.DB, { userId: (body as any).user_id || 'u010', userName: 'Ahmed Al-Hinai', userRole: 'developer', action: 'PROJECT_PUBLISHED', entityType: 'project', entityId: id })
-  return c.json({ success: true })
+  const body = await c.req.json().catch(() => ({})) as any
+  const ts = now()
+  await c.env.DB.prepare(
+    'UPDATE projects SET status = ?, listing_visible = 1, green_eligible = 1, updated_at = ? WHERE id = ?'
+  ).bind('active', ts, id).run()
+  await logAudit(c.env.DB, { userId: body.user_id || 'u010', userName: 'Ahmed Al-Hinai', userRole: 'developer', action: 'PROJECT_PUBLISHED', entityType: 'project', entityId: id, details: { listing_visible: true } })
+  return c.json({ success: true, listing_visible: true })
 })
 
 app.get('/:id/units', async (c) => {
