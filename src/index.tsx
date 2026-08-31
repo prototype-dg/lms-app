@@ -41,7 +41,10 @@ app.route('/api/v1/seed', seedApi)
 // Serve static files
 app.use('/assets/*', serveStatic({ root: './' }))
 
-// All other routes serve the SPA
-app.get('*', serveStatic({ root: './', path: 'index.html' }))
+// Root redirect to index.html (static file served by Pages)
+app.get('/', (c) => c.redirect('/index.html', 302))
+
+// All other non-API routes redirect to index.html
+app.get('*', (c) => c.redirect('/index.html', 302))
 
 export default app
