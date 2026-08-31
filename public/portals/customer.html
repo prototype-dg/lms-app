@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Green Home Loan — Sohar International</title>
+<style>
+:root{
+  --navy:#003B5C;--teal:#007F86;--seaglass:#35C6C4;--sand:#F4F0E7;--amber:#F4B35B;
+  --success:#2ECC71;--warning:#F39C12;--danger:#E74C3C;
+  --font-ui:'Inter',system-ui,sans-serif;--font-ar:'Noto Sans Arabic',sans-serif;
+  --font-display:'Georgia',serif;
+  --radius-sm:6px;--radius-md:12px;--radius-lg:20px;--radius-xl:28px;
+  --shadow-sm:0 2px 8px rgba(0,59,92,.08);--shadow-md:0 6px 24px rgba(0,59,92,.12);
+  --shadow-lg:0 16px 48px rgba(0,59,92,.18);--shadow-luxury:0 24px 80px rgba(0,59,92,.22);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-ui);background:#F8F9FA;color:#1a1a2e;overflow-x:hidden}
+body.ar{font-family:var(--font-ar);direction:rtl}
+
+/* LUXURY TOPBAR */
+.luxury-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(0,59,92,.96);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.1);height:68px;display:flex;align-items:center;padding:0 40px;justify-content:space-between}
+.lnav-logo{display:flex;align-items:center;gap:16px}
+.lnav-logo svg{height:40px}
+.lnav-logo-text{color:#fff;font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.7}
+.lnav-links{display:flex;align-items:center;gap:28px}
+.lnav-link{color:rgba(255,255,255,.75);font-size:13px;font-weight:500;cursor:pointer;transition:color .15s;text-decoration:none;border:none;background:none;font-family:inherit}
+.lnav-link:hover,.lnav-link.active{color:#fff}
+.lnav-link.cta{background:var(--seaglass);color:var(--navy);padding:8px 20px;border-radius:20px;font-weight:700}
+.lnav-link.cta:hover{background:#29b0ae}
+.lnav-user{display:flex;align-items:center;gap:10px;color:#fff;font-size:13px}
+.lnav-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--seaglass),var(--teal));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.lang-btn{background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.8);border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+
+/* HERO */
+.hero{min-height:100vh;background:linear-gradient(160deg,var(--navy) 0%,#005a6e 40%,var(--teal) 100%);display:flex;align-items:center;padding:100px 40px 60px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><circle cx="650" cy="100" r="250" fill="rgba(53,198,196,.08)"/><circle cx="100" cy="500" r="180" fill="rgba(244,179,91,.06)"/><circle cx="400" cy="300" r="120" fill="rgba(255,255,255,.03)"/></svg>');background-size:cover;pointer-events:none}
+.hero-content{max-width:580px;position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(53,198,196,.2);border:1px solid rgba(53,198,196,.4);border-radius:30px;padding:6px 16px;color:var(--seaglass);font-size:12px;font-weight:700;letter-spacing:.5px;margin-bottom:24px}
+.hero-title{font-family:var(--font-display);font-size:52px;font-weight:700;color:#fff;line-height:1.12;margin-bottom:16px}
+.hero-title span{color:var(--seaglass)}
+.hero-sub{font-size:17px;color:rgba(255,255,255,.75);line-height:1.65;margin-bottom:36px;max-width:460px}
+.hero-cta-group{display:flex;gap:14px;flex-wrap:wrap}
+.btn-hero-primary{background:var(--seaglass);color:var(--navy);padding:15px 32px;border-radius:30px;font-size:15px;font-weight:700;cursor:pointer;border:none;font-family:inherit;box-shadow:0 8px 24px rgba(53,198,196,.4);transition:all .2s}
+.btn-hero-primary:hover{background:#29b0ae;transform:translateY(-2px);box-shadow:0 12px 32px rgba(53,198,196,.5)}
+.btn-hero-secondary{background:rgba(255,255,255,.1);color:#fff;padding:15px 32px;border-radius:30px;font-size:15px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.3);font-family:inherit;backdrop-filter:blur(8px);transition:all .2s}
+.btn-hero-secondary:hover{background:rgba(255,255,255,.18)}
+
+/* RATE BADGE */
+.rate-showcase{position:absolute;right:80px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.05);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-xl);padding:32px;min-width:280px}
+.rate-label{font-size:11px;color:rgba(255,255,255,.6);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+.rate-value{font-size:64px;font-weight:900;color:var(--seaglass);line-height:1}
+.rate-unit{font-size:22px;font-weight:400;color:rgba(255,255,255,.6)}
+.rate-sub{font-size:13px;color:rgba(255,255,255,.7);margin-top:8px}
+.rate-divider{border:none;border-top:1px solid rgba(255,255,255,.1);margin:16px 0}
+.rate-features{display:flex;flex-direction:column;gap:8px}
+.rate-feat{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.8)}
+.rate-feat-icon{width:20px;height:20px;border-radius:50%;background:rgba(53,198,196,.2);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+
+/* SECTION GENERIC */
+.section{padding:80px 40px}
+.section-center{max-width:1100px;margin:0 auto}
+.section-eyebrow{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:12px}
+.section-title{font-family:var(--font-display);font-size:36px;font-weight:700;color:var(--navy);margin-bottom:16px;line-height:1.2}
+.section-sub{font-size:16px;color:#555;line-height:1.7;max-width:600px}
+
+/* PROPERTY CARDS */
+.properties-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+.prop-card{background:#fff;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm);transition:all .25s;cursor:pointer;border:2px solid transparent}
+.prop-card:hover{box-shadow:var(--shadow-md);transform:translateY(-4px)}
+.prop-card.featured{border-color:var(--seaglass)}
+.prop-img{height:220px;background:linear-gradient(135deg,var(--navy),var(--teal));display:flex;align-items:center;justify-content:center;font-size:64px;position:relative;overflow:hidden}
+.prop-img::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,.3))}
+.prop-badge{position:absolute;top:14px;right:14px;z-index:1;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700}
+.prop-badge.green{background:var(--seaglass);color:var(--navy)}
+.prop-badge.saved{background:var(--amber);color:var(--navy)}
+.prop-body{padding:20px}
+.prop-price{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px}
+.prop-name{font-size:15px;font-weight:700;color:#333;margin-bottom:6px}
+.prop-loc{font-size:13px;color:#888;display:flex;align-items:center;gap:4px;margin-bottom:12px}
+.prop-meta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.prop-meta-item{font-size:12px;color:#666;display:flex;align-items:center;gap:4px}
+.prop-gsas{display:flex;align-items:center;justify-content:space-between}
+.gsas-pill{background:rgba(46,204,113,.12);color:#27AE60;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.rate-pill{background:rgba(0,127,134,.1);color:var(--teal);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.prop-cta{width:100%;padding:11px;background:var(--teal);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;margin-top:12px;font-family:inherit;transition:background .15s}
+.prop-cta:hover{background:#006b70}
+
+/* CALCULATOR SECTION */
+.calc-section{background:linear-gradient(135deg,var(--sand) 0%,#ede9e0 100%);padding:80px 40px}
+.calc-card{background:#fff;border-radius:var(--radius-xl);box-shadow:var(--shadow-luxury);padding:40px;max-width:900px;margin:40px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:40px}
+.calc-label{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;display:flex;justify-content:space-between}
+.calc-input{width:100%;padding:12px 16px;border:2px solid #E9ECEF;border-radius:var(--radius-sm);font-size:15px;font-weight:600;font-family:inherit;transition:border .15s;color:var(--navy)}
+.calc-input:focus{outline:none;border-color:var(--teal)}
+.calc-slider{width:100%;accent-color:var(--teal);margin-top:6px}
+.esg-toggle{display:flex;align-items:center;gap:12px;background:rgba(53,198,196,.08);border:1px solid rgba(53,198,196,.3);border-radius:var(--radius-sm);padding:12px 16px;cursor:pointer;margin-bottom:16px}
+.toggle-switch{width:44px;height:24px;background:var(--gray-200,#e9ecef);border-radius:12px;position:relative;transition:background .2s;flex-shrink:0}
+.toggle-switch.on{background:var(--seaglass)}
+.toggle-knob{position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.2);transition:left .2s}
+.toggle-switch.on .toggle-knob{left:22px}
+.calc-results{background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%);border-radius:var(--radius-lg);padding:28px;color:#fff}
+.calc-result-main{font-size:48px;font-weight:900;color:var(--seaglass);line-height:1}
+.calc-result-label{font-size:12px;opacity:.7;margin-bottom:4px}
+.calc-result-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:13px}
+.calc-result-row:last-child{border-bottom:none}
+.calc-result-val{font-weight:700;color:var(--seaglass)}
+.saving-highlight{background:rgba(244,179,91,.2);border:1px solid rgba(244,179,91,.4);border-radius:var(--radius-sm);padding:12px;margin-top:12px;font-size:13px;color:#fff;text-align:center}
+.saving-num{font-size:24px;font-weight:900;color:var(--amber);display:block}
+
+/* WIZARD */
+.wizard-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.wizard-overlay.open{display:flex}
+.wizard{background:#fff;border-radius:var(--radius-xl);width:720px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-luxury)}
+.wizard-header{background:linear-gradient(135deg,var(--navy),var(--teal));padding:28px 32px;color:#fff;flex-shrink:0}
+.wizard-title{font-family:var(--font-display);font-size:22px;font-weight:700;margin-bottom:4px}
+.wizard-sub{font-size:13px;opacity:.75}
+.wizard-steps{display:flex;gap:0;margin-top:20px}
+.wstep{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+.wstep:not(:last-child)::after{content:'';position:absolute;top:14px;left:50%;width:100%;height:2px;background:rgba(255,255,255,.25);z-index:0}
+.wstep.done::after,.wstep.active::after{background:rgba(53,198,196,.5)}
+.wstep-num{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;z-index:1;position:relative}
+.wstep.done .wstep-num{background:var(--success)}
+.wstep.active .wstep-num{background:var(--seaglass);color:var(--navy)}
+.wstep-label{font-size:10px;font-weight:600;opacity:.7;text-align:center}
+.wstep.active .wstep-label{opacity:1;color:var(--seaglass)}
+
+.wizard-body{flex:1;overflow-y:auto;padding:32px}
+.wizard-footer{padding:20px 32px;border-top:1px solid #E9ECEF;display:flex;justify-content:space-between;flex-shrink:0}
+
+/* STEP FORMS */
+.step-panel{display:none}
+.step-panel.active{display:block}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px}
+.form-control{width:100%;padding:10px 14px;border:2px solid #E9ECEF;border-radius:var(--radius-sm);font-size:14px;font-family:inherit;color:#333;transition:border .15s}
+.form-control:focus{outline:none;border-color:var(--teal)}
+select.form-control{cursor:pointer}
+.form-hint{font-size:11px;color:#888;margin-top:4px}
+
+/* DOCUMENT UPLOAD */
+.doc-upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.doc-upload-card{border:2px dashed #DEE2E6;border-radius:var(--radius-md);padding:16px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.doc-upload-card:hover{border-color:var(--teal);background:rgba(0,127,134,.03)}
+.doc-upload-card.uploaded{border-color:var(--success);border-style:solid;background:rgba(46,204,113,.04)}
+.doc-upload-card.analyzing{border-color:var(--amber);border-style:solid}
+.doc-icon{font-size:28px;margin-bottom:8px}
+.doc-name{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:3px}
+.doc-status{font-size:11px}
+.doc-status.ok{color:var(--success)}
+.doc-status.pending{color:#888}
+.doc-status.ai{color:var(--teal)}
+.ai-result-mini{font-size:10px;background:rgba(0,127,134,.08);border-radius:4px;padding:4px 8px;margin-top:6px;color:var(--teal);font-weight:600}
+
+/* TRACKING PAGE */
+.tracking-section{background:#fff;padding:80px 40px}
+.tracking-card{max-width:800px;margin:40px auto 0;background:#fff;border-radius:var(--radius-xl);border:1px solid #E9ECEF;box-shadow:var(--shadow-md);overflow:hidden}
+.tracking-header{background:linear-gradient(135deg,var(--navy),var(--teal));padding:28px 32px;color:#fff}
+.tracking-ref{font-size:24px;font-weight:900;color:var(--seaglass)}
+.tracking-sub{font-size:13px;opacity:.75;margin-top:4px}
+.tracking-body{padding:32px}
+.timeline{position:relative;padding-left:36px}
+body.ar .timeline{padding-left:0;padding-right:36px}
+.timeline::before{content:'';position:absolute;left:12px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--success) 60%,#E9ECEF)}
+body.ar .timeline::before{left:auto;right:12px}
+.tl-item{position:relative;margin-bottom:28px}
+.tl-dot{position:absolute;left:-36px;top:2px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;z-index:1;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+body.ar .tl-dot{left:auto;right:-36px}
+.tl-dot.done{background:var(--success)}
+.tl-dot.active{background:var(--amber);animation:pulse-dot 1.5s infinite}
+.tl-dot.pending{background:#DEE2E6}
+@keyframes pulse-dot{0%,100%{box-shadow:0 0 0 0 rgba(244,179,91,.4)}50%{box-shadow:0 0 0 8px rgba(244,179,91,0)}}
+.tl-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.tl-desc{font-size:12px;color:#888;margin-bottom:4px}
+.tl-date{font-size:11px;color:var(--teal);font-weight:600}
+.tl-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-left:8px}
+.tl-badge.ai{background:rgba(0,127,134,.1);color:var(--teal)}
+.tl-badge.human{background:rgba(244,179,91,.15);color:#C8891A}
+
+/* SAVINGS BANNER */
+.savings-banner{background:linear-gradient(135deg,#e8f8f5,#d4f1e6);border:1px solid rgba(46,204,113,.3);border-radius:var(--radius-md);padding:20px;margin-bottom:24px;display:flex;align-items:center;gap:16px}
+.savings-icon{font-size:36px;flex-shrink:0}
+.savings-main{font-size:24px;font-weight:900;color:var(--success)}
+.savings-label{font-size:12px;color:#555;margin-top:2px}
+
+/* TOAST */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+body.ar .toast-container{right:auto;left:24px}
+.toast{background:#fff;border-radius:10px;padding:12px 16px;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:10px;min-width:280px;border-left:4px solid var(--teal);animation:toastIn .3s ease}
+.toast.success{border-left-color:var(--success)}
+.toast.error{border-left-color:var(--danger)}
+.toast-msg{font-size:13px;font-weight:500;flex:1}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-primary:hover{background:#006b70}
+.btn-secondary{background:#F1F3F5;color:#495057;border:1px solid #DEE2E6}
+.btn-secondary:hover{background:#E9ECEF}
+.btn-success{background:var(--success);color:#fff}
+.btn-lg{padding:13px 28px;font-size:14px;border-radius:var(--radius-md)}
+.hidden{display:none!important}
+.fade-in{animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+
+/* PAGE SECTIONS */
+.page{display:none}
+.page.active{display:block}
+</style>
+</head>
+<body>
+
+<!-- LUXURY NAV -->
+<nav class="luxury-nav">
+  <div class="lnav-logo">
+    <svg viewBox="0 0 260 60">
+      <g transform="translate(5 8)">
+        <path d="M6 41c13-4 24-14 27-27 3-8 9-14 17-19-3 16-8 29-18 39-8 7-17 11-26 12z" fill="#35c6c4"/>
+        <path d="M4 43c16-5 29-15 38-30 5-8 11-13 17-17-5 14-12 26-22 35-9 8-20 11-33 14z" fill="#f4b35b" opacity=".9"/>
+      </g>
+      <text x="68" y="34" fill="#fff" font-family="Arial,sans-serif" font-size="17" font-weight="700">sohar international</text>
+      <text x="69" y="47" fill="#35C6C4" font-family="Arial,sans-serif" font-size="7" letter-spacing="1.5">GREEN HOME LOAN</text>
+    </svg>
+  </div>
+  <div class="lnav-links">
+    <button class="lnav-link" onclick="scrollTo('properties')" data-en="Properties" data-ar="العقارات">Properties</button>
+    <button class="lnav-link" onclick="scrollTo('calculator')" data-en="Calculator" data-ar="الحاسبة">Calculator</button>
+    <button class="lnav-link" onclick="scrollTo('tracking')" data-en="Track Application" data-ar="تتبع الطلب">Track Application</button>
+    <button class="lnav-link cta" onclick="openWizard()" data-en="Apply Now" data-ar="تقدم الآن">Apply Now</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <button class="lang-btn" onclick="toggleLang()">🌐 <span id="lang-label">عربي</span></button>
+    <div class="lnav-user">
+      <div class="lnav-avatar">SA</div>
+      <span style="font-size:13px" data-en="Salim Al-Harthy" data-ar="سالم الحارثي">Salim Al-Harthy</span>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO SECTION -->
+<section class="hero" id="home">
+  <div class="hero-content">
+    <div class="hero-badge">🌿 <span data-en="CBO-Compliant Green Home Finance" data-ar="تمويل المنازل الخضراء المتوافق مع البنك المركزي">CBO-Compliant Green Home Finance</span></div>
+    <h1 class="hero-title"><span data-en="Live in a " data-ar="اعش في ">Live in a </span><span data-en="Greener " data-ar="مستقبل ">Greener </span><span data-en="Tomorrow" data-ar="أخضر">Tomorrow</span></h1>
+    <p class="hero-sub" data-en="Sohar International's Green Home Loan rewards eco-certified properties with preferential rates as low as 4.75% — save on your mortgage while saving the planet." data-ar="يكافئ قرض المنزل الأخضر من بنك صحار الدولي العقارات المعتمدة بيئياً بأسعار تفضيلية تبدأ من 4.75٪ — وفر في رهنك العقاري بينما توفر الكوكب.">Sohar International's Green Home Loan rewards eco-certified properties with preferential rates as low as 4.75% — save on your mortgage while saving the planet.</p>
+    <div class="hero-cta-group">
+      <button class="btn-hero-primary" onclick="openWizard()" data-en="Apply for Green Home Loan" data-ar="تقدم لقرض المنزل الأخضر">Apply for Green Home Loan</button>
+      <button class="btn-hero-secondary" onclick="scrollTo('calculator')" data-en="Calculate Savings" data-ar="احسب مدخراتك">Calculate Savings</button>
+    </div>
+  </div>
+  <div class="rate-showcase">
+    <div class="rate-label" data-en="FROM" data-ar="من">FROM</div>
+    <div><span class="rate-value">4.75</span><span class="rate-unit">%</span></div>
+    <div class="rate-sub" data-en="per annum · GSAS certified properties" data-ar="سنوياً · عقارات معتمدة GSAS">per annum · GSAS certified properties</div>
+    <hr class="rate-divider"/>
+    <div class="rate-features">
+      <div class="rate-feat"><div class="rate-feat-icon">✓</div><span data-en="Up to OMR 350,000" data-ar="حتى 350,000 ريال عماني">Up to OMR 350,000</span></div>
+      <div class="rate-feat"><div class="rate-feat-icon">✓</div><span data-en="Up to 30 years tenure" data-ar="حتى 30 سنة">Up to 30 years tenure</span></div>
+      <div class="rate-feat"><div class="rate-feat-icon">✓</div><span data-en="AI-powered fast approval" data-ar="موافقة سريعة بالذكاء الاصطناعي">AI-powered fast approval</span></div>
+      <div class="rate-feat"><div class="rate-feat-icon">✓</div><span data-en="ESG discount up to 0.5%" data-ar="خصم ESG حتى 0.5٪">ESG discount up to 0.5%</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- PROPERTIES SECTION -->
+<section class="section" id="properties">
+  <div class="section-center">
+    <div class="section-eyebrow" data-en="PARTNER DEVELOPMENTS" data-ar="مشاريع الشركاء">PARTNER DEVELOPMENTS</div>
+    <h2 class="section-title" data-en="Green-Certified Properties" data-ar="عقارات معتمدة بيئياً">Green-Certified Properties</h2>
+    <p class="section-sub" data-en="Browse our partner developer inventory — all units pre-screened and GSAS certified for instant Green Home Loan eligibility." data-ar="تصفح مخزون مطوري الشركاء - جميع الوحدات مفحوصة مسبقاً ومعتمدة من GSAS للتأهل الفوري لقرض المنزل الأخضر.">Browse our partner developer inventory — all units pre-screened and GSAS certified for instant Green Home Loan eligibility.</p>
+    <div class="properties-grid">
+      <!-- FEATURED: Villa B1 -->
+      <div class="prop-card featured" onclick="openWizardForUnit('B1')">
+        <div class="prop-img" style="background:linear-gradient(135deg,#003B5C,#007F86)">
+          🏡
+          <div class="prop-badge saved">⭐ Saved</div>
+        </div>
+        <div class="prop-body">
+          <div class="prop-price">OMR 200,000</div>
+          <div class="prop-name" data-en="Villa B1 — EcoVillage Muscat" data-ar="فيلا B1 - إيكو فيلاج مسقط">Villa B1 — EcoVillage Muscat</div>
+          <div class="prop-loc">📍 <span data-en="Al Mouj, Muscat" data-ar="الموج، مسقط">Al Mouj, Muscat</span></div>
+          <div class="prop-meta">
+            <div class="prop-meta-item">🏠 320m²</div>
+            <div class="prop-meta-item">🛏️ 4 bed</div>
+            <div class="prop-meta-item">☀️ 8.5kWp solar</div>
+            <div class="prop-meta-item">💧 Greywater</div>
+          </div>
+          <div class="prop-gsas">
+            <span class="gsas-pill">GSAS 89 🏆</span>
+            <span class="rate-pill">4.75% ✓</span>
+          </div>
+          <button class="prop-cta" onclick="event.stopPropagation();openWizardForUnit('B1')" data-en="Apply for Green Loan" data-ar="تقدم للقرض الأخضر">Apply for Green Loan</button>
+        </div>
+      </div>
+      <!-- Villa A1 -->
+      <div class="prop-card" onclick="openWizardForUnit('A1')">
+        <div class="prop-img" style="background:linear-gradient(135deg,#1a4a2e,#35C6C4)">
+          🌿
+          <div class="prop-badge green">GSAS 87</div>
+        </div>
+        <div class="prop-body">
+          <div class="prop-price">OMR 175,000</div>
+          <div class="prop-name">Villa A1 — EcoVillage Muscat</div>
+          <div class="prop-loc">📍 Al Mouj, Muscat</div>
+          <div class="prop-meta">
+            <div class="prop-meta-item">🏠 280m²</div>
+            <div class="prop-meta-item">🛏️ 3 bed</div>
+            <div class="prop-meta-item">☀️ 7kWp solar</div>
+          </div>
+          <div class="prop-gsas">
+            <span class="gsas-pill">GSAS 87</span>
+            <span class="rate-pill">4.75% ✓</span>
+          </div>
+          <button class="prop-cta" onclick="event.stopPropagation();openWizardForUnit('A1')" data-en="Apply for Green Loan" data-ar="تقدم للقرض الأخضر">Apply for Green Loan</button>
+        </div>
+      </div>
+      <!-- Green Palms -->
+      <div class="prop-card" onclick="openWizardForUnit('GP12')">
+        <div class="prop-img" style="background:linear-gradient(135deg,#2d5016,#6aaa2a)">
+          🌴
+          <div class="prop-badge green">GSAS 74</div>
+        </div>
+        <div class="prop-body">
+          <div class="prop-price">OMR 140,000</div>
+          <div class="prop-name">Unit 12 — Green Palms Seeb</div>
+          <div class="prop-loc">📍 Seeb, Muscat</div>
+          <div class="prop-meta">
+            <div class="prop-meta-item">🏠 240m²</div>
+            <div class="prop-meta-item">🛏️ 3 bed</div>
+            <div class="prop-meta-item">☀️ 5kWp solar</div>
+          </div>
+          <div class="prop-gsas">
+            <span class="gsas-pill" style="background:rgba(0,127,134,.1);color:var(--teal)">GSAS 74</span>
+            <span class="rate-pill" style="background:rgba(244,179,91,.15);color:#C8891A">5.00%</span>
+          </div>
+          <button class="prop-cta" onclick="event.stopPropagation();openWizardForUnit('GP12')" data-en="Apply for Green Loan" data-ar="تقدم للقرض الأخضر">Apply for Green Loan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CALCULATOR SECTION -->
+<section class="calc-section" id="calculator">
+  <div class="section-center">
+    <div class="section-eyebrow" data-en="ESG SAVINGS CALCULATOR" data-ar="حاسبة مدخرات ESG">ESG SAVINGS CALCULATOR</div>
+    <h2 class="section-title" data-en="See Your Green Savings" data-ar="انظر مدخراتك الخضراء">See Your Green Savings</h2>
+    <p class="section-sub" data-en="Toggle the ESG discount to see exactly how much you save with a GSAS-certified green property." data-ar="فعّل خصم ESG لترى بالضبط كم توفر مع عقار معتمد GSAS.">Toggle the ESG discount to see exactly how much you save with a GSAS-certified green property.</p>
+    <div class="calc-card">
+      <div>
+        <div class="form-group">
+          <label class="calc-label"><span data-en="Loan Amount (OMR)" data-ar="مبلغ القرض (ريال)">Loan Amount (OMR)</span><span id="calc-amount-display" style="color:var(--teal)">200,000</span></label>
+          <input type="range" class="calc-slider" min="20000" max="350000" step="5000" value="200000" oninput="updateCalc()" id="calc-amount"/>
+        </div>
+        <div class="form-group">
+          <label class="calc-label"><span data-en="Tenure (Years)" data-ar="المدة (سنوات)">Tenure (Years)</span><span id="calc-tenure-display" style="color:var(--teal)">25 years</span></label>
+          <input type="range" class="calc-slider" min="5" max="30" step="1" value="25" oninput="updateCalc()" id="calc-tenure"/>
+        </div>
+        <div class="form-group">
+          <label class="calc-label" data-en="GSAS Score" data-ar="نقاط GSAS">GSAS Score</label>
+          <select class="calc-input" id="calc-gsas" onchange="updateCalc()">
+            <option value="89">89 — GSAS 4-Star (4.75%)</option>
+            <option value="74">74 — GSAS 3-Star (5.00%)</option>
+            <option value="60">60 — Below GSAS (5.25%)</option>
+            <option value="0">No certification (5.50%)</option>
+          </select>
+        </div>
+        <div class="esg-toggle" onclick="toggleESG()">
+          <div class="toggle-switch on" id="esg-toggle-sw"><div class="toggle-knob"></div></div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--navy)" data-en="ESG Discount Applied" data-ar="تم تطبيق خصم ESG">ESG Discount Applied</div>
+            <div style="font-size:11px;color:#666" data-en="−0.25% for GSAS ≥ 85" data-ar="−0.25٪ للنقاط ≥ 85">−0.25% for GSAS ≥ 85</div>
+          </div>
+          <div style="margin-left:auto;font-size:18px">🌿</div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px" onclick="openWizard()" data-en="Apply with These Terms" data-ar="تقدم بهذه الشروط">Apply with These Terms</button>
+      </div>
+      <div class="calc-results">
+        <div class="calc-result-label" data-en="Monthly Payment" data-ar="الدفعة الشهرية">Monthly Payment</div>
+        <div class="calc-result-main" id="calc-monthly">OMR 1,089</div>
+        <div style="font-size:12px;opacity:.6;margin-bottom:20px" id="calc-rate-label">@ 4.75% p.a.</div>
+        <div class="calc-result-row"><span data-en="Loan Amount" data-ar="مبلغ القرض">Loan Amount</span><span class="calc-result-val" id="r-amount">OMR 200,000</span></div>
+        <div class="calc-result-row"><span data-en="Interest Rate" data-ar="معدل الفائدة">Interest Rate</span><span class="calc-result-val" id="r-rate">4.75%</span></div>
+        <div class="calc-result-row"><span data-en="Total Interest" data-ar="إجمالي الفائدة">Total Interest</span><span class="calc-result-val" id="r-interest">OMR 126,740</span></div>
+        <div class="calc-result-row"><span data-en="Total Repayment" data-ar="إجمالي السداد">Total Repayment</span><span class="calc-result-val" id="r-total">OMR 326,740</span></div>
+        <div class="saving-highlight" id="saving-block">
+          <span data-en="GREEN SAVING vs. Standard Rate" data-ar="التوفير الأخضر مقارنة بالسعر القياسي">GREEN SAVING vs. Standard Rate</span>
+          <span class="saving-num" id="r-saving">OMR 31,560</span>
+          <span style="font-size:11px;opacity:.75" data-en="over loan lifetime" data-ar="على مدى عمر القرض">over loan lifetime</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRACKING SECTION -->
+<section class="tracking-section" id="tracking">
+  <div class="section-center">
+    <div class="section-eyebrow" data-en="APPLICATION STATUS" data-ar="حالة الطلب">APPLICATION STATUS</div>
+    <h2 class="section-title" data-en="Track Your Application" data-ar="تتبع طلبك">Track Your Application</h2>
+    <div class="tracking-card">
+      <div class="tracking-header">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div class="tracking-ref">GHL-250001</div>
+            <div class="tracking-sub" data-en="Villa B1, EcoVillage Muscat · OMR 200,000" data-ar="فيلا B1، إيكو فيلاج مسقط · 200,000 ريال">Villa B1, EcoVillage Muscat · OMR 200,000</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;opacity:.6;margin-bottom:4px" data-en="Current Stage" data-ar="المرحلة الحالية">Current Stage</div>
+            <div style="font-size:14px;font-weight:700;color:var(--seaglass)" data-en="ESG Compliance Review" data-ar="مراجعة الامتثال البيئي">ESG Compliance Review</div>
+          </div>
+        </div>
+        <div class="savings-banner" style="margin-top:20px">
+          <div class="savings-icon">💚</div>
+          <div>
+            <div class="savings-main" data-en="OMR 31,560 lifetime saving" data-ar="31,560 ريال توفير مدى الحياة">OMR 31,560 lifetime saving</div>
+            <div class="savings-label" data-en="Your green discount: 4.75% vs 5.50% standard rate" data-ar="خصمك الأخضر: 4.75٪ مقابل 5.50٪ السعر القياسي">Your green discount: 4.75% vs 5.50% standard rate</div>
+          </div>
+        </div>
+      </div>
+      <div class="tracking-body">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot done">✓</div>
+            <div class="tl-title" data-en="Application Submitted" data-ar="تم تقديم الطلب">Application Submitted<span class="tl-badge ai">AI-Scored</span></div>
+            <div class="tl-desc" data-en="All documents verified. DBR: 28%. LTV: 65.3%. GSAS: 89." data-ar="تم التحقق من جميع المستندات. نسبة الدين: 28٪. نسبة القرض: 65.3٪. GSAS: 89.">All documents verified. DBR: 28%. LTV: 65.3%. GSAS: 89.</div>
+            <div class="tl-date">Jan 24, 2025 · 09:14</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot done">✓</div>
+            <div class="tl-title" data-en="Credit Bureau Check" data-ar="التحقق من مكتب الائتمان">Credit Bureau Check<span class="tl-badge human">MALA'A</span></div>
+            <div class="tl-desc" data-en="MALA'A score: 742/850. No adverse history. Clear." data-ar="نقاط MALA'A: 742/850. لا سجل سلبي.">MALA'A score: 742/850. No adverse history. Clear.</div>
+            <div class="tl-date">Jan 24, 2025 · 10:32</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot done">✓</div>
+            <div class="tl-title" data-en="ESG Document Validation" data-ar="التحقق من وثائق ESG">ESG Document Validation<span class="tl-badge ai">AI</span></div>
+            <div class="tl-desc" data-en="GSAS Certificate auto-verified (96% confidence). EPC flagged for manual review." data-ar="تم التحقق التلقائي من شهادة GSAS (ثقة 96٪). EPC مُشار للمراجعة.">GSAS Certificate auto-verified (96% confidence). EPC flagged for manual review.</div>
+            <div class="tl-date">Jan 24, 2025 · 11:05</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot active">⏳</div>
+            <div class="tl-title" data-en="ESG Compliance Review" data-ar="مراجعة الامتثال البيئي">ESG Compliance Review<span class="tl-badge human">In Progress</span></div>
+            <div class="tl-desc" data-en="Aisha Al-Balushi reviewing EPC report override. Awaiting Risk Officer sign-off." data-ar="عائشة البلوشي تراجع تقرير EPC. في انتظار توقيع مسؤول المخاطر.">Aisha Al-Balushi reviewing EPC report override. Awaiting Risk Officer sign-off.</div>
+            <div class="tl-date" data-en="In progress — est. 2 hours" data-ar="جارٍ — تقدير ساعتين">In progress — est. 2 hours</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot pending">5</div>
+            <div class="tl-title" style="color:#aaa" data-en="Final Approval" data-ar="الموافقة النهائية">Final Approval</div>
+            <div class="tl-desc" data-en="Credit committee decision pending." data-ar="في انتظار قرار لجنة الائتمان.">Credit committee decision pending.</div>
+            <div class="tl-date">—</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot pending">6</div>
+            <div class="tl-title" style="color:#aaa" data-en="Offer Letter Issued" data-ar="إصدار خطاب العرض">Offer Letter Issued</div>
+            <div class="tl-desc">—</div>
+            <div class="tl-date">—</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot pending">7</div>
+            <div class="tl-title" style="color:#aaa" data-en="Disbursement" data-ar="الصرف">Disbursement</div>
+            <div class="tl-desc">—</div>
+            <div class="tl-date">—</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:24px;justify-content:flex-end">
+          <button class="btn btn-secondary" onclick="toast('Document list downloaded','info')" data-en="Download Checklist" data-ar="تنزيل قائمة المستندات">📥 Download Checklist</button>
+          <button class="btn btn-primary" onclick="openWizard()" data-en="Upload Missing Docs" data-ar="رفع المستندات الناقصة">📤 Upload Missing Docs</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ LOAN APPLICATION WIZARD ═══ -->
+<div class="wizard-overlay" id="wizard-overlay" onclick="closeWizardIfOutside(event)">
+  <div class="wizard">
+    <div class="wizard-header">
+      <div class="wizard-title" data-en="Green Home Loan Application" data-ar="طلب قرض المنزل الأخضر">Green Home Loan Application</div>
+      <div class="wizard-sub" data-en="5-step process · AI-assisted · Avg. 8 min" data-ar="5 خطوات · مدعوم بالذكاء الاصطناعي · متوسط 8 دقائق">5-step process · AI-assisted · Avg. 8 min</div>
+      <div class="wizard-steps">
+        <div class="wstep done" id="ws1"><div class="wstep-num">✓</div><div class="wstep-label" data-en="Personal" data-ar="شخصي">Personal</div></div>
+        <div class="wstep active" id="ws2"><div class="wstep-num">2</div><div class="wstep-label" data-en="Property" data-ar="العقار">Property</div></div>
+        <div class="wstep" id="ws3"><div class="wstep-num">3</div><div class="wstep-label" data-en="Finance" data-ar="المالية">Finance</div></div>
+        <div class="wstep" id="ws4"><div class="wstep-num">4</div><div class="wstep-label" data-en="Documents" data-ar="المستندات">Documents</div></div>
+        <div class="wstep" id="ws5"><div class="wstep-num">5</div><div class="wstep-label" data-en="Review" data-ar="المراجعة">Review</div></div>
+      </div>
+    </div>
+    <div class="wizard-body" id="wizard-body">
+      <!-- Step content injected by JS -->
+    </div>
+    <div class="wizard-footer">
+      <button class="btn btn-secondary" id="wiz-back" onclick="wizardBack()">← <span data-en="Back" data-ar="رجوع">Back</span></button>
+      <button class="btn btn-primary" id="wiz-next" onclick="wizardNext()"><span data-en="Continue" data-ar="متابعة">Continue</span> →</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const OPENAI_KEY = 'REDACTED_OPENAI_KEY';
+let isAr = false;
+let esgOn = true;
+let wizardStep = 1;
+let selectedUnit = 'B1';
+
+// ═══ LANGUAGE ═══
+function toggleLang() {
+  isAr = !isAr;
+  document.body.classList.toggle('ar', isAr);
+  document.documentElement.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+  document.getElementById('lang-label').textContent = isAr ? 'English' : 'عربي';
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = isAr ? el.getAttribute('data-ar') : el.getAttribute('data-en');
+  });
+}
+
+// ═══ SCROLL ═══
+function scrollTo(id) { document.getElementById(id).scrollIntoView({behavior:'smooth'}); }
+
+// ═══ CALCULATOR ═══
+function getRate() {
+  const gsas = parseInt(document.getElementById('calc-gsas').value);
+  let base = gsas >= 85 ? 4.75 : gsas >= 70 ? 5.00 : gsas >= 60 ? 5.25 : 5.50;
+  if(esgOn && gsas >= 85) base -= 0;  // already at 4.75
+  return base;
+}
+
+function updateCalc() {
+  const amount = parseInt(document.getElementById('calc-amount').value);
+  const tenure = parseInt(document.getElementById('calc-tenure').value);
+  const rate = getRate();
+
+  document.getElementById('calc-amount-display').textContent = 'OMR ' + amount.toLocaleString();
+  document.getElementById('calc-tenure-display').textContent = tenure + ' years';
+  document.getElementById('calc-rate-label').textContent = `@ ${rate.toFixed(2)}% p.a.`;
+  document.getElementById('r-rate').textContent = rate.toFixed(2) + '%';
+  document.getElementById('r-amount').textContent = 'OMR ' + amount.toLocaleString();
+
+  const monthly = monthlyPmt(amount, rate, tenure * 12);
+  const totalPmt = monthly * tenure * 12;
+  const interest = totalPmt - amount;
+
+  // Saving vs standard (5.50%)
+  const stdMonthly = monthlyPmt(amount, 5.50, tenure * 12);
+  const stdTotal = stdMonthly * tenure * 12;
+  const saving = stdTotal - totalPmt;
+
+  document.getElementById('calc-monthly').textContent = 'OMR ' + monthly.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  document.getElementById('r-interest').textContent = 'OMR ' + interest.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  document.getElementById('r-total').textContent = 'OMR ' + totalPmt.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  document.getElementById('r-saving').textContent = 'OMR ' + Math.max(0, saving).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+}
+
+function monthlyPmt(P, annualRate, n) {
+  if(annualRate === 0) return P / n;
+  const r = annualRate / 100 / 12;
+  return P * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1);
+}
+
+function toggleESG() {
+  esgOn = !esgOn;
+  document.getElementById('esg-toggle-sw').classList.toggle('on', esgOn);
+  updateCalc();
+}
+
+// ═══ WIZARD ═══
+const STEPS = [
+  {
+    title:'Personal Information',
+    titleAr:'المعلومات الشخصية',
+    html:()=>`
+      <div style="margin-bottom:16px;padding:12px;background:rgba(0,127,134,.06);border-radius:8px;font-size:13px;color:var(--navy)">
+        ✅ <strong>Pre-filled from your profile</strong> — please verify and confirm.
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Full Name (English)</label><input class="form-control" value="Salim Mohammed Al-Harthy"/></div>
+        <div class="form-group"><label class="form-label">Full Name (Arabic)</label><input class="form-control" value="سالم محمد الحارثي"/></div>
+        <div class="form-group"><label class="form-label">Civil ID</label><input class="form-control" value="8827364"/></div>
+        <div class="form-group"><label class="form-label">Date of Birth</label><input class="form-control" type="date" value="1985-03-15"/></div>
+        <div class="form-group"><label class="form-label">Mobile</label><input class="form-control" value="+968 9234 5678"/></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-control" value="salim.alharthy@example.com"/></div>
+        <div class="form-group"><label class="form-label">Employer</label><input class="form-control" value="Oman Oil Company"/></div>
+        <div class="form-group"><label class="form-label">Monthly Salary (OMR)</label><input class="form-control" value="3,200"/></div>
+      </div>
+    `
+  },
+  {
+    title:'Property Details',
+    titleAr:'تفاصيل العقار',
+    html:()=>`
+      <div class="savings-banner" style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.3);border-radius:10px;padding:14px;margin-bottom:16px;display:flex;gap:12px">
+        <span style="font-size:28px">🏡</span>
+        <div>
+          <div style="font-weight:700;color:var(--navy)">Villa B1 — EcoVillage Muscat</div>
+          <div style="font-size:12px;color:#555">Auto-selected from your saved properties · GSAS 89 · 4.75% rate</div>
+        </div>
+        <span style="margin-left:auto;align-self:center;background:rgba(46,204,113,.15);color:#27AE60;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700">Eligible ✓</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Project</label><select class="form-control"><option selected>EcoVillage Muscat</option><option>Green Palms Seeb</option></select></div>
+        <div class="form-group"><label class="form-label">Unit</label><select class="form-control"><option selected>Villa B1 (320m²)</option><option>Villa A1 (280m²)</option><option>Villa C1 (340m²)</option></select></div>
+        <div class="form-group"><label class="form-label">Property Value (OMR)</label><input class="form-control" value="200,000"/></div>
+        <div class="form-group"><label class="form-label">GSAS Score</label><input class="form-control" value="89" readonly style="background:#f0fafa;color:var(--success);font-weight:700"/></div>
+      </div>
+      <div style="background:rgba(53,198,196,.06);border:1px solid rgba(53,198,196,.2);border-radius:8px;padding:14px;font-size:12px">
+        <strong>🌿 Green Features Verified:</strong> Solar PV 8.5kWp · Greywater Recycling · Green Roof · HVAC SEER 18.2 · EV Charging
+      </div>
+    `
+  },
+  {
+    title:'Financing Details',
+    titleAr:'تفاصيل التمويل',
+    html:()=>`
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Loan Amount (OMR)</label><input class="form-control" id="wiz-amount" value="200,000" oninput="wizCalc()"/></div>
+        <div class="form-group"><label class="form-label">Down Payment (OMR)</label><input class="form-control" value="35,000"/></div>
+        <div class="form-group"><label class="form-label">Tenure</label><select class="form-control" id="wiz-tenure" onchange="wizCalc()"><option>25 years</option><option>20 years</option><option>30 years</option><option>15 years</option></select></div>
+        <div class="form-group"><label class="form-label">Interest Rate</label><input class="form-control" value="4.75% (Green Rate)" readonly style="background:#f0fafa;color:var(--success);font-weight:700"/></div>
+      </div>
+      <div id="wiz-calc-result" style="background:linear-gradient(135deg,var(--navy),var(--teal));border-radius:12px;padding:20px;color:#fff;margin-top:4px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center">
+          <div><div style="font-size:11px;opacity:.7">Monthly Payment</div><div style="font-size:24px;font-weight:900;color:var(--seaglass)" id="wiz-monthly">OMR 1,089</div></div>
+          <div><div style="font-size:11px;opacity:.7">DBR Ratio</div><div style="font-size:24px;font-weight:900;color:var(--amber)" id="wiz-dbr">34.0%</div></div>
+          <div><div style="font-size:11px;opacity:.7">Lifetime Saving</div><div style="font-size:24px;font-weight:900;color:var(--seaglass)" id="wiz-saving">OMR 31,560</div></div>
+        </div>
+        <div style="margin-top:12px;font-size:11px;opacity:.6;text-align:center">DBR must be ≤ 40% · CBO compliant</div>
+      </div>
+    `
+  },
+  {
+    title:'Document Upload',
+    titleAr:'رفع المستندات',
+    html:()=>`
+      <div style="margin-bottom:14px;font-size:13px;color:#555" data-en="Upload required documents. AI will validate each one instantly." data-ar="ارفع المستندات المطلوبة. سيتحقق الذكاء الاصطناعي منها فوراً.">Upload required documents. AI will validate each one instantly.</div>
+      <div class="doc-upload-grid" id="doc-grid">
+        ${docCard('civil','🪪','Civil ID (Both Sides)','uploaded','✅ Verified by AI','97% confidence')}
+        ${docCard('salary','💼','Salary Certificate','uploaded','✅ Verified by AI','94% confidence')}
+        ${docCard('bank','🏦','Bank Statements (6M)','uploaded','✅ Verified by AI','91% confidence')}
+        ${docCard('valuation','🏠','Property Valuation','analyzing','🤖 AI Analyzing…','')}
+        ${docCard('gsas','🏆','GSAS Certificate','uploaded','✅ Score 89 Confirmed','96% confidence')}
+        ${docCard('epc','⚡','EPC Report','analyzing','⚠️ Flagged for Review','88% confidence')}
+      </div>
+      <div style="margin-top:14px;padding:12px;background:rgba(244,179,91,.08);border:1px solid rgba(244,179,91,.3);border-radius:8px;font-size:12px;color:#555">
+        ⚠️ <strong>EPC Report</strong> flagged — minor thermal bridging note. Compliance officer will review. This does not block your application.
+      </div>
+    `
+  },
+  {
+    title:'Review & Submit',
+    titleAr:'المراجعة والتقديم',
+    html:()=>`
+      <div style="margin-bottom:20px">
+        <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px">Application Summary</div>
+        <div style="font-size:12px;color:#888">Please review all details before submitting</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0;border:1px solid #E9ECEF;border-radius:10px;overflow:hidden;margin-bottom:16px">
+        ${reviewRow('Applicant','Salim Mohammed Al-Harthy')}
+        ${reviewRow('Property','Villa B1, EcoVillage Muscat')}
+        ${reviewRow('Loan Amount','OMR 200,000')}
+        ${reviewRow('Interest Rate','4.75% (Green Rate ✅)')}
+        ${reviewRow('Tenure','25 Years')}
+        ${reviewRow('Monthly Payment','OMR 1,089')}
+        ${reviewRow('DBR Ratio','34.0%')}
+        ${reviewRow('LTV Ratio','65.3%')}
+        ${reviewRow('GSAS Score','89 / 100 ✅')}
+        ${reviewRow('Lifetime Saving','OMR 31,560 vs Standard')}
+        ${reviewRow('Credit Bureau','MALA\'A — Clear ✅')}
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:10px;font-size:12px;color:#555;cursor:pointer;margin-bottom:14px">
+        <input type="checkbox" id="consent-check" style="margin-top:2px" checked/>
+        I confirm the information is accurate and consent to credit bureau checks and data processing per Sohar International's Privacy Policy and CBO regulations.
+      </label>
+    `
+  }
+];
+
+function docCard(id,icon,name,status,statusText,confidence) {
+  const cls = status === 'uploaded' ? 'uploaded' : 'analyzing';
+  const spin = status === 'analyzing' ? '<div style="width:20px;height:20px;border:2px solid rgba(0,127,134,.3);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;margin:6px auto"></div>' : '';
+  return `<div class="doc-upload-card ${cls}" onclick="simulateDocUpload('${id}')">
+    <div class="doc-icon">${icon}</div>
+    <div class="doc-name">${name}</div>
+    <div class="doc-status ${status === 'uploaded' ? 'ok' : 'ai'}">${statusText}</div>
+    ${spin}
+    ${confidence ? `<div class="ai-result-mini">${confidence}</div>` : ''}
+  </div>`;
+}
+
+function reviewRow(label,val) {
+  return `<div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #F1F3F5;font-size:13px"><span style="color:#888">${label}</span><span style="font-weight:600;color:var(--navy)">${val}</span></div>`;
+}
+
+function wizCalc() {
+  const amtStr = (document.getElementById('wiz-amount')||{}).value || '200000';
+  const amt = parseFloat(amtStr.replace(/[^0-9.]/g,'')) || 200000;
+  const tenureEl = document.getElementById('wiz-tenure');
+  const tenure = tenureEl ? parseInt(tenureEl.value) : 25;
+  const monthly = monthlyPmt(amt, 4.75, tenure * 12);
+  const dbr = (monthly / 3200) * 100;
+  const stdTotal = monthlyPmt(amt, 5.50, tenure * 12) * tenure * 12;
+  const greenTotal = monthly * tenure * 12;
+  const saving = stdTotal - greenTotal;
+
+  const me = document.getElementById('wiz-monthly'); if(me) me.textContent = 'OMR ' + monthly.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  const de = document.getElementById('wiz-dbr'); if(de) de.textContent = dbr.toFixed(1) + '%';
+  const se = document.getElementById('wiz-saving'); if(se) se.textContent = 'OMR ' + Math.max(0,saving).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+}
+
+function simulateDocUpload(id) {
+  toast('Document uploading… AI validation in progress', 'info');
+  setTimeout(() => toast('✅ Document validated by AI', 'success'), 2000);
+}
+
+function openWizard() {
+  wizardStep = 1;
+  document.getElementById('wizard-overlay').classList.add('open');
+  renderWizardStep();
+}
+
+function openWizardForUnit(unit) {
+  selectedUnit = unit;
+  openWizard();
+}
+
+function closeWizardIfOutside(e) { if(e.target === e.currentTarget) document.getElementById('wizard-overlay').classList.remove('open'); }
+
+function renderWizardStep() {
+  const step = STEPS[wizardStep - 1];
+  document.getElementById('wizard-body').innerHTML = `
+    <div class="fade-in">
+      <div style="font-size:18px;font-weight:800;color:var(--navy);margin-bottom:4px">${isAr ? step.titleAr : step.title}</div>
+      <div style="font-size:12px;color:#888;margin-bottom:20px">Step ${wizardStep} of ${STEPS.length}</div>
+      ${step.html()}
+    </div>
+  `;
+  // update step indicators
+  document.querySelectorAll('.wstep').forEach((el,i) => {
+    el.className = 'wstep' + (i < wizardStep-1 ? ' done' : i === wizardStep-1 ? ' active' : '');
+    el.querySelector('.wstep-num').textContent = i < wizardStep-1 ? '✓' : (i+1).toString();
+  });
+  document.getElementById('wiz-back').style.display = wizardStep === 1 ? 'none' : 'inline-flex';
+  const nextBtn = document.getElementById('wiz-next');
+  nextBtn.innerHTML = wizardStep === STEPS.length ? '🚀 Submit Application' : 'Continue →';
+  if(wizardStep === 3) setTimeout(wizCalc, 100);
+}
+
+function wizardNext() {
+  if(wizardStep < STEPS.length) {
+    wizardStep++;
+    renderWizardStep();
+  } else {
+    submitApplication();
+  }
+}
+
+function wizardBack() {
+  if(wizardStep > 1) { wizardStep--; renderWizardStep(); }
+}
+
+function submitApplication() {
+  const btn = document.getElementById('wiz-next');
+  btn.innerHTML = '<span class="spinner"></span> Submitting…';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    document.getElementById('wizard-overlay').classList.remove('open');
+    btn.innerHTML = '🚀 Submit Application';
+    btn.disabled = false;
+    wizardStep = 1;
+
+    toast('🎉 Application GHL-250001 submitted successfully!', 'success');
+    setTimeout(() => toast('✅ AI pre-screening complete — DBR 34% · GSAS 89 verified', 'success'), 1000);
+    setTimeout(() => toast('📧 Confirmation sent to salim.alharthy@example.com', 'info'), 2000);
+    setTimeout(() => scrollTo('tracking'), 2500);
+  }, 2500);
+}
+
+// ═══ TOAST ═══
+function toast(msg, type='info') {
+  const icons = {success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+// ═══ INIT ═══
+document.addEventListener('DOMContentLoaded', () => {
+  updateCalc();
+  // Animate bar after 1s so user sees it move
+  setTimeout(() => {
+    const analysingCards = document.querySelectorAll('.doc-upload-card.analyzing');
+    analysingCards.forEach(c => {
+      setTimeout(() => {
+        c.classList.remove('analyzing');
+        c.classList.add('uploaded');
+        const status = c.querySelector('.doc-status');
+        if(status) { status.className = 'doc-status ok'; status.textContent = '✅ Verified'; }
+      }, 3000 + Math.random()*2000);
+    });
+  }, 500);
+});
+</script>
+</body>
+</html>

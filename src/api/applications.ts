@@ -8,7 +8,7 @@ app.get('/', async (c) => {
   const status = c.req.query('status')
   const customerId = c.req.query('customer_id')
   let query = `SELECT a.*, c.name as customer_display_name, c.salary_omr, c.credit_score, 
-    p.name as product_name, u.name as unit_name, pr.name as project_name
+    p.name as product_name, u.unit_number as unit_name, pr.name as project_name
     FROM applications a
     LEFT JOIN customers c ON a.customer_id = c.id
     LEFT JOIN products p ON a.product_id = p.id

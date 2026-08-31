@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Developer Portal — Sohar International Green Home</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --navy:#003B5C;--teal:#007F86;--seaglass:#35C6C4;--sand:#F4F0E7;--amber:#F4B35B;
+  --success:#2ECC71;--warning:#F39C12;--danger:#E74C3C;--white:#fff;--gray-50:#F8F9FA;
+  --gray-100:#F1F3F5;--gray-200:#E9ECEF;--gray-300:#DEE2E6;--gray-500:#ADB5BD;
+  --gray-700:#495057;--gray-900:#212529;
+  --font-ui:'Inter',system-ui,sans-serif;--font-ar:'Noto Sans Arabic',sans-serif;
+  --radius-sm:6px;--radius-md:10px;--radius-lg:16px;--shadow-sm:0 1px 3px rgba(0,0,0,.08);
+  --shadow-md:0 4px 16px rgba(0,59,92,.10);--shadow-lg:0 8px 32px rgba(0,59,92,.16);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-ui);background:var(--gray-50);color:var(--gray-900);display:flex;height:100vh;overflow:hidden}
+body.ar{font-family:var(--font-ar);direction:rtl}
+
+/* SIDEBAR */
+.sidebar{width:240px;background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar-logo{padding:20px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo svg{width:160px;height:auto}
+.sidebar-user{padding:16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-avatar{width:38px;height:38px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0}
+.sidebar-user-info{flex:1;min-width:0}
+.sidebar-user-name{color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-user-role{color:var(--seaglass);font-size:11px}
+.sidebar-nav{padding:8px 0;flex:1}
+.nav-section{padding:8px 16px 4px;color:rgba(255,255,255,.4);font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;color:rgba(255,255,255,.75);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-decoration:none}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{background:rgba(53,198,196,.15);color:var(--seaglass);border-right:3px solid var(--seaglass)}
+body.ar .nav-item.active{border-right:none;border-left:3px solid var(--seaglass)}
+.nav-item .nav-icon{width:18px;text-align:center;font-size:16px}
+.nav-badge{margin-left:auto;background:var(--amber);color:var(--navy);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700}
+body.ar .nav-badge{margin-left:0;margin-right:auto}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:60px;background:#fff;border-bottom:1px solid var(--gray-200);flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:700;color:var(--navy)}
+.topbar-sub{font-size:12px;color:var(--gray-500);margin-top:1px}
+.topbar-actions{display:flex;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;text-decoration:none;font-family:inherit}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-primary:hover{background:#006b70}
+.btn-secondary{background:var(--gray-100);color:var(--gray-700);border:1px solid var(--gray-200)}
+.btn-secondary:hover{background:var(--gray-200)}
+.btn-success{background:var(--success);color:#fff}
+.btn-amber{background:var(--amber);color:var(--navy)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-danger{background:var(--danger);color:#fff}
+.lang-toggle{display:flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:var(--radius-sm);padding:4px 10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--gray-700);border:none;font-family:inherit}
+
+/* LAYOUT */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* CARDS */
+.card{background:#fff;border-radius:var(--radius-md);border:1px solid var(--gray-200);box-shadow:var(--shadow-sm)}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:700;color:var(--navy)}
+.card-body{padding:20px}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:#fff;border-radius:var(--radius-md);border:1px solid var(--gray-200);padding:16px 20px;display:flex;align-items:center;gap:14px}
+.stat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.stat-icon.navy{background:rgba(0,59,92,.1)}
+.stat-icon.teal{background:rgba(0,127,134,.1)}
+.stat-icon.seaglass{background:rgba(53,198,196,.1)}
+.stat-icon.amber{background:rgba(244,179,91,.15)}
+.stat-label{font-size:11px;color:var(--gray-500);margin-bottom:2px}
+.stat-value{font-size:22px;font-weight:800;color:var(--navy)}
+
+/* PROJECT LIST */
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.project-card{background:#fff;border-radius:var(--radius-md);border:1px solid var(--gray-200);overflow:hidden;cursor:pointer;transition:all .2s;box-shadow:var(--shadow-sm)}
+.project-card:hover{border-color:var(--teal);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.project-card.active-project{border-color:var(--seaglass);box-shadow:0 0 0 2px rgba(53,198,196,.2)}
+.project-img{height:140px;background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.project-img-overlay{position:absolute;inset:0;background:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="30" r="15" fill="rgba(255,255,255,.05)"/><circle cx="70" cy="60" r="25" fill="rgba(255,255,255,.05)"/><circle cx="50" cy="10" r="8" fill="rgba(255,255,255,.05)"/></svg>');background-size:cover}
+.project-img-icon{font-size:48px;z-index:1}
+.project-status-badge{position:absolute;top:10px;right:10px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase}
+.badge-active{background:rgba(46,204,113,.9);color:#fff}
+.badge-pending{background:rgba(244,179,91,.9);color:var(--navy)}
+.badge-draft{background:rgba(173,181,189,.8);color:var(--gray-900)}
+.project-body{padding:16px}
+.project-name{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.project-location{font-size:12px;color:var(--gray-500);display:flex;align-items:center;gap:4px;margin-bottom:10px}
+.project-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.project-meta-item{font-size:11px}
+.project-meta-label{color:var(--gray-500);margin-bottom:1px}
+.project-meta-value{font-weight:600;color:var(--gray-700)}
+.project-progress{margin-top:12px}
+.progress-bar-wrap{height:6px;background:var(--gray-200);border-radius:3px;margin-top:4px;overflow:hidden}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--teal),var(--seaglass));border-radius:3px;transition:width .6s ease}
+
+/* TABS */
+.tabs{display:flex;gap:2px;background:var(--gray-100);border-radius:var(--radius-sm);padding:3px;margin-bottom:20px}
+.tab{padding:7px 16px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;color:var(--gray-500);transition:all .15s;border:none;background:none;font-family:inherit}
+.tab.active{background:#fff;color:var(--navy);box-shadow:var(--shadow-sm)}
+
+/* MAP */
+#ecovillage-map{height:420px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--gray-200)}
+.map-legend{display:flex;gap:16px;padding:10px 0;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-700)}
+.legend-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+/* CERT UPLOAD */
+.cert-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.cert-card{border:2px dashed var(--gray-300);border-radius:var(--radius-md);padding:20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.cert-card:hover{border-color:var(--teal);background:rgba(0,127,134,.03)}
+.cert-card.uploading{border-color:var(--amber);border-style:solid}
+.cert-card.verified{border-color:var(--success);border-style:solid;background:rgba(46,204,113,.03)}
+.cert-card.flagged{border-color:var(--warning);border-style:solid;background:rgba(243,156,18,.03)}
+.cert-icon{font-size:32px;margin-bottom:10px}
+.cert-name{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.cert-desc{font-size:11px;color:var(--gray-500);margin-bottom:12px}
+.cert-status{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600}
+.cert-status.verified{color:var(--success)}
+.cert-status.flagged{color:var(--warning)}
+.cert-status.pending{color:var(--gray-500)}
+.cert-status.analyzing{color:var(--teal)}
+
+/* AI ANALYSIS PANEL */
+.ai-panel{background:linear-gradient(135deg,#f0fafa 0%,#e8f4f8 100%);border:1px solid rgba(53,198,196,.3);border-radius:var(--radius-md);padding:20px;margin-top:16px}
+.ai-panel-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.ai-badge{background:var(--teal);color:#fff;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.5px}
+.confidence-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.confidence-label{font-size:12px;color:var(--gray-700);width:140px;flex-shrink:0}
+.confidence-bar-wrap{flex:1;height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden}
+.confidence-bar{height:100%;border-radius:4px;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+.confidence-bar.high{background:linear-gradient(90deg,#2ECC71,#27AE60)}
+.confidence-bar.medium{background:linear-gradient(90deg,#F39C12,#E67E22)}
+.confidence-bar.low{background:linear-gradient(90deg,#E74C3C,#C0392B)}
+.confidence-pct{font-size:12px;font-weight:700;width:36px;text-align:right;color:var(--gray-700)}
+.finding-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;margin:2px}
+.finding-tag.pass{background:rgba(46,204,113,.15);color:#27AE60}
+.finding-tag.warn{background:rgba(243,156,18,.15);color:#E67E22}
+.finding-tag.fail{background:rgba(231,76,60,.15);color:#C0392B}
+
+/* INVENTORY TABLE */
+.inv-table{width:100%;border-collapse:collapse;font-size:13px}
+.inv-table th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;background:var(--gray-50);border-bottom:1px solid var(--gray-200)}
+.inv-table td{padding:10px 12px;border-bottom:1px solid var(--gray-100)}
+.inv-table tr:hover td{background:var(--gray-50)}
+body.ar .inv-table th, body.ar .inv-table td{text-align:right}
+.unit-status{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.unit-status.available{background:rgba(46,204,113,.12);color:#27AE60}
+.unit-status.reserved{background:rgba(244,179,91,.15);color:#C8891A}
+.unit-status.sold{background:rgba(0,59,92,.1);color:var(--navy)}
+.gsas-score{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700}
+.gsas-score.excellent{background:rgba(46,204,113,.15);color:#27AE60}
+.gsas-score.good{background:rgba(0,127,134,.12);color:var(--teal)}
+
+/* PANEL OVERLAY */
+.panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;backdrop-filter:blur(2px)}
+.panel-overlay.open{display:flex;justify-content:flex-end}
+body.ar .panel-overlay.open{justify-content:flex-start}
+.slide-panel{width:560px;height:100%;background:#fff;box-shadow:-8px 0 40px rgba(0,0,0,.15);display:flex;flex-direction:column;animation:slideIn .25s ease}
+body.ar .slide-panel{box-shadow:8px 0 40px rgba(0,0,0,.15);animation:slideInAr .25s ease}
+@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes slideInAr{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+.panel-header{padding:20px 24px;border-bottom:1px solid var(--gray-200);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+.panel-header-info{flex:1}
+.panel-title{font-size:16px;font-weight:700;color:var(--navy)}
+.panel-subtitle{font-size:12px;color:var(--gray-500);margin-top:2px}
+.panel-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray-500);line-height:1;padding:4px}
+.panel-body{flex:1;overflow-y:auto;padding:24px}
+.panel-footer{padding:16px 24px;border-top:1px solid var(--gray-200);display:flex;gap:10px;justify-content:flex-end}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:var(--radius-lg);width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:700;color:var(--navy)}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray-500)}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--gray-200);display:flex;gap:10px;justify-content:flex-end}
+
+/* FORM */
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:6px}
+.form-control{width:100%;padding:9px 12px;border:1px solid var(--gray-300);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;color:var(--gray-900);transition:border .15s}
+.form-control:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,127,134,.1)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+select.form-control{cursor:pointer}
+
+/* TOAST */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+body.ar .toast-container{right:auto;left:24px}
+.toast{background:#fff;border-radius:var(--radius-md);padding:12px 16px;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:10px;min-width:280px;border-left:4px solid var(--teal);animation:toastIn .3s ease}
+.toast.success{border-left-color:var(--success)}
+.toast.error{border-left-color:var(--danger)}
+.toast.warning{border-left-color:var(--amber)}
+.toast-icon{font-size:18px}
+.toast-msg{font-size:13px;font-weight:500;color:var(--gray-900);flex:1}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* PUBLISH FLOW */
+.publish-steps{display:flex;gap:0;margin-bottom:24px}
+.publish-step{flex:1;padding:12px;text-align:center;border-bottom:3px solid var(--gray-200);position:relative}
+.publish-step.done{border-bottom-color:var(--success)}
+.publish-step.active{border-bottom-color:var(--teal)}
+.publish-step-num{width:24px;height:24px;border-radius:50%;background:var(--gray-200);color:var(--gray-700);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-bottom:4px}
+.publish-step.done .publish-step-num{background:var(--success);color:#fff}
+.publish-step.active .publish-step-num{background:var(--teal);color:#fff}
+.publish-step-label{font-size:11px;color:var(--gray-500);font-weight:600}
+.publish-step.active .publish-step-label{color:var(--teal)}
+
+/* LOADING SPINNER */
+.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* SECTION PAGES */
+.page{display:none}
+.page.active{display:block}
+
+/* SECTION HEADER */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.section-title{font-size:20px;font-weight:800;color:var(--navy)}
+.section-sub{font-size:13px;color:var(--gray-500);margin-top:2px}
+
+/* NEW PROJECT BANNER */
+.hero-banner{background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%);border-radius:var(--radius-lg);padding:28px 32px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden}
+.hero-banner::before{content:'';position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.05)}
+.hero-banner::after{content:'';position:absolute;right:60px;bottom:-60px;width:150px;height:150px;border-radius:50%;background:rgba(53,198,196,.15)}
+.hero-title{font-size:22px;font-weight:800;margin-bottom:6px;position:relative;z-index:1}
+.hero-sub{font-size:13px;opacity:.8;position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(53,198,196,.25);border:1px solid rgba(53,198,196,.4);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;margin-top:12px;position:relative;z-index:1}
+
+/* STATUS CHIP */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.chip.green{background:rgba(46,204,113,.15);color:#27AE60}
+.chip.amber{background:rgba(244,179,91,.15);color:#C8891A}
+.chip.blue{background:rgba(0,127,134,.12);color:var(--teal)}
+.chip.gray{background:var(--gray-100);color:var(--gray-500)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--gray-300);border-radius:3px}
+
+/* ANIMATION */
+.fade-in{animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.analyzing-overlay{position:absolute;inset:0;background:rgba(0,59,92,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;border-radius:var(--radius-md)}
+.analyzing-pulse{width:48px;height:48px;border:3px solid rgba(53,198,196,.4);border-top-color:var(--seaglass);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120">
+      <g transform="translate(10 16)">
+        <path d="M12 82c27-7 47-27 54-53 6-17 18-29 35-38-5 31-17 58-37 77-16 15-34 22-52 24z" fill="#35c6c4"/>
+        <path d="M8 85c31-9 57-30 76-59 11-17 22-27 35-35-10 28-24 52-45 70-18 15-39 23-66 27z" fill="#f4b35b" opacity=".92"/>
+      </g>
+      <text x="135" y="67" fill="#fff" font-family="Arial,sans-serif" font-size="28" font-weight="700">sohar international</text>
+      <text x="138" y="88" fill="#35C6C4" font-family="Arial,sans-serif" font-size="9" letter-spacing="2">GREEN HOME · DEVELOPER PORTAL</text>
+    </svg>
+  </div>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar">AH</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name">Ahmed Al-Hinai</div>
+      <div class="sidebar-user-role">Developer Partner</div>
+    </div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section" data-en="OVERVIEW" data-ar="نظرة عامة">OVERVIEW</div>
+    <a class="nav-item active" onclick="showPage('dashboard')" href="#">
+      <span class="nav-icon">📊</span>
+      <span data-en="Dashboard" data-ar="لوحة التحكم">Dashboard</span>
+    </a>
+    <div class="nav-section" data-en="PROJECTS" data-ar="المشاريع">PROJECTS</div>
+    <a class="nav-item" onclick="showPage('projects')" href="#">
+      <span class="nav-icon">🏗️</span>
+      <span data-en="My Projects" data-ar="مشاريعي">My Projects</span>
+      <span class="nav-badge">3</span>
+    </a>
+    <a class="nav-item" onclick="showPage('newproject')" href="#">
+      <span class="nav-icon">➕</span>
+      <span data-en="Register Project" data-ar="تسجيل مشروع">Register Project</span>
+    </a>
+    <div class="nav-section" data-en="INVENTORY" data-ar="المخزون">INVENTORY</div>
+    <a class="nav-item" onclick="showPage('inventory')" href="#">
+      <span class="nav-icon">🏠</span>
+      <span data-en="Unit Inventory" data-ar="مخزون الوحدات">Unit Inventory</span>
+    </a>
+    <a class="nav-item" onclick="showPage('certificates')" href="#">
+      <span class="nav-icon">📋</span>
+      <span data-en="Certificates" data-ar="الشهادات">Certificates</span>
+      <span class="nav-badge" style="background:var(--warning);color:#fff">!</span>
+    </a>
+    <div class="nav-section" data-en="ANALYTICS" data-ar="التحليلات">ANALYTICS</div>
+    <a class="nav-item" onclick="showPage('analytics')" href="#">
+      <span class="nav-icon">📈</span>
+      <span data-en="Applications" data-ar="الطلبات">Applications</span>
+    </a>
+    <a class="nav-item" onclick="showPage('map')" href="#">
+      <span class="nav-icon">🗺️</span>
+      <span data-en="Site Map" data-ar="خريطة الموقع">Site Map</span>
+    </a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" data-en="Developer & Partner Portal" data-ar="بوابة المطورين والشركاء">Developer & Partner Portal</div>
+      <div class="topbar-sub" data-en="EcoVillage Muscat · Ahmed Al-Hinai Development Co." data-ar="إيكو فيلاج مسقط · شركة أحمد الحنائي للتطوير">EcoVillage Muscat · Ahmed Al-Hinai Development Co.</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="lang-toggle" onclick="toggleLang()">🌐 <span id="lang-label">عربي</span></button>
+      <button class="btn btn-primary btn-sm" onclick="showPage('newproject')">+ <span data-en="New Project" data-ar="مشروع جديد">New Project</span></button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ═══ DASHBOARD PAGE ═══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon navy">🏗️</div>
+          <div><div class="stat-label" data-en="Active Projects" data-ar="المشاريع النشطة">Active Projects</div><div class="stat-value">3</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon teal">🏠</div>
+          <div><div class="stat-label" data-en="Total Units" data-ar="إجمالي الوحدات">Total Units</div><div class="stat-value">96</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon seaglass">✅</div>
+          <div><div class="stat-label" data-en="Approved Loans" data-ar="القروض المعتمدة">Approved Loans</div><div class="stat-value">23</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon amber">💰</div>
+          <div><div class="stat-label" data-en="Funded (OMR)" data-ar="الممول (ريال)">Funded (OMR)</div><div class="stat-value">4.6M</div></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" data-en="Recent Activity" data-ar="النشاط الأخير">Recent Activity</span>
+          </div>
+          <div class="card-body" style="padding:0">
+            <table class="inv-table">
+              <thead><tr><th data-en="Event" data-ar="الحدث">Event</th><th data-en="Project" data-ar="المشروع">Project</th><th data-en="Date" data-ar="التاريخ">Date</th><th data-en="Status" data-ar="الحالة">Status</th></tr></thead>
+              <tbody>
+                <tr><td>GSAS Certificate Uploaded</td><td>EcoVillage Muscat</td><td>28 Jan 2025</td><td><span class="chip green">✅ Verified</span></td></tr>
+                <tr><td>EPC Report Uploaded</td><td>EcoVillage Muscat</td><td>27 Jan 2025</td><td><span class="chip amber">⚠ Review</span></td></tr>
+                <tr><td>Unit B1 Reserved</td><td>EcoVillage Muscat</td><td>26 Jan 2025</td><td><span class="chip blue">🔵 Active</span></td></tr>
+                <tr><td>Loan App GHL-250001 Linked</td><td>EcoVillage Muscat</td><td>25 Jan 2025</td><td><span class="chip green">✅ Linked</span></td></tr>
+                <tr><td>EIA Approval Received</td><td>EcoVillage Muscat</td><td>20 Jan 2025</td><td><span class="chip green">✅ Verified</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title" data-en="ESG Score" data-ar="نقاط ESG">ESG Score</span></div>
+          <div class="card-body" style="text-align:center">
+            <div style="font-size:64px;font-weight:900;color:var(--teal);line-height:1">89</div>
+            <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px">GSAS Rating · EcoVillage Muscat</div>
+            <div style="background:linear-gradient(90deg,#E74C3C 0%,#F39C12 40%,#2ECC71 70%,#27AE60 100%);height:8px;border-radius:4px;position:relative;margin-bottom:6px">
+              <div style="position:absolute;left:74%;top:-4px;width:16px;height:16px;background:var(--navy);border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--gray-500);margin-bottom:16px"><span>0</span><span>50</span><span>100</span></div>
+            <div style="font-size:11px;color:var(--success);font-weight:700">🏆 GSAS 4-Star Equivalent</div>
+            <div style="font-size:11px;color:var(--gray-500);margin-top:4px">Qualifies for 4.75% preferential rate</div>
+            <button class="btn btn-primary btn-sm" style="margin-top:16px;width:100%" onclick="showPage('certificates')" data-en="View Certificates" data-ar="عرض الشهادات">View Certificates</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PROJECTS PAGE ═══ -->
+    <div class="page" id="page-projects">
+      <div class="section-header">
+        <div><div class="section-title" data-en="My Projects" data-ar="مشاريعي">My Projects</div><div class="section-sub" data-en="3 active projects · 96 total units" data-ar="3 مشاريع نشطة · 96 وحدة">3 active projects · 96 total units</div></div>
+        <button class="btn btn-primary" onclick="showPage('newproject')">+ <span data-en="Register New Project" data-ar="تسجيل مشروع جديد">Register New Project</span></button>
+      </div>
+      <div class="project-grid">
+        <div class="project-card active-project" onclick="openProjectPanel('ecovillage')">
+          <div class="project-img"><div class="project-img-overlay"></div><div class="project-img-icon">🌿</div><span class="project-status-badge badge-active">Active</span></div>
+          <div class="project-body">
+            <div class="project-name">EcoVillage Muscat</div>
+            <div class="project-location">📍 Al Mouj, Muscat</div>
+            <div class="project-meta">
+              <div class="project-meta-item"><div class="project-meta-label">Units</div><div class="project-meta-value">24</div></div>
+              <div class="project-meta-item"><div class="project-meta-label">GSAS Score</div><div class="project-meta-value" style="color:var(--success)">89</div></div>
+              <div class="project-meta-item"><div class="project-meta-label">Sold</div><div class="project-meta-value">12</div></div>
+              <div class="project-meta-item"><div class="project-meta-label">Avg Price</div><div class="project-meta-value">OMR 185K</div></div>
+            </div>
+            <div class="project-progress">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-500)"><span data-en="Loan Coverage" data-ar="تغطية القروض">Loan Coverage</span><span>83%</span></div>
+              <div class="progress-bar-wrap"><div class="progress-bar" style="width:83%"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="project-card" onclick="openProjectPanel('greenpalms')">
+          <div class="project-img" style="background:linear-gradient(135deg,#1a4a2e,#2d7a50)"><div class="project-img-overlay"></div><div class="project-img-icon">🌴</div><span class="project-status-badge badge-active">Active</span></div>
+          <div class="project-body">
+            <div class="project-name">Green Palms Seeb</div>
+            <div class="project-location">📍 Seeb, Muscat</div>
+            <div class="project-meta">
+              <div class="project-meta-item"><div class="project-meta-label">Units</div><div class="project-meta-value">36</div></div>
+              <div class="project-meta-item"><div class="project-meta-label">GSAS Score</div><div class="project-meta-value" style="color:var(--teal)">74</div></div>
+              <div class="project-meta-item"><div class="project-meta-label">Sold</div><div class="project-meta-value">8</div></div>
+              <div class="project-meta-item"><div class="project-meta-label">Avg Price</div><div class="project-meta-value">OMR 145K</div></div>
+            </div>
+            <div class="project-progress">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-500)"><span>Loan Coverage</span><span>44%</span></div>
+              <div class="progress-bar-wrap"><div class="progress-bar" style="width:44%"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="project-card" onclick="openProjectPanel('solarrise')">
+          <div class="project-img" style="background:linear-gradient(135deg,#4a3500,#c4860a)"><div class="project-img-overlay"></div><div class="project-img-icon">☀️</div><span class="project-status-badge badge-pending">Pending</span></div>
+          <div class="project-body">
+            <div class="project-name">Solar Rise Barka</div>
+            <div class="project-location">📍 Barka, Al Batinah</div>
+            <div class="project-meta">
+              <div class="project-meta-item"><div class="project-meta-label">Units</div><div class="project-meta-value">36</div></div>
+              <div class="project-meta-item"><div class="project-meta-label">GSAS Score</div><div class="project-meta-value" style="color:var(--amber)">Pending</div></div>
+              <div class="project-meta-item"><div class="project-meta-label">Sold</div><div class="project-meta-value">0</div></div>
+              <div class="project-meta-item"><div class="project-meta-label">Avg Price</div><div class="project-meta-value">OMR 120K</div></div>
+            </div>
+            <div class="project-progress">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-500)"><span>Cert. Progress</span><span>25%</span></div>
+              <div class="progress-bar-wrap"><div class="progress-bar" style="width:25%;background:var(--amber)"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MAP PAGE ═══ -->
+    <div class="page" id="page-map">
+      <div class="section-header">
+        <div><div class="section-title" data-en="EcoVillage Muscat — Site Map" data-ar="خريطة موقع إيكو فيلاج مسقط">EcoVillage Muscat — Site Map</div><div class="section-sub" data-en="24 units · Click any pin for details" data-ar="24 وحدة · انقر على أي دبوس للتفاصيل">24 units · Click any pin for details</div></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="filterUnits('all')">All</button>
+          <button class="btn btn-sm" style="background:rgba(46,204,113,.15);color:#27AE60" onclick="filterUnits('available')">Available</button>
+          <button class="btn btn-sm" style="background:rgba(244,179,91,.15);color:#C8891A" onclick="filterUnits('reserved')">Reserved</button>
+          <button class="btn btn-sm" style="background:rgba(0,59,92,.1);color:var(--navy)" onclick="filterUnits('sold')">Sold</button>
+        </div>
+      </div>
+      <div id="ecovillage-map"></div>
+      <div class="map-legend" style="margin-top:12px">
+        <div class="legend-item"><div class="legend-dot" style="background:#2ECC71"></div><span data-en="Available" data-ar="متاح">Available (12 units)</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#F39C12"></div><span data-en="Reserved" data-ar="محجوز">Reserved (5 units)</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#003B5C"></div><span data-en="Sold" data-ar="مباع">Sold (7 units)</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E74C3C"></div><span>Villa B1 — GHL-250001</span></div>
+      </div>
+    </div>
+
+    <!-- ═══ INVENTORY PAGE ═══ -->
+    <div class="page" id="page-inventory">
+      <div class="section-header">
+        <div><div class="section-title" data-en="Unit Inventory" data-ar="مخزون الوحدات">Unit Inventory</div><div class="section-sub" data-en="EcoVillage Muscat · 24 units" data-ar="إيكو فيلاج مسقط · 24 وحدة">EcoVillage Muscat · 24 units</div></div>
+        <button class="btn btn-primary btn-sm" onclick="publishInventory()">📤 <span data-en="Publish to Bank" data-ar="نشر للبنك">Publish to Bank</span></button>
+      </div>
+      <div class="card">
+        <div class="card-body" style="padding:0">
+          <table class="inv-table" id="units-table">
+            <thead><tr>
+              <th>Unit</th><th>Type</th><th>Area (m²)</th><th>Price (OMR)</th><th>GSAS</th><th>Status</th><th>Action</th>
+            </tr></thead>
+            <tbody id="units-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CERTIFICATES PAGE ═══ -->
+    <div class="page" id="page-certificates">
+      <div class="section-header">
+        <div><div class="section-title" data-en="Green Certificates" data-ar="الشهادات الخضراء">Green Certificates</div><div class="section-sub" data-en="EcoVillage Muscat · AI-powered validation" data-ar="إيكو فيلاج مسقط · التحقق بالذكاء الاصطناعي">EcoVillage Muscat · AI-powered validation</div></div>
+        <span class="chip green">GSAS 89 · Eligible for 4.75%</span>
+      </div>
+      <div class="cert-grid" id="cert-grid">
+        <!-- Populated by JS -->
+      </div>
+      <div id="ai-analysis-panel" class="hidden">
+        <!-- AI results injected here -->
+      </div>
+    </div>
+
+    <!-- ═══ REGISTER PROJECT PAGE ═══ -->
+    <div class="page" id="page-newproject">
+      <div class="section-header">
+        <div><div class="section-title" data-en="Register New Project" data-ar="تسجيل مشروع جديد">Register New Project</div><div class="section-sub" data-en="Step-by-step project onboarding" data-ar="تسجيل المشروع خطوة بخطوة">Step-by-step project onboarding</div></div>
+      </div>
+      <div class="publish-steps">
+        <div class="publish-step done" id="reg-step-1"><div class="publish-step-num">✓</div><div class="publish-step-label">Project Info</div></div>
+        <div class="publish-step active" id="reg-step-2"><div class="publish-step-num">2</div><div class="publish-step-label">Green Specs</div></div>
+        <div class="publish-step" id="reg-step-3"><div class="publish-step-num">3</div><div class="publish-step-label">Certificates</div></div>
+        <div class="publish-step" id="reg-step-4"><div class="publish-step-num">4</div><div class="publish-step-label">Units</div></div>
+        <div class="publish-step" id="reg-step-5"><div class="publish-step-num">5</div><div class="publish-step-label">Publish</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Project Details</span></div>
+          <div class="card-body">
+            <div class="form-group"><label class="form-label">Project Name</label><input class="form-control" id="reg-name" value="EcoVillage Muscat Phase 2" placeholder="Project name"/></div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Governorate</label>
+                <select class="form-control" id="reg-gov"><option>Muscat</option><option>Dhofar</option><option>Al Batinah</option><option>Al Dakhiliyah</option></select></div>
+              <div class="form-group"><label class="form-label">Location</label><input class="form-control" value="Al Mouj, Muscat" placeholder="Area/neighbourhood"/></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Total Units</label><input class="form-control" type="number" id="reg-units" value="24" min="1"/></div>
+              <div class="form-group"><label class="form-label">Completion Year</label><input class="form-control" type="number" value="2026" min="2025"/></div>
+            </div>
+            <div class="form-group"><label class="form-label">Description</label>
+              <textarea class="form-control" rows="3" style="resize:none">Luxury eco-friendly villas with integrated solar systems and green rooftop gardens in the heart of Al Mouj.</textarea>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Green Specifications</span></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Target GSAS Score</label><input class="form-control" type="number" value="88" min="0" max="100"/></div>
+              <div class="form-group"><label class="form-label">GSAS Category</label>
+                <select class="form-control"><option>Residential</option><option>Mixed-Use</option><option>Commercial</option></select></div>
+            </div>
+            <div class="form-group"><label class="form-label">Solar Capacity (kWp)</label><input class="form-control" type="number" value="8.5"/></div>
+            <div class="form-group"><label class="form-label">Green Features</label>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" checked/> Solar PV System</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" checked/> Greywater Recycling</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" checked/> Green Roof / Garden</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" checked/> High-efficiency HVAC (SEER ≥ 18)</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox"/> EV Charging Station</label>
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="registerProject()">
+              <span data-en="Register & Continue" data-ar="تسجيل والمتابعة">Register & Continue</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ANALYTICS PAGE ═══ -->
+    <div class="page" id="page-analytics">
+      <div class="section-header">
+        <div><div class="section-title">Loan Applications</div><div class="section-sub">Linked to your projects</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-icon seaglass">📋</div><div><div class="stat-label">Total Applications</div><div class="stat-value">23</div></div></div>
+        <div class="stat-card"><div class="stat-icon teal">✅</div><div><div class="stat-label">Approved</div><div class="stat-value">18</div></div></div>
+        <div class="stat-card"><div class="stat-icon amber">⏳</div><div><div class="stat-label">In Review</div><div class="stat-value">4</div></div></div>
+        <div class="stat-card"><div class="stat-icon navy">💰</div><div><div class="stat-label">Total Funded</div><div class="stat-value">OMR 4.6M</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Loan Applications by Unit</span></div>
+        <div class="card-body" style="padding:0">
+          <table class="inv-table">
+            <thead><tr><th>Application</th><th>Customer</th><th>Unit</th><th>Amount (OMR)</th><th>Rate</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong>GHL-250001</strong></td><td>Salim Al-Harthy</td><td>Villa B1 — EcoVillage</td><td>200,000</td><td><span style="color:var(--success);font-weight:700">4.75%</span></td><td><span class="chip green">Approved</span></td></tr>
+              <tr><td>GHL-250002</td><td>Maryam Al-Siyabi</td><td>Villa A3 — EcoVillage</td><td>185,000</td><td><span style="color:var(--success);font-weight:700">4.75%</span></td><td><span class="chip green">Approved</span></td></tr>
+              <tr><td>GHL-250003</td><td>Khalid Al-Rashdi</td><td>Villa C2 — EcoVillage</td><td>195,000</td><td>5.00%</td><td><span class="chip amber">In Review</span></td></tr>
+              <tr><td>GHL-240018</td><td>Fatima Al-Busaidi</td><td>Unit 12 — Green Palms</td><td>140,000</td><td>5.25%</td><td><span class="chip green">Approved</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .content -->
+</div><!-- end .main -->
+
+<!-- ═══ PROJECT PANEL OVERLAY ═══ -->
+<div class="panel-overlay" id="project-panel-overlay" onclick="closePanelIfOutside(event)">
+  <div class="slide-panel">
+    <div class="panel-header">
+      <div class="panel-header-info">
+        <div class="panel-title" id="panel-proj-title">EcoVillage Muscat</div>
+        <div class="panel-subtitle" id="panel-proj-sub">Al Mouj, Muscat · 24 units</div>
+      </div>
+      <button class="panel-close" onclick="closePanel('project-panel-overlay')">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="tabs"><button class="tab active" onclick="switchTab(this,'ptab-overview')">Overview</button><button class="tab" onclick="switchTab(this,'ptab-units')">Units</button><button class="tab" onclick="switchTab(this,'ptab-certs')">Certificates</button></div>
+      <div id="ptab-overview">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div class="card" style="margin:0"><div class="card-body" style="text-align:center"><div style="font-size:36px;font-weight:900;color:var(--teal)">89</div><div style="font-size:11px;color:var(--gray-500)">GSAS Score</div></div></div>
+          <div class="card" style="margin:0"><div class="card-body" style="text-align:center"><div style="font-size:36px;font-weight:900;color:var(--navy)">24</div><div style="font-size:11px;color:var(--gray-500)">Total Units</div></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Developer</span><span style="font-weight:600">Ahmed Al-Hinai Development Co.</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Location</span><span style="font-weight:600">Al Mouj, Muscat</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Min Green Rate</span><span style="font-weight:600;color:var(--success)">4.75%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Completion</span><span style="font-weight:600">Q2 2025</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0"><span style="color:var(--gray-500)">Partner Since</span><span style="font-weight:600">January 2024</span></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="closePanel('project-panel-overlay');showPage('map')">🗺️ View on Map</button>
+      </div>
+      <div id="ptab-units" style="display:none">
+        <table class="inv-table"><thead><tr><th>Unit</th><th>Area</th><th>Price</th><th>Status</th></tr></thead><tbody>
+          <tr><td><strong>Villa B1</strong> ⭐</td><td>320m²</td><td>200,000</td><td><span class="unit-status reserved">Reserved</span></td></tr>
+          <tr><td>Villa A1</td><td>280m²</td><td>175,000</td><td><span class="unit-status available">Available</span></td></tr>
+          <tr><td>Villa A2</td><td>295m²</td><td>182,000</td><td><span class="unit-status sold">Sold</span></td></tr>
+          <tr><td>Villa A3</td><td>310m²</td><td>192,000</td><td><span class="unit-status sold">Sold</span></td></tr>
+          <tr><td>Villa C1</td><td>340m²</td><td>215,000</td><td><span class="unit-status available">Available</span></td></tr>
+          <tr><td>Villa C2</td><td>325m²</td><td>205,000</td><td><span class="unit-status reserved">Reserved</span></td></tr>
+        </tbody></table>
+      </div>
+      <div id="ptab-certs" style="display:none">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm)">
+            <div><div style="font-weight:600;font-size:13px">GSAS Certificate</div><div style="font-size:11px;color:var(--gray-500)">Score: 89 · Valid until Dec 2027</div></div>
+            <span class="chip green">✅ Verified</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm)">
+            <div><div style="font-weight:600;font-size:13px">EPC Report</div><div style="font-size:11px;color:var(--gray-500)">Rating: B+ · 88% efficiency</div></div>
+            <span class="chip amber">⚠ Review</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm)">
+            <div><div style="font-weight:600;font-size:13px">EIA Approval</div><div style="font-size:11px;color:var(--gray-500)">Ref: EIA-2024-0892</div></div>
+            <span class="chip green">✅ Verified</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <button class="btn btn-secondary" onclick="closePanel('project-panel-overlay')">Close</button>
+      <button class="btn btn-primary" onclick="closePanel('project-panel-overlay');showPage('certificates')">Upload Certificates</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST CONTAINER ═══ -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ═══ PUBLISH MODAL ═══ -->
+<div class="modal-overlay" id="publish-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📤 Publish Inventory to Bank</div>
+      <button class="modal-close" onclick="closeModal('publish-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--gray-50);border-radius:var(--radius-md);padding:16px;margin-bottom:16px">
+        <div style="font-weight:700;color:var(--navy);margin-bottom:8px">EcoVillage Muscat</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+          <div><span style="color:var(--gray-500)">Available units:</span> <strong>12</strong></div>
+          <div><span style="color:var(--gray-500)">Total value:</span> <strong>OMR 2.1M</strong></div>
+          <div><span style="color:var(--gray-500)">GSAS Score:</span> <strong style="color:var(--success)">89</strong></div>
+          <div><span style="color:var(--gray-500)">Min Rate:</span> <strong style="color:var(--success)">4.75%</strong></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Publish unit specifications</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Share GSAS certificate</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Enable Green Home Loan eligibility</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Allow bank customer browsing</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('publish-modal')">Cancel</button>
+      <button class="btn btn-success" onclick="confirmPublish()">✅ Confirm & Publish</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// STATE & DATA
+// ═══════════════════════════════════════════════════
+const OPENAI_KEY = 'REDACTED_OPENAI_KEY';
+let isAr = false;
+let leafletMap = null;
+let mapMarkers = [];
+
+const UNITS = [
+  {id:'B1',type:'Villa',area:320,price:200000,gsas:89,status:'reserved',lat:23.6102,lng:58.5922,loan:'GHL-250001'},
+  {id:'A1',type:'Villa',area:280,price:175000,gsas:87,status:'available',lat:23.6110,lng:58.5910},
+  {id:'A2',type:'Villa',area:295,price:182000,gsas:88,status:'sold',lat:23.6118,lng:58.5918},
+  {id:'A3',type:'Villa',area:310,price:192000,gsas:91,status:'sold',lat:23.6126,lng:58.5926},
+  {id:'C1',type:'Villa',area:340,price:215000,gsas:86,status:'available',lat:23.6094,lng:58.5930},
+  {id:'C2',type:'Villa',area:325,price:205000,gsas:85,status:'reserved',lat:23.6086,lng:58.5914},
+  {id:'D1',type:'Townhouse',area:240,price:155000,gsas:84,status:'available',lat:23.6130,lng:58.5900},
+  {id:'D2',type:'Townhouse',area:240,price:155000,gsas:84,status:'available',lat:23.6138,lng:58.5908},
+  {id:'D3',type:'Townhouse',area:245,price:158000,gsas:85,status:'sold',lat:23.6134,lng:58.5916},
+  {id:'D4',type:'Townhouse',area:242,price:156000,gsas:83,status:'available',lat:23.6142,lng:58.5924},
+  {id:'E1',type:'Apartment',area:180,price:115000,gsas:82,status:'available',lat:23.6078,lng:58.5920},
+  {id:'E2',type:'Apartment',area:175,price:112000,gsas:81,status:'available',lat:23.6070,lng:58.5912},
+  {id:'E3',type:'Apartment',area:185,price:118000,gsas:83,status:'sold',lat:23.6074,lng:58.5904},
+  {id:'E4',type:'Apartment',area:178,price:114000,gsas:82,status:'available',lat:23.6082,lng:58.5896},
+  {id:'F1',type:'Villa',area:360,price:225000,gsas:92,status:'sold',lat:23.6090,lng:58.5888},
+  {id:'F2',type:'Villa',area:355,price:222000,gsas:90,status:'available',lat:23.6098,lng:58.5880},
+  {id:'G1',type:'Townhouse',area:250,price:162000,gsas:86,status:'reserved',lat:23.6106,lng:58.5872},
+  {id:'G2',type:'Townhouse',area:252,price:163000,gsas:85,status:'available',lat:23.6114,lng:58.5864},
+  {id:'G3',type:'Townhouse',area:248,price:160000,gsas:84,status:'sold',lat:23.6122,lng:58.5856},
+  {id:'H1',type:'Apartment',area:190,price:122000,gsas:80,status:'available',lat:23.6068,lng:58.5944},
+  {id:'H2',type:'Apartment',area:188,price:120000,gsas:81,status:'sold',lat:23.6060,lng:58.5936},
+  {id:'H3',type:'Apartment',area:192,price:123000,gsas:82,status:'available',lat:23.6064,lng:58.5952},
+  {id:'I1',type:'Villa',area:330,price:208000,gsas:88,status:'reserved',lat:23.6052,lng:58.5928},
+  {id:'I2',type:'Villa',area:335,price:210000,gsas:89,status:'available',lat:23.6044,lng:58.5936},
+];
+
+const CERT_CONFIG = [
+  {id:'gsas',icon:'🏆',name:'GSAS Certificate',desc:'Green Suburb Assessment System — Score 89',status:'verified',confidence:96,findings:['Score 89/100 confirmed','4-Star Equivalent','Solar PV verified','Water efficiency ✓']},
+  {id:'epc',icon:'⚡',name:'EPC Report',desc:'Energy Performance Certificate — Rating B+',status:'flagged',confidence:88,findings:['Rating: B+','88% efficiency','HVAC: SEER 18.2 ✓','Thermal bridge: minor flag']},
+  {id:'eia',icon:'🌿',name:'EIA Approval',desc:'Environmental Impact Assessment — Ref: EIA-2024-0892',status:'verified',confidence:95,findings:['No adverse impact','Biodiversity protected','Dust control plan ✓','Ref validated']},
+];
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  if(page) { page.classList.add('active'); page.classList.add('fade-in'); }
+
+  // mark nav active
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) n.classList.add('active');
+  });
+
+  if(id === 'map') { setTimeout(() => initMap(), 100); }
+  if(id === 'inventory') { renderUnitsTable(); }
+  if(id === 'certificates') { renderCerts(); }
+}
+
+// ═══════════════════════════════════════════════════
+// LANGUAGE TOGGLE
+// ═══════════════════════════════════════════════════
+function toggleLang() {
+  isAr = !isAr;
+  document.body.classList.toggle('ar', isAr);
+  document.documentElement.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+  document.getElementById('lang-label').textContent = isAr ? 'English' : 'عربي';
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = isAr ? el.getAttribute('data-ar') : el.getAttribute('data-en');
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// LEAFLET MAP
+// ═══════════════════════════════════════════════════
+function initMap() {
+  const el = document.getElementById('ecovillage-map');
+  if(!el) return;
+  if(leafletMap) { leafletMap.invalidateSize(); return; }
+
+  leafletMap = L.map('ecovillage-map').setView([23.6094, 58.5910], 16);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 19
+  }).addTo(leafletMap);
+
+  // Project boundary
+  const bounds = [[23.604,58.585],[23.616,58.598]];
+  L.rectangle(bounds, {color:'#007F86', weight:2, fillColor:'#35C6C4', fillOpacity:0.06}).addTo(leafletMap);
+  L.marker([23.610,58.5915], {icon: L.divIcon({className:'', html:'<div style="background:var(--navy);color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap">🌿 EcoVillage Muscat</div>'})}).addTo(leafletMap);
+
+  renderMapMarkers('all');
+}
+
+function renderMapMarkers(filter) {
+  if(!leafletMap) return;
+  mapMarkers.forEach(m => leafletMap.removeLayer(m));
+  mapMarkers = [];
+
+  const colorMap = {available:'#2ECC71', reserved:'#F39C12', sold:'#003B5C'};
+
+  UNITS.forEach(u => {
+    if(filter !== 'all' && u.status !== filter) return;
+    const isB1 = u.id === 'B1';
+    const color = isB1 ? '#E74C3C' : colorMap[u.status];
+    const size = isB1 ? 18 : 12;
+    const icon = L.divIcon({
+      className:'',
+      html:`<div style="width:${size}px;height:${size}px;background:${color};border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);${isB1 ? 'animation:pulse 1.5s infinite' : ''}"></div>`,
+      iconAnchor:[size/2,size/2]
+    });
+    const popup = `<div style="font-size:12px;min-width:160px">
+      <strong style="color:#003B5C">Villa ${u.id}</strong>${isB1 ? ' ⭐' : ''}<br/>
+      Type: ${u.type} · ${u.area}m²<br/>
+      Price: OMR ${u.price.toLocaleString()}<br/>
+      GSAS: <strong style="color:#2ECC71">${u.gsas}</strong><br/>
+      Status: <strong>${u.status.toUpperCase()}</strong><br/>
+      ${u.loan ? `<span style="color:#007F86">🔗 ${u.loan}</span>` : ''}
+    </div>`;
+    const marker = L.marker([u.lat, u.lng], {icon}).addTo(leafletMap);
+    marker.bindPopup(popup);
+    if(isB1) marker.openPopup();
+    mapMarkers.push(marker);
+  });
+}
+
+function filterUnits(f) { renderMapMarkers(f); }
+
+// ═══════════════════════════════════════════════════
+// UNITS TABLE
+// ═══════════════════════════════════════════════════
+function renderUnitsTable() {
+  const tbody = document.getElementById('units-tbody');
+  if(!tbody) return;
+  tbody.innerHTML = UNITS.map(u => `
+    <tr>
+      <td><strong>${u.id === 'B1' ? '⭐ ' : ''}Villa ${u.id}</strong></td>
+      <td>${u.type}</td>
+      <td>${u.area}</td>
+      <td>${u.price.toLocaleString()}</td>
+      <td><span class="gsas-score ${u.gsas >= 85 ? 'excellent' : 'good'}">${u.gsas}</span></td>
+      <td><span class="unit-status ${u.status}">${u.status}</span></td>
+      <td><button class="btn btn-secondary btn-sm" onclick="showUnitDetail('${u.id}')">View</button></td>
+    </tr>
+  `).join('');
+}
+
+function showUnitDetail(id) { toast(`Viewing Unit ${id} details`, 'info'); }
+
+// ═══════════════════════════════════════════════════
+// CERTIFICATES
+// ═══════════════════════════════════════════════════
+function renderCerts() {
+  const grid = document.getElementById('cert-grid');
+  if(!grid) return;
+  grid.innerHTML = CERT_CONFIG.map(c => `
+    <div class="cert-card ${c.status}" id="cert-${c.id}" onclick="triggerCertUpload('${c.id}')">
+      <div class="cert-icon">${c.icon}</div>
+      <div class="cert-name">${c.name}</div>
+      <div class="cert-desc">${c.desc}</div>
+      <div class="cert-status ${c.status}">
+        ${c.status === 'verified' ? '✅ AI Verified' : c.status === 'flagged' ? '⚠️ Needs Review' : '📤 Click to Upload'}
+      </div>
+      ${c.status !== 'pending' ? `<div style="margin-top:8px;font-size:11px;color:var(--gray-500)">${c.confidence}% confidence</div>` : ''}
+    </div>
+  `).join('');
+
+  // auto-show AI panel for the demo
+  setTimeout(() => showAIPanel(CERT_CONFIG[0]), 600);
+}
+
+function triggerCertUpload(id) {
+  const cert = CERT_CONFIG.find(c => c.id === id);
+  if(!cert) return;
+  const card = document.getElementById('cert-' + id);
+
+  // Simulate upload + AI analysis
+  card.className = 'cert-card uploading';
+  card.innerHTML = `<div class="cert-icon">${cert.icon}</div><div class="cert-name">${cert.name}</div>
+    <div style="position:relative;min-height:60px">
+      <div style="text-align:center;padding:10px"><div class="analyzing-pulse" style="margin:0 auto 8px"></div><div style="font-size:12px;color:var(--teal)">AI Analyzing…</div></div>
+    </div>`;
+
+  setTimeout(() => {
+    card.className = 'cert-card ' + cert.status;
+    renderCerts();
+    showAIPanel(cert);
+    toast(`${cert.name} validated — ${cert.confidence}% confidence`, cert.status === 'verified' ? 'success' : 'warning');
+  }, 2200);
+}
+
+function showAIPanel(cert) {
+  const panel = document.getElementById('ai-analysis-panel');
+  panel.classList.remove('hidden');
+  panel.innerHTML = `
+    <div class="ai-panel fade-in">
+      <div class="ai-panel-header">
+        <span style="font-size:20px">🤖</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--navy)">AI Document Analysis — ${cert.name}</div>
+          <div style="font-size:11px;color:var(--gray-500)">GPT-4o Vision · Google Vision OCR · ${new Date().toLocaleTimeString()}</div>
+        </div>
+        <span class="ai-badge">GPT-4o</span>
+        <span class="chip ${cert.status === 'verified' ? 'green' : 'amber'}" style="margin-left:auto">${cert.status === 'verified' ? '✅ Auto-Verified' : '⚠️ Manual Review'}</span>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--gray-700);margin-bottom:8px">Confidence Scores</div>
+        ${buildConfidenceBar('Document Authenticity', 97, 'high')}
+        ${buildConfidenceBar('Score Validation', cert.confidence, cert.confidence >= 90 ? 'high' : cert.confidence >= 75 ? 'medium' : 'low')}
+        ${buildConfidenceBar('Issuer Verification', 94, 'high')}
+        ${buildConfidenceBar('Expiry Check', 99, 'high')}
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--gray-700);margin-bottom:8px">AI Findings</div>
+        <div>${cert.findings.map(f => `<span class="finding-tag ${f.includes('⚠') || f.includes('flag') || f.includes('minor') ? 'warn' : 'pass'}">${f}</span>`).join('')}</div>
+      </div>
+      <div style="background:rgba(0,59,92,.04);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--gray-700);line-height:1.6">
+        <strong>AI Recommendation:</strong> ${cert.status === 'verified'
+          ? `Certificate validated with ${cert.confidence}% confidence. All key parameters confirmed. Unit qualifies for Sohar International Green Home Loan preferential rate of <strong style="color:var(--success)">4.75%</strong>. No manual review required.`
+          : `Certificate accepted but flagged for manual review (${cert.confidence}% confidence). Thermal bridging note requires physical inspection. Recommend Compliance Officer override if physical inspection satisfactory. Does not block loan approval.`
+        }
+      </div>
+      ${cert.status === 'flagged' ? `
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-secondary btn-sm" onclick="this.parentElement.remove();toast('Override requested','info')">Request Override</button>
+        <button class="btn btn-amber btn-sm" onclick="uploadCorrectedDoc('${cert.id}')">Re-upload Corrected Doc</button>
+      </div>` : ''}
+    </div>
+  `;
+
+  // Animate bars after render
+  setTimeout(() => {
+    panel.querySelectorAll('.confidence-bar').forEach(bar => {
+      const w = bar.getAttribute('data-w');
+      bar.style.width = w + '%';
+    });
+  }, 100);
+}
+
+function buildConfidenceBar(label, pct, cls) {
+  return `<div class="confidence-row">
+    <div class="confidence-label">${label}</div>
+    <div class="confidence-bar-wrap"><div class="confidence-bar ${cls}" style="width:0%" data-w="${pct}"></div></div>
+    <div class="confidence-pct">${pct}%</div>
+  </div>`;
+}
+
+function uploadCorrectedDoc(id) { toast('Document upload dialog opening…', 'info'); triggerCertUpload(id); }
+
+// ═══════════════════════════════════════════════════
+// PANELS & MODALS
+// ═══════════════════════════════════════════════════
+function openProjectPanel(proj) {
+  const titles = {ecovillage:'EcoVillage Muscat',greenpalms:'Green Palms Seeb',solarrise:'Solar Rise Barka'};
+  const subs = {ecovillage:'Al Mouj, Muscat · 24 units',greenpalms:'Seeb, Muscat · 36 units',solarrise:'Barka, Al Batinah · 36 units'};
+  document.getElementById('panel-proj-title').textContent = titles[proj] || proj;
+  document.getElementById('panel-proj-sub').textContent = subs[proj] || '';
+  document.getElementById('project-panel-overlay').classList.add('open');
+}
+
+function closePanel(id) { document.getElementById(id).classList.remove('open'); }
+function closePanelIfOutside(e) { if(e.target === e.currentTarget) e.currentTarget.classList.remove('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function switchTab(btn, targetId) {
+  const panel = btn.closest('.slide-panel') || btn.closest('.card') || document.body;
+  btn.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  // hide all sibling tab panes
+  const allPanes = ['ptab-overview','ptab-units','ptab-certs'];
+  allPanes.forEach(id => { const el = document.getElementById(id); if(el) el.style.display='none'; });
+  const target = document.getElementById(targetId);
+  if(target) target.style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════
+function publishInventory() { document.getElementById('publish-modal').classList.add('open'); }
+function confirmPublish() {
+  closeModal('publish-modal');
+  toast('✅ Inventory published to Sohar International Green Home portal!', 'success');
+  toast('24 units now visible to bank customers', 'success');
+}
+
+function registerProject() {
+  const name = document.getElementById('reg-name').value || 'New Project';
+  toast(`🏗️ Project "${name}" registration submitted!`, 'success');
+  toast('Sohar International will review within 2 business days', 'info');
+  setTimeout(() => showPage('projects'), 1200);
+}
+
+// ═══════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════
+function toast(msg, type='info') {
+  const icons = {success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  showPage('dashboard');
+});
+</script>
+</body>
+</html>
