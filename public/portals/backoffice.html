@@ -651,7 +651,8 @@ async function renderRules() {
   document.getElementById('pageTitle').textContent = 'Rules Engine';
   document.getElementById('pageSubtitle').textContent = '15 active CBO rules';
   try {
-    const r = await fetch('/api/v1/products/p001/rules');
+    const pid = selectedProduct || (products[0] && products[0].id) || 'p001';
+    const r = await fetch(`/api/v1/products/${pid}/rules`);
     const d = await r.json();
     rules = d.rules || [];
   } catch(e) { rules = []; }
@@ -721,10 +722,10 @@ async function renderComplianceTasks() {
           ${colLabels[key]} <span class="kanban-count">${apps.length}</span>
         </div>
         ${apps.map(a => `
-        <div class="kanban-card ${a.reference==='GHL-250001'?'priority':''}" onclick="openComplianceDetail('${a.id}')">
+        <div class="kanban-card ${a.priority==='high'?'priority':''}" onclick="openComplianceDetail('${a.id}')">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem">
             <span style="font-family:monospace;font-size:.75rem;color:var(--teal);font-weight:600">${a.reference}</span>
-            ${a.reference==='GHL-250001'?'<span class="badge badge-amber" style="font-size:.65rem">HIGH PRIORITY</span>':''}
+            ${a.priority==='high'?'<span class="badge badge-amber" style="font-size:.65rem">HIGH PRIORITY</span>':''}
           </div>
           <div style="font-weight:600;font-size:.85rem;color:var(--navy);margin-bottom:.25rem">${a.customer_name||a.customer_display_name}</div>
           <div style="font-size:.78rem;color:var(--grey-500);margin-bottom:.5rem">${a.product_name||''}</div>
@@ -777,7 +778,7 @@ function renderCompliancePanel(comp, appData) {
             </div>
             ${[
               ['Application Ref',`<span style="font-family:monospace;color:var(--teal)">${app.reference||'–'}</span>`],
-              ['Product', app.product_name||'Green Home Loan – ESG'],
+              ['Product', app.product_name||'—'],
               ['Property', app.property_address||'EcoVillage Muscat, Villa B1'],
               ['GSAS Score', `<strong style="color:var(--success)">${app.gsas_score||89} / 100 (Gold)</strong>`],
               ['Applied Rate', `<strong style="color:var(--navy)">${app.applied_rate||4.75}%</strong> <span style="color:var(--success);font-size:.75rem">(${((app.standard_rate||5.5)-(app.applied_rate||4.75)).toFixed(2)}% green discount)</span>`],
@@ -890,7 +891,7 @@ function renderCompliancePanel(comp, appData) {
         </div>
       </div>
     </div>`;
-  openPanel(`Review: ${app.reference||'GHL-250001'}`);
+  openPanel(`Review: ${app.reference||app.id||'Application'}`);
 }
 
 async function overrideDocConfidence(docId) {
@@ -1101,7 +1102,7 @@ function showCloneModal() {
   const opts = products.filter(p=>p.status==='active').map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   showModal('Clone Product', `
     <div class="form-group"><label class="form-label">Clone from</label><select class="form-control" id="cloneSource">${opts}</select></div>
-    <div class="form-group"><label class="form-label">New Product Name</label><input class="form-control" id="cloneName" value="Green Home Loan – ESG" placeholder="New product name…"></div>
+    <div class="form-group"><label class="form-label">New Product Name</label><input class="form-control" id="cloneName" value="" placeholder="New product name…"></div>
   `, async () => {
     const sourceId = document.getElementById('cloneSource').value;
     const name = document.getElementById('cloneName').value;
