@@ -1,19 +1,199 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sohar International – Digital Ecosystem Demo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Georgia:ital@0;1&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    body { margin:0; font-family:'Inter',sans-serif; background:#001f38; color:#fff; }
+    .launcher { min-height:100vh; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+    .bg-pattern { position:absolute; inset:0; opacity:.07;
+      background-image: repeating-linear-gradient(45deg,#35C6C4 0,#35C6C4 1px,transparent 0,transparent 50%),
+      repeating-linear-gradient(-45deg,#F4B35B 0,#F4B35B 1px,transparent 0,transparent 50%);
+      background-size:40px 40px; }
+    .bg-glow { position:absolute; width:600px; height:600px; border-radius:50%;
+      background:radial-gradient(circle,rgba(53,198,196,.15),transparent 70%);
+      top:-200px; right:-100px; pointer-events:none; }
+    .bg-glow2 { bottom:-200px; left:-100px; top:auto; right:auto; background:radial-gradient(circle,rgba(244,179,91,.08),transparent 70%); }
+    nav { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between;
+      padding:1.5rem 3rem; border-bottom:1px solid rgba(255,255,255,.06); }
+    .nav-logo { display:flex; align-items:center; gap:.875rem; }
+    .nav-logo-svg { width:48px; height:48px; }
+    .nav-wordmark h1 { font-size:1.1rem; font-weight:700; color:#fff; margin:0; letter-spacing:-.01em; }
+    .nav-wordmark p { font-size:.65rem; color:rgba(255,255,255,.4); letter-spacing:2px; text-transform:uppercase; margin:.1rem 0 0; }
+    .nav-badge { background:rgba(53,198,196,.12); border:1px solid rgba(53,198,196,.25);
+      color:#35C6C4; font-size:.7rem; padding:.3rem .8rem; border-radius:20px; letter-spacing:.5px; }
+    .nav-actions { display:flex; gap:.75rem; }
+    .btn-init { background:#35C6C4; color:#003B5C; border:none; padding:.5rem 1.25rem;
+      border-radius:10px; font-weight:700; font-size:.8rem; cursor:pointer; transition:all .2s;
+      display:flex; align-items:center; gap:.5rem; }
+    .btn-init:hover { background:#fff; transform:translateY(-1px); }
+    .btn-init.loading { opacity:.7; cursor:default; }
+    .hero { position:relative; z-index:5; text-align:center; padding:4rem 2rem 2rem; }
+    .hero-eyebrow { font-size:.75rem; letter-spacing:3px; text-transform:uppercase;
+      color:#F4B35B; margin-bottom:1.25rem; }
+    .hero h2 { font-size:2.8rem; font-weight:800; line-height:1.15; max-width:700px; margin:0 auto 1rem;
+      background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,.7) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .hero p { color:rgba(255,255,255,.55); max-width:520px; margin:0 auto 2.5rem; line-height:1.7; font-size:.95rem; }
+    .acts-row { display:flex; gap:.625rem; justify-content:center; flex-wrap:wrap; margin-bottom:3.5rem; }
+    .act-pill { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+      border-radius:20px; padding:.35rem .9rem; font-size:.75rem; color:rgba(255,255,255,.6); }
+    .act-pill strong { color:#35C6C4; margin-right:.35rem; }
+    .portals-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1.25rem;
+      max-width:900px; margin:0 auto 2rem; }
+    @media(max-width:700px){ .portals-grid{grid-template-columns:1fr 1fr;} }
+    .portal-tile { border-radius:18px; padding:1.75rem 1.25rem; text-align:center;
+      cursor:pointer; transition:all .25s; border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04); backdrop-filter:blur(10px); }
+    .portal-tile:hover { transform:translateY(-6px); border-color:rgba(53,198,196,.4);
+      background:rgba(255,255,255,.08); box-shadow:0 20px 50px rgba(0,0,0,.4); }
+    .portal-tile .icon { font-size:2.2rem; margin-bottom:1rem; }
+    .portal-tile h3 { font-size:.9rem; font-weight:600; margin-bottom:.35rem; color:#fff; }
+    .portal-tile p { font-size:.72rem; color:rgba(255,255,255,.45); line-height:1.5; margin:0; }
+    .portal-tile .chip { display:inline-block; font-size:.65rem; padding:.2rem .65rem;
+      border-radius:20px; margin-top:.75rem; font-weight:500; }
+    .chip-customer { background:rgba(53,198,196,.15); color:#35C6C4; }
+    .chip-developer { background:rgba(244,179,91,.15); color:#F4B35B; }
+    .chip-backoffice { background:rgba(255,255,255,.08); color:rgba(255,255,255,.7); }
+    .chip-contractor { background:rgba(22,132,91,.2); color:#4eda9e; }
+    .init-status { text-align:center; padding:1rem; }
+    .init-status p { color:rgba(255,255,255,.5); font-size:.8rem; }
+    .init-status .spinner { display:inline-block; width:20px; height:20px; border:2px solid rgba(255,255,255,.2); border-top-color:#35C6C4; border-radius:50%; animation:spin 1s linear infinite; margin-right:.5rem; vertical-align:middle; }
+    @keyframes spin { to{transform:rotate(360deg);} }
+    .demo-version { text-align:center; padding:2rem; color:rgba(255,255,255,.2); font-size:.7rem; letter-spacing:1px; }
+    .toast-container { position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999; display:flex; flex-direction:column; gap:.5rem; }
+    .toast { background:#003B5C; color:#fff; padding:.75rem 1.25rem; border-radius:12px; font-size:.82rem;
+      display:flex; align-items:center; gap:.625rem; box-shadow:0 8px 30px rgba(0,0,0,.4);
+      animation:slideUp .3s ease; border-left:3px solid #35C6C4; max-width:340px; }
+    .toast.success { border-color:#16845B; }
+    .toast.error { border-color:#BD3B4B; }
+    @keyframes slideUp { from{transform:translateY(12px);opacity:0;} to{transform:translateY(0);opacity:1;} }
+  </style>
 </head>
 <body>
-  <div id="app"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/assets/app.js"></script>
+<div class="launcher">
+  <div class="bg-pattern"></div>
+  <div class="bg-glow"></div>
+  <div class="bg-glow bg-glow2"></div>
+
+  <nav>
+    <div class="nav-logo">
+      <svg class="nav-logo-svg" viewBox="0 0 520 120" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(10 16)">
+          <path d="M12 82c27-7 47-27 54-53 6-17 18-29 35-38-5 31-17 58-37 77-16 15-34 22-52 24z" fill="#35c6c4"/>
+          <path d="M8 85c31-9 57-30 76-59 11-17 22-27 35-35-10 28-24 52-45 70-18 15-39 23-66 27z" fill="#f4b35b" opacity=".9"/>
+        </g>
+      </svg>
+      <div class="nav-wordmark">
+        <h1>sohar international</h1>
+        <p>Digital Ecosystem · Demo v1.0</p>
+      </div>
+    </div>
+    <div class="nav-badge">RFP 76/2026 · Green Home Loan Demo</div>
+    <div class="nav-actions">
+      <button class="btn-init" id="initBtn" onclick="initDb()">
+        <i class="fas fa-database"></i> Initialize Demo Data
+      </button>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-eyebrow">Andersen FZCO &amp; KUDO LABS FZCO · 31 August 2026</div>
+    <h2>Banking made clear.<br>Progress made possible.</h2>
+    <p>A 42-minute live demonstration of AI-powered digital lending — from product configuration to first construction tranche. Select a portal to begin.</p>
+    <div class="acts-row">
+      <div class="act-pill"><strong>Act 1</strong> Back-Office: Product Config</div>
+      <div class="act-pill"><strong>Act 2</strong> Developer: Project Registration</div>
+      <div class="act-pill"><strong>Act 3</strong> Customer: Loan Application</div>
+      <div class="act-pill"><strong>Act 4</strong> Compliance &amp; Risk Review</div>
+      <div class="act-pill"><strong>Act 5</strong> Contractor: Tranche Release</div>
+    </div>
+  </div>
+
+  <div class="portals-grid">
+    <div class="portal-tile" onclick="openPortal('customer')">
+      <div class="icon">🏡</div>
+      <h3>Customer Portal</h3>
+      <p>Salim Al-Harthy applies for Green Home Loan on Villa B1</p>
+      <span class="chip chip-customer">Salim Al-Harthy</span>
+    </div>
+    <div class="portal-tile" onclick="openPortal('developer')">
+      <div class="icon">🏗️</div>
+      <h3>Developer Portal</h3>
+      <p>Al Madaen Real Estate registers EcoVillage Muscat, AI validates certificates</p>
+      <span class="chip chip-developer">Ahmed Al-Hinai</span>
+    </div>
+    <div class="portal-tile" onclick="openPortal('backoffice')">
+      <div class="icon">⚙️</div>
+      <h3>Back-Office Console</h3>
+      <p>Product Manager launches Green Home Loan. Compliance &amp; Risk review</p>
+      <span class="chip chip-backoffice">Fatima · Aisha · Omar</span>
+    </div>
+    <div class="portal-tile" onclick="openPortal('contractor')">
+      <div class="icon">🔨</div>
+      <h3>Contractor Portal</h3>
+      <p>Site supervisor completes Stage 1, AI validates invoice, tranche released</p>
+      <span class="chip chip-contractor">Rashid Al-Hassani</span>
+    </div>
+  </div>
+
+  <div class="init-status" id="initStatus"></div>
+  <div class="demo-version">WORKING DEMO SYSTEM · V1.0 · 31 AUGUST 2026 · SOHAR INTERNATIONAL</div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const BASE = '';
+function openPortal(p) {
+  const urls = {
+    customer: '/portals/customer.html',
+    developer: '/portals/developer.html',
+    backoffice: '/portals/backoffice.html',
+    contractor: '/portals/contractor.html'
+  };
+  window.open(urls[p], '_blank');
+}
+
+async function initDb() {
+  const btn = document.getElementById('initBtn');
+  const status = document.getElementById('initStatus');
+  btn.innerHTML = '<span class="spinner"></span> Initializing…';
+  btn.classList.add('loading');
+  btn.disabled = true;
+  status.innerHTML = '<p><span class="spinner"></span> Seeding database with demo data…</p>';
+  try {
+    const r = await fetch('/api/v1/seed/run', { method:'POST' });
+    const d = await r.json();
+    if (d.success) {
+      status.innerHTML = '<p style="color:#4eda9e">✅ Demo data ready — ' + d.executed + ' statements executed. All portals are live.</p>';
+      btn.innerHTML = '<i class="fas fa-check"></i> Data Ready';
+      btn.style.background = '#16845B';
+      toast('Demo database initialized successfully!', 'success');
+    } else {
+      status.innerHTML = '<p style="color:#F4B35B">⚠️ ' + (d.error||'Partial init') + '</p>';
+      btn.innerHTML = '<i class="fas fa-database"></i> Retry Init';
+      btn.classList.remove('loading'); btn.disabled = false;
+    }
+  } catch(e) {
+    status.innerHTML = '<p style="color:#F4B35B">⚠️ Could not reach API. Start the dev server first.</p>';
+    btn.innerHTML = '<i class="fas fa-database"></i> Retry Init';
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+function toast(msg, type='info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = '<i class="fas fa-' + (type==='success'?'check-circle':type==='error'?'exclamation-circle':'info-circle') + '"></i> ' + msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+</script>
 </body>
 </html>
