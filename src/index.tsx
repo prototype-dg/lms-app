@@ -38,6 +38,32 @@ app.route('/api/v1/audit', auditApi)
 app.route('/api/v1/users', usersApi)
 app.route('/api/v1/seed', seedApi)
 
+// Standalone rules endpoint (all rules, or filter by product)
+app.get('/api/v1/rules', async (c) => {
+  const productId = c.req.query('product_id')
+  const category = c.req.query('category')
+  let sql = 'SELECT * FROM rules WHERE 1=1'
+  const params: string[] = []
+  if (productId) { sql += ' AND (product_id = ? OR product_id IS NULL)'; params.push(productId) }
+  if (category) { sql += ' AND category = ?'; params.push(category) }
+  sql += ' ORDER BY category, name'
+  const stmt = params.length ? c.env.DB.prepare(sql).bind(...params) : c.env.DB.prepare(sql)
+  const { results } = await stmt.all()
+  return c.json({ rules: results, total: results.length })
+})
+
+// Standalone customers endpoint
+app.get('/api/v1/customers', async (c) => {
+  const { results } = await c.env.DB.prepare('SELECT * FROM customers ORDER BY name').all()
+  return c.json({ customers: results, total: results.length })
+})
+app.get('/api/v1/customers/:id', async (c) => {
+  const id = c.req.param('id')
+  const customer = await c.env.DB.prepare('SELECT * FROM customers WHERE id = ?').bind(id).first()
+  if (!customer) return c.json({ error: 'Not found' }, 404)
+  return c.json({ customer })
+})
+
 // Serve static files
 app.use('/assets/*', serveStatic({ root: './' }))
 
