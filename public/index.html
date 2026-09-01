@@ -21,9 +21,9 @@
     .bg-glow2 { bottom:-200px; left:-100px; top:auto; right:auto; background:radial-gradient(circle,rgba(244,179,91,.08),transparent 70%); }
     nav { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between;
       padding:1.5rem 3rem; border-bottom:1px solid rgba(255,255,255,.06); }
-    .nav-logo { display:flex; align-items:center; gap:.875rem; }
-    .nav-logo-svg { width:48px; height:48px; }
-    .nav-wordmark h1 { font-size:1.1rem; font-weight:700; color:#fff; margin:0; letter-spacing:-.01em; }
+    .nav-logo { display:flex; align-items:center; gap:.5rem; }
+    .nav-logo-svg { width:68px; height:68px; }
+    .nav-wordmark h1 { font-size:1.2rem; font-weight:700; color:#fff; margin:0; letter-spacing:-.01em; }
     .nav-wordmark p { font-size:.65rem; color:rgba(255,255,255,.4); letter-spacing:2px; text-transform:uppercase; margin:.1rem 0 0; }
     .nav-badge { background:rgba(53,198,196,.12); border:1px solid rgba(53,198,196,.25);
       color:#35C6C4; font-size:.7rem; padding:.3rem .8rem; border-radius:20px; letter-spacing:.5px; }
@@ -33,6 +33,11 @@
       display:flex; align-items:center; gap:.5rem; }
     .btn-init:hover { background:#fff; transform:translateY(-1px); }
     .btn-init.loading { opacity:.7; cursor:default; }
+    .btn-reset { background:rgba(255,255,255,.08); color:rgba(255,255,255,.7); border:1px solid rgba(255,255,255,.15);
+      padding:.5rem 1.25rem; border-radius:10px; font-weight:600; font-size:.8rem; cursor:pointer;
+      transition:all .2s; display:flex; align-items:center; gap:.5rem; }
+    .btn-reset:hover { background:rgba(244,179,91,.15); color:#F4B35B; border-color:rgba(244,179,91,.4); }
+    .btn-reset.loading { opacity:.7; cursor:default; }
     .hero { position:relative; z-index:5; text-align:center; padding:4rem 2rem 2rem; }
     .hero-eyebrow { font-size:.75rem; letter-spacing:3px; text-transform:uppercase;
       color:#F4B35B; margin-bottom:1.25rem; }
@@ -82,19 +87,20 @@
 
   <nav>
     <div class="nav-logo">
-      <svg class="nav-logo-svg" viewBox="0 0 520 120" xmlns="http://www.w3.org/2000/svg">
-        <g transform="translate(10 16)">
-          <path d="M12 82c27-7 47-27 54-53 6-17 18-29 35-38-5 31-17 58-37 77-16 15-34 22-52 24z" fill="#35c6c4"/>
-          <path d="M8 85c31-9 57-30 76-59 11-17 22-27 35-35-10 28-24 52-45 70-18 15-39 23-66 27z" fill="#f4b35b" opacity=".9"/>
-        </g>
+      <svg class="nav-logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 78c25-6 44-25 50-50 5-16 17-27 33-35-4 29-16 54-35 72-15 14-32 21-48 22z" fill="#35c6c4"/>
+        <path d="M6 82c29-8 53-28 71-55 10-16 21-25 33-33-9 26-22 49-42 66-17 14-37 21-62 25z" fill="#f4b35b" opacity=".9"/>
       </svg>
       <div class="nav-wordmark">
         <h1>sohar international</h1>
         <p>Digital Ecosystem</p>
       </div>
     </div>
-    <div class="nav-badge">RFP 76/2026</div>
+
     <div class="nav-actions">
+      <button class="btn-reset" id="resetBtn" onclick="resetDemo()">
+        <i class="fas fa-rotate-left"></i> Reset Demo
+      </button>
       <button class="btn-init" id="initBtn" onclick="initDb()">
         <i class="fas fa-database"></i> Initialize System Data
       </button>
@@ -184,6 +190,38 @@ async function initDb() {
     btn.innerHTML = '<i class="fas fa-database"></i> Retry Init';
     btn.classList.remove('loading'); btn.disabled = false;
   }
+}
+
+async function resetDemo() {
+  const btn = document.getElementById('resetBtn');
+  const status = document.getElementById('initStatus');
+  if (!confirm('Reset demo to template state?\n\nThis will:\n• Remove all AI-created products\n• Clear all applications and construction stages\n• Clear all AI conversation threads\n• Restore template products to original values\n• Reset EcoVillage to draft state\n\nThis cannot be undone.')) return;
+  btn.innerHTML = '<span class="spinner"></span> Resetting…';
+  btn.classList.add('loading');
+  btn.disabled = true;
+  status.innerHTML = '<p><span class="spinner"></span> Resetting database to template state…</p>';
+  try {
+    const r = await fetch('/api/v1/seed/reset-demo', { method:'POST' });
+    const d = await r.json();
+    if (d.success) {
+      status.innerHTML = '<p style="color:#4eda9e">✅ ' + d.message + '</p>';
+      btn.innerHTML = '<i class="fas fa-check"></i> Reset Complete';
+      btn.style.background = 'rgba(22,132,91,.25)';
+      btn.style.borderColor = 'rgba(22,132,91,.5)';
+      btn.style.color = '#4eda9e';
+      toast('Demo reset to template state. Ready for a fresh run!', 'success');
+    } else {
+      status.innerHTML = '<p style="color:#F4B35B">⚠️ Reset failed: ' + (d.error||'Unknown error') + '</p>';
+      btn.innerHTML = '<i class="fas fa-rotate-left"></i> Reset Demo';
+      btn.classList.remove('loading'); btn.disabled = false;
+      toast('Reset failed: ' + (d.error||'Unknown error'), 'error');
+    }
+  } catch(e) {
+    status.innerHTML = '<p style="color:#F4B35B">⚠️ Could not reach API.</p>';
+    btn.innerHTML = '<i class="fas fa-rotate-left"></i> Reset Demo';
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+  setTimeout(() => { btn.innerHTML = '<i class="fas fa-rotate-left"></i> Reset Demo'; btn.style.cssText=''; btn.classList.remove('loading'); btn.disabled = false; }, 4000);
 }
 
 function toast(msg, type='info') {

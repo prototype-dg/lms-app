@@ -225,9 +225,6 @@ INSERT OR IGNORE INTO knowledge_base VALUES ('kb003','Oman PDPL – Royal Decree
 INSERT OR IGNORE INTO knowledge_base VALUES ('kb004','OEESC – EPC Requirements','esg','Energy Performance Certificates required for all new residential developments. Minimum rating C for green financing. Scale A+ to G.','OEESC Section 5.1','2024-01-01','["EPC","energy","efficiency"]','2026-08-31');
 INSERT OR IGNORE INTO knowledge_base VALUES ('kb005','Environment Authority Decision 107/2023','esg','EIA clearance mandatory for residential developments exceeding 20 units. Reference format: EIA/YYYY/NNN. Valid 3 years.','Environment Authority Decision 107/2023','2023-07-15','["EIA","environment","assessment"]','2026-08-31');
 
-INSERT OR IGNORE INTO audit_logs VALUES ('al001','u001','Fatima Al-Rashdi','product_manager','PRODUCT_CLONED','product','p009','{"from":"Standard Home Loan","to":"Green Home Loan - ESG"}','manual',null,null,'10.10.50.15','2026-08-31 10:23:00');
-INSERT OR IGNORE INTO audit_logs VALUES ('al002','u001','Fatima Al-Rashdi','product_manager','PRODUCT_CONFIG_UPDATED','product','p009','{"field":"pricing_modifier","conditions":["GSAS>=85: 4.75%","GSAS>=70<85: 5.0%"]}','manual',null,null,'10.10.50.15','2026-08-31 10:25:00');
-INSERT OR IGNORE INTO audit_logs VALUES ('al003','u001','Fatima Al-Rashdi','product_manager','AI_RULE_GENERATED','rule','r015','{"prompt":"CBO DBR Circular","metric":"DBR","threshold":55,"ai_model":"gpt-4o"}','ai_generated',94,'CBO Circular 2026-12, Section 3.2','10.10.50.15','2026-08-31 10:28:00');
 INSERT OR IGNORE INTO audit_logs VALUES ('al001','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p001','{"status":"active","product_name":"Standard Home Loan"}','manual',null,null,'10.10.50.15','2024-01-10 09:00:00');
 INSERT OR IGNORE INTO audit_logs VALUES ('al002','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p002','{"status":"active","product_name":"Auto Finance - Personal"}','manual',null,null,'10.10.50.15','2023-06-01 10:00:00');
 INSERT OR IGNORE INTO audit_logs VALUES ('al003','u002','Aisha Al-Balushi','compliance_officer','APPLICATION_APPROVED','application','app001','{"reference":"HL-240892","customer":"Mariam Al-Siyabi","amount":250000}','manual',null,'CBO Circular 2024-01','10.10.50.22','2024-09-15 14:30:00');
@@ -235,31 +232,134 @@ INSERT OR IGNORE INTO audit_logs VALUES ('al004','u003','Omar Al-Mantheri','risk
 `
 
 // ── Demo reset endpoint ───────────────────────────────────────────────────
-// Removes all live-created data so the demonstration can be repeated cleanly
+// Full hard-reset: returns DB to the exact pre-presentation template state.
+// All user-created products, applications, threads, and live data are purged.
+// Template products (p001-p008) are restored to their seeded values.
 app.post('/reset-demo', async (c) => {
   const db = c.env.DB
+  const TEMPLATE_PRODUCT_IDS = ['p001','p002','p003','p004','p005','p006','p007','p008']
+  const TEMPLATE_PRODUCT_CODES = ['SHL-STANDARD','AFL-PERSONAL','PL-UNSECURED','SME-WORKCAP','HELOC-STANDARD','CPF-COMMERCIAL','EHL-EXPAT','EDU-FINANCE']
+
   try {
-    // Remove GHL product and all AI-generated rules attached to it
-    await db.prepare("DELETE FROM products WHERE code LIKE 'GHL-%' AND code != 'SHL-STANDARD'").run()
-    await db.prepare("DELETE FROM rules WHERE source = 'ai_generated'").run()
+    // ── 1. Remove ALL products that are NOT in the template set ──────────
+    // This catches any AI-created or manually-created products (p009, etc.)
+    await db.prepare(
+      `DELETE FROM products WHERE id NOT IN (${TEMPLATE_PRODUCT_IDS.map(()=>'?').join(',')})
+       AND code NOT IN (${TEMPLATE_PRODUCT_CODES.map(()=>'?').join(',')})`
+    ).bind(...TEMPLATE_PRODUCT_IDS, ...TEMPLATE_PRODUCT_CODES).run()
+
+    // ── 2. Restore template products to exact seeded field values ────────
+    // Reset all mutable fields back to template defaults
+    const productResets: [string, any[]][] = [
+      [`UPDATE products SET
+          name='Standard Home Loan', description='Our flagship home financing product for Omani nationals and residents. Competitive rates with flexible terms.',
+          status='active', base_rate=5.5, max_ltv=90, max_dbr=60, green_dbr=60, min_term=5, max_term=25,
+          min_amount=10000, max_amount=500000, gsas_min_score=0, gsas_premium_score=0,
+          green_discount_premium=0, green_discount_standard=0, ai_confidence_threshold=90,
+          required_docs='["salary_cert","utility_bill","civil_id","property_deed","valuation_report"]',
+          esg_required_docs='[]',
+          portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
+          portal_highlights='["Fixed and variable rate options","Flexible 5–25 year terms","Top-up facility available","Insurance bundled"]',
+          updated_at=datetime('now')
+        WHERE id='p001'`, []],
+      [`UPDATE products SET
+          name='Auto Finance – Personal', status='active', base_rate=4.9, max_ltv=85, max_dbr=55, min_term=1, max_term=7,
+          min_amount=3000, max_amount=80000, esg_required_docs='[]',
+          portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
+          portal_highlights='["Covers sedans, SUVs & EVs","Quick 48-hour approval","Flexible 1–7 year terms"]',
+          updated_at=datetime('now')
+        WHERE id='p002'`, []],
+      [`UPDATE products SET
+          name='Personal Loan', status='active', base_rate=7.5, max_dbr=50, min_term=1, max_term=5,
+          min_amount=1000, max_amount=30000, esg_required_docs='[]',
+          portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
+          portal_highlights='["No collateral required","Approved employer list","Competitive fixed rate"]',
+          updated_at=datetime('now')
+        WHERE id='p003'`, []],
+      [`UPDATE products SET
+          name='SME Working Capital', status='active', base_rate=6.5, max_ltv=70, max_dbr=65, min_term=1, max_term=3,
+          min_amount=5000, max_amount=200000, esg_required_docs='[]',
+          portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
+          portal_highlights='["For SMEs registered in Oman","Revolving or term facility","Supports growth & payroll"]',
+          updated_at=datetime('now')
+        WHERE id='p004'`, []],
+      [`UPDATE products SET
+          name='Home Equity Line', status='active', base_rate=6.0, max_ltv=75, max_dbr=55, min_term=5, max_term=15,
+          min_amount=20000, max_amount=300000, esg_required_docs='[]',
+          portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
+          portal_highlights='["Use your property equity","Revolving credit line","Up to OMR 300,000"]',
+          updated_at=datetime('now')
+        WHERE id='p005'`, []],
+      [`UPDATE products SET
+          name='Commercial Property Finance', status='active', base_rate=6.8, max_ltv=70, max_dbr=65, min_term=5, max_term=20,
+          min_amount=50000, max_amount=2000000, esg_required_docs='[]',
+          portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
+          portal_highlights='["For offices, retail & warehouses","Up to OMR 2,000,000","Flexible repayment structures"]',
+          updated_at=datetime('now')
+        WHERE id='p006'`, []],
+      [`UPDATE products SET
+          name='Expat Home Finance', status='active', base_rate=6.0, max_ltv=75, max_dbr=55, min_term=5, max_term=20,
+          min_amount=15000, max_amount=400000, esg_required_docs='[]',
+          portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
+          portal_highlights='["For expatriate professionals","Competitive rates from 6%","Up to OMR 400,000"]',
+          updated_at=datetime('now')
+        WHERE id='p007'`, []],
+      [`UPDATE products SET
+          name='Education Finance', status='archived', base_rate=8.0, max_dbr=45, min_term=1, max_term=8,
+          min_amount=500, max_amount=20000, esg_required_docs='[]',
+          portal_visible=0, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
+          portal_highlights='[]',
+          updated_at=datetime('now')
+        WHERE id='p008'`, []],
+    ]
+    for (const [sql, params] of productResets) {
+      await db.prepare(sql).bind(...params).run()
+    }
+
+    // ── 3. Remove all AI-generated and product-specific rules ────────────
+    // Keep only the 14 global template rules (r001-r014, product_id IS NULL)
+    await db.prepare("DELETE FROM rules WHERE source='ai_generated' OR product_id IS NOT NULL").run()
+    // Also remove any extra rules beyond r001-r014 that crept in
+    await db.prepare("DELETE FROM rules WHERE id NOT IN ('r001','r002','r003','r004','r005','r006','r007','r008','r009','r010','r011','r012','r013','r014')").run()
+
+    // ── 4. Clear all AI conversation threads ────────────────────────────
     await db.prepare("DELETE FROM ai_threads").run()
 
-    // Reset EcoVillage back to draft/hidden
-    await db.prepare("UPDATE projects SET status='draft', listing_visible=0, green_eligible=0, premium_tier=0, gsas_score=null, gsas_rating=null, epc_rating=null, eia_reference=null, total_units=0, available_units=0, updated_at=datetime('now') WHERE id='proj004'").run()
+    // ── 5. Remove all user-created applications and their dependants ─────
+    // Keep only app001 and app002 (the two background seed applications)
+    await db.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run()
+    await db.prepare("DELETE FROM documents WHERE entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')").run()
+    await db.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run()
 
-    // Remove EcoVillage units and documents
+    // ── 6. Reset EcoVillage back to draft / hidden ──────────────────────
+    await db.prepare(`UPDATE projects SET
+        status='draft', listing_visible=0, green_eligible=0, premium_tier=0,
+        gsas_score=NULL, gsas_rating=NULL, epc_rating=NULL, eia_reference=NULL,
+        total_units=24, available_units=0, reserved_units=0, sold_units=0,
+        marketing_tagline=NULL, hero_image_url=NULL, completion_date=NULL,
+        updated_at=datetime('now')
+      WHERE id='proj004'`).run()
+
+    // Remove EcoVillage units and documents (uploaded live in Act 2)
     await db.prepare("DELETE FROM units WHERE project_id='proj004'").run()
     await db.prepare("DELETE FROM documents WHERE entity_id='proj004'").run()
 
-    // Remove all GHL applications and their stages
-    await db.prepare("DELETE FROM construction_stages WHERE application_id IN (SELECT id FROM applications WHERE reference LIKE 'GHL-%')").run()
-    await db.prepare("DELETE FROM documents WHERE entity_id IN (SELECT id FROM applications WHERE reference LIKE 'GHL-%')").run()
-    await db.prepare("DELETE FROM applications WHERE reference LIKE 'GHL-%'").run()
-
-    // Clean up live-generated audit logs (keep only background ones al001-al004)
+    // ── 7. Reset audit logs to only the 4 background template entries ────
     await db.prepare("DELETE FROM audit_logs WHERE id NOT IN ('al001','al002','al003','al004')").run()
+    // Restore the 4 template audit logs in case they were modified
+    await db.prepare(`INSERT OR REPLACE INTO audit_logs VALUES
+      ('al001','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p001','{"status":"active","product_name":"Standard Home Loan"}','manual',NULL,NULL,'10.10.50.15','2024-01-10 09:00:00')`).run()
+    await db.prepare(`INSERT OR REPLACE INTO audit_logs VALUES
+      ('al002','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p002','{"status":"active","product_name":"Auto Finance – Personal"}','manual',NULL,NULL,'10.10.50.15','2023-06-01 10:00:00')`).run()
+    await db.prepare(`INSERT OR REPLACE INTO audit_logs VALUES
+      ('al003','u002','Aisha Al-Balushi','compliance_officer','APPLICATION_APPROVED','application','app001','{"reference":"HL-240892","customer":"Mariam Al-Siyabi","amount":250000}','manual',NULL,'CBO Circular 2024-01','10.10.50.22','2024-09-15 14:30:00')`).run()
+    await db.prepare(`INSERT OR REPLACE INTO audit_logs VALUES
+      ('al004','u003','Omar Al-Mantheri','risk_officer','CREDIT_REVIEW_APPROVED','application','app001','{"reference":"HL-240892","dbr":46,"ltv":78,"stress_test":"passed"}','manual',NULL,'CBO Circular 2024-01','10.10.50.33','2024-09-16 11:00:00')`).run()
 
-    return c.json({ success: true, message: 'System reset to pre-presentation state. Ready for a fresh run.' })
+    return c.json({
+      success: true,
+      message: 'System fully reset to template state. All demo-created products, applications, threads, and live data removed. Ready for a fresh run.'
+    })
   } catch (e: any) {
     return c.json({ success: false, error: e.message }, 500)
   }

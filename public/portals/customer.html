@@ -23,8 +23,11 @@ body.rtl{font-family:'Noto Sans Arabic',system-ui,sans-serif;direction:rtl}
 
 /* ── NAV ── */
 .nav{position:fixed;inset:0 0 auto;z-index:200;height:60px;background:rgba(0,37,64,.97);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;padding:0 28px;gap:0}
-.nav-logo{display:flex;align-items:center;gap:12px;margin-right:32px;text-decoration:none}
-.nav-logo svg{height:34px}
+.nav-logo{display:flex;align-items:center;gap:6px;margin-right:32px;text-decoration:none}
+.nav-logo svg{width:46px;height:46px}
+.nav-logo-wm{display:flex;flex-direction:column;line-height:1.2}
+.nav-logo-wm strong{font-size:13px;font-weight:700;color:#fff;letter-spacing:-.01em}
+.nav-logo-wm span{font-size:8.5px;color:rgba(53,198,196,.85);letter-spacing:1.8px;text-transform:uppercase}
 .nav-links{display:flex;align-items:center;gap:2px;flex:1}
 .nav-btn{background:none;border:none;color:rgba(255,255,255,.7);font-size:13px;font-weight:500;padding:6px 14px;border-radius:var(--r8);cursor:pointer;font-family:inherit;transition:var(--transition);white-space:nowrap}
 .nav-btn:hover,.nav-btn.active{color:#fff;background:rgba(255,255,255,.1)}
@@ -245,12 +248,14 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 <!-- NAV -->
 <nav class="nav">
   <a class="nav-logo" href="#" onclick="showPage('home')">
-    <svg viewBox="0 0 220 50" fill="none">
-      <path d="M5 36c11-3 21-12 23-24 3-7 8-12 15-16-3 14-7 25-16 34-7 6-14 9-22 10z" fill="#35c6c4"/>
-      <path d="M3 38c14-4 25-13 32-26 4-7 9-11 14-15-4 12-10 23-19 30-8 7-17 10-27 12z" fill="#f4b35b" opacity=".9"/>
-      <text x="58" y="28" fill="#fff" font-family="Arial" font-size="14" font-weight="700">sohar international</text>
-      <text x="59" y="40" fill="#35C6C4" font-family="Arial" font-size="6" letter-spacing="1.5">GREEN HOME LOAN</text>
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 78c25-6 44-25 50-50 5-16 17-27 33-35-4 29-16 54-35 72-15 14-32 21-48 22z" fill="#35c6c4"/>
+      <path d="M6 82c29-8 53-28 71-55 10-16 21-25 33-33-9 26-22 49-42 66-17 14-37 21-62 25z" fill="#f4b35b" opacity=".9"/>
     </svg>
+    <div class="nav-logo-wm">
+      <strong>sohar international</strong>
+      <span>Customer Portal</span>
+    </div>
   </a>
   <div class="nav-links">
     <button class="nav-btn" onclick="showPage('home')" id="nb-home" data-en="Home" data-ar="الرئيسية">Home</button>
