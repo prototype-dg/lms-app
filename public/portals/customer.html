@@ -89,6 +89,11 @@ body.rtl{font-family:'Noto Sans Arabic',system-ui,sans-serif;direction:rtl}
 .rate-badge{background:rgba(0,127,134,.08);color:var(--teal);font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--rfull)}
 .prop-btn{width:100%;padding:10px;background:var(--teal);color:#fff;border:none;border-radius:var(--r8);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:var(--transition)}
 .prop-btn:hover{background:var(--teal-d)}
+/* ESG product card */
+.prop-card.esg-product{border-color:#16845B;background:linear-gradient(160deg,#f0faf5 0%,#e6f7ef 60%,#eafaf6 100%);position:relative}
+.prop-card.esg-product:hover{box-shadow:0 12px 40px rgba(22,132,91,.18);transform:translateY(-4px)}
+.esg-hot-ribbon{position:absolute;top:-1px;right:-1px;background:linear-gradient(135deg,#16845B,#35C6C4);color:#fff;font-size:10px;font-weight:800;padding:5px 13px 5px 11px;border-radius:0 var(--r16) 0 var(--r16);letter-spacing:.4px;display:flex;align-items:center;gap:4px;box-shadow:0 3px 10px rgba(22,132,91,.35)}
+.esg-card-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(22,132,91,.12);color:#16845B;font-size:10px;font-weight:700;padding:3px 9px;border-radius:var(--rfull);border:1px solid rgba(22,132,91,.25);margin-bottom:8px}
 
 /* ── CALCULATOR ── */
 .calc-wrap{background:linear-gradient(135deg,var(--sand) 0%,#ece8df 100%);border-radius:0}
@@ -761,17 +766,24 @@ async function loadProducts() {
     const catIcon = {home_loan:'🏡', auto_loan:'🚗', personal_loan:'💳', sme:'🏢', commercial:'🏗️', education:'🎓'};
     grid.innerHTML = prods.map(p => {
       const highlights = (() => { try { return JSON.parse(p.portal_highlights||'[]'); } catch{return[];} })();
-      return `<div class="prop-card" style="cursor:pointer" onclick="selectProduct('${p.id}','${p.name.replace(/'/g,'&apos;')}')">
+      const isEsg = (() => { try { return JSON.parse(p.esg_required_docs||'[]').length > 0; } catch{return false;} })();
+      const cardBadge = p.portal_card_badge ? `<span class="esg-card-badge">✦ ${p.portal_card_badge}</span>` : '';
+      const hotRibbon = isEsg ? `<div class="esg-hot-ribbon">🌿 Hot Offering</div>` : '';
+      const esgClass = isEsg ? ' esg-product' : '';
+      const esgFooterAccent = isEsg ? 'color:#16845B' : 'color:var(--teal)';
+      const esgBtnStyle = isEsg ? 'background:linear-gradient(135deg,#16845B,#2aa88e)' : '';
+      return `<div class="prop-card${esgClass}" style="cursor:pointer" onclick="selectProduct('${p.id}','${p.name.replace(/'/g,'&apos;')}')">\n        ${hotRibbon}
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <span style="font-size:1.5rem">${catIcon[p.category]||'💼'}</span>
           <span style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.5px">${(p.category||'').replace(/_/g,' ')}</span>
         </div>
+        ${isEsg ? cardBadge : ''}
         <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:6px">${p.portal_hero_title||p.name}</div>
         <div style="font-size:12px;color:var(--g500);margin-bottom:14px;line-height:1.5">${p.description||''}</div>
         ${highlights.length ? `<ul style="margin:0 0 14px;padding-left:16px;font-size:12px;color:var(--navy-d);line-height:1.8">${highlights.slice(0,3).map(h=>`<li>${h}</li>`).join('')}</ul>` : ''}
-        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--g100);padding-top:12px;margin-top:auto">
-          <div style="font-size:13px"><strong style="font-size:1.3rem;color:var(--teal)">${p.base_rate||'—'}%</strong> <span style="color:var(--g500)">from p.a.</span></div>
-          <button class="prop-btn" onclick="event.stopPropagation();selectProduct('${p.id}','${p.name.replace(/'/g,'&apos;')}')">Apply</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid ${isEsg?'rgba(22,132,91,.2)':'var(--g100)'};padding-top:12px;margin-top:auto">
+          <div style="font-size:13px"><strong style="font-size:1.3rem;${esgFooterAccent}">${p.base_rate||'—'}%</strong> <span style="color:var(--g500)">from p.a.</span></div>
+          <button class="prop-btn" style="${esgBtnStyle}" onclick="event.stopPropagation();selectProduct('${p.id}','${p.name.replace(/'/g,'&apos;')}')">Apply</button>
         </div>
       </div>`;
     }).join('');

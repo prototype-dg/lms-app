@@ -77,6 +77,29 @@
 <div id="modalContainer"></div>
 
 <script>
+/* ======================== MARKDOWN RENDERER ======================== */
+function markdownToHtml(text) {
+  return text
+    // Bold **text** or __text__
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.+?)__/g, '<strong>$1</strong>')
+    // Italic *text*
+    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+    // Numbered list: lines starting with "1. " etc → wrap whole block
+    .replace(/((?:^|\n)\d+\.\s.+)+/g, function(block) {
+      const items = block.trim().split(/\n/).map(l => l.replace(/^\d+\.\s+/, ''));
+      return '<ol style="margin:.5rem 0 .5rem 1.2rem;line-height:1.9">' + items.map(i => '<li>' + i + '</li>').join('') + '</ol>';
+    })
+    // Bullet list: lines starting with "- " or "• "
+    .replace(/((?:^|\n)[\-•]\s.+)+/g, function(block) {
+      const items = block.trim().split(/\n/).map(l => l.replace(/^[\-•]\s+/, ''));
+      return '<ul style="margin:.5rem 0 .5rem 1.2rem;line-height:1.9">' + items.map(i => '<li>' + i + '</li>').join('') + '</ul>';
+    })
+    // Line breaks
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+}
+
 /* ======================== STATE ======================== */
 const API = '';
 let currentRole = 'product_manager';
@@ -417,6 +440,7 @@ function renderProductPanel(p, productRules) {
   document.getElementById('panelTitle').textContent = p.name;
   const tabs = ['general','pricing','eligibility','documents','workflow','ai_config','ai_assistant'];
   const tabLabels = {general:'General',pricing:'Pricing',eligibility:'Eligibility',documents:'Document Requirements',workflow:'Workflow',ai_config:'AI Config',ai_assistant:'🤖 AI Studio'};
+  const catLabels = {home_loan:'Home Loan',auto_loan:'Auto Finance',personal_loan:'Personal Loan',sme:'SME Finance',commercial:'Commercial',education:'Education Finance'};
   
   const esgDocs = (() => { try { return JSON.parse(p.esg_required_docs||'[]'); } catch{return[];} })();
   const reqDocs = (() => { try { return JSON.parse(p.required_docs||'[]'); } catch{return[];} })();
@@ -427,7 +451,7 @@ function renderProductPanel(p, productRules) {
     general: `
       <div class="form-row">
         <div class="form-group"><label class="form-label">Product Name</label><input class="form-control" value="${p.name}" id="pName"></div>
-        <div class="form-group"><label class="form-label">Category</label><input class="form-control" value="${p.category}" disabled></div>
+        <div class="form-group"><label class="form-label">Category</label><input class="form-control" value="${catLabels[p.category]||p.category}" disabled style="color:var(--grey-600);background:var(--grey-50)"></div>
       </div>
       <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" rows="3" id="pDesc">${p.description||''}</textarea></div>
       <div class="form-row">
@@ -435,8 +459,8 @@ function renderProductPanel(p, productRules) {
         <div class="form-group"><label class="form-label">Max Term (years)</label><input class="form-control" type="number" value="${p.max_term}" id="pMaxTerm"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Min Amount (OMR)</label><input class="form-control" type="number" value="${p.min_amount}"></div>
-        <div class="form-group"><label class="form-label">Max Amount (OMR)</label><input class="form-control" type="number" value="${p.max_amount}"></div>
+        <div class="form-group"><label class="form-label">Min Amount (OMR)</label><input class="form-control" type="number" value="${p.min_amount}" id="pMinAmount"></div>
+        <div class="form-group"><label class="form-label">Max Amount (OMR)</label><input class="form-control" type="number" value="${p.max_amount}" id="pMaxAmount"></div>
       </div>
       <div style="display:flex;align-items:center;gap:.75rem;margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--grey-100)">
         <span class="badge ${p.status==='active'?'badge-active':'badge-draft'}">${p.status}</span>
@@ -691,7 +715,7 @@ async function sendAiChat(productId) {
     const log2 = document.getElementById('ai-chat-log');
     if (log2 && log2.lastChild) log2.removeChild(log2.lastChild);
     if (d.thread_id) aiThreadId = d.thread_id;
-    let replyHtml = d.reply || d.message || 'Done.';
+    let replyHtml = markdownToHtml(d.reply || d.message || 'Done.');
     if (d.product_draft) {
       aiProductDraft = d.product_draft;
       replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:6px;font-size:.78rem"><strong>Product Draft</strong><br><b>' + (d.product_draft.name||'') + '</b> &middot; ' + (d.product_draft.base_rate||'') + '% &middot; up to OMR ' + Number(d.product_draft.max_amount||0).toLocaleString() + '</div>';
@@ -738,8 +762,10 @@ async function confirmAiProduct(productId) {
       const bar = document.getElementById('ai-confirm-bar');
       if (bar) bar.style.display = 'none';
       aiThreadId = null; aiProductDraft = null;
-      // Reload products list in background so when user navigates back it's fresh
+      // Close panel, refresh products list and re-render the products page
+      closePanel();
       await loadProducts();
+      await renderProducts();
     } else { toast(d.error||'Confirm failed', 'error'); }
   } catch(e) { toast(e.message, 'error'); }
   if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-rocket"></i> Confirm &amp; Publish'; }
@@ -1275,6 +1301,8 @@ async function saveProductChanges(id) {
     name: get('pName'), description: get('pDesc'),
     min_term: get('pMinTerm') ? parseInt(get('pMinTerm')) : null,
     max_term: get('pMaxTerm') ? parseInt(get('pMaxTerm')) : null,
+    min_amount: get('pMinAmount') ? parseInt(get('pMinAmount')) : null,
+    max_amount: get('pMaxAmount') ? parseInt(get('pMaxAmount')) : null,
     base_rate: get('pRate') ? parseFloat(get('pRate')) : null,
     max_dbr: get('pMaxDbr') ? parseFloat(get('pMaxDbr')) : null,
     max_ltv: get('pMaxLtv') ? parseFloat(get('pMaxLtv')) : null,
