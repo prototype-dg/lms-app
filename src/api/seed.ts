@@ -446,7 +446,16 @@ app.post('/reset-demo', async (c) => {
     try { await db.prepare("DELETE FROM ai_threads").run() } catch(_) { /* table may not exist */ }
 
     // ── 5. Reset EcoVillage back to draft / hidden ──────────────────────
-    // (applications/docs/stages already cleaned in step 1)
+    // IMPORTANT: app001.unit_id may point to a proj004 unit (EcoVillage).
+    // We must null out unit_id on ALL seed applications BEFORE deleting EcoVillage
+    // units — otherwise the FK constraint (applications.unit_id → units.id) fires.
+    await db.prepare("UPDATE applications SET unit_id=NULL WHERE id IN ('app001','app002')").run()
+
+    // Now safe to delete EcoVillage units and documents
+    await db.prepare("DELETE FROM units WHERE project_id='proj004'").run()
+    await db.prepare("DELETE FROM documents WHERE entity_id='proj004'").run()
+
+    // Reset EcoVillage project metadata to draft state
     await db.prepare(`UPDATE projects SET
         status='draft', listing_visible=0, green_eligible=0, premium_tier=0,
         gsas_score=NULL, gsas_rating=NULL, epc_rating=NULL, eia_reference=NULL,
@@ -455,9 +464,20 @@ app.post('/reset-demo', async (c) => {
         updated_at=datetime('now')
       WHERE id='proj004'`).run()
 
-    // Remove EcoVillage units and documents (uploaded live in Act 2)
-    await db.prepare("DELETE FROM units WHERE project_id='proj004'").run()
-    await db.prepare("DELETE FROM documents WHERE entity_id='proj004'").run()
+    // ── 6. Restore seed applications to exact template state ─────────────
+    // app001 may have had unit_id/project assigned during live demo; restore to template.
+    await db.prepare(`INSERT OR REPLACE INTO applications VALUES
+      ('app001','HL-240892','p001','c002','Mariam Al-Siyabi',NULL,'proj001',
+       250000,20,'Al Mouj Residences, Unit A12, Muscat','partner',142,NULL,NULL,
+       5.5,5.5,1608.82,1608.82,0,46,78,9.0,1,780,'approved','verified',
+       'u002','2024-09-15','u003','2024-09-16',250000,0,NULL,NULL,
+       '2024-09-14','2024-09-16')`).run()
+    await db.prepare(`INSERT OR REPLACE INTO applications VALUES
+      ('app002','HL-241156','p001','c003','Hassan Al-Amri',NULL,NULL,
+       120000,15,'Plot 45, Al Ghubra North, Muscat','byop',200,NULL,NULL,
+       5.5,5.5,980.12,980.12,0,36,72,9.0,1,710,'credit_review','pending',
+       NULL,NULL,NULL,NULL,120000,0,NULL,NULL,
+       '2024-12-01','2024-12-03')`).run()
 
     // ── 7. Reset audit logs to only the 4 background template entries ────
     await db.prepare("DELETE FROM audit_logs WHERE id NOT IN ('al001','al002','al003','al004')").run()
