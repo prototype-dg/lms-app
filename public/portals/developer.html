@@ -619,7 +619,7 @@ body.ar .toast-container{right:auto;left:24px}
       <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Publish unit specifications</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Share GSAS certificate</label>
-        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Enable Green Home Loan eligibility</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Enable financing eligibility</label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Allow bank customer browsing</label>
       </div>
     </div>
@@ -848,7 +848,7 @@ function showAIPanel(cert) {
       </div>
       <div style="background:rgba(0,59,92,.04);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--gray-700);line-height:1.6">
         <strong>AI Recommendation:</strong> ${cert.status === 'verified'
-          ? `Certificate validated with ${cert.confidence}% confidence. All key parameters confirmed. Unit qualifies for Sohar International Green Home Loan preferential rate of <strong style="color:var(--success)">4.75%</strong>. No manual review required.`
+          ? `Certificate validated with ${cert.confidence}% confidence. All key parameters confirmed. Unit qualifies for Sohar International ESG preferential financing rate. No manual review required.`
           : `Certificate accepted but flagged for manual review (${cert.confidence}% confidence). Thermal bridging note requires physical inspection. Recommend Compliance Officer override if physical inspection satisfactory. Does not block loan approval.`
         }
       </div>

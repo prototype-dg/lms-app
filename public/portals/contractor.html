@@ -700,7 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const refEl = document.getElementById('loan-ref-display');
   const unitEl = document.getElementById('loan-unit-display');
   if (refEl) refEl.textContent = storedRef || 'No active application';
-  if (unitEl) unitEl.textContent = storedRef ? 'Green Home Loan' : 'Submit an application via the Customer Portal';
+  if (unitEl) unitEl.textContent = storedRef ? 'Active financing application' : 'Submit an application via the Customer Portal';
   renderStages();
   renderPayments();
 });
