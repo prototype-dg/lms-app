@@ -241,12 +241,30 @@ app.post('/reset-demo', async (c) => {
   const TEMPLATE_PRODUCT_CODES = ['SHL-STANDARD','AFL-PERSONAL','PL-UNSECURED','SME-WORKCAP','HELOC-STANDARD','CPF-COMMERCIAL','EHL-EXPAT','EDU-FINANCE']
 
   try {
-    // ── 1. Remove ALL products that are NOT in the template set ──────────
-    // This catches any AI-created or manually-created products (p009, etc.)
+    // ── 1. Delete ALL child rows that reference non-template products ─────
+    // Must happen BEFORE deleting the products themselves (FK constraints).
+    // Uses NOT IN on the template ID list so template products' children survive.
+    const idPlaceholders = TEMPLATE_PRODUCT_IDS.map(() => '?').join(',')
+
+    // rules.product_id → products.id
     await db.prepare(
-      `DELETE FROM products WHERE id NOT IN (${TEMPLATE_PRODUCT_IDS.map(()=>'?').join(',')})
-       AND code NOT IN (${TEMPLATE_PRODUCT_CODES.map(()=>'?').join(',')})`
-    ).bind(...TEMPLATE_PRODUCT_IDS, ...TEMPLATE_PRODUCT_CODES).run()
+      `DELETE FROM rules WHERE product_id IS NOT NULL AND product_id NOT IN (${idPlaceholders})`
+    ).bind(...TEMPLATE_PRODUCT_IDS).run()
+
+    // audit_logs referencing non-template products
+    await db.prepare(
+      `DELETE FROM audit_logs WHERE entity_type='product' AND entity_id NOT IN (${idPlaceholders})`
+    ).bind(...TEMPLATE_PRODUCT_IDS).run()
+
+    // ai_threads referencing non-template products
+    await db.prepare(
+      `DELETE FROM ai_threads WHERE product_id IS NOT NULL AND product_id NOT IN (${idPlaceholders})`
+    ).bind(...TEMPLATE_PRODUCT_IDS).run()
+
+    // ── 2. Now safely delete non-template products ───────────────────────
+    await db.prepare(
+      `DELETE FROM products WHERE id NOT IN (${idPlaceholders})`
+    ).bind(...TEMPLATE_PRODUCT_IDS).run()
 
     // ── 2. Restore template products to exact seeded field values ────────
     // Reset all mutable fields back to template defaults

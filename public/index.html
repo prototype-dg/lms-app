@@ -33,11 +33,7 @@
       display:flex; align-items:center; gap:.5rem; }
     .btn-init:hover { background:#fff; transform:translateY(-1px); }
     .btn-init.loading { opacity:.7; cursor:default; }
-    .btn-reset { background:rgba(255,255,255,.08); color:rgba(255,255,255,.7); border:1px solid rgba(255,255,255,.15);
-      padding:.5rem 1.25rem; border-radius:10px; font-weight:600; font-size:.8rem; cursor:pointer;
-      transition:all .2s; display:flex; align-items:center; gap:.5rem; }
-    .btn-reset:hover { background:rgba(244,179,91,.15); color:#F4B35B; border-color:rgba(244,179,91,.4); }
-    .btn-reset.loading { opacity:.7; cursor:default; }
+
     .hero { position:relative; z-index:5; text-align:center; padding:4rem 2rem 2rem; }
     .hero-eyebrow { font-size:.75rem; letter-spacing:3px; text-transform:uppercase;
       color:#F4B35B; margin-bottom:1.25rem; }
@@ -98,9 +94,6 @@
     </div>
 
     <div class="nav-actions">
-      <button class="btn-reset" id="resetBtn" onclick="resetDemo()">
-        <i class="fas fa-rotate-left"></i> Reset Demo
-      </button>
       <button class="btn-init" id="initBtn" onclick="initDb()">
         <i class="fas fa-database"></i> Initialize System Data
       </button>
@@ -168,60 +161,35 @@ function openPortal(p) {
 async function initDb() {
   const btn = document.getElementById('initBtn');
   const status = document.getElementById('initStatus');
-  btn.innerHTML = '<span class="spinner"></span> Initializing…';
-  btn.classList.add('loading');
-  btn.disabled = true;
-  status.innerHTML = '<p><span class="spinner"></span> Initializing system data…</p>';
-  try {
-    const r = await fetch('/api/v1/seed/run', { method:'POST' });
-    const d = await r.json();
-    if (d.success) {
-      status.innerHTML = '<p style="color:#4eda9e">✅ System ready — ' + d.executed + ' statements executed. All portals are live.</p>';
-      btn.innerHTML = '<i class="fas fa-check"></i> Data Ready';
-      btn.style.background = '#16845B';
-      toast('System initialized successfully!', 'success');
-    } else {
-      status.innerHTML = '<p style="color:#F4B35B">⚠️ ' + (d.error||'Partial init') + '</p>';
-      btn.innerHTML = '<i class="fas fa-database"></i> Retry Init';
-      btn.classList.remove('loading'); btn.disabled = false;
-    }
-  } catch(e) {
-    status.innerHTML = '<p style="color:#F4B35B">⚠️ Could not reach API. Start the dev server first.</p>';
-    btn.innerHTML = '<i class="fas fa-database"></i> Retry Init';
-    btn.classList.remove('loading'); btn.disabled = false;
-  }
-}
-
-async function resetDemo() {
-  const btn = document.getElementById('resetBtn');
-  const status = document.getElementById('initStatus');
-  if (!confirm('Reset demo to template state?\n\nThis will:\n• Remove all AI-created products\n• Clear all applications and construction stages\n• Clear all AI conversation threads\n• Restore template products to original values\n• Reset EcoVillage to draft state\n\nThis cannot be undone.')) return;
   btn.innerHTML = '<span class="spinner"></span> Resetting…';
   btn.classList.add('loading');
   btn.disabled = true;
-  status.innerHTML = '<p><span class="spinner"></span> Resetting database to template state…</p>';
+  status.innerHTML = '<p><span class="spinner"></span> Resetting to template state…</p>';
   try {
-    const r = await fetch('/api/v1/seed/reset-demo', { method:'POST' });
-    const d = await r.json();
-    if (d.success) {
-      status.innerHTML = '<p style="color:#4eda9e">✅ ' + d.message + '</p>';
-      btn.innerHTML = '<i class="fas fa-check"></i> Reset Complete';
-      btn.style.background = 'rgba(22,132,91,.25)';
-      btn.style.borderColor = 'rgba(22,132,91,.5)';
-      btn.style.color = '#4eda9e';
-      toast('Demo reset to template state. Ready for a fresh run!', 'success');
+    // Step 1: full hard-reset (removes live data, restores template)
+    const r1 = await fetch('/api/v1/seed/reset-demo', { method:'POST' });
+    const d1 = await r1.json();
+    if (!d1.success) throw new Error(d1.error || 'Reset failed');
+    status.innerHTML = '<p><span class="spinner"></span> Seeding initial data…</p>';
+    // Step 2: re-run seed to ensure all tables and rows exist
+    const r2 = await fetch('/api/v1/seed/run', { method:'POST' });
+    const d2 = await r2.json();
+    if (d2.success) {
+      status.innerHTML = '<p style="color:#4eda9e">✅ System ready — all portals are live.</p>';
+      btn.innerHTML = '<i class="fas fa-check"></i> System Ready';
+      btn.style.background = '#16845B';
+      toast('System initialized. Ready for a fresh run!', 'success');
+      setTimeout(() => { btn.innerHTML = '<i class="fas fa-database"></i> Initialize System Data'; btn.style.background=''; btn.classList.remove('loading'); btn.disabled = false; }, 4000);
     } else {
-      status.innerHTML = '<p style="color:#F4B35B">⚠️ Reset failed: ' + (d.error||'Unknown error') + '</p>';
-      btn.innerHTML = '<i class="fas fa-rotate-left"></i> Reset Demo';
-      btn.classList.remove('loading'); btn.disabled = false;
-      toast('Reset failed: ' + (d.error||'Unknown error'), 'error');
+      throw new Error(d2.error || 'Seed failed');
     }
   } catch(e) {
-    status.innerHTML = '<p style="color:#F4B35B">⚠️ Could not reach API.</p>';
-    btn.innerHTML = '<i class="fas fa-rotate-left"></i> Reset Demo';
+    status.innerHTML = '<p style="color:#F4B35B">⚠️ ' + (e.message || 'Could not reach API') + '</p>';
+    btn.innerHTML = '<i class="fas fa-database"></i> Initialize System Data';
+    btn.style.background = '';
     btn.classList.remove('loading'); btn.disabled = false;
+    toast(e.message || 'Initialization failed', 'error');
   }
-  setTimeout(() => { btn.innerHTML = '<i class="fas fa-rotate-left"></i> Reset Demo'; btn.style.cssText=''; btn.classList.remove('loading'); btn.disabled = false; }, 4000);
 }
 
 function toast(msg, type='info') {
