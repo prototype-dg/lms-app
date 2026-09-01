@@ -183,7 +183,7 @@ async function renderPage(page) {
   main.innerHTML = '<div class="page"><div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--grey-300)"></i></div></div>';
   
   switch(page) {
-    case 'products': await renderProducts(); break;
+    case 'products': await loadProducts(); await renderProducts(); break;
     case 'rules': await renderRules(); break;
     case 'audit_logs': await renderAuditLogs(); break;
     case 'tasks': await renderComplianceTasks(); break;
@@ -269,7 +269,7 @@ async function loadProducts() {
 
 async function renderProducts() {
   document.getElementById('pageTitle').textContent = 'Products';
-  document.getElementById('pageSubtitle').textContent = `${products.length} products`;
+  document.getElementById('pageSubtitle').textContent = '';
 
   const statusColor = {active:'badge-active', draft:'badge-draft', archived:'badge-archived'};
   const catMeta = {
@@ -703,7 +703,9 @@ async function sendAiChat(productId) {
       replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(244,179,91,.1);border:1px solid rgba(244,179,91,.3);border-radius:6px;font-size:.78rem"><strong>GSAS Schema</strong> &mdash; ' + Object.keys(d.schema_draft).length + ' fields defined</div>';
     }
     appendChatBubble('assistant', replyHtml);
-    if (d.product_draft && (d.step === 'confirm' || d.ready_to_confirm)) {
+    // Show confirm bar when AI signals readiness — action field OR product_draft present after turn 3+
+    if (d.action === 'ready_to_confirm' || d.action === 'show_draft' ||
+        (aiProductDraft && d.action !== 'none')) {
       const bar = document.getElementById('ai-confirm-bar');
       if (bar) bar.style.display = 'flex';
     }

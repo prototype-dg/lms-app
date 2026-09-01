@@ -646,83 +646,100 @@ function getDemoReport(apps: any[]) {
 
 function getFallbackChatResponse(message: string, msgCount: number): any {
   const lower = message.toLowerCase()
-  const isGreen = lower.includes('green') || lower.includes('gsas') || lower.includes('esg') || lower.includes('sustainable')
-  const isClone = lower.includes('clone') || lower.includes('standard') || lower.includes('base')
-  const isDBR = lower.includes('dbr') || lower.includes('debt burden') || lower.includes('55%') || lower.includes('rule')
-  const isSchema = lower.includes('schema') || lower.includes('validation') || lower.includes('gsas')
-  const isConfirm = lower.includes('confirm') || lower.includes('yes') || lower.includes('proceed') || lower.includes('create')
 
-  if (msgCount <= 2 && isGreen) {
-    return {
-      message: "I can help you configure a green home loan product. A few questions to get started: Would you like to clone this from your existing Standard Home Loan as a base, or configure from scratch? Also, what minimum GSAS score should be required for eligibility — the regulation suggests 70 as a minimum?",
+  // Step 1 (turn 1-2): understand the product concept, ask one clarifying question
+  if (msgCount <= 2) {
+    const isGreen = lower.includes('green') || lower.includes('gsas') || lower.includes('esg') || lower.includes('sustainable') || lower.includes('eco')
+    const isAuto  = lower.includes('auto') || lower.includes('car') || lower.includes('vehicle')
+    const isPersonal = lower.includes('personal') || lower.includes('unsecured') || lower.includes('consumer')
+    const isSme  = lower.includes('sme') || lower.includes('business') || lower.includes('working capital')
+
+    if (isGreen) return {
+      message: "I can help you configure a green home loan product. Based on CBO Circular 2026-12 and OS GSO 3000:2025, I'll build the full configuration. A couple of quick questions: <br><br><strong>1.</strong> Would you like to clone from your existing <em>Standard Home Loan</em> as a base, or start from scratch?<br><strong>2.</strong> What minimum GSAS sustainability score should be required for eligibility? (Regulation suggests 70 as the floor.)",
       follow_up: "Clone from Standard Home Loan or configure fresh?",
       action: 'none', product_draft: null, rules_draft: null, schema_draft: null,
     }
-  }
-  if (isClone || msgCount === 2) {
+    if (isAuto) return {
+      message: "I'll help configure an auto finance product. Should we clone from <em>Auto Finance – Personal</em> as a base? And would you like Islamic (Murabaha) or conventional structure?",
+      follow_up: "Clone from Auto Finance – Personal?",
+      action: 'none', product_draft: null, rules_draft: null, schema_draft: null,
+    }
+    if (isPersonal) return {
+      message: "I'll configure a personal loan product. Should we base this on the existing <em>Personal Loan</em> product? Any specific DBR cap or target salary band?",
+      follow_up: "Clone from Personal Loan?",
+      action: 'none', product_draft: null, rules_draft: null, schema_draft: null,
+    }
+    if (isSme) return {
+      message: "I'll configure an SME working capital product. Should we base this on <em>SME Working Capital</em>? Any sector focus or collateral requirement to note?",
+      follow_up: "Clone from SME Working Capital?",
+      action: 'none', product_draft: null, rules_draft: null, schema_draft: null,
+    }
     return {
-      message: "I'll use the Standard Home Loan as a base. Based on CBO Circular 2026-12, I recommend: GSAS minimum score 70 for eligibility, premium discount of 0.75% for scores ≥85, standard discount 0.5% for scores 70–84. For the DBR rule: CBO allows banks to apply a 5% buffer for green products, reducing the threshold from 60% to 55% for loans over OMR 100,000. Shall I generate the product draft and rules?",
-      follow_up: "Confirm the green discount structure?",
-      action: 'show_draft',
-      product_draft: {
-        name: 'Green Home Loan – ESG', description: 'Preferential home financing for GSAS-certified green properties. Supports Oman Vision 2040 and the National ESG Strategy. Earn up to 0.75% rate discount based on sustainability score.',
-        category: 'home_loan', base_rate: 5.5, max_ltv: 90, max_dbr: 60, green_dbr: 55,
-        min_term: 5, max_term: 25, min_amount: 10000, max_amount: 500000,
-        gsas_min_score: 70, gsas_premium_score: 85, green_discount_premium: 0.75, green_discount_standard: 0.5,
-        esg_required_docs: ['gsas_cert', 'epc_report', 'eia_approval'],
-        approved_materials: ['Green Concrete', 'Thermal Insulation', 'Solar Panels', 'Energy-Efficient Appliances', 'Low-E Glass', 'Recycled Steel'],
-        approved_vendors: ['Oman Readymix LLC', 'Gulf Insulation Group', 'SunTech Oman', 'Green Build Oman', 'EcoMaterials Oman'],
-        clone_from_id: 'p001',
-      },
-      rules_draft: null, schema_draft: null,
+      message: "I'll help you configure that product. Could you tell me: <br><br><strong>1.</strong> What product category? (Home Loan, Auto Finance, Personal Loan, SME, Commercial, Education)<br><strong>2.</strong> Should we clone from an existing product or start fresh?<br><strong>3.</strong> Any specific regulatory or ESG requirements?",
+      follow_up: "What product type?",
+      action: 'none', product_draft: null, rules_draft: null, schema_draft: null,
     }
   }
-  if (isDBR) {
-    return {
-      message: "I've generated two regulatory rules based on Oman standards. Rule 1: Green DBR Buffer — for loans over OMR 100,000, DBR capped at 55% (vs 60% standard), per CBO Circular 2026-12. AI confidence: 94%. Rule 2: GSAS Score Minimum — property must score ≥70, per OS GSO 3000:2025. AI confidence: 97%. Would you like me to also generate the GSAS document validation schema?",
-      follow_up: "Generate GSAS validation schema?",
-      action: 'show_rules',
-      product_draft: null,
-      rules_draft: [
-        { name: 'Green DBR Buffer', category: 'creditworthiness', metric: 'DBR', operator: '<=', threshold_value: 55, threshold_condition: 'loan_amount > 100000 AND product_type = green', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular 2026-12, Section 3.2', ai_confidence: 94, description: 'For green financing products with loan amount >OMR 100,000, effective DBR threshold is 55% (60% – 5% green buffer).' },
-        { name: 'GSAS Score – Green Entry', category: 'esg', metric: 'gsas_score', operator: '>=', threshold_value: 70, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'OS GSO 3000:2025, Section 4.2', ai_confidence: 97, description: 'Property must achieve minimum GSAS score of 70 for Green Home Loan eligibility.' },
+
+  // Step 2 (turn 3): user has answered — generate the COMPLETE draft + rules + schema in one response
+  if (msgCount <= 4) {
+    const isGreen = lower.includes('green') || lower.includes('gsas') || lower.includes('esg') || lower.includes('clone') || lower.includes('standard') || lower.includes('yes') || lower.includes('ok') || lower.includes('proceed') || lower.includes('alignment') || lower.includes('regulator') || lower.includes('cbo') || lower.includes('cap') || lower.includes('max') || lower.includes('keep') || lower.includes('marketing') || lower.includes('workflow') || lower.includes('draft') || lower.includes('show') || lower.includes('detail') || lower.includes('publish')
+    
+    // Always produce the full package at this stage regardless of message content
+    // (user has already provided enough context in previous turns)
+    const productDraft = {
+      name: 'Green Home Loan – ESG',
+      description: 'Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on your property\'s sustainability score. Supports Oman Vision 2040 and the National ESG Strategy.',
+      category: 'home_loan', base_rate: 5.5, max_ltv: 90, max_dbr: 60, green_dbr: 55,
+      min_term: 5, max_term: 25, min_amount: 10000, max_amount: 500000,
+      gsas_min_score: 70, gsas_premium_score: 85, green_discount_premium: 0.75, green_discount_standard: 0.5,
+      esg_required_docs: ['gsas_cert', 'epc_report', 'eia_approval'],
+      approved_materials: ['Green Concrete', 'Thermal Insulation', 'Solar Panels', 'Energy-Efficient Appliances', 'Low-E Glass', 'Recycled Steel'],
+      approved_vendors: ['Oman Readymix LLC', 'Gulf Insulation Group', 'SunTech Oman', 'Green Build Oman', 'EcoMaterials Oman'],
+      clone_from_id: 'p001',
+    }
+    const rulesDraft = [
+      { name: 'Green DBR Buffer', category: 'creditworthiness', metric: 'DBR', operator: '<=', threshold_value: 55, threshold_condition: 'loan_amount > 100000', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular 2026-12, Section 3.2', ai_confidence: 94, description: 'For green financing >OMR 100,000 DBR capped at 55% (60% − 5% green buffer per CBO).' },
+      { name: 'GSAS Score – Minimum Eligibility', category: 'esg', metric: 'gsas_score', operator: '>=', threshold_value: 70, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'OS GSO 3000:2025, Section 4.2', ai_confidence: 97, description: 'Property must achieve minimum GSAS score of 70 to qualify for this product.' },
+      { name: 'LTV Cap – Green Product', category: 'collateral', metric: 'LTV', operator: '<=', threshold_value: 90, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular BM/REG/2019/74', ai_confidence: 95, description: 'Maximum LTV 90% for residential green home financing.' },
+      { name: 'ESG Document Set Complete', category: 'esg', metric: 'esg_docs_complete', operator: '=', threshold_value: 1, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular 2026-12, Section 5.1', ai_confidence: 92, description: 'GSAS Certificate, EPC Report and EIA Clearance must all be submitted and AI-verified before disbursement.' },
+    ]
+    const schemaDraft = {
+      schema_type: 'gsas_certificate_validation',
+      fields: [
+        { name: 'Certificate Number', type: 'String', validation: '^GSAS-\\d{4}-\\d{3}$', error_message: 'Invalid certificate number format' },
+        { name: 'Issuer', type: 'String', validation: 'Must be GORD or accredited body', error_message: 'Issuer not accredited' },
+        { name: 'Issue Date', type: 'Date', validation: 'Must be ≤ today', error_message: 'Certificate not yet issued' },
+        { name: 'Expiry Date', type: 'Date', validation: 'Must be ≥ today + 90 days', error_message: 'Certificate expires within 90 days' },
+        { name: 'Overall Score', type: 'Integer', validation: '0–100, min 70 for eligibility', error_message: 'Score below minimum threshold (70)' },
+        { name: 'Rating', type: 'String', validation: 'Silver/Gold/Platinum', error_message: 'Rating does not meet minimum (Bronze rejected)' },
       ],
-      schema_draft: null,
+      ai_confidence: 96,
+      regulatory_reference: 'OS GSO 3000:2025, Section 4.2',
     }
-  }
-  if (isSchema) {
     return {
-      message: "GSAS Certificate validation schema generated. The system will extract: Certificate Number (format GSAS-YYYY-NNN), Issuer (must be GORD or accredited body), Overall Score (minimum 70), Rating (Silver/Gold/Platinum), and Expiry Date (must be valid for ≥90 days). AI confidence: 96%, per OS GSO 3000:2025. Ready to confirm the product and save everything?",
-      follow_up: "Confirm and create product?",
-      action: 'show_schema',
-      product_draft: null, rules_draft: null,
-      schema_draft: {
-        schema_type: 'gsas_certificate_validation',
-        fields: [
-          { name: 'Certificate Number', type: 'String', validation: '^GSAS-\\d{4}-\\d{3}$', error_message: 'Invalid certificate number format' },
-          { name: 'Issuer', type: 'String', validation: 'Must be GORD or accredited body', error_message: 'Issuer not accredited' },
-          { name: 'Issue Date', type: 'Date', validation: 'Must be ≤ today', error_message: 'Certificate not yet issued' },
-          { name: 'Expiry Date', type: 'Date', validation: 'Must be ≥ today + 90 days', error_message: 'Certificate expires within 90 days' },
-          { name: 'Overall Score', type: 'Integer', validation: '0–100, min 70 for eligibility', error_message: 'Score below minimum threshold (70)' },
-          { name: 'Rating', type: 'String', validation: 'Silver/Gold/Platinum', error_message: 'Rating does not meet minimum (Bronze rejected)' },
-        ],
-        ai_confidence: 96,
-        regulatory_reference: 'OS GSO 3000:2025, Section 4.2',
-      },
-    }
-  }
-  if (isConfirm) {
-    return {
-      message: "Product configuration complete. The Green Home Loan is saved as a draft. You can now review all settings, add any final adjustments, and click 'Publish to Portals' when ready. Once published, it will appear on the customer and developer portals immediately.",
+      message: "I've generated the complete product configuration based on CBO Circular 2026-12 and OS GSO 3000:2025. Here's a summary:<br><br>" +
+        "📋 <strong>Product:</strong> Green Home Loan – ESG · 5.5% base rate · Cloned from Standard Home Loan<br>" +
+        "💚 <strong>Green discounts:</strong> 0.75% off for GSAS ≥85 (Premium) · 0.5% off for GSAS 70–84 (Standard)<br>" +
+        "📏 <strong>Limits:</strong> DBR 55% (green buffer) · LTV 90% · Terms 5–25 years · Up to OMR 500,000<br>" +
+        "📄 <strong>Documents required:</strong> GSAS Certificate + EPC Report + EIA Clearance<br>" +
+        "⚙️ <strong>4 regulatory rules</strong> generated (DBR buffer, GSAS eligibility, LTV cap, ESG document set)<br>" +
+        "🔍 <strong>GSAS validation schema</strong> generated (6 fields, 96% AI confidence)<br><br>" +
+        "Review the draft above, then click <strong>Confirm &amp; Publish</strong> to save the product, apply the rules, and make it live on the Customer Portal.",
       follow_up: null,
       action: 'ready_to_confirm',
-      product_draft: null, rules_draft: null, schema_draft: null,
+      product_draft: productDraft,
+      rules_draft: rulesDraft,
+      schema_draft: schemaDraft,
     }
   }
+
+  // Step 3+ (turn 5+): user is asking follow-up questions — still show confirm bar
   return {
-    message: "I understand. To configure the Green Home Loan, I'll need to know: (1) What GSAS minimum score you require, (2) Whether to apply a preferential DBR rate for green products, and (3) What green materials and vendors to approve for construction escrow. Would you like me to propose defaults based on CBO guidelines?",
-    follow_up: "Shall I propose defaults from CBO Circular 2026-12?",
-    action: 'none', product_draft: null, rules_draft: null, schema_draft: null,
+    message: "The product draft is ready and all regulatory rules have been generated. Click <strong>Confirm &amp; Publish</strong> below to save and publish to the Customer Portal. If you'd like to adjust any specific parameter first, let me know.",
+    follow_up: null,
+    action: 'ready_to_confirm',
+    product_draft: null, rules_draft: null, schema_draft: null,
   }
 }
 
