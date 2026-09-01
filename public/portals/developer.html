@@ -455,55 +455,190 @@ body.ar .toast-container{right:auto;left:24px}
     <!-- ═══ REGISTER PROJECT PAGE ═══ -->
     <div class="page" id="page-newproject">
       <div class="section-header">
-        <div><div class="section-title" data-en="Register New Project" data-ar="تسجيل مشروع جديد">Register New Project</div><div class="section-sub" data-en="Step-by-step project onboarding" data-ar="تسجيل المشروع خطوة بخطوة">Step-by-step project onboarding</div></div>
+        <div><div class="section-title">Register New Project</div><div class="section-sub">Partner onboarding · ESG certification · Inventory setup</div></div>
+        <div id="reg-wizard-actions" style="display:flex;gap:8px"></div>
       </div>
-      <div class="publish-steps">
-        <div class="publish-step done" id="reg-step-1"><div class="publish-step-num">✓</div><div class="publish-step-label">Project Info</div></div>
-        <div class="publish-step active" id="reg-step-2"><div class="publish-step-num">2</div><div class="publish-step-label">Green Specs</div></div>
-        <div class="publish-step" id="reg-step-3"><div class="publish-step-num">3</div><div class="publish-step-label">Certificates</div></div>
-        <div class="publish-step" id="reg-step-4"><div class="publish-step-num">4</div><div class="publish-step-label">Units</div></div>
-        <div class="publish-step" id="reg-step-5"><div class="publish-step-num">5</div><div class="publish-step-label">Publish</div></div>
+
+      <!-- Wizard step indicator -->
+      <div class="publish-steps" id="reg-steps-bar">
+        <div class="publish-step active" id="reg-step-1"><div class="publish-step-num">1</div><div class="publish-step-label">Project Info</div></div>
+        <div class="publish-step" id="reg-step-2"><div class="publish-step-num">2</div><div class="publish-step-label">Documents</div></div>
+        <div class="publish-step" id="reg-step-3"><div class="publish-step-num">3</div><div class="publish-step-label">AI Parsing</div></div>
+        <div class="publish-step" id="reg-step-4"><div class="publish-step-num">4</div><div class="publish-step-label">Inventory</div></div>
+        <div class="publish-step" id="reg-step-5"><div class="publish-step-num">5</div><div class="publish-step-label">Review & Publish</div></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Project Details</span></div>
-          <div class="card-body">
-            <div class="form-group"><label class="form-label">Project Name</label><input class="form-control" id="reg-name" value="EcoVillage Muscat Phase 2" placeholder="Project name"/></div>
-            <div class="form-row">
-              <div class="form-group"><label class="form-label">Governorate</label>
-                <select class="form-control" id="reg-gov"><option>Muscat</option><option>Dhofar</option><option>Al Batinah</option><option>Al Dakhiliyah</option></select></div>
-              <div class="form-group"><label class="form-label">Location</label><input class="form-control" value="Al Mouj, Muscat" placeholder="Area/neighbourhood"/></div>
+
+      <!-- STEP 1: Project Info -->
+      <div id="wiz-step-1">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Project Details</span></div>
+            <div class="card-body">
+              <div class="form-group"><label class="form-label">Project Name *</label><input class="form-control" id="reg-name" value="EcoVillage Muscat Phase 2" placeholder="e.g. EcoVillage Muscat Phase 2"/></div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Governorate</label>
+                  <select class="form-control" id="reg-gov"><option>Muscat</option><option>Dhofar</option><option>Al Batinah</option><option>Al Dakhiliyah</option></select></div>
+                <div class="form-group"><label class="form-label">Area / District</label><input class="form-control" id="reg-location" value="Seeb, Muscat"/></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Total Units</label><input class="form-control" type="number" id="reg-units" value="18" min="1"/></div>
+                <div class="form-group"><label class="form-label">Est. Completion</label><input class="form-control" id="reg-completion" value="Q4 2027"/></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Price From (OMR)</label><input class="form-control" type="number" id="reg-price-from" value="165000"/></div>
+                <div class="form-group"><label class="form-label">Price To (OMR)</label><input class="form-control" type="number" id="reg-price-to" value="345000"/></div>
+              </div>
+              <div class="form-group"><label class="form-label">Marketing Tagline</label><input class="form-control" id="reg-tagline" value="Oman's first GSAS Gold certified eco-villa community"/></div>
             </div>
-            <div class="form-row">
-              <div class="form-group"><label class="form-label">Total Units</label><input class="form-control" type="number" id="reg-units" value="24" min="1"/></div>
-              <div class="form-group"><label class="form-label">Completion Year</label><input class="form-control" type="number" value="2026" min="2025"/></div>
-            </div>
-            <div class="form-group"><label class="form-label">Description</label>
-              <textarea class="form-control" rows="3" style="resize:none">Luxury eco-friendly villas with integrated solar systems and green rooftop gardens in the heart of Al Mouj.</textarea>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Developer & Green Profile</span></div>
+            <div class="card-body">
+              <div class="form-group"><label class="form-label">Developer Company</label><input class="form-control" id="reg-dev" value="Ahmed Al-Hinai Development Co."/></div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">CR Number</label><input class="form-control" value="1234567"/></div>
+                <div class="form-group"><label class="form-label">Project Type</label>
+                  <select class="form-control" id="reg-type"><option value="villa">Villa</option><option value="apartment">Apartment</option><option value="mixed">Mixed-Use</option></select></div>
+              </div>
+              <div class="form-group" style="margin-top:4px"><label class="form-label">Green Features</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" checked/> Solar PV (8.5 kWp)</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" checked/> Greywater Recycling</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" checked/> Green Roof Gardens</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" checked/> HVAC SEER ≥ 18</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" checked/> Triple Glazing</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox"/> EV Charging</label>
+                </div>
+              </div>
+              <div class="form-group" style="margin-top:12px"><label class="form-label">Project Hero Image URL</label>
+                <input class="form-control" id="reg-image" value="https://www.genspark.ai/api/files/s/8nc68AvS?cache_control=3600" style="font-size:11px"/>
+                <div style="margin-top:8px;border-radius:6px;overflow:hidden;height:80px;background:var(--gray-100)">
+                  <img id="reg-img-preview" src="https://www.genspark.ai/api/files/s/8nc68AvS?cache_control=3600" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
+                </div>
+              </div>
+              <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="wizNext(1)">Continue to Documents →</button>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- STEP 2: Document Upload -->
+      <div id="wiz-step-2" class="hidden">
         <div class="card">
-          <div class="card-header"><span class="card-title">Green Specifications</span></div>
+          <div class="card-header">
+            <span class="card-title">Upload ESG Certification Documents</span>
+            <span class="chip gray">Upload the 5 EcoVillage Phase 2 documents</span>
+          </div>
           <div class="card-body">
-            <div class="form-row">
-              <div class="form-group"><label class="form-label">Target GSAS Score</label><input class="form-control" type="number" value="88" min="0" max="100"/></div>
-              <div class="form-group"><label class="form-label">GSAS Category</label>
-                <select class="form-control"><option>Residential</option><option>Mixed-Use</option><option>Commercial</option></select></div>
-            </div>
-            <div class="form-group"><label class="form-label">Solar Capacity (kWp)</label><input class="form-control" type="number" value="8.5"/></div>
-            <div class="form-group"><label class="form-label">Green Features</label>
-              <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" checked/> Solar PV System</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" checked/> Greywater Recycling</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" checked/> Green Roof / Garden</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" checked/> High-efficiency HVAC (SEER ≥ 18)</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox"/> EV Charging Station</label>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px" id="doc-upload-grid">
+              <div class="cert-card" id="doc-gsas" onclick="triggerFileUpload('gsas','GSAS_Certificate_EcoVillage_Phase2.pdf')">
+                <div class="cert-icon">🏆</div><div class="cert-name">GSAS Certificate</div>
+                <div class="cert-desc">Gulf Sustainable Assessment System<br/>Gold tier · Score 91</div>
+                <div class="cert-status pending" id="doc-gsas-status">📤 Click to upload PDF</div>
+              </div>
+              <div class="cert-card" id="doc-epc" onclick="triggerFileUpload('epc','EPC_Report_EcoVillage_Phase2.pdf')">
+                <div class="cert-icon">⚡</div><div class="cert-name">EPC Report</div>
+                <div class="cert-desc">Energy Performance Certificate<br/>Rating A+ · 43 kWh/m²/yr</div>
+                <div class="cert-status pending" id="doc-epc-status">📤 Click to upload PDF</div>
+              </div>
+              <div class="cert-card" id="doc-eia" onclick="triggerFileUpload('eia','EIA_Clearance_EcoVillage_Phase2.pdf')">
+                <div class="cert-icon">🌿</div><div class="cert-name">EIA Clearance</div>
+                <div class="cert-desc">Environment Authority Oman<br/>Ref EA/EIA/2026/MSC/0887</div>
+                <div class="cert-status pending" id="doc-eia-status">📤 Click to upload PDF</div>
+              </div>
+              <div class="cert-card" id="doc-brochure" onclick="triggerFileUpload('brochure','EcoVillage_Phase2_Brochure.pdf')">
+                <div class="cert-icon">📄</div><div class="cert-name">Project Brochure</div>
+                <div class="cert-desc">Site plan · Villa types<br/>Community amenities</div>
+                <div class="cert-status pending" id="doc-brochure-status">📤 Click to upload PDF</div>
+              </div>
+              <div class="cert-card" id="doc-specs" onclick="triggerFileUpload('specs','EcoVillage_Phase2_VillaSpecs.xlsx')">
+                <div class="cert-icon">📊</div><div class="cert-name">Villa Specifications</div>
+                <div class="cert-desc">18 units · Pricing, GPS<br/>Area, type, ESG scores</div>
+                <div class="cert-status pending" id="doc-specs-status">📤 Click to upload XLSX</div>
+              </div>
+              <div class="cert-card" style="cursor:default;background:var(--gray-50);border-style:solid;border-color:var(--gray-200)">
+                <div class="cert-icon" style="font-size:22px">ℹ️</div>
+                <div class="cert-name" style="font-size:12px">Optional Documents</div>
+                <div class="cert-desc">Floor plans, structural report,<br/>NOC from municipality</div>
+                <div class="cert-status pending" style="color:var(--gray-400)">Optional</div>
               </div>
             </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:8px" id="reg-btn" onclick="registerProject()">
-              <span>Register & Continue</span>
-            </button>
+            <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+              <button class="btn btn-secondary" onclick="wizBack(2)">← Back</button>
+              <button class="btn btn-primary" id="wiz-step2-next" onclick="wizNext(2)">Run AI Analysis →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: AI Parsing Results -->
+      <div id="wiz-step-3" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">AI Document Analysis</span>
+            <span class="ai-badge">GPT-4o Vision</span>
+          </div>
+          <div class="card-body" id="ai-parse-body">
+            <div style="text-align:center;padding:32px">
+              <div class="analyzing-pulse" style="margin:0 auto 12px"></div>
+              <div style="font-size:14px;font-weight:600;color:var(--teal)">Analyzing documents…</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;justify-content:space-between">
+          <button class="btn btn-secondary" onclick="wizBack(3)">← Back</button>
+          <button class="btn btn-primary" id="wiz-step3-next" class="hidden" onclick="wizNext(3)">Confirm & Build Inventory →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: Inventory Preview -->
+      <div id="wiz-step-4" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Unit Inventory — 18 Villas (parsed from Excel)</span>
+            <span class="chip green">✅ Auto-populated from VillaSpecs.xlsx</span>
+          </div>
+          <div class="card-body" style="padding:0">
+            <table class="inv-table" id="reg-units-table">
+              <thead><tr><th>#</th><th>Villa ID</th><th>Type</th><th>Area m²</th><th>Bed</th><th>Price (OMR)</th><th>GSAS</th><th>GPS</th><th>Status</th></tr></thead>
+              <tbody id="reg-units-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div class="stat-card"><div class="stat-icon seaglass">🏠</div><div><div class="stat-label">Total Units</div><div class="stat-value" id="inv-total">18</div></div></div>
+          <div class="stat-card"><div class="stat-icon teal">💰</div><div><div class="stat-label">Portfolio Value</div><div class="stat-value" id="inv-value">OMR 3.7M</div></div></div>
+          <div class="stat-card"><div class="stat-icon amber">🌿</div><div><div class="stat-label">Avg GSAS Score</div><div class="stat-value" id="inv-gsas">91</div></div></div>
+        </div>
+        <div style="margin-top:12px;display:flex;justify-content:space-between">
+          <button class="btn btn-secondary" onclick="wizBack(4)">← Back</button>
+          <button class="btn btn-primary" onclick="wizNext(4)">Proceed to Review →</button>
+        </div>
+      </div>
+
+      <!-- STEP 5: Review & Publish -->
+      <div id="wiz-step-5" class="hidden">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Project Summary</span></div>
+            <div class="card-body" id="review-summary"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">ESG Score Card</span></div>
+            <div class="card-body" id="review-esg"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><span class="card-title">Two-Phase Site Map Preview</span></div>
+          <div class="card-body" style="padding:0">
+            <div id="reg-map" style="height:320px;border-radius:0 0 var(--radius-md) var(--radius-md)"></div>
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+          <button class="btn btn-secondary" onclick="wizBack(5)">← Back</button>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-secondary" onclick="wizSaveDraft()">💾 Save as Draft</button>
+            <button class="btn btn-success" id="wiz-publish-btn" onclick="wizPublish()">📤 Register & Publish to Bank</button>
           </div>
         </div>
       </div>
@@ -688,7 +823,7 @@ function showPage(id) {
     if(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) n.classList.add('active');
   });
 
-  if(id === 'map') { setTimeout(() => initMap(), 100); }
+  if(id === 'map') { setTimeout(() => initMap('ecovillage-map', true), 100); }
   if(id === 'inventory') { renderUnitsTable(); }
   if(id === 'certificates') { renderCerts(); }
 }
@@ -709,53 +844,62 @@ function toggleLang() {
 // ═══════════════════════════════════════════════════
 // LEAFLET MAP
 // ═══════════════════════════════════════════════════
-function initMap() {
-  const el = document.getElementById('ecovillage-map');
+function initMap(containerId, showPhase2) {
+  const mapId = containerId || 'ecovillage-map';
+  const el = document.getElementById(mapId);
   if(!el) return;
-  if(leafletMap) { leafletMap.invalidateSize(); return; }
+  if(mapId === 'ecovillage-map' && leafletMap) { leafletMap.invalidateSize(); return; }
 
-  leafletMap = L.map('ecovillage-map').setView([23.6094, 58.5910], 16);
+  const map = L.map(mapId).setView([23.6130, 58.5940], 15);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors', maxZoom: 19
-  }).addTo(leafletMap);
+  }).addTo(map);
 
-  // Project boundary
-  const bounds = [[23.604,58.585],[23.616,58.598]];
-  L.rectangle(bounds, {color:'#007F86', weight:2, fillColor:'#35C6C4', fillOpacity:0.06}).addTo(leafletMap);
-  L.marker([23.610,58.5915], {icon: L.divIcon({className:'', html:'<div style="background:var(--navy);color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap">🌿 EcoVillage Muscat</div>'})}).addTo(leafletMap);
+  // Phase 1 boundary — teal (completed)
+  L.rectangle([[23.604,58.585],[23.614,58.594]], {color:'#007F86',weight:2,fillColor:'#35C6C4',fillOpacity:0.07,dashArray:'4,4'}).addTo(map);
+  L.marker([23.609,58.5895],{icon:L.divIcon({className:'',html:'<div style="background:#007F86;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">✅ Phase 1 — Completed</div>'})}).addTo(map);
 
-  renderMapMarkers('all');
+  // Phase 1 sold/reserved units (teal dots)
+  [[23.6065,58.5872],[23.6080,58.5884],[23.6072,58.5900],[23.6088,58.5868],[23.6056,58.5890],[23.6095,58.5876]].forEach(([lat,lng],i)=>{
+    L.circleMarker([lat,lng],{radius:7,color:'#fff',weight:2,fillColor:'#007F86',fillOpacity:0.9}).addTo(map)
+     .bindPopup(`<b>Phase 1 · Villa P1-${String.fromCharCode(65+i)}</b><br/>Status: <b>Sold</b>`);
+  });
+
+  if(showPhase2) {
+    // Phase 2 boundary — amber (new)
+    L.rectangle([[23.612,58.591],[23.622,58.600]], {color:'#C8891A',weight:2,fillColor:'#F4B35B',fillOpacity:0.08}).addTo(map);
+    L.marker([23.617,58.5955],{icon:L.divIcon({className:'',html:'<div style="background:#C8891A;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">🆕 Phase 2 — Available</div>'})}).addTo(map);
+    // Phase 2 units from UNITS_P2
+    UNITS_P2.forEach(u=>{
+      const col = u.status==='available'?'#2ECC71':'#F39C12';
+      L.circleMarker([u.lat,u.lng],{radius:8,color:'#fff',weight:2,fillColor:col,fillOpacity:0.95}).addTo(map)
+       .bindPopup(`<b>${u.label}</b><br/>Type: ${u.type} · ${u.area}m²<br/>OMR ${u.price.toLocaleString()}<br/>GSAS: <b>${u.gsas}</b><br/>Status: ${u.status}`);
+    });
+  } else {
+    renderMapMarkers('all', map);
+  }
+
+  if(mapId === 'ecovillage-map') leafletMap = map;
+  return map;
 }
 
-function renderMapMarkers(filter) {
-  if(!leafletMap) return;
-  mapMarkers.forEach(m => leafletMap.removeLayer(m));
+function renderMapMarkers(filter, map) {
+  const m = map || leafletMap;
+  if(!m) return;
+  mapMarkers.forEach(mk => m.removeLayer(mk));
   mapMarkers = [];
-
   const colorMap = {available:'#2ECC71', reserved:'#F39C12', sold:'#003B5C'};
-
   UNITS.forEach(u => {
     if(filter !== 'all' && u.status !== filter) return;
     const isB1 = u.id === 'B1';
     const color = isB1 ? '#E74C3C' : colorMap[u.status];
     const size = isB1 ? 18 : 12;
-    const icon = L.divIcon({
-      className:'',
-      html:`<div style="width:${size}px;height:${size}px;background:${color};border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);${isB1 ? 'animation:pulse 1.5s infinite' : ''}"></div>`,
-      iconAnchor:[size/2,size/2]
-    });
-    const popup = `<div style="font-size:12px;min-width:160px">
-      <strong style="color:#003B5C">Villa ${u.id}</strong>${isB1 ? ' ⭐' : ''}<br/>
-      Type: ${u.type} · ${u.area}m²<br/>
-      Price: OMR ${u.price.toLocaleString()}<br/>
-      GSAS: <strong style="color:#2ECC71">${u.gsas}</strong><br/>
-      Status: <strong>${u.status.toUpperCase()}</strong><br/>
-      ${u.loan ? `<span style="color:#007F86">🔗 ${u.loan}</span>` : ''}
-    </div>`;
-    const marker = L.marker([u.lat, u.lng], {icon}).addTo(leafletMap);
-    marker.bindPopup(popup);
-    if(isB1) marker.openPopup();
-    mapMarkers.push(marker);
+    const icon = L.divIcon({className:'',html:`<div style="width:${size}px;height:${size}px;background:${color};border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`,iconAnchor:[size/2,size/2]});
+    const popup = `<div style="font-size:12px;min-width:160px"><strong style="color:#003B5C">Villa ${u.id}</strong>${isB1?' ⭐':''}<br/>Type: ${u.type} · ${u.area}m²<br/>Price: OMR ${u.price.toLocaleString()}<br/>GSAS: <strong style="color:#2ECC71">${u.gsas}</strong><br/>Status: <strong>${u.status.toUpperCase()}</strong><br/>${u.loan?`<span style="color:#007F86">🔗 ${u.loan}</span>`:''}</div>`;
+    const mk = L.marker([u.lat,u.lng],{icon}).addTo(m);
+    mk.bindPopup(popup);
+    if(isB1) mk.openPopup();
+    mapMarkers.push(mk);
   });
 }
 
@@ -930,33 +1074,269 @@ async function confirmPublish() {
   }
 }
 
-async function registerProject() {
-  const btn = document.getElementById('reg-btn');
-  const name = (document.getElementById('reg-name')||{}).value || '';
-  const city = (document.getElementById('reg-city')||{}).value || '';
-  const dev  = (document.getElementById('reg-developer')||{}).value || 'Developer';
-  if (!name.trim()) { toast('Project name is required', 'error'); return; }
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Registering…';
+// ═══════════════════════════════════════════════════
+// PHASE 2 UNIT DATA (parsed from VillaSpecs.xlsx)
+// ═══════════════════════════════════════════════════
+const UNITS_P2 = [
+  {label:'EV-P2-A01',type:'Type A',area:340,bedrooms:4,price:195000,gsas:91,lat:23.6135,lng:58.5920,status:'available'},
+  {label:'EV-P2-A02',type:'Type A',area:340,bedrooms:4,price:198000,gsas:91,lat:23.6140,lng:58.5928,status:'available'},
+  {label:'EV-P2-A03',type:'Type A',area:342,bedrooms:4,price:200000,gsas:92,lat:23.6145,lng:58.5936,status:'available'},
+  {label:'EV-P2-A04',type:'Type A',area:338,bedrooms:4,price:202000,gsas:91,lat:23.6150,lng:58.5944,status:'available'},
+  {label:'EV-P2-A05',type:'Type A',area:340,bedrooms:4,price:205000,gsas:90,lat:23.6155,lng:58.5932,status:'available'},
+  {label:'EV-P2-A06',type:'Type A',area:345,bedrooms:4,price:208000,gsas:92,lat:23.6160,lng:58.5940,status:'available'},
+  {label:'EV-P2-A07',type:'Type A',area:340,bedrooms:4,price:210000,gsas:91,lat:23.6165,lng:58.5948,status:'available'},
+  {label:'EV-P2-A08',type:'Type A',area:342,bedrooms:4,price:215000,gsas:91,lat:23.6170,lng:58.5956,status:'available'},
+  {label:'EV-P2-B01',type:'Type B',area:280,bedrooms:3,price:165000,gsas:90,lat:23.6125,lng:58.5950,status:'available'},
+  {label:'EV-P2-B02',type:'Type B',area:282,bedrooms:3,price:168000,gsas:91,lat:23.6130,lng:58.5958,status:'available'},
+  {label:'EV-P2-B03',type:'Type B',area:280,bedrooms:3,price:170000,gsas:90,lat:23.6135,lng:58.5966,status:'available'},
+  {label:'EV-P2-B04',type:'Type B',area:285,bedrooms:3,price:172000,gsas:91,lat:23.6140,lng:58.5974,status:'available'},
+  {label:'EV-P2-B05',type:'Type B',area:280,bedrooms:3,price:175000,gsas:90,lat:23.6145,lng:58.5962,status:'available'},
+  {label:'EV-P2-B06',type:'Type B',area:282,bedrooms:3,price:178000,gsas:91,lat:23.6150,lng:58.5970,status:'available'},
+  {label:'EV-P2-C01',type:'Type C',area:420,bedrooms:5,price:310000,gsas:92,lat:23.6120,lng:58.5938,status:'available'},
+  {label:'EV-P2-C02',type:'Type C',area:425,bedrooms:5,price:325000,gsas:93,lat:23.6125,lng:58.5946,status:'available'},
+  {label:'EV-P2-C03',type:'Type C',area:418,bedrooms:5,price:338000,gsas:92,lat:23.6130,lng:58.5982,status:'available'},
+  {label:'EV-P2-C04',type:'Type C',area:422,bedrooms:5,price:345000,gsas:93,lat:23.6135,lng:58.5990,status:'available'},
+];
+
+// Wizard state
+let wizCurrentStep = 1;
+let wizProjectId = null;
+let wizDocsUploaded = {};
+let wizParsedData = null;
+let regMap = null;
+
+function wizSetStep(n) {
+  for(let i=1;i<=5;i++) {
+    document.getElementById('wiz-step-'+i).classList.toggle('hidden', i!==n);
+    const s = document.getElementById('reg-step-'+i);
+    s.className = 'publish-step' + (i<n?' done':i===n?' active':'');
+    s.querySelector('.publish-step-num').textContent = i<n ? '✓' : i;
+  }
+  wizCurrentStep = n;
+  if(n===5) { setTimeout(()=>initRegMap(), 200); }
+}
+
+function wizNext(from) {
+  if(from===1) {
+    const name = document.getElementById('reg-name').value.trim();
+    if(!name){ toast('Project name required','error'); return; }
+    wizSetStep(2);
+  } else if(from===2) {
+    const uploaded = Object.keys(wizDocsUploaded).length;
+    if(uploaded < 3){ toast('Upload at least GSAS, EPC and EIA documents','warning'); return; }
+    wizSetStep(3);
+    runAiParse();
+  } else if(from===3) {
+    wizSetStep(4);
+    renderRegUnitsTable();
+  } else if(from===4) {
+    wizSetStep(5);
+    renderReviewSummary();
+  }
+}
+
+function wizBack(from) { wizSetStep(from-1); }
+
+function triggerFileUpload(docType, filename) {
+  const card = document.getElementById('doc-'+docType);
+  const statusEl = document.getElementById('doc-'+docType+'-status');
+  card.className = 'cert-card uploading';
+  statusEl.className = 'cert-status analyzing';
+  statusEl.textContent = '⏳ Uploading…';
+  setTimeout(() => {
+    wizDocsUploaded[docType] = filename;
+    card.className = 'cert-card verified';
+    statusEl.className = 'cert-status verified';
+    statusEl.textContent = '✅ ' + filename;
+    const count = Object.keys(wizDocsUploaded).length;
+    toast(`${filename} uploaded (${count}/5)`, 'success');
+  }, 1200 + Math.random()*600);
+}
+
+function runAiParse() {
+  const body = document.getElementById('ai-parse-body');
+  const docs = Object.keys(wizDocsUploaded);
+  let step = 0;
+  const steps = [
+    {label:'OCR extraction — GSAS Certificate…', delay:900},
+    {label:'Parsing EPC energy data…', delay:800},
+    {label:'Validating EIA authority reference…', delay:700},
+    {label:'Reading villa specs Excel (18 rows)…', delay:900},
+    {label:'Cross-referencing GPS coordinates…', delay:600},
+    {label:'Computing ESG composite score…', delay:500},
+  ];
+  let html = `<div style="margin-bottom:12px"><div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:10px">Processing ${docs.length} documents…</div><div id="parse-log" style="font-size:12px;color:var(--gray-700);display:flex;flex-direction:column;gap:6px"></div></div>`;
+  body.innerHTML = html;
+  const log = document.getElementById('parse-log');
+  function nextStep() {
+    if(step >= steps.length) { showParseResults(body, log); return; }
+    const s = steps[step++];
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(0,127,134,.05);border-radius:4px';
+    row.innerHTML = `<div class="analyzing-pulse" style="width:14px;height:14px;border-width:2px;flex-shrink:0"></div><span>${s.label}</span>`;
+    log.appendChild(row);
+    setTimeout(() => { row.innerHTML = `<span style="color:#27AE60;font-size:14px">✓</span><span>${s.label}</span>`; nextStep(); }, s.delay);
+  }
+  nextStep();
+}
+
+function showParseResults(body, log) {
+  wizParsedData = {gsas_score:91, epc_rating:'A+', eia_ref:'EA/EIA/2026/MSC/0887', gsas_ref:'GSAS-2026-112', primary_energy:43, units:18};
+  const resultsHtml = `
+    <div class="ai-panel fade-in" style="margin-top:12px">
+      <div class="ai-panel-header"><span style="font-size:20px">🤖</span>
+        <div><div style="font-size:14px;font-weight:700;color:var(--navy)">AI Extraction Complete</div>
+        <div style="font-size:11px;color:var(--gray-500)">5 documents · 18 units · GPT-4o Vision</div></div>
+        <span class="chip green" style="margin-left:auto">✅ All Verified</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+        <div style="background:#fff;border:1px solid var(--gray-200);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:var(--success)">91</div>
+          <div style="font-size:11px;color:var(--gray-500)">GSAS Score</div>
+          <span class="chip green" style="margin-top:4px;font-size:10px">GOLD Tier</span>
+        </div>
+        <div style="background:#fff;border:1px solid var(--gray-200);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:var(--teal)">A+</div>
+          <div style="font-size:11px;color:var(--gray-500)">EPC Rating</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:2px">43 kWh/m²/yr</div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--gray-200);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:var(--navy)">18</div>
+          <div style="font-size:11px;color:var(--gray-500)">Units parsed</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:2px">3 types (A/B/C)</div>
+        </div>
+      </div>
+      ${buildConfidenceBar('GSAS Authenticity',98,'high')}
+      ${buildConfidenceBar('EPC Data Extraction',97,'high')}
+      ${buildConfidenceBar('EIA Reference Match',99,'high')}
+      ${buildConfidenceBar('Unit Inventory Parse',96,'high')}
+      <div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.3);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--gray-700);margin-top:12px;line-height:1.6">
+        <strong>AI Recommendation:</strong> All 5 documents verified. GSAS score 91 qualifies for <strong>0.75% premium green discount</strong> (rate: 4.75%). EIA reference EA/EIA/2026/MSC/0887 confirmed with Environment Authority. 18 units auto-populated. Ready for inventory review.
+      </div>
+    </div>`;
+  body.innerHTML += resultsHtml;
+  setTimeout(() => {
+    body.querySelectorAll('.confidence-bar').forEach(bar => { bar.style.width = bar.getAttribute('data-w')+'%'; });
+  }, 100);
+  document.getElementById('wiz-step3-next').classList.remove('hidden');
+  setTimeout(() => {
+    body.querySelectorAll('.confidence-bar').forEach(bar => { bar.style.width = bar.getAttribute('data-w')+'%'; });
+  }, 100);
+}
+
+function renderRegUnitsTable() {
+  const tbody = document.getElementById('reg-units-tbody');
+  if(!tbody) return;
+  tbody.innerHTML = UNITS_P2.map((u,i) => `<tr>
+    <td style="color:var(--gray-500)">${i+1}</td>
+    <td><strong>${u.label}</strong></td>
+    <td>${u.type}</td>
+    <td>${u.area}</td>
+    <td>${u.bedrooms}</td>
+    <td>${u.price.toLocaleString()}</td>
+    <td><span class="gsas-score excellent">${u.gsas}</span></td>
+    <td style="font-size:10px;color:var(--gray-500)">${u.lat.toFixed(4)}, ${u.lng.toFixed(4)}</td>
+    <td><span class="unit-status available">Available</span></td>
+  </tr>`).join('');
+  const total = UNITS_P2.reduce((s,u)=>s+u.price,0);
+  document.getElementById('inv-total').textContent = UNITS_P2.length;
+  document.getElementById('inv-value').textContent = 'OMR ' + (total/1000000).toFixed(1)+'M';
+  const avgGsas = Math.round(UNITS_P2.reduce((s,u)=>s+u.gsas,0)/UNITS_P2.length);
+  document.getElementById('inv-gsas').textContent = avgGsas;
+}
+
+function renderReviewSummary() {
+  const name = document.getElementById('reg-name').value;
+  const loc  = document.getElementById('reg-location').value;
+  document.getElementById('review-summary').innerHTML = `
+    <img src="https://www.genspark.ai/api/files/s/8nc68AvS?cache_control=3600" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:12px" onerror="this.style.display='none'"/>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Project</span><span style="font-weight:600">${name}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Location</span><span style="font-weight:600">${loc}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Units</span><span style="font-weight:600">18 villas (A/B/C)</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Price range</span><span style="font-weight:600">OMR 165K – 345K</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Documents</span><span style="font-weight:600">${Object.keys(wizDocsUploaded).length}/5 uploaded</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0"><span style="color:var(--gray-500)">Green Rate</span><span style="font-weight:700;color:var(--success)">4.75% (0.75% discount)</span></div>
+    </div>`;
+  document.getElementById('review-esg').innerHTML = `
+    <div style="text-align:center;padding:8px 0 16px">
+      <div style="font-size:56px;font-weight:900;color:var(--success);line-height:1">91</div>
+      <div style="font-size:13px;color:var(--gray-500);margin-bottom:4px">GSAS Score · GOLD Tier</div>
+      <span class="chip green">🏆 Premium Eligible</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">GSAS Ref</span><span style="font-weight:600">GSAS-2026-112</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">EPC Rating</span><span style="font-weight:600;color:var(--teal)">A+</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Primary Energy</span><span style="font-weight:600">43 kWh/m²/yr</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">EIA Reference</span><span style="font-weight:600">EA/EIA/2026/MSC/0887</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0"><span style="color:var(--gray-500)">GSAS Valid Until</span><span style="font-weight:600">2029-03-10</span></div>
+    </div>`;
+}
+
+function initRegMap() {
+  if(regMap) return;
+  regMap = initMap('reg-map', true);
+}
+
+async function wizSaveDraft() {
+  await doRegisterProject(false);
+}
+
+async function wizPublish() {
+  const ok = await doRegisterProject(true);
+  if(ok) {
+    document.getElementById('wiz-publish-btn').textContent = '✅ Published!';
+    document.getElementById('wiz-publish-btn').disabled = true;
+  }
+}
+
+async function doRegisterProject(publish) {
+  const name = document.getElementById('reg-name').value.trim();
+  const loc  = document.getElementById('reg-location').value.trim();
+  const gov  = document.getElementById('reg-gov').value;
+  const type = document.getElementById('reg-type').value;
+  const pf   = document.getElementById('reg-price-from').value;
+  const pt   = document.getElementById('reg-price-to').value;
+  const tag  = document.getElementById('reg-tagline').value;
+  const imgUrl = document.getElementById('reg-image').value;
+  const btn = document.getElementById('wiz-publish-btn');
+  if(btn) { btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Processing…'; }
   try {
     const r = await fetch('/api/v1/portal/developer/projects', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ name, location: city, developer_name: dev, type:'Residential', total_units: 10, gsas_target_score: 85 })
+      body: JSON.stringify({
+        name, location:loc, governorate:gov, type, total_units:18,
+        available_units:18, price_from:parseFloat(pf), price_to:parseFloat(pt),
+        marketing_tagline:tag, hero_image_url:imgUrl,
+        gsas_score: wizParsedData?.gsas_score||91,
+        gsas_rating:'Gold', epc_rating: wizParsedData?.epc_rating||'A+',
+        eia_reference: wizParsedData?.eia_ref||'EA/EIA/2026/MSC/0887',
+        green_eligible:1, premium_tier:1,
+        amenities: JSON.stringify(['Solar PV 8.5kWp','Greywater Recycling','Green Roof Gardens','HVAC SEER 18','Triple Glazing','Community Pool','Gated Security']),
+        completion_date:'Q4 2027'
+      })
     });
     const d = await r.json();
-    btn.disabled = false; btn.innerHTML = 'Register & Continue';
-    if (d.id || d.project_id || d.success) {
-      const pid = d.id || d.project_id;
-      toast(`🏗️ Project "${name}" registered!`, 'success');
-      toast('Next: Upload ESG certificates', 'info');
-      if (pid) window._activeProjectId = pid;
-      setTimeout(() => { loadProjects(); showPage('certificates'); }, 1200);
-    } else {
-      toast('⚠️ ' + (d.error || 'Registration failed'), 'error');
+    if(!(d.id||d.success)) { toast('Registration failed: '+(d.error||'unknown'),'error'); if(btn){btn.disabled=false;btn.innerHTML='📤 Register & Publish to Bank';} return false; }
+    const pid = d.id;
+    wizProjectId = pid;
+    window._activeProjectId = pid;
+    // Create units
+    for(const u of UNITS_P2) {
+      await fetch('/api/v1/portal/developer/projects/'+pid+'/units', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({unit_number:u.label, type:u.type, area_sqm:u.area, bedrooms:u.bedrooms, price:u.price, lat:u.lat, lng:u.lng, gsas_score:u.gsas, status:'available', features:JSON.stringify(['Solar PV','Green Roof','High-Eff HVAC'])})
+      });
     }
-  } catch(e) {
-    btn.disabled = false; btn.innerHTML = 'Register & Continue';
-    toast('⚠️ API error: ' + e.message, 'error');
-  }
+    if(publish) {
+      await fetch('/api/v1/portal/developer/projects/'+pid+'/publish', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+      toast('🎉 Project registered and published to bank portal!','success');
+    } else {
+      toast('💾 Project saved as draft','success');
+    }
+    loadProjects();
+    return true;
+  } catch(e) { toast('API error: '+e.message,'error'); if(btn){btn.disabled=false;btn.innerHTML='📤 Register & Publish to Bank';} return false; }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1001,8 +1381,11 @@ async function loadProjects() {
       } else {
         grid.innerHTML = projects.map(p => {
           const isLive = p.listing_visible === 1 || p.status === 'active';
+          const imgStyle = p.hero_image_url
+            ? `background:url('${p.hero_image_url}') center/cover no-repeat`
+            : 'background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%)';
           return `<div class="project-card${isLive?' active-project':''}" onclick="selectProject('${p.id}')">
-            <div class="project-img"><div class="project-img-overlay"></div><div class="project-img-icon">🏗️</div>
+            <div class="project-img" style="${imgStyle}"><div class="project-img-overlay"></div>${!p.hero_image_url?'<div class="project-img-icon">🏗️</div>':''}
               <span class="project-status-badge badge-${isLive?'active':p.status||'draft'}">${isLive?'Live':p.status||'draft'}</span>
             </div>
             <div class="project-body">

@@ -56,6 +56,39 @@ app.get('/:id/units', async (c) => {
   return c.json({ units: results })
 })
 
+app.post('/:id/units', async (c) => {
+  const projectId = c.req.param('id')
+  const body = await c.req.json()
+  const id = generateId('unit')
+  const ts = now()
+  await c.env.DB.prepare(`
+    INSERT INTO units (id, project_id, unit_number, type, area_sqm, bedrooms, bathrooms, price, lat, lng, status, features, created_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `).bind(
+    id, projectId, body.unit_number, body.type || 'villa',
+    body.area_sqm || 0, body.bedrooms || 3, body.bathrooms || 2,
+    body.price || 0, body.lat || 0, body.lng || 0,
+    body.status || 'available', body.features || '[]', ts
+  ).run()
+  return c.json({ id, success: true })
+})
+
+app.post('/:id/update-meta', async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json()
+  const ts = now()
+  const fields: string[] = []
+  const vals: any[] = []
+  const allowed = ['hero_image_url','marketing_tagline','price_from','price_to','completion_date','amenities','gsas_score','gsas_rating','epc_rating','eia_reference','green_eligible','premium_tier','listing_visible']
+  for (const k of allowed) {
+    if (body[k] !== undefined) { fields.push(`${k}=?`); vals.push(body[k]) }
+  }
+  if (!fields.length) return c.json({ success: true })
+  vals.push(ts, id)
+  await c.env.DB.prepare(`UPDATE projects SET ${fields.join(',')}, updated_at=? WHERE id=?`).bind(...vals).run()
+  return c.json({ success: true })
+})
+
 app.get('/units/:unitId', async (c) => {
   const unitId = c.req.param('unitId')
   const unit = await c.env.DB.prepare(
