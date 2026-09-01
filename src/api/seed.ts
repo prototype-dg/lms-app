@@ -33,8 +33,8 @@ app.post('/run', async (c) => {
 })
 
 function getSeedSQL(): string {
-  // Embedded schema + seed data
-  return SCHEMA_SQL + '\n' + SEED_SQL
+  // Embedded schema + portal migration columns + seed data
+  return SCHEMA_SQL + '\n' + PORTAL_COLUMNS_SQL + '\n' + SEED_SQL
 }
 
 const SCHEMA_SQL = `
@@ -44,15 +44,22 @@ CREATE TABLE IF NOT EXISTS products (
   base_rate REAL DEFAULT 5.5, max_ltv INTEGER DEFAULT 90, max_dbr INTEGER DEFAULT 60,
   green_dbr INTEGER DEFAULT 55, min_term INTEGER DEFAULT 5, max_term INTEGER DEFAULT 25,
   min_amount REAL DEFAULT 10000, max_amount REAL DEFAULT 500000,
-  gsas_min_score INTEGER DEFAULT 70, gsas_premium_score INTEGER DEFAULT 85,
-  green_discount_premium REAL DEFAULT 0.75, green_discount_standard REAL DEFAULT 0.5,
+  gsas_min_score INTEGER DEFAULT 0, gsas_premium_score INTEGER DEFAULT 0,
+  green_discount_premium REAL DEFAULT 0.0, green_discount_standard REAL DEFAULT 0.0,
   ai_confidence_threshold INTEGER DEFAULT 90, allow_byop INTEGER DEFAULT 1,
   allow_partner_inventory INTEGER DEFAULT 1,
   required_docs TEXT DEFAULT '[]', esg_required_docs TEXT DEFAULT '[]',
   approved_materials TEXT DEFAULT '[]', approved_vendors TEXT DEFAULT '[]',
   configuration TEXT DEFAULT '{}', applications_ytd INTEGER DEFAULT 0,
   created_by TEXT DEFAULT 'system', created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now'))
+  updated_at TEXT DEFAULT (datetime('now')),
+  portal_visible INTEGER DEFAULT 0,
+  portal_hero_title TEXT, portal_hero_subtitle TEXT, portal_card_badge TEXT,
+  portal_highlights TEXT DEFAULT '[]',
+  portal_calculator_enabled INTEGER DEFAULT 1,
+  developer_portal_visible INTEGER DEFAULT 0,
+  developer_requirements TEXT DEFAULT '{}',
+  published_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS rules (
@@ -165,6 +172,32 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_construction_stages_app ON construction_stages(application_id);
 `
 
+// Portal & AI columns from migration 0003 — applied idempotently for local dev DBs.
+// ALTER TABLE on existing columns errors silently (ignored by the seed/run executor).
+const PORTAL_COLUMNS_SQL = `
+ALTER TABLE products ADD COLUMN portal_visible INTEGER DEFAULT 0;
+ALTER TABLE products ADD COLUMN portal_hero_title TEXT;
+ALTER TABLE products ADD COLUMN portal_hero_subtitle TEXT;
+ALTER TABLE products ADD COLUMN portal_card_badge TEXT;
+ALTER TABLE products ADD COLUMN portal_highlights TEXT DEFAULT '[]';
+ALTER TABLE products ADD COLUMN portal_calculator_enabled INTEGER DEFAULT 1;
+ALTER TABLE products ADD COLUMN developer_portal_visible INTEGER DEFAULT 0;
+ALTER TABLE products ADD COLUMN developer_requirements TEXT DEFAULT '{}';
+ALTER TABLE products ADD COLUMN published_at TEXT;
+ALTER TABLE projects ADD COLUMN listing_visible INTEGER DEFAULT 0;
+ALTER TABLE projects ADD COLUMN hero_image_url TEXT;
+ALTER TABLE projects ADD COLUMN marketing_tagline TEXT;
+ALTER TABLE projects ADD COLUMN price_from REAL;
+ALTER TABLE projects ADD COLUMN price_to REAL;
+ALTER TABLE projects ADD COLUMN completion_date TEXT;
+ALTER TABLE projects ADD COLUMN amenities TEXT DEFAULT '[]';
+CREATE TABLE IF NOT EXISTS ai_threads (
+  id TEXT PRIMARY KEY, user_id TEXT, product_id TEXT, purpose TEXT NOT NULL,
+  messages TEXT DEFAULT '[]', context TEXT DEFAULT '{}', status TEXT DEFAULT 'active',
+  result TEXT DEFAULT '{}', created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))
+);
+`
+
 const SEED_SQL = `
 INSERT OR IGNORE INTO users VALUES ('u001','Fatima Al-Rashdi','فاطمة الراشدي','fatima@sib.om','product_manager','Product Management','FA','active','2024-01-15');
 INSERT OR IGNORE INTO users VALUES ('u002','Aisha Al-Balushi','عائشة البلوشي','aisha@sib.om','compliance_officer','Compliance & ESG','AB','active','2023-06-01');
@@ -178,14 +211,14 @@ INSERT OR IGNORE INTO customers VALUES ('c001','Salim Al-Harthy','سالم ال�
 INSERT OR IGNORE INTO customers VALUES ('c002','Mariam Al-Siyabi','مريم السيابي','91234567','mariam@hotmail.com','+968 9955 1122','Omani','Oman Oil Company',4500,'salaried',780,12,'2020-03-22','active','2020-03-22');
 INSERT OR IGNORE INTO customers VALUES ('c003','Hassan Al-Amri','حسن العامري','78654321','hassan@gmail.com','+968 9977 8899','Omani','Bank Muscat',2800,'salaried',710,18,'2021-07-15','active','2021-07-15');
 
-INSERT OR IGNORE INTO products VALUES ('p001','Standard Home Loan',null,'Standard Home Loan','Our flagship home financing product for Omani nationals and residents.','home_loan','active',5.5,90,60,60,5,25,10000,500000,0,0,0,0,90,1,1,'["salary_cert","utility_bill","civil_id","property_deed"]','[]','[]','[]','{"applications_ytd":4847}',4847,'u001','2024-01-10','2025-12-15');
-INSERT OR IGNORE INTO products VALUES ('p002','Auto Finance – Personal',null,'Auto Finance - Personal','Financing for personal vehicles.','auto_loan','active',4.9,85,55,55,1,7,3000,80000,0,0,0,0,90,0,0,'["salary_cert","civil_id","vehicle_proforma"]','[]','[]','[]','{}',1923,'u001','2023-06-01','2025-11-20');
-INSERT OR IGNORE INTO products VALUES ('p003','Personal Loan',null,'Personal Loan','Unsecured personal financing.','personal_loan','active',7.5,0,50,50,1,5,1000,30000,0,0,0,0,90,0,0,'["salary_cert","civil_id","employer_letter"]','[]','[]','[]','{}',3241,'u001','2023-01-15','2025-10-01');
-INSERT OR IGNORE INTO products VALUES ('p004','SME Working Capital',null,'SME Working Capital Finance','Working capital for SMEs.','sme','active',6.5,70,65,65,1,3,5000,200000,0,0,0,0,85,0,0,'["cr_certificate","audited_financials","bank_statements"]','[]','[]','[]','{}',892,'u001','2023-08-10','2025-09-15');
-INSERT OR IGNORE INTO products VALUES ('p005','Home Equity Line',null,'Home Equity Line of Credit','Revolving credit against property.','home_loan','active',6.0,75,55,55,5,15,20000,300000,0,0,0,0,90,0,0,'["property_title","valuation_report","civil_id"]','[]','[]','[]','{}',567,'u001','2024-03-01','2025-08-20');
-INSERT OR IGNORE INTO products VALUES ('p006','Commercial Property Finance',null,'Commercial Property Finance','Commercial property financing.','commercial','active',6.8,70,65,65,5,20,50000,2000000,0,0,0,0,85,0,0,'["cr_certificate","audited_financials","property_title"]','[]','[]','[]','{}',234,'u001','2023-09-01','2025-07-10');
-INSERT OR IGNORE INTO products VALUES ('p007','Expat Home Finance',null,'Expatriate Home Finance','Home financing for expatriates.','home_loan','active',6.0,75,55,55,5,20,15000,400000,0,0,0,0,90,0,0,'["work_permit","salary_cert","civil_id","property_deed"]','[]','[]','[]','{}',1102,'u001','2024-01-20','2025-12-01');
-INSERT OR IGNORE INTO products VALUES ('p008','Education Finance',null,'Education Finance','Education expense financing.','education','archived',8.0,0,45,45,1,8,500,20000,0,0,0,0,90,0,0,'["civil_id","university_offer_letter"]','[]','[]','[]','{}',445,'u001','2022-01-01','2024-06-01');
+INSERT OR IGNORE INTO products VALUES ('p001','Standard Home Loan','SHL-STANDARD','Flagship home financing for Omani nationals and residents. Fixed and variable rate options, top-up facility, and bundled insurance. CBO-compliant with full credit assessment.','home_loan','active',5.5,90,60,60,5,25,10000,500000,0,0,0.0,0.0,90,1,1,'["civil_id","salary_certificate","utility_bill","property_deed","independent_valuation_report","bank_statements_3m","employer_letter"]','[]','[]','[]','{"features":["Fixed and variable rate options","Top-up facility available","Insurance bundled","Salary transfer preferred"]}',4847,'u001','2024-01-10','2025-12-15');
+INSERT OR IGNORE INTO products VALUES ('p002','Auto Finance – Personal','AFL-PERSONAL','Financing for personal vehicles including sedans, SUVs, and electric vehicles. Competitive flat rate, quick 48-hour approval, covers new and used vehicles up to 5 years old.','auto_loan','active',4.9,85,55,55,1,7,3000,80000,0,0,0.0,0.0,90,0,0,'["civil_id","salary_certificate","vehicle_proforma_invoice","driving_license","insurance_quotation","bank_statements_3m"]','[]','[]','[]','{"features":["Covers new & used vehicles","48-hour credit decision","EV purchase supported","Comprehensive insurance required"]}',1923,'u001','2023-06-01','2025-11-20');
+INSERT OR IGNORE INTO products VALUES ('p003','Personal Loan','PL-UNSECURED','Unsecured personal financing for salaried employees of approved employers. No collateral required. Flat competitive rate for medical, travel, home renovation and other personal needs.','personal_loan','active',7.5,0,45,45,1,5,1000,30000,0,0,0.0,0.0,90,0,0,'["civil_id","salary_certificate","employer_letter","bank_statements_3m","approved_employer_confirmation"]','[]','[]','[]','{"features":["No collateral required","Approved employer list","Competitive fixed rate","Loan protector insurance available"]}',3241,'u001','2023-01-15','2025-10-01');
+INSERT OR IGNORE INTO products VALUES ('p004','SME Working Capital','SME-WORKCAP','Short-term working capital facility for small and medium enterprises registered in Oman. Revolving or term structure. Supports payroll, inventory procurement, and operational growth.','sme','active',6.5,70,65,65,1,3,5000,200000,0,0,0.0,0.0,85,0,0,'["commercial_registration_certificate","memorandum_of_association","audited_financials_2yr","bank_statements_6m","cr_extract","tax_clearance_certificate","business_profile"]','[]','[]','[]','{"features":["For Oman-registered SMEs","Revolving or term facility","Supports payroll & growth","MOCI-verified CR required"]}',892,'u001','2023-08-10','2025-09-15');
+INSERT OR IGNORE INTO products VALUES ('p005','Home Equity Line','HELOC-STANDARD','Revolving credit facility secured against existing owned property. Access equity without selling. Ideal for large purchases, education, or business funding. Second charge behind primary mortgage.','home_loan','active',6.0,75,55,55,5,15,20000,300000,0,0,0.0,0.0,90,0,0,'["civil_id","property_title_deed","independent_valuation_report","salary_certificate","bank_statements_3m","existing_mortgage_statement","noc_from_primary_lender"]','[]','[]','[]','{"features":["Use your property equity","Revolving credit line","Up to OMR 300,000","No early settlement penalty"]}',567,'u001','2024-03-01','2025-08-20');
+INSERT OR IGNORE INTO products VALUES ('p006','Commercial Property Finance','CPF-COMMERCIAL','Financing for commercial properties including offices, retail units, and warehouses. Available to Omani-registered companies and sole proprietors. Full corporate credit assessment applies.','commercial','active',6.8,70,65,65,5,20,50000,2000000,0,0,0.0,0.0,85,0,0,'["commercial_registration_certificate","memorandum_of_association","audited_financials_3yr","bank_statements_12m","property_title_deed","independent_valuation_report","lease_agreements","board_resolution"]','[]','[]','[]','{"features":["For offices, retail & warehouses","Up to OMR 2,000,000","Flexible repayment structures","Lease income considered"]}',234,'u001','2023-09-01','2025-07-10');
+INSERT OR IGNORE INTO products VALUES ('p007','Expat Home Finance','EHL-EXPAT','Home financing for expatriate professionals working in Oman. Stricter LTV (max 75%) per CBO regulations. Employer NOC required. Available for IZ-approved freehold zones.','home_loan','active',6.0,75,55,55,5,20,15000,400000,0,0,0.0,0.0,90,0,0,'["civil_id","passport_copy","valid_work_permit_residence_card","salary_certificate","noc_from_employer","property_deed_freehold_zone","independent_valuation_report","bank_statements_6m"]','[]','[]','[]','{"features":["Expatriate professionals","LTV up to 75%","Freehold zone properties","Employer NOC required"]}',1102,'u001','2024-01-20','2025-12-01');
+INSERT OR IGNORE INTO products VALUES ('p008','Education Finance','EDU-FINANCE','Financing for higher education expenses including tuition, accommodation, and study materials at approved universities in Oman and abroad. Deferred repayment option available.','education','archived',8.0,0,45,45,1,8,500,20000,0,0,0.0,0.0,90,0,0,'["civil_id","university_offer_letter_or_enrollment","salary_certificate","fee_schedule_from_institution","bank_statements_3m"]','[]','[]','[]','{"features":["Approved universities list","Deferred repayment option","Covers tuition & accommodation","Loan protector insurance"]}',445,'u001','2022-01-01','2024-06-01');
 -- Green Home Loan is created LIVE during the presentation (Act 1).
 
 INSERT OR IGNORE INTO rules VALUES ('r001',null,'DBR Maximum Limit','creditworthiness','DBR','<=',60,null,'reject','hard','CBO Circular 2024-01, Section 3.1','manual',null,'Debt Burden Ratio must not exceed 60% of gross monthly income',1,'system','2024-01-01');
@@ -241,25 +274,42 @@ app.post('/reset-demo', async (c) => {
   const TEMPLATE_PRODUCT_CODES = ['SHL-STANDARD','AFL-PERSONAL','PL-UNSECURED','SME-WORKCAP','HELOC-STANDARD','CPF-COMMERCIAL','EHL-EXPAT','EDU-FINANCE']
 
   try {
-    // ── 1. Delete ALL child rows that reference non-template products ─────
-    // Must happen BEFORE deleting the products themselves (FK constraints).
-    // Uses NOT IN on the template ID list so template products' children survive.
+    // ── 1. Delete ALL descendant rows in FK-safe leaf-to-root order ──────
+    // Correct FK chain: construction_stages → applications → products
+    //                   rules → products
+    //                   ai_threads → products
+    //                   audit_logs → (products, applications)
+    // We MUST delete in leaf→root order to satisfy all FK constraints.
     const idPlaceholders = TEMPLATE_PRODUCT_IDS.map(() => '?').join(',')
 
-    // rules.product_id → products.id
+    // 1a. construction_stages first (FK: invoice_doc_id → documents, application_id → applications)
+    // Delete ALL non-seed construction stages to avoid doc FK
+    await db.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run()
+    // Also null out invoice_doc_id on any remaining stages that reference non-seed docs
+    await db.prepare("UPDATE construction_stages SET invoice_doc_id=NULL WHERE invoice_doc_id IS NOT NULL").run()
+
+    // 1b. documents attached to live applications or EcoVillage project
+    await db.prepare("DELETE FROM documents WHERE entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')").run()
+
+    // 1c. applications that reference non-template products (or any live app besides seed 2)
+    await db.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run()
+
+    // 1d. rules.product_id → products.id
     await db.prepare(
       `DELETE FROM rules WHERE product_id IS NOT NULL AND product_id NOT IN (${idPlaceholders})`
     ).bind(...TEMPLATE_PRODUCT_IDS).run()
 
-    // audit_logs referencing non-template products
+    // 1e. audit_logs referencing non-template products
     await db.prepare(
       `DELETE FROM audit_logs WHERE entity_type='product' AND entity_id NOT IN (${idPlaceholders})`
     ).bind(...TEMPLATE_PRODUCT_IDS).run()
 
-    // ai_threads referencing non-template products
-    await db.prepare(
-      `DELETE FROM ai_threads WHERE product_id IS NOT NULL AND product_id NOT IN (${idPlaceholders})`
-    ).bind(...TEMPLATE_PRODUCT_IDS).run()
+    // 1f. ai_threads referencing non-template products (table may not exist on fresh DBs)
+    try {
+      await db.prepare(
+        `DELETE FROM ai_threads WHERE product_id IS NOT NULL AND product_id NOT IN (${idPlaceholders})`
+      ).bind(...TEMPLATE_PRODUCT_IDS).run()
+    } catch(_) { /* ai_threads table may not exist yet */ }
 
     // ── 2. Now safely delete non-template products ───────────────────────
     await db.prepare(
@@ -267,64 +317,116 @@ app.post('/reset-demo', async (c) => {
     ).bind(...TEMPLATE_PRODUCT_IDS).run()
 
     // ── 2. Restore template products to exact seeded field values ────────
-    // Reset all mutable fields back to template defaults
+    // Reset all mutable fields back to template defaults (realistic per-product-type configs)
     const productResets: [string, any[]][] = [
+      // p001 – Standard Home Loan: Omani salaried, secured, LTV 90%, DBR 60%, 5–25yr
       [`UPDATE products SET
-          name='Standard Home Loan', description='Our flagship home financing product for Omani nationals and residents. Competitive rates with flexible terms.',
-          status='active', base_rate=5.5, max_ltv=90, max_dbr=60, green_dbr=60, min_term=5, max_term=25,
-          min_amount=10000, max_amount=500000, gsas_min_score=0, gsas_premium_score=0,
-          green_discount_premium=0, green_discount_standard=0, ai_confidence_threshold=90,
-          required_docs='["salary_cert","utility_bill","civil_id","property_deed","valuation_report"]',
+          name='Standard Home Loan',
+          description='Flagship home financing for Omani nationals and residents. Fixed and variable rate options, top-up facility, and bundled insurance. CBO-compliant with full credit assessment.',
+          status='active', base_rate=5.5, max_ltv=90, max_dbr=60, green_dbr=60,
+          min_term=5, max_term=25, min_amount=10000, max_amount=500000,
+          gsas_min_score=0, gsas_premium_score=0, green_discount_premium=0.0, green_discount_standard=0.0,
+          ai_confidence_threshold=90, allow_byop=1, allow_partner_inventory=1,
+          required_docs='["civil_id","salary_certificate","utility_bill","property_deed","independent_valuation_report","bank_statements_3m","employer_letter"]',
           esg_required_docs='[]',
           portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
           portal_highlights='["Fixed and variable rate options","Flexible 5–25 year terms","Top-up facility available","Insurance bundled"]',
           updated_at=datetime('now')
         WHERE id='p001'`, []],
+      // p002 – Auto Finance Personal: vehicle-secured, LTV 85%, DBR 55%, 1–7yr, driving license required
       [`UPDATE products SET
-          name='Auto Finance – Personal', status='active', base_rate=4.9, max_ltv=85, max_dbr=55, min_term=1, max_term=7,
-          min_amount=3000, max_amount=80000, esg_required_docs='[]',
+          name='Auto Finance – Personal',
+          description='Financing for personal vehicles including sedans, SUVs, and electric vehicles. Competitive flat rate, quick 48-hour approval, covers new and used vehicles up to 5 years old.',
+          status='active', base_rate=4.9, max_ltv=85, max_dbr=55, green_dbr=55,
+          min_term=1, max_term=7, min_amount=3000, max_amount=80000,
+          gsas_min_score=0, gsas_premium_score=0, green_discount_premium=0.0, green_discount_standard=0.0,
+          ai_confidence_threshold=90, allow_byop=0, allow_partner_inventory=0,
+          required_docs='["civil_id","salary_certificate","vehicle_proforma_invoice","driving_license","insurance_quotation","bank_statements_3m"]',
+          esg_required_docs='[]',
           portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
-          portal_highlights='["Covers sedans, SUVs & EVs","Quick 48-hour approval","Flexible 1–7 year terms"]',
+          portal_highlights='["Covers new & used vehicles","48-hour credit decision","EV purchase supported","Comprehensive insurance required"]',
           updated_at=datetime('now')
         WHERE id='p002'`, []],
+      // p003 – Personal Loan: unsecured (LTV=0), DBR 45%, 1–5yr, approved employers only
       [`UPDATE products SET
-          name='Personal Loan', status='active', base_rate=7.5, max_dbr=50, min_term=1, max_term=5,
-          min_amount=1000, max_amount=30000, esg_required_docs='[]',
+          name='Personal Loan',
+          description='Unsecured personal financing for salaried employees of approved employers. No collateral required. Flat competitive rate for medical, travel, home renovation and other personal needs.',
+          status='active', base_rate=7.5, max_ltv=0, max_dbr=45, green_dbr=45,
+          min_term=1, max_term=5, min_amount=1000, max_amount=30000,
+          gsas_min_score=0, gsas_premium_score=0, green_discount_premium=0.0, green_discount_standard=0.0,
+          ai_confidence_threshold=90, allow_byop=0, allow_partner_inventory=0,
+          required_docs='["civil_id","salary_certificate","employer_letter","bank_statements_3m","approved_employer_confirmation"]',
+          esg_required_docs='[]',
           portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
-          portal_highlights='["No collateral required","Approved employer list","Competitive fixed rate"]',
+          portal_highlights='["No collateral required","Approved employer list","Competitive fixed rate","Loan protector insurance available"]',
           updated_at=datetime('now')
         WHERE id='p003'`, []],
+      // p004 – SME Working Capital: business-secured, LTV 70%, DBR 65%, 1–3yr, full corporate docs
       [`UPDATE products SET
-          name='SME Working Capital', status='active', base_rate=6.5, max_ltv=70, max_dbr=65, min_term=1, max_term=3,
-          min_amount=5000, max_amount=200000, esg_required_docs='[]',
+          name='SME Working Capital',
+          description='Short-term working capital facility for small and medium enterprises registered in Oman. Revolving or term structure. Supports payroll, inventory procurement, and operational growth.',
+          status='active', base_rate=6.5, max_ltv=70, max_dbr=65, green_dbr=65,
+          min_term=1, max_term=3, min_amount=5000, max_amount=200000,
+          gsas_min_score=0, gsas_premium_score=0, green_discount_premium=0.0, green_discount_standard=0.0,
+          ai_confidence_threshold=85, allow_byop=0, allow_partner_inventory=0,
+          required_docs='["commercial_registration_certificate","memorandum_of_association","audited_financials_2yr","bank_statements_6m","cr_extract","tax_clearance_certificate","business_profile"]',
+          esg_required_docs='[]',
           portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
-          portal_highlights='["For SMEs registered in Oman","Revolving or term facility","Supports growth & payroll"]',
+          portal_highlights='["For Oman-registered SMEs","Revolving or term facility","Supports payroll & growth","MOCI-verified CR required"]',
           updated_at=datetime('now')
         WHERE id='p004'`, []],
+      // p005 – Home Equity Line: HELOC, LTV 75% (conservative second charge), DBR 55%, 5–15yr
       [`UPDATE products SET
-          name='Home Equity Line', status='active', base_rate=6.0, max_ltv=75, max_dbr=55, min_term=5, max_term=15,
-          min_amount=20000, max_amount=300000, esg_required_docs='[]',
+          name='Home Equity Line',
+          description='Revolving credit facility secured against existing owned property. Access equity without selling. Ideal for large purchases, education, or business funding. Second charge behind primary mortgage.',
+          status='active', base_rate=6.0, max_ltv=75, max_dbr=55, green_dbr=55,
+          min_term=5, max_term=15, min_amount=20000, max_amount=300000,
+          gsas_min_score=0, gsas_premium_score=0, green_discount_premium=0.0, green_discount_standard=0.0,
+          ai_confidence_threshold=90, allow_byop=0, allow_partner_inventory=0,
+          required_docs='["civil_id","property_title_deed","independent_valuation_report","salary_certificate","bank_statements_3m","existing_mortgage_statement","noc_from_primary_lender"]',
+          esg_required_docs='[]',
           portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
-          portal_highlights='["Use your property equity","Revolving credit line","Up to OMR 300,000"]',
+          portal_highlights='["Use your property equity","Revolving credit line","Up to OMR 300,000","No early settlement penalty"]',
           updated_at=datetime('now')
         WHERE id='p005'`, []],
+      // p006 – Commercial Property Finance: corporate, LTV 70%, DBR 65%, 5–20yr, 3yr audited financials
       [`UPDATE products SET
-          name='Commercial Property Finance', status='active', base_rate=6.8, max_ltv=70, max_dbr=65, min_term=5, max_term=20,
-          min_amount=50000, max_amount=2000000, esg_required_docs='[]',
+          name='Commercial Property Finance',
+          description='Financing for commercial properties including offices, retail units, and warehouses. Available to Omani-registered companies and sole proprietors. Full corporate credit assessment applies.',
+          status='active', base_rate=6.8, max_ltv=70, max_dbr=65, green_dbr=65,
+          min_term=5, max_term=20, min_amount=50000, max_amount=2000000,
+          gsas_min_score=0, gsas_premium_score=0, green_discount_premium=0.0, green_discount_standard=0.0,
+          ai_confidence_threshold=85, allow_byop=0, allow_partner_inventory=0,
+          required_docs='["commercial_registration_certificate","memorandum_of_association","audited_financials_3yr","bank_statements_12m","property_title_deed","independent_valuation_report","lease_agreements","board_resolution"]',
+          esg_required_docs='[]',
           portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
-          portal_highlights='["For offices, retail & warehouses","Up to OMR 2,000,000","Flexible repayment structures"]',
+          portal_highlights='["For offices, retail & warehouses","Up to OMR 2,000,000","Flexible repayment structures","Lease income considered"]',
           updated_at=datetime('now')
         WHERE id='p006'`, []],
+      // p007 – Expat Home Finance: CBO LTV cap 75% for non-Omanis, work permit + employer NOC required
       [`UPDATE products SET
-          name='Expat Home Finance', status='active', base_rate=6.0, max_ltv=75, max_dbr=55, min_term=5, max_term=20,
-          min_amount=15000, max_amount=400000, esg_required_docs='[]',
+          name='Expat Home Finance',
+          description='Home financing for expatriate professionals working in Oman. Stricter LTV (max 75%) per CBO regulations. Employer NOC required. Available for IZ-approved freehold zones.',
+          status='active', base_rate=6.0, max_ltv=75, max_dbr=55, green_dbr=55,
+          min_term=5, max_term=20, min_amount=15000, max_amount=400000,
+          gsas_min_score=0, gsas_premium_score=0, green_discount_premium=0.0, green_discount_standard=0.0,
+          ai_confidence_threshold=90, allow_byop=0, allow_partner_inventory=0,
+          required_docs='["civil_id","passport_copy","valid_work_permit_residence_card","salary_certificate","noc_from_employer","property_deed_freehold_zone","independent_valuation_report","bank_statements_6m"]',
+          esg_required_docs='[]',
           portal_visible=1, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
-          portal_highlights='["For expatriate professionals","Competitive rates from 6%","Up to OMR 400,000"]',
+          portal_highlights='["Expatriate professionals","LTV up to 75%","Freehold zone properties","Employer NOC required"]',
           updated_at=datetime('now')
         WHERE id='p007'`, []],
+      // p008 – Education Finance: unsecured (LTV=0), DBR 45%, 1–8yr, university docs only
       [`UPDATE products SET
-          name='Education Finance', status='archived', base_rate=8.0, max_dbr=45, min_term=1, max_term=8,
-          min_amount=500, max_amount=20000, esg_required_docs='[]',
+          name='Education Finance',
+          description='Financing for higher education expenses including tuition, accommodation, and study materials at approved universities in Oman and abroad. Deferred repayment option available.',
+          status='archived', base_rate=8.0, max_ltv=0, max_dbr=45, green_dbr=45,
+          min_term=1, max_term=8, min_amount=500, max_amount=20000,
+          gsas_min_score=0, gsas_premium_score=0, green_discount_premium=0.0, green_discount_standard=0.0,
+          ai_confidence_threshold=90, allow_byop=0, allow_partner_inventory=0,
+          required_docs='["civil_id","university_offer_letter_or_enrollment","salary_certificate","fee_schedule_from_institution","bank_statements_3m"]',
+          esg_required_docs='[]',
           portal_visible=0, portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
           portal_highlights='[]',
           updated_at=datetime('now')
@@ -341,15 +443,10 @@ app.post('/reset-demo', async (c) => {
     await db.prepare("DELETE FROM rules WHERE id NOT IN ('r001','r002','r003','r004','r005','r006','r007','r008','r009','r010','r011','r012','r013','r014')").run()
 
     // ── 4. Clear all AI conversation threads ────────────────────────────
-    await db.prepare("DELETE FROM ai_threads").run()
+    try { await db.prepare("DELETE FROM ai_threads").run() } catch(_) { /* table may not exist */ }
 
-    // ── 5. Remove all user-created applications and their dependants ─────
-    // Keep only app001 and app002 (the two background seed applications)
-    await db.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run()
-    await db.prepare("DELETE FROM documents WHERE entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')").run()
-    await db.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run()
-
-    // ── 6. Reset EcoVillage back to draft / hidden ──────────────────────
+    // ── 5. Reset EcoVillage back to draft / hidden ──────────────────────
+    // (applications/docs/stages already cleaned in step 1)
     await db.prepare(`UPDATE projects SET
         status='draft', listing_visible=0, green_eligible=0, premium_tier=0,
         gsas_score=NULL, gsas_rating=NULL, epc_rating=NULL, eia_reference=NULL,
@@ -374,11 +471,16 @@ app.post('/reset-demo', async (c) => {
     await db.prepare(`INSERT OR REPLACE INTO audit_logs VALUES
       ('al004','u003','Omar Al-Mantheri','risk_officer','CREDIT_REVIEW_APPROVED','application','app001','{"reference":"HL-240892","dbr":46,"ltv":78,"stress_test":"passed"}','manual',NULL,'CBO Circular 2024-01','10.10.50.33','2024-09-16 11:00:00')`).run()
 
+    // Re-enable FK enforcement
+    await db.prepare("PRAGMA foreign_keys = ON").run()
+
     return c.json({
       success: true,
       message: 'System fully reset to template state. All demo-created products, applications, threads, and live data removed. Ready for a fresh run.'
     })
   } catch (e: any) {
+    // Make sure FK enforcement is re-enabled even on error
+    try { await (c.env.DB).prepare("PRAGMA foreign_keys = ON").run() } catch(_) {}
     return c.json({ success: false, error: e.message }, 500)
   }
 })

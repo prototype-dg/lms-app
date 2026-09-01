@@ -29,33 +29,102 @@ INSERT OR IGNORE INTO customers VALUES
   ('c003', 'Hassan Al-Amri', 'حسن العامري', '78654321', 'hassan@gmail.com', '+968 9977 8899', 'Omani', 'Bank Muscat', 2800, 'salaried', 710, 18, '2021-07-15', 'active', '2021-07-15');
 
 -- Products Library
+-- Column order (29): id, name, code, description, category, status,
+--   base_rate, max_ltv, max_dbr, green_dbr, min_term, max_term,
+--   min_amount, max_amount, gsas_min_score, gsas_premium_score,
+--   green_discount_premium, green_discount_standard, ai_confidence_threshold,
+--   allow_byop, allow_partner_inventory,
+--   required_docs, esg_required_docs, approved_materials, approved_vendors,
+--   configuration, applications_ytd, created_by, created_at, updated_at
+--
+-- p001 – Standard Home Loan (Omani nationals, salaried, secured)
+--   LTV 90%, DBR 60%, salary min OMR 600, term 5–25 yr, collateral required
 INSERT OR IGNORE INTO products VALUES
-  ('p001', 'Standard Home Loan', 'SHL-STANDARD', 'Our flagship home financing product for Omani nationals and residents. Competitive rates with flexible terms.', 'home_loan', 'active', 5.5, 90, 60, 60, 5, 25, 10000, 500000, 0, 0, 0, 0, 90, 1, 1,
-   '["salary_cert","utility_bill","civil_id","property_deed","valuation_report"]',
+  ('p001', 'Standard Home Loan', 'SHL-STANDARD',
+   'Flagship home financing for Omani nationals and residents. Fixed and variable rate options, top-up facility, and bundled insurance. CBO-compliant with full credit assessment.',
+   'home_loan', 'active', 5.5, 90, 60, 60, 5, 25, 10000, 500000,
+   0, 0, 0.0, 0.0, 90, 1, 1,
+   '["civil_id","salary_certificate","utility_bill","property_deed","independent_valuation_report","bank_statements_3m","employer_letter"]',
    '[]', '[]', '[]',
-   '{"features":["Fixed and variable rate options","Top-up facility available","Insurance bundled"]}',
+   '{"features":["Fixed and variable rate options","Top-up facility available","Insurance bundled","Salary transfer preferred"]}',
    4847, 'u001', '2024-01-10', '2025-12-15'),
-  ('p002', 'Auto Finance – Personal', 'AFL-PERSONAL', 'Financing for personal vehicles including sedans, SUVs, and electric vehicles.', 'auto_loan', 'active', 4.9, 85, 55, 55, 1, 7, 3000, 80000, 0, 0, 0, 0, 90, 0, 0,
-   '["salary_cert","civil_id","vehicle_proforma"]',
-   '[]', '[]', '[]', '{}', 1923, 'u001', '2023-06-01', '2025-11-20'),
-  ('p003', 'Personal Loan', 'PL-UNSECURED', 'Unsecured personal financing for salaried employees of approved employers.', 'personal_loan', 'active', 7.5, 0, 50, 50, 1, 5, 1000, 30000, 0, 0, 0, 0, 90, 0, 0,
-   '["salary_cert","civil_id","employer_letter"]',
-   '[]', '[]', '[]', '{}', 3241, 'u001', '2023-01-15', '2025-10-01'),
-  ('p004', 'SME Working Capital', 'SME-WORKCAP', 'Short-term working capital facility for small and medium enterprises registered in Oman.', 'sme', 'active', 6.5, 70, 65, 65, 1, 3, 5000, 200000, 0, 0, 0, 0, 85, 0, 0,
-   '["cr_certificate","audited_financials","bank_statements","cr_extract"]',
-   '[]', '[]', '[]', '{}', 892, 'u001', '2023-08-10', '2025-09-15'),
-  ('p005', 'Home Equity Line', 'HELOC-STANDARD', 'Revolving credit facility secured against existing property equity.', 'home_loan', 'active', 6.0, 75, 55, 55, 5, 15, 20000, 300000, 0, 0, 0, 0, 90, 0, 0,
-   '["property_title","valuation_report","civil_id","salary_cert"]',
-   '[]', '[]', '[]', '{}', 567, 'u001', '2024-03-01', '2025-08-20'),
-  ('p006', 'Commercial Property Finance', 'CPF-COMMERCIAL', 'Financing for commercial properties including offices, retail and warehouses.', 'commercial', 'active', 6.8, 70, 65, 65, 5, 20, 50000, 2000000, 0, 0, 0, 0, 85, 0, 0,
-   '["cr_certificate","audited_financials","property_title","valuation_report"]',
-   '[]', '[]', '[]', '{}', 234, 'u001', '2023-09-01', '2025-07-10'),
-  ('p007', 'Expat Home Finance', 'EHL-EXPAT', 'Home financing solutions for expatriate professionals working in Oman.', 'home_loan', 'active', 6.0, 75, 55, 55, 5, 20, 15000, 400000, 0, 0, 0, 0, 90, 0, 0,
-   '["work_permit","salary_cert","civil_id","property_deed","noc_employer"]',
-   '[]', '[]', '[]', '{}', 1102, 'u001', '2024-01-20', '2025-12-01'),
-  ('p008', 'Education Finance', 'EDU-FINANCE', 'Financing for education expenses including tuition fees for approved universities.', 'education', 'archived', 8.0, 0, 45, 45, 1, 8, 500, 20000, 0, 0, 0, 0, 90, 0, 0,
-   '["civil_id","university_offer_letter","salary_cert"]',
-   '[]', '[]', '[]', '{}', 445, 'u001', '2022-01-01', '2024-06-01');
+
+-- p002 – Auto Finance Personal (secured against vehicle, shorter term)
+--   LTV 85%, DBR 55%, term 1–7 yr, vehicle-specific docs, no BYOP/inventory
+  ('p002', 'Auto Finance – Personal', 'AFL-PERSONAL',
+   'Financing for personal vehicles including sedans, SUVs, and electric vehicles. Competitive flat rate, quick 48-hour approval, covers new and used vehicles up to 5 years old.',
+   'auto_loan', 'active', 4.9, 85, 55, 55, 1, 7, 3000, 80000,
+   0, 0, 0.0, 0.0, 90, 0, 0,
+   '["civil_id","salary_certificate","vehicle_proforma_invoice","driving_license","insurance_quotation","bank_statements_3m"]',
+   '[]', '[]', '[]',
+   '{"features":["Covers new & used vehicles","48-hour credit decision","EV purchase supported","Comprehensive insurance required"]}',
+   1923, 'u001', '2023-06-01', '2025-11-20'),
+
+-- p003 – Personal Loan (unsecured, no LTV, tighter DBR, approved employers only)
+--   max_ltv=0 (unsecured), DBR 45%, term 1–5 yr, no BYOP/inventory
+  ('p003', 'Personal Loan', 'PL-UNSECURED',
+   'Unsecured personal financing for salaried employees of approved employers. No collateral required. Flat competitive rate for medical, travel, home renovation and other personal needs.',
+   'personal_loan', 'active', 7.5, 0, 45, 45, 1, 5, 1000, 30000,
+   0, 0, 0.0, 0.0, 90, 0, 0,
+   '["civil_id","salary_certificate","employer_letter","bank_statements_3m","approved_employer_confirmation"]',
+   '[]', '[]', '[]',
+   '{"features":["No collateral required","Approved employer list","Competitive fixed rate","Loan protector insurance available"]}',
+   3241, 'u001', '2023-01-15', '2025-10-01'),
+
+-- p004 – SME Working Capital (business-secured, higher DBR, short term, CR required)
+--   LTV 70%, DBR 65%, term 1–3 yr, corporate docs, no BYOP/inventory
+  ('p004', 'SME Working Capital', 'SME-WORKCAP',
+   'Short-term working capital facility for small and medium enterprises registered in Oman. Revolving or term structure. Supports payroll, inventory procurement, and operational growth.',
+   'sme', 'active', 6.5, 70, 65, 65, 1, 3, 5000, 200000,
+   0, 0, 0.0, 0.0, 85, 0, 0,
+   '["commercial_registration_certificate","memorandum_of_association","audited_financials_2yr","bank_statements_6m","cr_extract","tax_clearance_certificate","business_profile"]',
+   '[]', '[]', '[]',
+   '{"features":["For Oman-registered SMEs","Revolving or term facility","Supports payroll & growth","MOCI-verified CR required"]}',
+   892, 'u001', '2023-08-10', '2025-09-15'),
+
+-- p005 – Home Equity Line (HELOC, secured against existing property, revolving)
+--   LTV 75% (conservative for second charge), DBR 55%, term 5–15 yr
+  ('p005', 'Home Equity Line', 'HELOC-STANDARD',
+   'Revolving credit facility secured against existing owned property. Access equity without selling. Ideal for large purchases, education, or business funding. Second charge behind primary mortgage.',
+   'home_loan', 'active', 6.0, 75, 55, 55, 5, 15, 20000, 300000,
+   0, 0, 0.0, 0.0, 90, 0, 0,
+   '["civil_id","property_title_deed","independent_valuation_report","salary_certificate","bank_statements_3m","existing_mortgage_statement","noc_from_primary_lender"]',
+   '[]', '[]', '[]',
+   '{"features":["Use your property equity","Revolving credit line","Up to OMR 300,000","No early settlement penalty"]}',
+   567, 'u001', '2024-03-01', '2025-08-20'),
+
+-- p006 – Commercial Property Finance (corporate, large amounts, secured)
+--   LTV 70%, DBR 65%, term 5–20 yr, full corporate docs + business valuation
+  ('p006', 'Commercial Property Finance', 'CPF-COMMERCIAL',
+   'Financing for commercial properties including offices, retail units, and warehouses. Available to Omani-registered companies and sole proprietors. Full corporate credit assessment applies.',
+   'commercial', 'active', 6.8, 70, 65, 65, 5, 20, 50000, 2000000,
+   0, 0, 0.0, 0.0, 85, 0, 0,
+   '["commercial_registration_certificate","memorandum_of_association","audited_financials_3yr","bank_statements_12m","property_title_deed","independent_valuation_report","lease_agreements","board_resolution"]',
+   '[]', '[]', '[]',
+   '{"features":["For offices, retail & warehouses","Up to OMR 2,000,000","Flexible repayment structures","Lease income considered"]}',
+   234, 'u001', '2023-09-01', '2025-07-10'),
+
+-- p007 – Expat Home Finance (secured, lower LTV for non-Omani, work permit required)
+--   LTV 75% (CBO cap for expats), DBR 55%, term 5–20 yr
+  ('p007', 'Expat Home Finance', 'EHL-EXPAT',
+   'Home financing for expatriate professionals working in Oman. Stricter LTV (max 75%) per CBO regulations. Employer NOC required. Available for IZ-approved freehold zones.',
+   'home_loan', 'active', 6.0, 75, 55, 55, 5, 20, 15000, 400000,
+   0, 0, 0.0, 0.0, 90, 0, 0,
+   '["civil_id","passport_copy","valid_work_permit_residence_card","salary_certificate","noc_from_employer","property_deed_freehold_zone","independent_valuation_report","bank_statements_6m"]',
+   '[]', '[]', '[]',
+   '{"features":["Expatriate professionals","LTV up to 75%","Freehold zone properties","Employer NOC required"]}',
+   1102, 'u001', '2024-01-20', '2025-12-01'),
+
+-- p008 – Education Finance (unsecured, no LTV, lowest amounts, education docs)
+--   max_ltv=0 (unsecured), DBR 45%, term 1–8 yr, university docs required
+  ('p008', 'Education Finance', 'EDU-FINANCE',
+   'Financing for higher education expenses including tuition, accommodation, and study materials at approved universities in Oman and abroad. Deferred repayment option available.',
+   'education', 'archived', 8.0, 0, 45, 45, 1, 8, 500, 20000,
+   0, 0, 0.0, 0.0, 90, 0, 0,
+   '["civil_id","university_offer_letter_or_enrollment","salary_certificate","fee_schedule_from_institution","bank_statements_3m"]',
+   '[]', '[]', '[]',
+   '{"features":["Approved universities list","Deferred repayment option","Covers tuition & accommodation","Loan protector insurance"]}',
+   445, 'u001', '2022-01-01', '2024-06-01');
 -- NOTE: Green Home Loan (p009) is created LIVE by Product Manager during Act 1.
 
 -- Rules Library (15 pre-configured CBO rules)

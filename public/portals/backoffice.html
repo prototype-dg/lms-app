@@ -434,16 +434,182 @@ async function openProductDetail(id) {
   } catch(e) { document.getElementById('panelBody').innerHTML = '<p>Error loading product</p>'; }
 }
 
+/* ======================== DOCUMENT CATALOGUE HELPERS ======================== */
+
+// Master catalogue: key → human-readable label grouped by category
+const DOC_CATALOGUE = [
+  // Identity
+  { key:'civil_id', label:'Civil ID / National ID', group:'Identity' },
+  { key:'passport_copy', label:'Passport Copy', group:'Identity' },
+  { key:'driving_license', label:'Driving License', group:'Identity' },
+  { key:'valid_work_permit_residence_card', label:'Work Permit / Residence Card', group:'Identity' },
+  // Income & Employment
+  { key:'salary_certificate', label:'Salary Certificate (< 3 months)', group:'Income & Employment' },
+  { key:'employer_letter', label:'Employer Confirmation Letter', group:'Income & Employment' },
+  { key:'approved_employer_confirmation', label:'Approved Employer List Confirmation', group:'Income & Employment' },
+  { key:'noc_from_employer', label:'NOC from Employer', group:'Income & Employment' },
+  // Bank & Financial
+  { key:'bank_statements_3m', label:'Bank Statements (3 months)', group:'Financial' },
+  { key:'bank_statements_6m', label:'Bank Statements (6 months)', group:'Financial' },
+  { key:'bank_statements_12m', label:'Bank Statements (12 months)', group:'Financial' },
+  { key:'existing_mortgage_statement', label:'Existing Mortgage Statement', group:'Financial' },
+  { key:'audited_financials_2yr', label:'Audited Financials (2 years)', group:'Financial' },
+  { key:'audited_financials_3yr', label:'Audited Financials (3 years)', group:'Financial' },
+  // Property & Collateral
+  { key:'property_deed', label:'Property Deed / Title', group:'Property' },
+  { key:'property_title_deed', label:'Property Title Deed', group:'Property' },
+  { key:'property_deed_freehold_zone', label:'Property Deed (IZ Freehold Zone)', group:'Property' },
+  { key:'independent_valuation_report', label:'Independent Valuation Report', group:'Property' },
+  { key:'noc_from_primary_lender', label:'NOC from Primary Lender', group:'Property' },
+  { key:'lease_agreements', label:'Lease Agreements', group:'Property' },
+  // Utility & Proof of Residence
+  { key:'utility_bill', label:'Utility Bill (< 3 months)', group:'Proof of Residence' },
+  // Vehicle (Auto Finance)
+  { key:'vehicle_proforma_invoice', label:'Vehicle Proforma Invoice', group:'Vehicle' },
+  { key:'insurance_quotation', label:'Vehicle Insurance Quotation', group:'Vehicle' },
+  // Corporate / SME / Commercial
+  { key:'commercial_registration_certificate', label:'Commercial Registration Certificate (CR)', group:'Corporate' },
+  { key:'memorandum_of_association', label:'Memorandum of Association (MOA)', group:'Corporate' },
+  { key:'cr_extract', label:'CR Extract (Ministry of Commerce)', group:'Corporate' },
+  { key:'tax_clearance_certificate', label:'Tax Clearance Certificate', group:'Corporate' },
+  { key:'business_profile', label:'Business Profile / Company Profile', group:'Corporate' },
+  { key:'board_resolution', label:'Board Resolution (for signatories)', group:'Corporate' },
+  // Education
+  { key:'university_offer_letter_or_enrollment', label:'University Offer Letter or Enrollment', group:'Education' },
+  { key:'fee_schedule_from_institution', label:'Fee Schedule from Institution', group:'Education' },
+  // ESG / Green
+  { key:'gsas_certificate', label:'GSAS Certificate (GORD-issued)', group:'ESG / Green' },
+  { key:'epc_certificate', label:'Energy Performance Certificate (EPC)', group:'ESG / Green' },
+  { key:'eia_clearance', label:'EIA Clearance (Environment Authority)', group:'ESG / Green' },
+  { key:'green_building_compliance_report', label:'Green Building Compliance Report', group:'ESG / Green' },
+];
+
+function docLabel(key) {
+  const found = DOC_CATALOGUE.find(d => d.key === key);
+  return found ? found.label : key.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Track which product we're editing docs for
+let _docEditProductId = null;
+let _docEditCurrentList = [];
+let _catalogueSelectedKeys = new Set();
+
+function openDocCatalogue(productId) {
+  _docEditProductId = productId;
+  _catalogueSelectedKeys = new Set();
+  // Get current docs from the displayed list
+  const prod = products.find(x => x.id === productId);
+  _docEditCurrentList = prod ? (() => { try { return JSON.parse(prod.required_docs||'[]'); } catch{return[];} })() : [];
+
+  // Group catalogue by category
+  const groups = {};
+  DOC_CATALOGUE.forEach(d => {
+    if (!groups[d.group]) groups[d.group] = [];
+    groups[d.group].push(d);
+  });
+
+  const alreadyAdded = new Set(_docEditCurrentList);
+  let html = '';
+  for (const [group, items] of Object.entries(groups)) {
+    html += `<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--grey-400);letter-spacing:.06em;margin:.6rem 0 .25rem">${group}</div>`;
+    items.forEach(item => {
+      const already = alreadyAdded.has(item.key);
+      html += `<label style="display:flex;align-items:center;gap:.5rem;padding:.35rem .5rem;border-radius:6px;cursor:${already?'not-allowed':'pointer'};background:${already?'var(--grey-50)':'white'};opacity:${already?'.5':'1'};border:1px solid transparent" ${already?'':'onmouseover="this.style.background=\'var(--grey-50)\'" onmouseout="this.style.background=\'white\'"'}>
+        <input type="checkbox" value="${item.key}" ${already?'disabled checked':''}
+          onchange="toggleCatalogueItem('${item.key}',this.checked)"
+          style="accent-color:var(--navy)">
+        <span style="font-size:.82rem;font-weight:500;color:var(--navy-dark)">${item.label}</span>
+        <code style="margin-left:auto;font-size:.67rem;color:var(--grey-400)">${item.key}</code>
+      </label>`;
+    });
+  }
+  document.getElementById('catalogueItems').innerHTML = html;
+
+  const modal = document.getElementById('docCatalogueModal');
+  modal.style.display = 'flex';
+}
+
+function toggleCatalogueItem(key, checked) {
+  if (checked) _catalogueSelectedKeys.add(key);
+  else _catalogueSelectedKeys.delete(key);
+}
+
+function closeDocCatalogue() {
+  const modal = document.getElementById('docCatalogueModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveSelectedDocs(productId) {
+  if (_catalogueSelectedKeys.size === 0) { closeDocCatalogue(); return; }
+  const prod = products.find(x => x.id === productId);
+  const current = prod ? (() => { try { return JSON.parse(prod.required_docs||'[]'); } catch{return[];} })() : [];
+  const newList = [...current, ...[..._catalogueSelectedKeys].filter(k => !current.includes(k))];
+  await patchProductDocs(productId, newList);
+  closeDocCatalogue();
+}
+
+async function removeDoc(productId, docKey) {
+  const prod = products.find(x => x.id === productId);
+  const current = prod ? (() => { try { return JSON.parse(prod.required_docs||'[]'); } catch{return[];} })() : [];
+  const newList = current.filter(k => k !== docKey);
+  await patchProductDocs(productId, newList);
+}
+
+async function addManualDoc(productId) {
+  const input = document.getElementById('manualDocInput');
+  const raw = input ? input.value.trim() : '';
+  if (!raw) return;
+  // Normalise: lowercase, spaces → underscores, strip special chars
+  const key = raw.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  if (!key) { toast('Invalid document key','error'); return; }
+  const prod = products.find(x => x.id === productId);
+  const current = prod ? (() => { try { return JSON.parse(prod.required_docs||'[]'); } catch{return[];} })() : [];
+  if (current.includes(key)) { toast('Document already in list','info'); return; }
+  await patchProductDocs(productId, [...current, key]);
+  if (input) input.value = '';
+}
+
+async function patchProductDocs(productId, newDocList) {
+  try {
+    const r = await fetch(`/api/v1/products/${productId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ required_docs: JSON.stringify(newDocList) })
+    });
+    const d = await r.json();
+    if (d.success) {
+      // Update local cache
+      const prod = products.find(x => x.id === productId);
+      if (prod) prod.required_docs = JSON.stringify(newDocList);
+      toast('Documents updated', 'success');
+      // Re-open the same tab to refresh display
+      switchProductTab('documents', productId);
+    } else { toast(d.error||'Failed to update documents','error'); }
+  } catch(e) { toast(e.message,'error'); }
+}
+
+/* ======================== PRODUCT PANEL RENDER ======================== */
+
 function renderProductPanel(p, productRules) {
   document.getElementById('panelTitle').textContent = p.name;
   const tabs = ['general','pricing','eligibility','documents','workflow','ai_config','ai_assistant'];
-  const tabLabels = {general:'General',pricing:'Pricing',eligibility:'Eligibility',documents:'Document Requirements',workflow:'Workflow',ai_config:'AI Config',ai_assistant:'🤖 AI Studio'};
+  const tabLabels = {general:'General',pricing:'Pricing',eligibility:'Eligibility',documents:'Documents',workflow:'Workflow',ai_config:'AI Config',ai_assistant:'🤖 AI Studio'};
   const catLabels = {home_loan:'Home Loan',auto_loan:'Auto Finance',personal_loan:'Personal Loan',sme:'SME Finance',commercial:'Commercial',education:'Education Finance'};
-  
+
   const esgDocs = (() => { try { return JSON.parse(p.esg_required_docs||'[]'); } catch{return[];} })();
   const reqDocs = (() => { try { return JSON.parse(p.required_docs||'[]'); } catch{return[];} })();
   const materials = (() => { try { return JSON.parse(p.approved_materials||'[]'); } catch{return[];} })();
   const vendors = (() => { try { return JSON.parse(p.approved_vendors||'[]'); } catch{return[];} })();
+
+  // Product-type helpers
+  const isEsg = esgDocs.length > 0;
+  const isSecured = ['home_loan','auto_loan','sme','commercial'].includes(p.category);
+  const isHomeLoan = p.category === 'home_loan';
+  const isAutoLoan = p.category === 'auto_loan';
+  const isPersonalOrEdu = ['personal_loan','education'].includes(p.category);
+
+  // Term label — home/commercial/SME use years; auto may use months
+  const termLabel = isAutoLoan ? 'Term (years / months)' : 'years';
 
   const tabContent = {
     general: `
@@ -453,8 +619,8 @@ function renderProductPanel(p, productRules) {
       </div>
       <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" rows="3" id="pDesc">${p.description||''}</textarea></div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Min Term (years)</label><input class="form-control" type="number" value="${p.min_term}" id="pMinTerm"></div>
-        <div class="form-group"><label class="form-label">Max Term (years)</label><input class="form-control" type="number" value="${p.max_term}" id="pMaxTerm"></div>
+        <div class="form-group"><label class="form-label">Min Term (${isAutoLoan?'months':'years'})</label><input class="form-control" type="number" value="${p.min_term}" id="pMinTerm"></div>
+        <div class="form-group"><label class="form-label">Max Term (${isAutoLoan?'months':'years'})</label><input class="form-control" type="number" value="${p.max_term}" id="pMaxTerm"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Min Amount (OMR)</label><input class="form-control" type="number" value="${p.min_amount}" id="pMinAmount"></div>
@@ -462,7 +628,7 @@ function renderProductPanel(p, productRules) {
       </div>
       <div style="display:flex;align-items:center;gap:.75rem;margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--grey-100)">
         <span class="badge ${p.status==='active'?'badge-active':'badge-draft'}">${p.status}</span>
-        ${p.esg_required_docs&&p.esg_required_docs!=='[]'?'<span class="badge badge-esg"><i class="fas fa-leaf"></i> ESG Product</span>':''}
+        ${isEsg?'<span class="badge badge-esg"><i class="fas fa-leaf"></i> ESG Product</span>':''}
         <button class="btn btn-navy btn-sm" style="margin-left:auto" onclick="saveProductChanges('${p.id}')"><i class="fas fa-save"></i> Save Changes</button>
       </div>`,
 
@@ -474,22 +640,32 @@ function renderProductPanel(p, productRules) {
             <div class="form-group"><label class="form-label">Base Rate (%)</label><input class="form-control" type="number" step=".01" value="${p.base_rate||5.5}" id="pRate"></div>
             <div class="form-group"><label class="form-label">Max DBR (%)</label><input class="form-control" type="number" value="${p.max_dbr||60}" id="pMaxDbr"></div>
           </div>
+          ${isSecured ? `
           <div class="form-row">
-            <div class="form-group"><label class="form-label">Max LTV (%)</label><input class="form-control" type="number" value="${p.max_ltv||90}" id="pMaxLtv"></div>
-            <div class="form-group"><label class="form-label">Green DBR (%)</label><input class="form-control" type="number" value="${p.green_dbr||p.max_dbr||60}" id="pGreenDbr"></div>
+            <div class="form-group"><label class="form-label">Max LTV (%)</label><input class="form-control" type="number" value="${p.max_ltv||90}" id="pMaxLtv">
+              <small style="color:var(--grey-400);font-size:.72rem">${isAutoLoan?'Secured against vehicle value':isHomeLoan?'CBO cap: 90% Omani, 75% expat':'Max loan-to-collateral value'}</small>
+            </div>
+            <div class="form-group"><label class="form-label">Green DBR (%)</label><input class="form-control" type="number" value="${p.green_dbr||p.max_dbr||60}" id="pGreenDbr">
+              <small style="color:var(--grey-400);font-size:.72rem">DBR limit for ESG-linked applications</small>
+            </div>
+          </div>` : `
+          <div class="form-row">
+            <div class="form-group" style="opacity:.5;pointer-events:none"><label class="form-label">Max LTV (%)</label><input class="form-control" type="number" value="0" disabled><small style="color:var(--grey-400);font-size:.72rem">N/A — unsecured product</small></div>
+            <div class="form-group"><label class="form-label">Green DBR (%)</label><input class="form-control" type="number" value="${p.green_dbr||p.max_dbr||45}" id="pGreenDbr"></div>
+          </div>`}
+          ${isEsg ? `
+          <div class="form-row" style="border-top:1px solid var(--grey-100);margin-top:.75rem;padding-top:.75rem">
+            <div class="form-group"><label class="form-label" style="color:var(--success)"><i class="fas fa-leaf"></i> GSAS Min Score</label><input class="form-control" type="number" value="${p.gsas_min_score||70}" id="pGsasMin"></div>
+            <div class="form-group"><label class="form-label" style="color:var(--success)"><i class="fas fa-leaf"></i> GSAS Premium Score</label><input class="form-control" type="number" value="${p.gsas_premium_score||85}" id="pGsasPremium"></div>
           </div>
           <div class="form-row">
-            <div class="form-group"><label class="form-label">GSAS Min Score</label><input class="form-control" type="number" value="${p.gsas_min_score||0}" id="pGsasMin"></div>
-            <div class="form-group"><label class="form-label">GSAS Premium Score</label><input class="form-control" type="number" value="${p.gsas_premium_score||0}" id="pGsasPremium"></div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label class="form-label">Green Discount Standard (%)</label><input class="form-control" type="number" step=".01" value="${p.green_discount_standard||0}" id="pGreenDiscStd"></div>
-            <div class="form-group"><label class="form-label">Green Discount Premium (%)</label><input class="form-control" type="number" step=".01" value="${p.green_discount_premium||0}" id="pGreenDiscPrem"></div>
-          </div>
+            <div class="form-group"><label class="form-label" style="color:var(--success)"><i class="fas fa-leaf"></i> Green Discount Standard (%)</label><input class="form-control" type="number" step=".01" value="${p.green_discount_standard||0.5}" id="pGreenDiscStd"></div>
+            <div class="form-group"><label class="form-label" style="color:var(--success)"><i class="fas fa-leaf"></i> Green Discount Premium (%)</label><input class="form-control" type="number" step=".01" value="${p.green_discount_premium||0.75}" id="pGreenDiscPrem"></div>
+          </div>` : ''}
           <button class="btn btn-navy btn-sm" style="margin-top:.5rem" onclick="saveProductChanges('${p.id}')"><i class="fas fa-save"></i> Save Pricing</button>
         </div>
       </div>
-      ${esgDocs.length ? `
+      ${isEsg ? `
       <div class="card" style="border-left:4px solid var(--success)">
         <div class="card-header" style="background:var(--success-light)">
           <h4 style="color:var(--success)"><i class="fas fa-leaf"></i> ESG Pricing Modifiers</h4>
@@ -515,89 +691,125 @@ function renderProductPanel(p, productRules) {
           </div>
           <button class="btn btn-ghost btn-sm" style="margin-top:.75rem" onclick="toast('Use the AI Assistant tab to generate new ESG pricing modifiers from regulatory text','info')"><i class="fas fa-plus"></i> Add Modifier</button>
         </div>
-      </div>` : '<p style="color:var(--grey-500);font-size:.85rem">No ESG pricing modifiers. This is a standard product.</p>'}`,
+      </div>` : `<p style="color:var(--grey-500);font-size:.85rem;padding:.5rem 0"><i class="fas fa-info-circle"></i> No ESG pricing modifiers — this is a standard product. ESG discount fields are only available on Green/ESG products.</p>`}`,
 
     eligibility: `
-      <h4 style="margin-bottom:1rem">Eligibility Rules</h4>
-      <div style="background:var(--grey-100);border-radius:var(--radius-lg);overflow:hidden">
-        <div style="display:grid;grid-template-columns:2fr 1.5fr 1.5fr 1fr;padding:.5rem .75rem;font-size:.7rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;border-bottom:1px solid var(--grey-200)">
-          <span>Rule Name</span><span>Condition</span><span>Reference</span><span>Severity</span>
-        </div>
-        ${productRules.filter(r=>r.is_active).slice(0,10).map(r => `
-        <div style="display:grid;grid-template-columns:2fr 1.5fr 1.5fr 1fr;padding:.625rem .75rem;font-size:.8rem;border-bottom:1px solid var(--grey-100);align-items:center">
-          <span style="font-weight:500">${r.name}</span>
-          <span style="font-family:monospace;font-size:.75rem;color:var(--teal)">${r.metric} ${r.operator} ${r.threshold_value||r.threshold_condition||'–'}</span>
-          <span style="font-size:.72rem;color:var(--grey-500)">${r.regulatory_reference||'–'}</span>
-          <span class="badge ${r.severity==='hard'?'badge-red':'badge-amber'}">${r.severity}</span>
-        </div>`).join('')}
-      </div>`,
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <h4>Eligibility Rules</h4>
+        <span style="font-size:.75rem;color:var(--grey-500)">Showing rules applicable to ${catLabels[p.category]||p.category}</span>
+      </div>
+      ${(() => {
+        // Filter rules by relevance to product type
+        const relevantCategories = ['creditworthiness','compliance','stress_test'];
+        if (isSecured) relevantCategories.push('collateral');
+        if (isEsg) relevantCategories.push('esg');
+        if (isHomeLoan) relevantCategories.push('eligibility','product');
+        const filtered = productRules.filter(r => r.is_active && relevantCategories.includes(r.category));
+        if (!filtered.length) return '<p style="color:var(--grey-500);font-size:.85rem">No eligibility rules configured.</p>';
+        return '<div style="background:var(--grey-100);border-radius:var(--radius-lg);overflow:hidden">' +
+          '<div style="display:grid;grid-template-columns:2fr 1.2fr 1.5fr 1.5fr .8fr;padding:.5rem .75rem;font-size:.7rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;border-bottom:1px solid var(--grey-200)">' +
+          '<span>Rule Name</span><span>Category</span><span>Condition</span><span>Reference</span><span>Severity</span></div>' +
+          filtered.map(r => `
+          <div style="display:grid;grid-template-columns:2fr 1.2fr 1.5fr 1.5fr .8fr;padding:.625rem .75rem;font-size:.8rem;border-bottom:1px solid var(--grey-100);align-items:center">
+            <span style="font-weight:500">${r.name}</span>
+            <span class="rule-category-tag rule-cat-${r.category}" style="font-size:.68rem">${r.category}</span>
+            <span style="font-family:monospace;font-size:.75rem;color:var(--teal)">${r.metric} ${r.operator} ${r.threshold_value??r.threshold_condition??'–'}</span>
+            <span style="font-size:.72rem;color:var(--grey-500)">${r.regulatory_reference||'–'}</span>
+            <span class="badge ${r.severity==='hard'?'badge-red':'badge-amber'}">${r.severity}</span>
+          </div>`).join('') + '</div>';
+      })()}`,
 
     documents: `
-      <h4 style="margin-bottom:1rem">Document Requirements</h4>
-      <div style="margin-bottom:1rem">
-        <p style="font-size:.8rem;color:var(--grey-500);margin-bottom:.75rem">Standard Documents</p>
-        <div style="display:flex;flex-wrap:wrap;gap:.5rem">
-          ${reqDocs.map(d=>`<span class="badge badge-navy"><i class="fas fa-file"></i> ${d.replace(/_/g,' ')}</span>`).join('')}
-        </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <h4>Document Requirements</h4>
+        <button class="btn btn-navy btn-sm" onclick="openDocCatalogue('${p.id}')"><i class="fas fa-plus"></i> Add from Catalogue</button>
       </div>
-      ${esgDocs.length ? `
-      <div style="background:var(--success-light);border-radius:var(--radius-md);padding:1rem;border:1px solid rgba(22,132,91,.15)">
-        <p style="font-size:.8rem;color:var(--success);font-weight:600;margin-bottom:.75rem"><i class="fas fa-leaf"></i> ESG Certificates (Mandatory)</p>
-        <div style="display:flex;flex-wrap:wrap;gap:.5rem">
-          ${esgDocs.map(d=>`<span class="badge badge-green"><i class="fas fa-certificate"></i> ${d.replace(/_/g,' ').toUpperCase()}</span>`).join('')}
-        </div>
+      <div id="docList" style="margin-bottom:1.25rem">
+        ${reqDocs.length ? reqDocs.map((d,i)=>`
+        <div style="display:flex;align-items:center;gap:.5rem;padding:.45rem .6rem;background:var(--grey-50);border:1px solid var(--grey-200);border-radius:6px;margin-bottom:.35rem" id="docItem_${i}">
+          <i class="fas fa-file-alt" style="color:var(--navy);font-size:.8rem;flex-shrink:0"></i>
+          <span style="flex:1;font-size:.83rem;font-weight:500;color:var(--navy-dark)">${docLabel(d)}</span>
+          <code style="font-size:.68rem;color:var(--grey-400);font-family:monospace">${d}</code>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 6px;color:var(--danger)" onclick="removeDoc('${p.id}','${d}')"><i class="fas fa-times"></i></button>
+        </div>`).join('') : '<p style="color:var(--grey-400);font-size:.83rem;font-style:italic;padding:.5rem 0">No documents configured. Add from catalogue or enter manually.</p>'}
       </div>
-      <div style="margin-top:1rem">
-        <p style="font-size:.8rem;color:var(--grey-500);margin-bottom:.75rem">Approved Green Materials</p>
-        <div style="display:flex;flex-wrap:wrap;gap:.5rem">
-          ${materials.map(m=>`<span class="feature-tag green"><i class="fas fa-check"></i> ${m}</span>`).join('')}
-        </div>
+      <div style="display:flex;gap:.5rem;align-items:center;border-top:1px solid var(--grey-100);padding-top:.75rem">
+        <input class="form-control" id="manualDocInput" placeholder="Enter custom document key (e.g. customs_clearance)" style="font-size:.83rem">
+        <button class="btn btn-navy btn-sm" style="white-space:nowrap" onclick="addManualDoc('${p.id}')"><i class="fas fa-plus"></i> Add</button>
       </div>
-      <div style="margin-top:1rem">
-        <p style="font-size:.8rem;color:var(--grey-500);margin-bottom:.75rem">Approved Vendors</p>
+      ${isEsg ? `
+      <div style="background:var(--success-light);border-radius:var(--radius-md);padding:1rem;border:1px solid rgba(22,132,91,.15);margin-top:1.25rem">
+        <p style="font-size:.8rem;color:var(--success);font-weight:600;margin-bottom:.75rem"><i class="fas fa-leaf"></i> ESG Certificates (Mandatory — set by AI Studio)</p>
         <div style="display:flex;flex-wrap:wrap;gap:.5rem">
-          ${vendors.map(v=>`<span class="feature-tag"><i class="fas fa-building"></i> ${v}</span>`).join('')}
+          ${esgDocs.map(d=>`<span class="badge badge-green"><i class="fas fa-certificate"></i> ${d.replace(/_/g,' ')}</span>`).join('')}
         </div>
-      </div>` : ''}`,
+        ${materials.length ? `<p style="font-size:.75rem;color:var(--grey-500);margin:.75rem 0 .35rem">Approved Materials: ${materials.join(', ')}</p>` : ''}
+        ${vendors.length ? `<p style="font-size:.75rem;color:var(--grey-500);margin:.35rem 0 0">Approved Vendors: ${vendors.join(', ')}</p>` : ''}
+      </div>` : ''}
+
+      <!-- Document Catalogue Modal (hidden) -->
+      <div id="docCatalogueModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+        <div style="background:white;border-radius:12px;padding:1.5rem;max-width:560px;width:95%;max-height:80vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.2)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+            <h4 style="color:var(--navy)"><i class="fas fa-folder-open"></i> Document Catalogue</h4>
+            <button class="btn btn-ghost btn-sm" onclick="closeDocCatalogue()"><i class="fas fa-times"></i></button>
+          </div>
+          <p style="font-size:.8rem;color:var(--grey-500);margin-bottom:1rem">Select one or more documents to add to <strong>${p.name}</strong>. Already-added documents are greyed out.</p>
+          <div id="catalogueItems" style="display:flex;flex-direction:column;gap:.35rem"></div>
+          <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem;border-top:1px solid var(--grey-100);padding-top:.75rem">
+            <button class="btn btn-ghost" onclick="closeDocCatalogue()">Cancel</button>
+            <button class="btn btn-navy" onclick="saveSelectedDocs('${p.id}')"><i class="fas fa-save"></i> Add Selected</button>
+          </div>
+        </div>
+      </div>`,
 
     workflow: `
       <h4 style="margin-bottom:1rem">Workflow Configuration</h4>
       <div class="card" style="margin-bottom:1rem">
         <div class="card-body">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          ${isHomeLoan || isAutoLoan ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;${isHomeLoan?'margin-bottom:1rem':''}">
             <div>
               <div style="font-weight:600;font-size:.875rem">Partner Developer Inventory</div>
               <div style="font-size:.78rem;color:var(--grey-500)">Allow applications from registered developer projects</div>
             </div>
             <label class="toggle"><input type="checkbox" ${p.allow_partner_inventory?'checked':''} onchange="toast('Setting saved','success')"><span class="toggle-slider"></span></label>
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;${isEsg?'margin-bottom:1rem':''}">
             <div>
               <div style="font-weight:600;font-size:.875rem">Bring Your Own Property (BYOP)</div>
-              <div style="font-size:.78rem;color:var(--grey-500)">Allow customers to apply with their own property</div>
+              <div style="font-size:.78rem;color:var(--grey-500)">Allow customers to apply with their own property${isAutoLoan?' / vehicle':''}</div>
             </div>
             <label class="toggle"><input type="checkbox" ${p.allow_byop?'checked':''} onchange="toast('Setting saved','success')"><span class="toggle-slider"></span></label>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center">
+          </div>` : `
+          <div style="padding:.5rem 0;color:var(--grey-400);font-size:.82rem;font-style:italic">
+            <i class="fas fa-info-circle"></i> Partner inventory and BYOP settings are only applicable to Home Loan and Auto Finance products.
+          </div>`}
+          ${isEsg ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:${isHomeLoan||isAutoLoan?'1rem':'0'};${isHomeLoan||isAutoLoan?'border-top:1px solid var(--grey-100)':''}">
             <div>
-              <div style="font-weight:600;font-size:.875rem">Maker-Checker for ESG Discount</div>
-              <div style="font-size:.78rem;color:var(--grey-500)">Requires Compliance + Risk dual approval</div>
+              <div style="font-weight:600;font-size:.875rem;color:var(--success)"><i class="fas fa-leaf"></i> Maker-Checker for ESG Discount</div>
+              <div style="font-size:.78rem;color:var(--grey-500)">Requires Compliance + Risk dual approval before applying green rate discount</div>
             </div>
             <label class="toggle"><input type="checkbox" checked onchange="toast('Setting saved','success')"><span class="toggle-slider"></span></label>
-          </div>
+          </div>` : ''}
         </div>
       </div>
+      ${isHomeLoan ? `
       <div class="card">
-        <div class="card-header"><h4>Construction Milestones</h4></div>
+        <div class="card-header"><h4>Construction Milestones</h4><span style="font-size:.72rem;color:var(--grey-400)">Home loans only</span></div>
         <div class="card-body">
           ${['Foundation & Groundwork (25%)','Roof & Envelope (30%)','MEP & Solar (25%)','Finishing & Handover (20%)'].map((s,i)=>`
           <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid var(--grey-100)">
             <span style="width:22px;height:22px;border-radius:50%;background:var(--teal);color:white;font-size:.7rem;display:flex;align-items:center;justify-content:center;font-weight:700">${i+1}</span>
             <span style="font-size:.85rem;flex:1">${s}</span>
-            <span class="badge badge-green">Green material check</span>
+            ${isEsg?'<span class="badge badge-green">Green material check</span>':'<span class="badge badge-navy">Standard check</span>'}
           </div>`).join('')}
         </div>
-      </div>`,
+      </div>` : `
+      <div style="padding:.5rem;color:var(--grey-400);font-size:.82rem;font-style:italic">
+        <i class="fas fa-info-circle"></i> Construction milestone disbursement is only applicable to Home Loan products.
+      </div>`}`,
 
     ai_config: `
       <h4 style="margin-bottom:1rem">AI Configuration</h4>
