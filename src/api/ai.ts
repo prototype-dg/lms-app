@@ -157,7 +157,22 @@ Only output JSON. No markdown, no code blocks.`
 // ── Confirm product draft — saves to DB ──────────────────────────────────
 app.post('/products/confirm', async (c) => {
   const body = await c.req.json() as any
-  const { thread_id, product_draft, rules_draft, schema_draft, user_id = 'u001', user_name = 'Fatima Al-Rashdi' } = body
+  let { thread_id, product_draft, rules_draft, schema_draft, user_id = 'u001', user_name = 'Fatima Al-Rashdi' } = body
+
+  // If drafts not passed in body, load from saved thread result
+  if (thread_id && !product_draft) {
+    const thread = await c.env.DB.prepare('SELECT result FROM ai_threads WHERE id = ?').bind(thread_id).first() as any
+    if (thread?.result) {
+      try {
+        const saved = JSON.parse(thread.result)
+        if (saved.product_draft) product_draft = saved.product_draft
+        if (saved.rules_draft && !rules_draft) rules_draft = saved.rules_draft
+        if (saved.schema_draft && !schema_draft) schema_draft = saved.schema_draft
+      } catch {}
+    }
+  }
+
+  if (!product_draft) return c.json({ success: false, error: 'No product draft found. Please complete the AI conversation first.' }, 400)
 
   const id = generateId('p')
   const ts = now()
@@ -224,6 +239,51 @@ app.post('/products/confirm', async (c) => {
     }
   }
 
+  // Auto-publish: generate portal marketing content and set portal_visible=1
+  const apiKey = c.env.OPENAI_API_KEY
+  let portalHeroTitle = name
+  let portalHighlights: string[] = []
+  let portalBadge = ''
+  const isGreen = (product_draft.esg_required_docs || []).length > 0
+
+  if (apiKey) {
+    try {
+      const prompt = `Generate marketing content for a bank loan product. Return JSON only, no markdown:
+{"hero_title":"short compelling tagline (max 6 words)","hero_subtitle":"one sentence benefit statement","card_badge":"2-3 word category badge","highlights":["benefit 1","benefit 2","benefit 3","benefit 4"]}
+Product: ${name}. Description: ${product_draft.description || ''}. Base rate: ${product_draft.base_rate || 5.5}%.${isGreen ? ` Green discount: up to ${product_draft.green_discount_premium || 0.75}% for GSAS score ≥${product_draft.gsas_premium_score || 85}. ESG/green product.` : ''}`
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: 0.6, max_tokens: 300 }),
+      })
+      const mktData = await resp.json() as any
+      if (resp.ok) {
+        const text = mktData.choices[0].message.content
+        const match = text.match(/\{[\s\S]*\}/)
+        if (match) {
+          const parsed = JSON.parse(match[0])
+          portalHeroTitle = parsed.hero_title || portalHeroTitle
+          portalHighlights = parsed.highlights || []
+          portalBadge = parsed.card_badge || ''
+        }
+      }
+    } catch (_) { /* use defaults */ }
+  }
+
+  if (!portalHighlights.length) {
+    if (isGreen) {
+      portalHighlights = [`Up to ${product_draft.green_discount_premium || 0.75}% rate discount`, 'GSAS-certified properties only', 'Supports Oman Vision 2040', 'Maker-checker ESG approval']
+      portalBadge = 'ESG Premium'
+    } else {
+      portalHighlights = [`From ${product_draft.base_rate || 5.5}% per annum`, `Terms up to ${product_draft.max_term || 25} years`, `Up to OMR ${Math.round((product_draft.max_amount || 500000) / 1000)}K financing`]
+    }
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,
+     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, updated_at=? WHERE id=?`
+  ).bind(isGreen ? 1 : 0, portalHeroTitle, JSON.stringify(portalHighlights), portalBadge, ts, ts, id).run()
+
   // Mark thread as completed
   if (thread_id) {
     await c.env.DB.prepare(
@@ -234,11 +294,11 @@ app.post('/products/confirm', async (c) => {
   await logAudit(c.env.DB, {
     userId: user_id, userName: user_name, userRole: 'product_manager',
     action: 'PRODUCT_CREATED_BY_AI', entityType: 'product', entityId: id,
-    details: { name, rules_created: ruleIds.length, cloned_from: product_draft.clone_from_id || null, thread_id },
+    details: { name, rules_created: ruleIds.length, cloned_from: product_draft.clone_from_id || null, thread_id, portal_visible: true },
     source: 'ai_generated',
   })
 
-  return c.json({ success: true, product_id: id, product_name: name, rule_ids: ruleIds })
+  return c.json({ success: true, product_id: id, product_name: name, rule_ids: ruleIds, portal_hero_title: portalHeroTitle, portal_visible: true })
 })
 
 // ── AI-powered regulatory rule generation ───────────────────────────────
