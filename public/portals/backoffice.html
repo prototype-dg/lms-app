@@ -384,7 +384,7 @@ function openAiStudio() {
       <div style="padding:1rem 1.25rem">
         <div id="ai-chat-log" style="min-height:200px;max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;padding:4px 0"></div>
         <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;display:flex;gap:.5rem;align-items:flex-end">
-          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder='e.g. "I want to create a green home loan for GSAS-certified properties under CBO ESG guidelines"' style="flex:1;min-height:0;resize:none;background:transparent;border:none;color:rgba(255,255,255,.9);outline:none;font-size:.84rem"></textarea>
+          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="Type here to describe the new product highlights…" style="flex:1;min-height:0;resize:none;background:transparent;border:none;color:rgba(255,255,255,.9);outline:none;font-size:.84rem"></textarea>
           <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat(null)" style="height:44px;padding:0 16px;flex-shrink:0"><i class="fas fa-paper-plane"></i></button>
         </div>
         <div id="ai-confirm-bar" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:8px;align-items:center;gap:10px">
@@ -393,15 +393,7 @@ function openAiStudio() {
         </div>
       </div>
     </div>
-    <div style="margin-top:1rem;padding:.75rem;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.07)">
-      <div style="font-size:.72rem;color:rgba(255,255,255,.35);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">Try saying</div>
-      <div style="display:flex;flex-wrap:wrap;gap:.4rem">
-        ${['Create a green home loan for GSAS-certified properties',
-           'Auto finance product with Islamic structure',
-           'Personal loan for SME owners with CBO DBR rules',
-           'Clone Standard Home Loan with ESG discount'].map(s=>`<span onclick="document.getElementById('aiChatInput').value='${s}'" style="font-size:.75rem;padding:4px 10px;border-radius:20px;background:rgba(53,198,196,.1);color:rgba(53,198,196,.8);cursor:pointer;border:1px solid rgba(53,198,196,.2)">${s}</span>`).join('')}
-      </div>
-    </div>`;
+    `;
   // Auto-send welcome context if first time
   setTimeout(() => {
     appendChatBubble('assistant', 'Hello, I\'m your AI Product Manager. I can help you create a new regulated banking product from scratch.<br><br>I\'ll ask you a series of questions, read the relevant CBO regulations from the knowledge base, generate the product configuration, eligibility rules, and portal marketing content — then present everything for your review before publishing.<br><br><strong>What type of product would you like to create?</strong>');
@@ -628,7 +620,7 @@ function renderProductPanel(p, productRules) {
         </div>
         <div id="ai-chat-log" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:10px;padding:4px 0"></div>
         <div style="display:flex;gap:.5rem;align-items:flex-end">
-          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="e.g. Create a Green Home Loan product for eco-certified properties with an ESG discount…" style="flex:1;min-height:0;resize:none"></textarea>
+          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="Type here to describe the new product highlights…" style="flex:1;min-height:0;resize:none"></textarea>
           <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat('${p.id}')" style="height:48px;padding:0 18px"><i class="fas fa-paper-plane"></i></button>
         </div>
         <div id="ai-confirm-bar" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:8px;align-items:center;gap:10px">
@@ -699,7 +691,7 @@ async function sendAiChat(productId) {
     const log2 = document.getElementById('ai-chat-log');
     if (log2 && log2.lastChild) log2.removeChild(log2.lastChild);
     if (d.thread_id) aiThreadId = d.thread_id;
-    let replyHtml = d.message || d.reply || 'Done.';
+    let replyHtml = d.reply || d.message || 'Done.';
     if (d.product_draft) {
       aiProductDraft = d.product_draft;
       replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:6px;font-size:.78rem"><strong>Product Draft</strong><br><b>' + (d.product_draft.name||'') + '</b> &middot; ' + (d.product_draft.base_rate||'') + '% &middot; up to OMR ' + Number(d.product_draft.max_amount||0).toLocaleString() + '</div>';
