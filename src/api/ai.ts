@@ -127,12 +127,20 @@ Only output JSON. No markdown, no code blocks.`
   const assistantMsg = { role: 'assistant', content: aiReply.message, timestamp: now(), metadata: { action: aiReply.action } }
   messages.push(assistantMsg)
 
-  // Save/update thread
+  // Save/update thread — MERGE result so earlier drafts are never overwritten.
+  // If this turn's AI reply doesn't include a draft (e.g. step 3+ follow-up turns),
+  // we keep whatever was already saved in the thread's result field.
   const ts = now()
-  const result: any = {}
-  if (aiReply.product_draft) result.product_draft = aiReply.product_draft
-  if (aiReply.rules_draft) result.rules_draft = aiReply.rules_draft
-  if (aiReply.schema_draft) result.schema_draft = aiReply.schema_draft
+
+  // Load existing result so we can merge into it
+  let savedResult: any = {}
+  if (thread?.result) {
+    try { savedResult = JSON.parse(thread.result) } catch { savedResult = {} }
+  }
+  // Only overwrite a field when this turn explicitly provides a new value
+  if (aiReply.product_draft) savedResult.product_draft = aiReply.product_draft
+  if (aiReply.rules_draft)   savedResult.rules_draft   = aiReply.rules_draft
+  if (aiReply.schema_draft)  savedResult.schema_draft  = aiReply.schema_draft
 
   await c.env.DB.prepare(`
     INSERT INTO ai_threads (id, user_id, purpose, messages, context, status, result, created_at, updated_at)
@@ -140,7 +148,7 @@ Only output JSON. No markdown, no code blocks.`
     ON CONFLICT(id) DO UPDATE SET messages=excluded.messages, result=excluded.result, updated_at=excluded.updated_at
   `).bind(threadId, user_id, context.purpose || 'product_creation',
     JSON.stringify(messages), JSON.stringify(context),
-    'active', JSON.stringify(result), ts, ts
+    'active', JSON.stringify(savedResult), ts, ts
   ).run()
 
   return c.json({
@@ -734,12 +742,14 @@ function getFallbackChatResponse(message: string, msgCount: number): any {
     }
   }
 
-  // Step 3+ (turn 5+): user is asking follow-up questions — still show confirm bar
+  // Step 3+ (turn 5+): user is asking follow-up questions — still show confirm bar.
+  // Do NOT send null drafts here; the backend now merges so omitting them preserves
+  // whatever was saved in the thread on turn 2.
   return {
     message: "The product draft is ready and all regulatory rules have been generated. Click <strong>Confirm &amp; Publish</strong> below to save and publish to the Customer Portal. If you'd like to adjust any specific parameter first, let me know.",
     follow_up: null,
     action: 'ready_to_confirm',
-    product_draft: null, rules_draft: null, schema_draft: null,
+    // omit product_draft / rules_draft / schema_draft so they aren't overwritten in DB
   }
 }
 

@@ -956,8 +956,12 @@ async function confirmAiProduct(productId) {
   const btn = document.querySelector('#ai-confirm-bar .btn-success');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving…'; }
   try {
+    // Send both thread_id AND any locally-held draft as a safety fallback.
+    // The backend prefers the thread's saved result, but will use the body draft
+    // if the thread result is missing (e.g. if a prior turn wiped it).
     const body = { thread_id: aiThreadId, user_id:'u001' };
     if (productId) body.product_id = productId;
+    if (aiProductDraft) body.product_draft = aiProductDraft;
     const r = await fetch('/api/v1/ai/products/confirm', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body)
