@@ -4,6 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Sohar International – Customer Portal</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -260,6 +262,7 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
   <div class="nav-links">
     <button class="nav-btn" onclick="showPage('home')" id="nb-home" data-en="Home" data-ar="الرئيسية">Home</button>
     <button class="nav-btn" onclick="showPage('properties')" id="nb-properties" data-en="Properties" data-ar="العقارات">Properties</button>
+    <button class="nav-btn" onclick="showPage('ecovillage')" id="nb-ecovillage" data-en="EcoVillage P2" data-ar="إيكو فيلاج">EcoVillage P2 🌿</button>
     <button class="nav-btn" onclick="showPage('calculator')" id="nb-calculator" data-en="Calculator" data-ar="الحاسبة">Calculator</button>
     <button class="nav-btn" onclick="showPage('tracking')" id="nb-tracking" data-en="My Application" data-ar="طلبي">My Application</button>
     <button class="nav-btn nav-cta" onclick="openWizard()" data-en="Apply Now" data-ar="تقدم الآن">Apply Now</button>
@@ -353,10 +356,225 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 <div class="page" id="page-properties">
   <section class="sec">
     <div class="sec-inner">
-      <div class="sec-eye" data-en="PARTNER DEVELOPMENTS" data-ar="مشاريع الشركاء">PARTNER DEVELOPMENTS</div>
-      <h2 class="sec-h2" data-en="Green-Certified Properties" data-ar="عقارات معتمدة بيئياً">Green-Certified Properties</h2>
-      <p class="sec-sub" data-en="All units pre-screened and GSAS-certified for instant financing eligibility." data-ar="جميع الوحدات مفحوصة مسبقاً ومعتمدة GSAS للتأهل الفوري.">All units pre-screened and GSAS-certified for instant financing eligibility.</p>
+      <div class="sec-eye">PARTNER DEVELOPMENTS</div>
+      <h2 class="sec-h2">Green-Certified Properties</h2>
+      <p class="sec-sub">All units pre-screened and GSAS-certified. EcoVillage Phase 2 qualifies for the 4.75% premium green rate.</p>
       <div class="prop-grid" id="projects-grid"><div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--g500)"><span class="spin" style="border-color:rgba(0,127,134,.2);border-top-color:var(--teal)"></span> Loading properties…</div></div>
+    </div>
+  </section>
+</div>
+
+<!-- ═══ PAGE: ECOVILLAGE PHASE 2 ═══ -->
+<div class="page" id="page-ecovillage">
+  <!-- Hero banner -->
+  <div style="position:relative;height:340px;overflow:hidden">
+    <img src="https://www.genspark.ai/api/files/s/pepLOOLC?cache_control=3600" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='linear-gradient(135deg,#002540,#007F86)'"/>
+    <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,37,64,.85) 40%,rgba(0,37,64,.3))"></div>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 48px">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(53,198,196,.2);border:1px solid rgba(53,198,196,.4);border-radius:999px;padding:5px 14px;color:#35C6C4;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:16px">🏆 GSAS GOLD · Score 91 · EPC A+</div>
+        <h1 style="font-size:2.4rem;font-weight:800;color:#fff;margin-bottom:10px;line-height:1.15">EcoVillage Muscat <em style="color:#35C6C4;font-style:normal">Phase 2</em></h1>
+        <p style="font-size:14px;color:rgba(255,255,255,.75);max-width:480px;line-height:1.7;margin-bottom:20px">Oman's first GSAS Gold certified eco-villa community. 18 villas across 3 types — solar-powered, net-zero water, green rooftops. Seeb district, Muscat.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn-prime" onclick="document.getElementById('ev-map-section').scrollIntoView({behavior:'smooth'})">🗺️ Explore Site Map</button>
+          <button class="btn-ghost" onclick="document.getElementById('ev-calc-section').scrollIntoView({behavior:'smooth'})">🧮 Green Loan Calculator</button>
+        </div>
+      </div>
+    </div>
+    <!-- ESG badges overlay -->
+    <div style="position:absolute;top:20px;right:24px;display:flex;flex-direction:column;gap:8px">
+      <div style="background:rgba(22,132,91,.9);color:#fff;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;backdrop-filter:blur(6px)">🏆 GSAS GOLD 91/100</div>
+      <div style="background:rgba(0,127,134,.85);color:#fff;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;backdrop-filter:blur(6px)">⚡ EPC Rating A+</div>
+      <div style="background:rgba(0,37,64,.85);color:#35C6C4;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;backdrop-filter:blur(6px)">🌿 EIA Approved</div>
+    </div>
+  </div>
+
+  <!-- Stats bar -->
+  <div style="background:var(--navy);padding:18px 48px;display:flex;gap:40px;flex-wrap:wrap">
+    <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#35C6C4">18</div><div style="font-size:11px;color:rgba(255,255,255,.6)">Total Villas</div></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#35C6C4">18</div><div style="font-size:11px;color:rgba(255,255,255,.6)">Available Now</div></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#35C6C4">OMR 165K</div><div style="font-size:11px;color:rgba(255,255,255,.6)">Starting Price</div></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#F4B35B">4.75%</div><div style="font-size:11px;color:rgba(255,255,255,.6)">Green Rate p.a.</div></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#35C6C4">91</div><div style="font-size:11px;color:rgba(255,255,255,.6)">GSAS Score</div></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#35C6C4">A+</div><div style="font-size:11px;color:rgba(255,255,255,.6)">EPC Rating</div></div>
+    <div style="margin-left:auto;display:flex;align-items:center">
+      <button class="btn-prime" onclick="openWizard()">Apply for Green Home Loan →</button>
+    </div>
+  </div>
+
+  <!-- Villa type cards -->
+  <section class="sec" style="padding:48px 48px 32px">
+    <div class="sec-inner">
+      <div class="sec-eye">VILLA TYPES</div>
+      <h2 class="sec-h2">Choose Your Villa</h2>
+      <p class="sec-sub">Three villa configurations to suit every lifestyle. All GSAS Gold certified with identical green features.</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:32px" id="villa-type-grid">
+        <!-- Type A -->
+        <div class="prop-card esg-product" id="vtype-A" onclick="selectVillaType('A')" style="cursor:pointer">
+          <div class="esg-hot-ribbon">8 units</div>
+          <div style="padding:20px 20px 0">
+            <div style="font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Type A — Family Villa</div>
+            <div style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px">OMR 195K – 215K</div>
+            <div style="font-size:13px;color:var(--g500);margin-bottom:14px">340 m² · 4 beds · 3 baths</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--navy);margin-bottom:16px">
+              <div>☀️ Solar PV 8.5 kWp</div><div>💧 Greywater recycling</div><div>🌿 Green roof garden</div><div>❄️ HVAC SEER ≥ 18</div>
+            </div>
+          </div>
+          <div style="padding:0 20px 20px">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(22,132,91,.15);padding-top:12px">
+              <span style="background:rgba(22,132,91,.12);color:#16845B;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px">GSAS 91</span>
+              <span style="font-size:11px;font-weight:700;color:var(--teal)">4.75% rate</span>
+            </div>
+          </div>
+        </div>
+        <!-- Type B -->
+        <div class="prop-card esg-product" id="vtype-B" onclick="selectVillaType('B')" style="cursor:pointer">
+          <div class="esg-hot-ribbon">6 units</div>
+          <div style="padding:20px 20px 0">
+            <div style="font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Type B — Compact Villa</div>
+            <div style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px">OMR 165K – 178K</div>
+            <div style="font-size:13px;color:var(--g500);margin-bottom:14px">280 m² · 3 beds · 2 baths</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--navy);margin-bottom:16px">
+              <div>☀️ Solar PV 8.5 kWp</div><div>💧 Greywater recycling</div><div>🌿 Green roof garden</div><div>❄️ HVAC SEER ≥ 18</div>
+            </div>
+          </div>
+          <div style="padding:0 20px 20px">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(22,132,91,.15);padding-top:12px">
+              <span style="background:rgba(22,132,91,.12);color:#16845B;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px">GSAS 90</span>
+              <span style="font-size:11px;font-weight:700;color:var(--teal)">4.75% rate</span>
+            </div>
+          </div>
+        </div>
+        <!-- Type C -->
+        <div class="prop-card esg-product" id="vtype-C" onclick="selectVillaType('C')" style="cursor:pointer">
+          <div class="esg-hot-ribbon">4 units</div>
+          <div style="padding:20px 20px 0">
+            <div style="font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Type C — Premium Villa</div>
+            <div style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px">OMR 310K – 345K</div>
+            <div style="font-size:13px;color:var(--g500);margin-bottom:14px">420 m² · 5 beds · 4 baths</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--navy);margin-bottom:16px">
+              <div>☀️ Solar PV 8.5 kWp</div><div>💧 Greywater recycling</div><div>🌿 Green roof garden</div><div>❄️ HVAC SEER ≥ 18</div>
+            </div>
+          </div>
+          <div style="padding:0 20px 20px">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(22,132,91,.15);padding-top:12px">
+              <span style="background:rgba(22,132,91,.12);color:#16845B;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px">GSAS 92</span>
+              <span style="font-size:11px;font-weight:700;color:var(--teal)">4.75% rate</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Villa unit selector -->
+      <div id="ev-unit-selector" style="display:none">
+        <h3 style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:14px" id="ev-unit-title">Available Units</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="ev-unit-grid"></div>
+      </div>
+
+      <!-- Selected unit detail panel -->
+      <div id="ev-unit-detail" style="display:none;margin-top:20px;background:#fff;border-radius:var(--r16);border:2px solid rgba(22,132,91,.3);padding:24px;box-shadow:var(--sh2)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px" id="ev-detail-type">Type A</div>
+            <div style="font-size:20px;font-weight:800;color:var(--navy)" id="ev-detail-id">EV-P2-A01</div>
+            <div style="font-size:13px;color:var(--g500);margin-top:2px" id="ev-detail-sub">340 m² · 4 beds · GSAS 91</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:800;color:var(--navy)" id="ev-detail-price">OMR 195,000</div>
+            <div style="font-size:11px;font-weight:700;color:#16845B;margin-top:3px">🌿 GSAS GOLD · 4.75% rate</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+          <div style="background:rgba(22,132,91,.07);border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:18px;font-weight:800;color:#16845B" id="ev-det-gsas">91</div>
+            <div style="font-size:10px;color:var(--g500)">GSAS Score</div>
+          </div>
+          <div style="background:rgba(0,127,134,.07);border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:18px;font-weight:800;color:var(--teal)" id="ev-det-discount">−0.75%</div>
+            <div style="font-size:10px;color:var(--g500)">Rate Discount</div>
+          </div>
+          <div style="background:rgba(244,179,91,.1);border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:18px;font-weight:800;color:#C8891A" id="ev-det-rate">4.75%</div>
+            <div style="font-size:10px;color:var(--g500)">Green Rate</div>
+          </div>
+        </div>
+        <button class="btn-prime" style="width:100%;justify-content:center;padding:13px" id="ev-apply-btn" onclick="applyForSelectedVilla()">Apply for Green Home Loan →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Map -->
+  <section class="sec" style="padding:0 0 48px" id="ev-map-section">
+    <div class="sec-inner">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-top:32px">
+        <div>
+          <div class="sec-eye">SITE MAP</div>
+          <h2 class="sec-h2" style="margin-bottom:4px">Two-Phase Community</h2>
+          <p style="font-size:13px;color:var(--g500)">Phase 1 completed · Phase 2 now available</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px"><div style="width:12px;height:12px;border-radius:50%;background:#007F86"></div> Phase 1 (sold)</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px"><div style="width:12px;height:12px;border-radius:50%;background:#2ECC71"></div> Phase 2 (available)</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px"><div style="width:12px;height:12px;border-radius:50%;background:#F39C12"></div> Selected</div>
+        </div>
+      </div>
+      <div id="ev-consumer-map" style="height:380px;border-radius:var(--r16);overflow:hidden;border:1px solid var(--g200);box-shadow:var(--sh1)"></div>
+    </div>
+  </section>
+
+  <!-- Green Home Loan Calculator -->
+  <section class="sec calc-wrap" id="ev-calc-section">
+    <div class="sec-inner">
+      <div class="sec-eye">GREEN HOME LOAN CALCULATOR</div>
+      <h2 class="sec-h2">EcoVillage Phase 2 — Personalised Payment</h2>
+      <p class="sec-sub">Enter your down payment to see your monthly repayment at the GSAS Gold preferential rate of 4.75%.</p>
+      <div class="calc-card">
+        <div>
+          <div class="c-group">
+            <div class="c-label"><span>Villa</span><span class="c-val" id="ev-calc-villa-lbl">Select a villa above</span></div>
+            <select class="c-input" id="ev-calc-villa" onchange="evCalcUpdate()">
+              <option value="195000">EV-P2-A01 · Type A · OMR 195,000</option>
+              <option value="198000">EV-P2-A02 · Type A · OMR 198,000</option>
+              <option value="200000">EV-P2-A03 · Type A · OMR 200,000</option>
+              <option value="165000">EV-P2-B01 · Type B · OMR 165,000</option>
+              <option value="168000">EV-P2-B02 · Type B · OMR 168,000</option>
+              <option value="170000">EV-P2-B03 · Type B · OMR 170,000</option>
+              <option value="310000">EV-P2-C01 · Type C · OMR 310,000</option>
+              <option value="325000">EV-P2-C02 · Type C · OMR 325,000</option>
+              <option value="345000">EV-P2-C04 · Type C · OMR 345,000</option>
+            </select>
+          </div>
+          <div class="c-group">
+            <div class="c-label"><span>Down Payment (OMR)</span><span class="c-val" id="ev-dp-d">19,500</span></div>
+            <input type="range" class="c-slider" id="ev-dp" min="0" max="100" step="1" value="10" oninput="evCalcUpdate()"/>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--g500);margin-top:3px"><span>0%</span><span id="ev-dp-pct">10%</span><span>Max LTV</span></div>
+          </div>
+          <div class="c-group">
+            <div class="c-label"><span>Loan Term</span><span class="c-val" id="ev-ten-d">25 years</span></div>
+            <input type="range" class="c-slider" id="ev-ten" min="5" max="25" step="5" value="25" oninput="evCalcUpdate()"/>
+          </div>
+          <div style="background:rgba(22,132,91,.08);border:1px solid rgba(22,132,91,.2);border-radius:8px;padding:12px 14px;font-size:12px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">🏆</span>
+            <div><strong style="color:#16845B">GSAS Gold Discount Applied</strong><br/><span style="color:var(--g500)">−0.75% premium discount · Base 5.5% → Green rate 4.75%</span></div>
+          </div>
+        </div>
+        <div class="calc-res">
+          <div class="cr-lbl">Monthly Payment</div>
+          <div class="cr-main" id="ev-monthly">OMR —</div>
+          <div class="cr-rate" id="ev-rate-lbl">@ 4.75% p.a. · Green Rate</div>
+          <div class="cr-row"><span>Villa Price</span><span class="cr-v" id="ev-price-disp">OMR 195,000</span></div>
+          <div class="cr-row"><span>Down Payment</span><span class="cr-v" id="ev-dp-disp">OMR 19,500</span></div>
+          <div class="cr-row"><span>Loan Amount</span><span class="cr-v" id="ev-loan-disp">OMR 175,500</span></div>
+          <div class="cr-row"><span>Green Rate</span><span class="cr-v" style="color:#35C6C4">4.75%</span></div>
+          <div class="cr-row"><span>Standard Rate</span><span class="cr-v" style="color:rgba(255,255,255,.5);text-decoration:line-through">5.50%</span></div>
+          <div class="saving-box">
+            <span>LIFETIME SAVING vs. 5.50%</span>
+            <span class="saving-num" id="ev-saving">—</span>
+            <span style="font-size:10px;opacity:.8">over full loan term</span>
+          </div>
+          <button class="btn-prime" style="width:100%;margin-top:14px;justify-content:center" onclick="openWizard()">Apply Now →</button>
+        </div>
+      </div>
     </div>
   </section>
 </div>
@@ -513,6 +731,7 @@ function showPage(id) {
   const nb = document.getElementById('nb-' + id);
   if (nb) nb.classList.add('active');
   if (id === 'tracking') loadTracking();
+  if (id === 'ecovillage') setTimeout(()=>{ initEvMap(); evCalcUpdate(); }, 150);
 }
 
 /* ─── CALCULATOR ─── */
@@ -819,29 +1038,36 @@ async function loadProjects() {
     }
     const GRADIENTS = ['linear-gradient(135deg,#003B5C,#007F86)','linear-gradient(135deg,#1a4a2e,#35C6C4)','linear-gradient(135deg,#2d5016,#6aaa2a)','linear-gradient(135deg,#003B5C,#35C6C4)'];
     grid.innerHTML = projects.map((p, i) => {
-      const units = p.units || [];
-      const firstUnit = units[0];
-      const price = firstUnit ? 'OMR ' + Number(firstUnit.price_omr||0).toLocaleString() : 'Price TBC';
-      const gsas = p.gsas_overall_score || p.gsas_score || '—';
+      const gsas = p.gsas_overall_score || p.gsas_score || 0;
       const rate = gsas >= 85 ? '4.75' : gsas >= 70 ? '5.00' : '5.25';
-      return `<div class="prop-card${i===0?' featured':''}" onclick="openWizardForProject('${p.id}')">
-        <div class="prop-img" style="background:${GRADIENTS[i%GRADIENTS.length]}">
-          🏡<div class="prop-ribbon" style="background:var(--sea);color:var(--navy)">${p.type||'Green'}</div>
+      const isGold = gsas >= 85 && p.green_eligible;
+      const priceFrom = p.price_from ? 'OMR ' + Number(p.price_from).toLocaleString() : 'Price TBC';
+      const imgBg = p.hero_image_url
+        ? `background:url('${p.hero_image_url}') center/cover no-repeat`
+        : `background:${GRADIENTS[i%GRADIENTS.length]}`;
+      const cardClass = isGold ? 'prop-card esg-product' : `prop-card${i===0?' featured':''}`;
+      const onClick = isGold ? `showPage('ecovillage')` : `openWizardForProject('${p.id}')`;
+      return `<div class="${cardClass}" onclick="${onClick}" style="cursor:pointer">
+        ${isGold ? '<div class="esg-hot-ribbon">🌿 GSAS Gold · New Launch</div>' : ''}
+        <div class="prop-img" style="${imgBg};height:200px">
+          ${!p.hero_image_url ? '🏡' : ''}
+          <div class="prop-ribbon" style="background:${isGold?'#16845B':'var(--sea)'};color:#fff">${isGold?'Phase 2':p.type||'Green'}</div>
         </div>
         <div class="prop-body">
-          <div class="prop-price">${price}</div>
+          ${isGold ? '<span class="esg-card-badge">✦ GSAS GOLD Certified</span>' : ''}
+          <div class="prop-price">${priceFrom}${p.price_to?' – OMR '+Number(p.price_to).toLocaleString():''}</div>
           <div class="prop-name">${p.name}</div>
-          <div class="prop-loc">📍 ${p.location||p.city||'Muscat'}</div>
+          <div class="prop-loc">📍 ${p.location||'Muscat'}</div>
           <div class="prop-tags">
-            <span class="tag">${units.length} units</span>
-            ${p.has_solar?'<span class="tag">☀️ Solar</span>':''}
-            ${p.has_greywater?'<span class="tag">💧 Greywater</span>':''}
+            <span class="tag">${p.total_units||0} units</span>
+            ${gsas ? `<span class="tag">GSAS ${gsas}</span>` : ''}
+            ${p.epc_rating ? `<span class="tag">EPC ${p.epc_rating}</span>` : ''}
           </div>
           <div class="prop-foot">
-            <span class="gsas-badge">GSAS ${gsas}</span>
-            <span class="rate-badge">${rate}%</span>
+            <span class="gsas-badge">${isGold?'🏆 Gold':'GSAS '+gsas}</span>
+            <span class="rate-badge" style="${isGold?'background:rgba(22,132,91,.12);color:#16845B':''}">${rate}% p.a.</span>
           </div>
-          <button class="prop-btn" onclick="event.stopPropagation();openWizardForProject('${p.id}')">Apply for Financing</button>
+          <button class="prop-btn" style="${isGold?'background:linear-gradient(135deg,#16845B,#2aa88e)':''}" onclick="event.stopPropagation();${onClick}">${isGold?'Explore & Apply →':'Apply for Financing'}</button>
         </div>
       </div>`;
     }).join('');
@@ -930,10 +1156,146 @@ async function loadTracking() {
 }
 
 let wizProductId = null, wizProjectId = null, wizUnitId = null;
+let evConsumerMap = null, evSelectedUnit = null;
+
 function openWizardForProject(projectId) {
   wizProjectId = projectId;
   openWizard();
 }
+
+/* ─── ECOVILLAGE PHASE 2 ─── */
+const EV_UNITS = [
+  {id:'EV-P2-A01',type:'A',area:340,beds:4,price:195000,gsas:91,lat:23.6135,lng:58.5920},
+  {id:'EV-P2-A02',type:'A',area:340,beds:4,price:198000,gsas:91,lat:23.6140,lng:58.5928},
+  {id:'EV-P2-A03',type:'A',area:342,beds:4,price:200000,gsas:92,lat:23.6145,lng:58.5936},
+  {id:'EV-P2-A04',type:'A',area:338,beds:4,price:202000,gsas:91,lat:23.6150,lng:58.5944},
+  {id:'EV-P2-A05',type:'A',area:340,beds:4,price:205000,gsas:90,lat:23.6155,lng:58.5932},
+  {id:'EV-P2-A06',type:'A',area:345,beds:4,price:208000,gsas:92,lat:23.6160,lng:58.5940},
+  {id:'EV-P2-A07',type:'A',area:340,beds:4,price:210000,gsas:91,lat:23.6165,lng:58.5948},
+  {id:'EV-P2-A08',type:'A',area:342,beds:4,price:215000,gsas:91,lat:23.6170,lng:58.5956},
+  {id:'EV-P2-B01',type:'B',area:280,beds:3,price:165000,gsas:90,lat:23.6125,lng:58.5950},
+  {id:'EV-P2-B02',type:'B',area:282,beds:3,price:168000,gsas:91,lat:23.6130,lng:58.5958},
+  {id:'EV-P2-B03',type:'B',area:280,beds:3,price:170000,gsas:90,lat:23.6135,lng:58.5966},
+  {id:'EV-P2-B04',type:'B',area:285,beds:3,price:172000,gsas:91,lat:23.6140,lng:58.5974},
+  {id:'EV-P2-B05',type:'B',area:280,beds:3,price:175000,gsas:90,lat:23.6145,lng:58.5962},
+  {id:'EV-P2-B06',type:'B',area:282,beds:3,price:178000,gsas:91,lat:23.6150,lng:58.5970},
+  {id:'EV-P2-C01',type:'C',area:420,beds:5,price:310000,gsas:92,lat:23.6120,lng:58.5938},
+  {id:'EV-P2-C02',type:'C',area:425,beds:5,price:325000,gsas:93,lat:23.6125,lng:58.5946},
+  {id:'EV-P2-C03',type:'C',area:418,beds:5,price:338000,gsas:92,lat:23.6130,lng:58.5982},
+  {id:'EV-P2-C04',type:'C',area:422,beds:5,price:345000,gsas:93,lat:23.6135,lng:58.5990},
+];
+
+function initEvMap() {
+  if (evConsumerMap) return;
+  const el = document.getElementById('ev-consumer-map');
+  if (!el) return;
+  evConsumerMap = L.map('ev-consumer-map').setView([23.614, 58.595], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap',maxZoom:19}).addTo(evConsumerMap);
+  // Phase 1 boundary — teal
+  L.rectangle([[23.604,58.585],[23.614,58.594]],{color:'#007F86',weight:2,fillColor:'#35C6C4',fillOpacity:0.06,dashArray:'4,4'}).addTo(evConsumerMap);
+  L.marker([23.609,58.5895],{icon:L.divIcon({className:'',html:'<div style="background:#007F86;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">✅ Phase 1 — Completed</div>'})}).addTo(evConsumerMap);
+  [[23.6065,58.5872],[23.6080,58.5884],[23.6072,58.5900],[23.6088,58.5868],[23.6056,58.5890],[23.6095,58.5876]].forEach(([lat,lng],i)=>{
+    L.circleMarker([lat,lng],{radius:6,color:'#fff',weight:2,fillColor:'#007F86',fillOpacity:0.85}).addTo(evConsumerMap)
+     .bindPopup(`<b>Phase 1 · Villa P1-${String.fromCharCode(65+i)}</b><br/>Status: <b>Sold</b>`);
+  });
+  // Phase 2 boundary — amber
+  L.rectangle([[23.612,58.591],[23.622,58.600]],{color:'#C8891A',weight:2,fillColor:'#F4B35B',fillOpacity:0.06}).addTo(evConsumerMap);
+  L.marker([23.617,58.5955],{icon:L.divIcon({className:'',html:'<div style="background:#C8891A;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">🆕 Phase 2 — Available</div>'})}).addTo(evConsumerMap);
+  // Phase 2 unit pins
+  EV_UNITS.forEach(u => {
+    const mk = L.circleMarker([u.lat,u.lng],{radius:9,color:'#fff',weight:2,fillColor:'#2ECC71',fillOpacity:0.9}).addTo(evConsumerMap);
+    mk.bindPopup(`<div style="min-width:160px;font-size:12px"><b>${u.id}</b><br/>Type ${u.type} · ${u.area}m² · ${u.beds} beds<br/>OMR ${u.price.toLocaleString()}<br/>GSAS <b style="color:#27AE60">${u.gsas}</b> · 4.75%<br/><button onclick="selectUnitFromMap('${u.id}')" style="margin-top:6px;background:#16845B;color:#fff;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;width:100%">Select This Villa</button></div>`);
+    mk._unitId = u.id;
+  });
+}
+
+function selectVillaType(type) {
+  ['A','B','C'].forEach(t => {
+    const el = document.getElementById('vtype-'+t);
+    if (el) el.style.outline = t===type ? '3px solid #16845B' : 'none';
+  });
+  const units = EV_UNITS.filter(u => u.type === type);
+  const names = {A:'Type A — Family Villas',B:'Type B — Compact Villas',C:'Type C — Premium Villas'};
+  document.getElementById('ev-unit-title').textContent = names[type] + ' (' + units.length + ' available)';
+  const grid = document.getElementById('ev-unit-grid');
+  grid.innerHTML = units.map(u => `
+    <div onclick="selectUnit('${u.id}')" style="background:#fff;border:2px solid var(--g200);border-radius:12px;padding:14px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='#16845B'" onmouseout="this.style.borderColor='var(--g200)'">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px">${u.id}</div>
+      <div style="font-size:12px;color:var(--g500);margin-bottom:8px">${u.area}m² · ${u.beds} beds</div>
+      <div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:6px">OMR ${u.price.toLocaleString()}</div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="font-size:10px;font-weight:700;background:rgba(22,132,91,.1);color:#16845B;padding:2px 7px;border-radius:999px">GSAS ${u.gsas}</span>
+        <span style="font-size:10px;font-weight:700;color:var(--teal)">4.75%</span>
+      </div>
+    </div>`).join('');
+  document.getElementById('ev-unit-selector').style.display = 'block';
+  document.getElementById('ev-unit-detail').style.display = 'none';
+}
+
+function selectUnit(id) {
+  evSelectedUnit = EV_UNITS.find(u => u.id === id);
+  if (!evSelectedUnit) return;
+  showUnitDetail(evSelectedUnit);
+  // Sync calculator
+  const sel = document.getElementById('ev-calc-villa');
+  if (sel) { for (let o of sel.options) { if (o.value == evSelectedUnit.price) { o.selected = true; break; } } }
+  evCalcUpdate();
+  document.getElementById('ev-calc-section').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function selectUnitFromMap(id) {
+  evConsumerMap && evConsumerMap.closePopup();
+  selectUnit(id);
+  document.getElementById('ev-unit-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function showUnitDetail(u) {
+  const typeNames = {A:'Type A — Family Villa',B:'Type B — Compact Villa',C:'Type C — Premium Villa'};
+  document.getElementById('ev-detail-type').textContent = typeNames[u.type];
+  document.getElementById('ev-detail-id').textContent = u.id;
+  document.getElementById('ev-detail-sub').textContent = `${u.area} m² · ${u.beds} beds · GSAS ${u.gsas}`;
+  document.getElementById('ev-detail-price').textContent = 'OMR ' + u.price.toLocaleString();
+  document.getElementById('ev-det-gsas').textContent = u.gsas;
+  document.getElementById('ev-det-discount').textContent = u.gsas >= 85 ? '−0.75%' : '−0.50%';
+  document.getElementById('ev-det-rate').textContent = u.gsas >= 85 ? '4.75%' : '5.00%';
+  document.getElementById('ev-unit-detail').style.display = 'block';
+  // highlight on map
+  if (evConsumerMap) {
+    evConsumerMap.eachLayer(l => {
+      if (l._unitId) { l.setStyle({fillColor: l._unitId===u.id ? '#F39C12' : '#2ECC71'}); }
+    });
+  }
+}
+
+function applyForSelectedVilla() {
+  if (evSelectedUnit) { wizUnitId = evSelectedUnit.id; }
+  openWizard();
+}
+
+function evCalcUpdate() {
+  const sel = document.getElementById('ev-calc-villa');
+  const villaPrice = sel ? parseInt(sel.value) : 195000;
+  const dpPct = parseInt(document.getElementById('ev-dp').value) || 10;
+  const term = parseInt(document.getElementById('ev-ten').value) || 25;
+  const dp = Math.round(villaPrice * dpPct / 100);
+  const loan = villaPrice - dp;
+  const r = 4.75 / 100 / 12;
+  const n = term * 12;
+  const monthly = loan * r * Math.pow(1+r,n) / (Math.pow(1+r,n) - 1);
+  const stdMonthly = loan * (5.5/100/12) * Math.pow(1+5.5/100/12,n) / (Math.pow(1+5.5/100/12,n) - 1);
+  const saving = (stdMonthly - monthly) * n;
+  document.getElementById('ev-dp-d').textContent = 'OMR ' + dp.toLocaleString();
+  document.getElementById('ev-dp-pct').textContent = dpPct + '%';
+  document.getElementById('ev-ten-d').textContent = term + ' years';
+  document.getElementById('ev-monthly').textContent = 'OMR ' + Math.round(monthly).toLocaleString();
+  document.getElementById('ev-price-disp').textContent = 'OMR ' + villaPrice.toLocaleString();
+  document.getElementById('ev-dp-disp').textContent = 'OMR ' + dp.toLocaleString();
+  document.getElementById('ev-loan-disp').textContent = 'OMR ' + loan.toLocaleString();
+  document.getElementById('ev-saving').textContent = 'OMR ' + Math.round(Math.max(0,saving)).toLocaleString();
+  document.getElementById('ev-calc-villa-lbl').textContent = sel ? sel.options[sel.selectedIndex].text.split('·')[0].trim() : '';
+}
+
+function selectVillaTypeFromNav(type) { selectVillaType(type); }
 
 /* ─── TOAST ─── */
 function toast(msg, type='info') {
