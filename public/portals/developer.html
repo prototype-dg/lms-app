@@ -256,6 +256,44 @@ body.ar .toast-container{right:auto;left:24px}
 .analyzing-overlay{position:absolute;inset:0;background:rgba(0,59,92,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;border-radius:var(--radius-md)}
 .analyzing-pulse{width:48px;height:48px;border:3px solid rgba(53,198,196,.4);border-top-color:var(--seaglass);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px}
 .hidden{display:none!important}
+
+/* PRICE MATRIX TABLE */
+.price-matrix th{background:var(--navy);color:#fff;padding:9px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center}
+.price-matrix td{padding:9px 14px;text-align:center;font-size:13px;border-bottom:1px solid var(--gray-100)}
+.price-matrix tr:hover td{background:rgba(0,127,134,.04)}
+.price-cell{font-weight:700;color:var(--navy);cursor:pointer;border-radius:4px;padding:3px 6px;transition:background .15s}
+.price-cell:hover{background:rgba(0,127,134,.12);color:var(--teal)}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.kpi-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:14px 16px;position:relative}
+.kpi-value{font-size:26px;font-weight:900;color:var(--navy);line-height:1}
+.kpi-label{font-size:11px;color:var(--gray-500);margin-top:3px}
+.kpi-delta{font-size:11px;font-weight:700;margin-top:4px}
+.kpi-delta.up{color:var(--success)}
+.kpi-delta.down{color:var(--danger)}
+
+/* ABSORPTION CHART */
+.abs-bar-wrap{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.abs-bar-label{width:80px;font-size:12px;color:var(--gray-700);flex-shrink:0;text-align:right}
+.abs-bar-track{flex:1;height:16px;background:var(--gray-100);border-radius:8px;overflow:hidden;position:relative}
+.abs-bar-fill{height:100%;border-radius:8px;transition:width .8s ease;display:flex;align-items:center;padding-left:8px}
+.abs-bar-pct{font-size:10px;font-weight:700;color:#fff;white-space:nowrap}
+
+/* CAMPAIGN CARD */
+.campaign-card{border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:14px 16px;display:flex;align-items:center;gap:14px;background:#fff;margin-bottom:10px}
+.campaign-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700}
+.campaign-badge.active{background:rgba(46,204,113,.15);color:#27AE60}
+.campaign-badge.scheduled{background:rgba(0,127,134,.12);color:var(--teal)}
+.campaign-badge.ended{background:var(--gray-100);color:var(--gray-500)}
+
+/* COLLAPSIBLE PROJECT GROUPS */
+.inv-group-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:2px;user-select:none}
+.inv-group-header:hover{background:var(--gray-100)}
+.inv-group-toggle{font-size:12px;color:var(--gray-500);transition:transform .2s;margin-left:auto}
+.inv-group-toggle.open{transform:rotate(90deg)}
+.inv-group-body{border:1px solid var(--gray-200);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);margin-bottom:12px;overflow:hidden}
+.inv-group-body.collapsed{display:none}
 </style>
 </head>
 <body>
@@ -284,34 +322,32 @@ body.ar .toast-container{right:auto;left:24px}
       <span class="nav-icon">📊</span>
       <span data-en="Dashboard" data-ar="لوحة التحكم">Dashboard</span>
     </a>
-    <div class="nav-section" data-en="PROJECTS" data-ar="المشاريع">PROJECTS</div>
+
+    <div class="nav-section" data-en="1 · PROJECTS" data-ar="١ · المشاريع">1 · PROJECTS</div>
     <a class="nav-item" onclick="showPage('projects')" href="#">
       <span class="nav-icon">🏗️</span>
       <span data-en="My Projects" data-ar="مشاريعي">My Projects</span>
-      <span class="nav-badge">3</span>
+      <span class="nav-badge" id="nav-badge-projects">0</span>
     </a>
     <a class="nav-item" onclick="showPage('newproject')" href="#">
       <span class="nav-icon">➕</span>
       <span data-en="Register Project" data-ar="تسجيل مشروع">Register Project</span>
     </a>
-    <div class="nav-section" data-en="INVENTORY" data-ar="المخزون">INVENTORY</div>
+
+    <div class="nav-section" data-en="2 · SALES" data-ar="٢ · المبيعات">2 · SALES</div>
+    <a class="nav-item" onclick="showPage('sales-strategy')" href="#">
+      <span class="nav-icon">📈</span>
+      <span data-en="Sales Strategy" data-ar="استراتيجية المبيعات">Sales Strategy</span>
+    </a>
     <a class="nav-item" onclick="showPage('inventory')" href="#">
       <span class="nav-icon">🏠</span>
-      <span data-en="Unit Inventory" data-ar="مخزون الوحدات">Unit Inventory</span>
+      <span data-en="Units Inventory" data-ar="مخزون الوحدات">Units Inventory</span>
     </a>
-    <a class="nav-item" onclick="showPage('certificates')" href="#">
-      <span class="nav-icon">📋</span>
-      <span data-en="Certificates" data-ar="الشهادات">Certificates</span>
-      <span class="nav-badge" style="background:var(--warning);color:#fff">!</span>
-    </a>
-    <div class="nav-section" data-en="ANALYTICS" data-ar="التحليلات">ANALYTICS</div>
-    <a class="nav-item" onclick="showPage('analytics')" href="#">
-      <span class="nav-icon">📈</span>
-      <span data-en="Applications" data-ar="الطلبات">Applications</span>
-    </a>
+
+    <div class="nav-section" data-en="3 · SITE MAP" data-ar="٣ · خريطة الموقع">3 · SITE MAP</div>
     <a class="nav-item" onclick="showPage('map')" href="#">
       <span class="nav-icon">🗺️</span>
-      <span data-en="Site Map" data-ar="خريطة الموقع">Site Map</span>
+      <span data-en="All Units Map" data-ar="خريطة الوحدات">All Units Map</span>
     </a>
   </div>
 </nav>
@@ -400,41 +436,44 @@ body.ar .toast-container{right:auto;left:24px}
       </div>
     </div>
 
-    <!-- ═══ MAP PAGE ═══ -->
+    <!-- ═══ SITE MAP PAGE ═══ -->
     <div class="page" id="page-map">
       <div class="section-header">
-        <div><div class="section-title" data-en="EcoVillage Muscat — Site Map" data-ar="خريطة موقع إيكو فيلاج مسقط">EcoVillage Muscat — Site Map</div><div class="section-sub" data-en="24 units · Click any pin for details" data-ar="24 وحدة · انقر على أي دبوس للتفاصيل">24 units · Click any pin for details</div></div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-secondary btn-sm" onclick="filterUnits('all')">All</button>
-          <button class="btn btn-sm" style="background:rgba(46,204,113,.15);color:#27AE60" onclick="filterUnits('available')">Available</button>
-          <button class="btn btn-sm" style="background:rgba(244,179,91,.15);color:#C8891A" onclick="filterUnits('reserved')">Reserved</button>
-          <button class="btn btn-sm" style="background:rgba(0,59,92,.1);color:var(--navy)" onclick="filterUnits('sold')">Sold</button>
+        <div>
+          <div class="section-title" data-en="Site Map — All Projects" data-ar="خريطة الموقع — كل المشاريع">Site Map — All Projects</div>
+          <div class="section-sub" id="map-subtitle">Loading units…</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:12px;color:var(--gray-500)">Filter:</span>
+          <button class="btn btn-secondary btn-sm" id="map-filter-all" onclick="siteMapFilter('all')">All</button>
+          <button class="btn btn-sm" style="background:rgba(46,204,113,.15);color:#27AE60;border:1px solid rgba(46,204,113,.3)" onclick="siteMapFilter('available')">🟢 Available</button>
+          <button class="btn btn-sm" style="background:rgba(244,179,91,.15);color:#C8891A;border:1px solid rgba(244,179,91,.3)" onclick="siteMapFilter('reserved')">🟠 Reserved</button>
+          <button class="btn btn-sm" style="background:rgba(0,59,92,.1);color:var(--navy);border:1px solid rgba(0,59,92,.2)" onclick="siteMapFilter('sold')">🔵 Sold</button>
         </div>
       </div>
-      <div id="ecovillage-map"></div>
-      <div class="map-legend" style="margin-top:12px">
-        <div class="legend-item"><div class="legend-dot" style="background:#2ECC71"></div><span data-en="Available" data-ar="متاح">Available (12 units)</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:#F39C12"></div><span data-en="Reserved" data-ar="محجوز">Reserved (5 units)</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:#003B5C"></div><span data-en="Sold" data-ar="مباع">Sold (7 units)</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:#E74C3C"></div><span>Villa B1 — GHL-250001</span></div>
+      <div id="site-map" style="height:480px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--gray-200)"></div>
+      <div class="map-legend" style="margin-top:12px" id="map-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#2ECC71"></div><span id="leg-available">Available</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#F39C12"></div><span id="leg-reserved">Reserved</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#003B5C"></div><span id="leg-sold">Sold</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(0,127,134,.3);border:2px solid #007F86;border-radius:2px"></div><span>Project boundary</span></div>
       </div>
     </div>
 
-    <!-- ═══ INVENTORY PAGE ═══ -->
+    <!-- ═══ UNITS INVENTORY PAGE ═══ -->
     <div class="page" id="page-inventory">
       <div class="section-header">
-        <div><div class="section-title" data-en="Unit Inventory" data-ar="مخزون الوحدات">Unit Inventory</div><div class="section-sub" data-en="EcoVillage Muscat · 24 units" data-ar="إيكو فيلاج مسقط · 24 وحدة">EcoVillage Muscat · 24 units</div></div>
-        <button class="btn btn-primary btn-sm" onclick="publishInventory()">📤 <span data-en="Publish to Bank" data-ar="نشر للبنك">Publish to Bank</span></button>
-      </div>
-      <div class="card">
-        <div class="card-body" style="padding:0">
-          <table class="inv-table" id="units-table">
-            <thead><tr>
-              <th>Unit</th><th>Type</th><th>Area (m²)</th><th>Price (OMR)</th><th>GSAS</th><th>Status</th><th>Action</th>
-            </tr></thead>
-            <tbody id="units-tbody"></tbody>
-          </table>
+        <div>
+          <div class="section-title" data-en="Units Inventory" data-ar="مخزون الوحدات">Units Inventory</div>
+          <div class="section-sub" id="inv-subtitle">All projects · Loading…</div>
         </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="renderInventoryGroups()">↺ Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="publishInventory()">📤 Publish to Bank</button>
+        </div>
+      </div>
+      <div id="inventory-groups">
+        <div style="text-align:center;padding:32px;color:var(--gray-500)">Loading inventory…</div>
       </div>
     </div>
 
@@ -455,8 +494,8 @@ body.ar .toast-container{right:auto;left:24px}
     <!-- ═══ REGISTER PROJECT PAGE ═══ -->
     <div class="page" id="page-newproject">
       <div class="section-header">
-        <div><div class="section-title">Register New Project</div><div class="section-sub">Partner onboarding · ESG certification · Inventory setup</div></div>
-        <div id="reg-wizard-actions" style="display:flex;gap:8px"></div>
+        <div><div class="section-title" data-en="Register New Project" data-ar="تسجيل مشروع جديد">Register New Project</div><div class="section-sub" data-en="Partner onboarding · ESG certification · Inventory setup" data-ar="تأهيل الشريك · شهادات ESG · إعداد المخزون">Partner onboarding · ESG certification · Inventory setup</div></div>
+        <button class="btn btn-secondary btn-sm" onclick="resetWizard()">↺ Reset Form</button>
       </div>
 
       <!-- Wizard step indicator -->
@@ -474,46 +513,47 @@ body.ar .toast-container{right:auto;left:24px}
           <div class="card">
             <div class="card-header"><span class="card-title">Project Details</span></div>
             <div class="card-body">
-              <div class="form-group"><label class="form-label">Project Name *</label><input class="form-control" id="reg-name" value="EcoVillage Muscat Phase 2" placeholder="e.g. EcoVillage Muscat Phase 2"/></div>
+              <div class="form-group"><label class="form-label">Project Name *</label><input class="form-control" id="reg-name" value="" placeholder="e.g. Green Hills Residences"/></div>
               <div class="form-row">
                 <div class="form-group"><label class="form-label">Governorate</label>
-                  <select class="form-control" id="reg-gov"><option>Muscat</option><option>Dhofar</option><option>Al Batinah</option><option>Al Dakhiliyah</option></select></div>
-                <div class="form-group"><label class="form-label">Area / District</label><input class="form-control" id="reg-location" value="Seeb, Muscat"/></div>
+                  <select class="form-control" id="reg-gov"><option value="">— Select —</option><option>Muscat</option><option>Dhofar</option><option>Al Batinah</option><option>Al Dakhiliyah</option><option>Al Sharqiyah</option><option>Al Buraymi</option></select></div>
+                <div class="form-group"><label class="form-label">Area / District</label><input class="form-control" id="reg-location" value="" placeholder="e.g. Al Mouj, Muscat"/></div>
               </div>
               <div class="form-row">
-                <div class="form-group"><label class="form-label">Total Units</label><input class="form-control" type="number" id="reg-units" value="18" min="1"/></div>
-                <div class="form-group"><label class="form-label">Est. Completion</label><input class="form-control" id="reg-completion" value="Q4 2027"/></div>
+                <div class="form-group"><label class="form-label">Total Units</label><input class="form-control" type="number" id="reg-units" value="" min="1" placeholder="e.g. 24"/></div>
+                <div class="form-group"><label class="form-label">Est. Completion</label><input class="form-control" id="reg-completion" value="" placeholder="e.g. Q3 2027"/></div>
               </div>
               <div class="form-row">
-                <div class="form-group"><label class="form-label">Price From (OMR)</label><input class="form-control" type="number" id="reg-price-from" value="165000"/></div>
-                <div class="form-group"><label class="form-label">Price To (OMR)</label><input class="form-control" type="number" id="reg-price-to" value="345000"/></div>
+                <div class="form-group"><label class="form-label">Price From (OMR)</label><input class="form-control" type="number" id="reg-price-from" value="" placeholder="e.g. 120000"/></div>
+                <div class="form-group"><label class="form-label">Price To (OMR)</label><input class="form-control" type="number" id="reg-price-to" value="" placeholder="e.g. 350000"/></div>
               </div>
-              <div class="form-group"><label class="form-label">Marketing Tagline</label><input class="form-control" id="reg-tagline" value="Oman's first GSAS Gold certified eco-villa community"/></div>
+              <div class="form-group"><label class="form-label">Marketing Tagline</label><input class="form-control" id="reg-tagline" value="" placeholder="e.g. Oman's first GSAS Gold certified eco-villa community"/></div>
             </div>
           </div>
           <div class="card">
-            <div class="card-header"><span class="card-title">Developer & Green Profile</span></div>
+            <div class="card-header"><span class="card-title">Developer &amp; Green Profile</span></div>
             <div class="card-body">
-              <div class="form-group"><label class="form-label">Developer Company</label><input class="form-control" id="reg-dev" value="Ahmed Al-Hinai Development Co."/></div>
+              <div class="form-group"><label class="form-label">Developer Company *</label><input class="form-control" id="reg-dev" value="" placeholder="e.g. Al-Hinai Development Co."/></div>
               <div class="form-row">
-                <div class="form-group"><label class="form-label">CR Number</label><input class="form-control" value="1234567"/></div>
+                <div class="form-group"><label class="form-label">CR Number</label><input class="form-control" id="reg-cr" value="" placeholder="e.g. 1234567"/></div>
                 <div class="form-group"><label class="form-label">Project Type</label>
-                  <select class="form-control" id="reg-type"><option value="villa">Villa</option><option value="apartment">Apartment</option><option value="mixed">Mixed-Use</option></select></div>
+                  <select class="form-control" id="reg-type"><option value="">— Select —</option><option value="villa">Villa</option><option value="apartment">Apartment</option><option value="townhouse">Townhouse</option><option value="mixed">Mixed-Use</option></select></div>
               </div>
               <div class="form-group" style="margin-top:4px"><label class="form-label">Green Features</label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
-                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" checked/> Solar PV (8.5 kWp)</label>
-                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" checked/> Greywater Recycling</label>
-                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" checked/> Green Roof Gardens</label>
-                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" checked/> HVAC SEER ≥ 18</label>
-                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" checked/> Triple Glazing</label>
-                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox"/> EV Charging</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-solar"/> Solar PV</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-grey"/> Greywater Recycling</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-roof"/> Green Roof Gardens</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-hvac"/> HVAC SEER ≥ 18</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-glazing"/> Triple Glazing</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-ev"/> EV Charging</label>
                 </div>
               </div>
               <div class="form-group" style="margin-top:12px"><label class="form-label">Project Hero Image URL</label>
-                <input class="form-control" id="reg-image" value="https://www.genspark.ai/api/files/s/8nc68AvS?cache_control=3600" style="font-size:11px"/>
-                <div style="margin-top:8px;border-radius:6px;overflow:hidden;height:80px;background:var(--gray-100)">
-                  <img id="reg-img-preview" src="https://www.genspark.ai/api/files/s/8nc68AvS?cache_control=3600" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
+                <input class="form-control" id="reg-image" value="" placeholder="https://…" style="font-size:11px" oninput="document.getElementById('reg-img-preview').src=this.value"/>
+                <div style="margin-top:8px;border-radius:6px;overflow:hidden;height:80px;background:var(--gray-100);display:flex;align-items:center;justify-content:center">
+                  <img id="reg-img-preview" src="" style="width:100%;height:100%;object-fit:cover;display:none" onload="this.style.display='block'" onerror="this.style.display='none'"/>
+                  <span id="reg-img-placeholder" style="font-size:11px;color:var(--gray-400)">Image preview</span>
                 </div>
               </div>
               <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="wizNext(1)">Continue to Documents →</button>
@@ -671,6 +711,67 @@ body.ar .toast-container{right:auto;left:24px}
       </div>
     </div>
 
+    <!-- ═══ SALES STRATEGY PAGE ═══ -->
+    <div class="page" id="page-sales-strategy">
+      <div class="section-header">
+        <div><div class="section-title">Sales Strategy</div><div class="section-sub">Price matrix · Campaigns · Pipeline KPIs · Absorption rate</div></div>
+        <button class="btn btn-primary btn-sm" onclick="openNewCampaignModal()">+ New Campaign</button>
+      </div>
+
+      <!-- KPIs row -->
+      <div class="kpi-grid" id="sales-kpi-grid">
+        <div class="kpi-card"><div class="kpi-value" id="kpi-total-units">—</div><div class="kpi-label">Total Units</div></div>
+        <div class="kpi-card"><div class="kpi-value" style="color:#2ECC71" id="kpi-available">—</div><div class="kpi-label">Available</div></div>
+        <div class="kpi-card"><div class="kpi-value" style="color:#F39C12" id="kpi-reserved">—</div><div class="kpi-label">Reserved</div></div>
+        <div class="kpi-card"><div class="kpi-value" style="color:#003B5C" id="kpi-sold">—</div><div class="kpi-label">Sold</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpi-absorption">—%</div><div class="kpi-label">Absorption Rate</div><div class="kpi-delta up" id="kpi-absorption-delta"></div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpi-portfolio">—</div><div class="kpi-label">Portfolio Value (OMR)</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- Price Matrix -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Price Matrix by Unit Type</span>
+            <button class="btn btn-secondary btn-sm" onclick="openBulkPriceModal()">📊 Bulk Adjust</button>
+          </div>
+          <div class="card-body" style="padding:0;overflow-x:auto">
+            <table class="inv-table price-matrix" id="price-matrix-table">
+              <thead><tr><th>Type</th><th>Count</th><th>Avg m²</th><th>Base Price</th><th>Current Avg</th><th>Discount</th><th>Action</th></tr></thead>
+              <tbody id="price-matrix-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--gray-500)">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Absorption Rate Chart -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">Absorption Rate by Type</span></div>
+          <div class="card-body" id="absorption-chart">
+            <div style="text-align:center;color:var(--gray-500);padding:20px">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Campaigns -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><span class="card-title">Campaigns</span><span class="chip gray" id="campaign-count">0 active</span></div>
+        <div class="card-body" id="campaigns-list">
+          <div style="text-align:center;color:var(--gray-500);padding:20px">No campaigns yet. Create one to track discounts and promotions.</div>
+        </div>
+      </div>
+
+      <!-- Pipeline Applications -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Loan Application Pipeline</span></div>
+        <div class="card-body" style="padding:0">
+          <table class="inv-table" id="pipeline-table">
+            <thead><tr><th>App #</th><th>Customer</th><th>Unit</th><th>Project</th><th>Amount (OMR)</th><th>Rate</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody id="pipeline-tbody"><tr><td colspan="8" style="text-align:center;padding:20px;color:var(--gray-500)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div><!-- end .content -->
 </div><!-- end .main -->
 
@@ -823,9 +924,9 @@ function showPage(id) {
     if(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) n.classList.add('active');
   });
 
-  if(id === 'map') { setTimeout(() => initMap('ecovillage-map', true), 100); }
-  if(id === 'inventory') { renderUnitsTable(); }
-  if(id === 'certificates') { renderCerts(); }
+  if(id === 'map') { setTimeout(() => initSiteMap(), 150); }
+  if(id === 'inventory') { renderInventoryGroups(); }
+  if(id === 'sales-strategy') { renderSalesStrategy(); }
 }
 
 // ═══════════════════════════════════════════════════
@@ -842,89 +943,214 @@ function toggleLang() {
 }
 
 // ═══════════════════════════════════════════════════
-// LEAFLET MAP
+// SITE MAP — loads all units from DB
 // ═══════════════════════════════════════════════════
-function initMap(containerId, showPhase2) {
-  const mapId = containerId || 'ecovillage-map';
-  const el = document.getElementById(mapId);
-  if(!el) return;
-  if(mapId === 'ecovillage-map' && leafletMap) { leafletMap.invalidateSize(); return; }
+let siteMap = null;
+let siteMapMarkers = [];
+let siteMapAllUnits = [];  // [{unit, projectName, projectBoundary}]
 
-  const map = L.map(mapId).setView([23.6130, 58.5940], 15);
+async function initSiteMap() {
+  const el = document.getElementById('site-map');
+  if (!el) return;
+  if (siteMap) { siteMap.invalidateSize(); return; }
+
+  siteMap = L.map('site-map').setView([23.615, 58.593], 14);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors', maxZoom: 19
-  }).addTo(map);
+  }).addTo(siteMap);
 
-  // Phase 1 boundary — teal (completed)
-  L.rectangle([[23.604,58.585],[23.614,58.594]], {color:'#007F86',weight:2,fillColor:'#35C6C4',fillOpacity:0.07,dashArray:'4,4'}).addTo(map);
-  L.marker([23.609,58.5895],{icon:L.divIcon({className:'',html:'<div style="background:#007F86;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">✅ Phase 1 — Completed</div>'})}).addTo(map);
+  // Load all projects and their units
+  try {
+    const r = await fetch('/api/v1/portal/developer/projects');
+    const d = await r.json();
+    const projects = d.projects || [];
 
-  // Phase 1 sold/reserved units (teal dots)
-  [[23.6065,58.5872],[23.6080,58.5884],[23.6072,58.5900],[23.6088,58.5868],[23.6056,58.5890],[23.6095,58.5876]].forEach(([lat,lng],i)=>{
-    L.circleMarker([lat,lng],{radius:7,color:'#fff',weight:2,fillColor:'#007F86',fillOpacity:0.9}).addTo(map)
-     .bindPopup(`<b>Phase 1 · Villa P1-${String.fromCharCode(65+i)}</b><br/>Status: <b>Sold</b>`);
-  });
+    // Colour palette per project (cycles)
+    const projColors = ['#007F86','#C8891A','#6C3483','#1A5276','#117A65'];
+    let totalUnits = 0;
 
-  if(showPhase2) {
-    // Phase 2 boundary — amber (new)
-    L.rectangle([[23.612,58.591],[23.622,58.600]], {color:'#C8891A',weight:2,fillColor:'#F4B35B',fillOpacity:0.08}).addTo(map);
-    L.marker([23.617,58.5955],{icon:L.divIcon({className:'',html:'<div style="background:#C8891A;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap">🆕 Phase 2 — Available</div>'})}).addTo(map);
-    // Phase 2 units from UNITS_P2
-    UNITS_P2.forEach(u=>{
-      const col = u.status==='available'?'#2ECC71':'#F39C12';
-      L.circleMarker([u.lat,u.lng],{radius:8,color:'#fff',weight:2,fillColor:col,fillOpacity:0.95}).addTo(map)
-       .bindPopup(`<b>${u.label}</b><br/>Type: ${u.type} · ${u.area}m²<br/>OMR ${u.price.toLocaleString()}<br/>GSAS: <b>${u.gsas}</b><br/>Status: ${u.status}`);
-    });
-  } else {
-    renderMapMarkers('all', map);
+    for (const [pi, proj] of projects.entries()) {
+      const pcol = projColors[pi % projColors.length];
+      // Project boundary label
+      const ur = await fetch(`/api/v1/portal/developer/projects/${proj.id}/units`);
+      const ud = await ur.json();
+      const units = ud.units || [];
+      if (!units.length) continue;
+
+      // Auto-compute bounding box from unit lat/lngs that have coordinates
+      const geoUnits = units.filter(u => u.lat && u.lng);
+      if (geoUnits.length) {
+        const lats = geoUnits.map(u => parseFloat(u.lat));
+        const lngs = geoUnits.map(u => parseFloat(u.lng));
+        const pad = 0.0008;
+        const bounds = [[Math.min(...lats)-pad, Math.min(...lngs)-pad],[Math.max(...lats)+pad, Math.max(...lngs)+pad]];
+        L.rectangle(bounds, {color:pcol, weight:2, fillColor:pcol, fillOpacity:0.06, dashArray:'5,4'}).addTo(siteMap)
+         .bindTooltip(`<b>${proj.name}</b>`, {permanent:true, direction:'center', className:'', opacity:0.85});
+      }
+
+      // Plot each unit
+      units.forEach(u => {
+        if (!u.lat || !u.lng) return;
+        totalUnits++;
+        const colMap = {available:'#2ECC71', reserved:'#F39C12', sold:'#003B5C'};
+        const col = colMap[u.status] || '#ADB5BD';
+        const icon = L.divIcon({className:'',
+          html:`<div style="width:13px;height:13px;background:${col};border-radius:50%;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35)"></div>`,
+          iconAnchor:[6,6]});
+        const popup = `<div style="font-size:12px;min-width:180px;line-height:1.7">
+          <strong style="color:#003B5C;font-size:13px">${u.unit_number||u.id}</strong><br/>
+          <span style="color:#666">${proj.name}</span><br/>
+          Type: <b>${u.type||'—'}</b> · ${u.area_sqm||'—'} m²<br/>
+          Beds: <b>${u.bedrooms||'—'}</b> · Bath: <b>${u.bathrooms||'—'}</b><br/>
+          Price: <b>OMR ${u.price ? Number(u.price).toLocaleString() : '—'}</b><br/>
+          GSAS: <b style="color:#2ECC71">${u.gsas_score||'—'}</b><br/>
+          Status: <b style="color:${col}">${(u.status||'').toUpperCase()}</b>
+        </div>`;
+        const mk = L.marker([parseFloat(u.lat), parseFloat(u.lng)], {icon}).addTo(siteMap);
+        mk.bindPopup(popup);
+        siteMapMarkers.push({mk, status: u.status||'available'});
+        siteMapAllUnits.push({mk, status: u.status||'available'});
+      });
+    }
+
+    // Update subtitle + legend counts
+    const av = siteMapAllUnits.filter(x=>x.status==='available').length;
+    const re = siteMapAllUnits.filter(x=>x.status==='reserved').length;
+    const so = siteMapAllUnits.filter(x=>x.status==='sold').length;
+    const sub = document.getElementById('map-subtitle');
+    if (sub) sub.textContent = `${totalUnits} units across ${projects.length} projects · click any pin for details`;
+    const la = document.getElementById('leg-available'); if(la) la.textContent = `Available (${av})`;
+    const lr = document.getElementById('leg-reserved');  if(lr) lr.textContent = `Reserved (${re})`;
+    const ls = document.getElementById('leg-sold');       if(ls) ls.textContent = `Sold (${so})`;
+
+  } catch(e) {
+    console.error('initSiteMap', e);
+    toast('Could not load units for map', 'error');
   }
-
-  if(mapId === 'ecovillage-map') leafletMap = map;
-  return map;
 }
 
-function renderMapMarkers(filter, map) {
-  const m = map || leafletMap;
-  if(!m) return;
-  mapMarkers.forEach(mk => m.removeLayer(mk));
-  mapMarkers = [];
-  const colorMap = {available:'#2ECC71', reserved:'#F39C12', sold:'#003B5C'};
-  UNITS.forEach(u => {
-    if(filter !== 'all' && u.status !== filter) return;
-    const isB1 = u.id === 'B1';
-    const color = isB1 ? '#E74C3C' : colorMap[u.status];
-    const size = isB1 ? 18 : 12;
-    const icon = L.divIcon({className:'',html:`<div style="width:${size}px;height:${size}px;background:${color};border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`,iconAnchor:[size/2,size/2]});
-    const popup = `<div style="font-size:12px;min-width:160px"><strong style="color:#003B5C">Villa ${u.id}</strong>${isB1?' ⭐':''}<br/>Type: ${u.type} · ${u.area}m²<br/>Price: OMR ${u.price.toLocaleString()}<br/>GSAS: <strong style="color:#2ECC71">${u.gsas}</strong><br/>Status: <strong>${u.status.toUpperCase()}</strong><br/>${u.loan?`<span style="color:#007F86">🔗 ${u.loan}</span>`:''}</div>`;
-    const mk = L.marker([u.lat,u.lng],{icon}).addTo(m);
-    mk.bindPopup(popup);
-    if(isB1) mk.openPopup();
-    mapMarkers.push(mk);
+function siteMapFilter(status) {
+  siteMapAllUnits.forEach(({mk, status: s}) => {
+    if (status === 'all' || s === status) {
+      if (!siteMap.hasLayer(mk)) siteMap.addLayer(mk);
+    } else {
+      if (siteMap.hasLayer(mk)) siteMap.removeLayer(mk);
+    }
   });
 }
 
-function filterUnits(f) { renderMapMarkers(f); }
-
-// ═══════════════════════════════════════════════════
-// UNITS TABLE
-// ═══════════════════════════════════════════════════
-function renderUnitsTable() {
-  const tbody = document.getElementById('units-tbody');
-  if(!tbody) return;
-  tbody.innerHTML = UNITS.map(u => `
-    <tr>
-      <td><strong>${u.id === 'B1' ? '⭐ ' : ''}Villa ${u.id}</strong></td>
-      <td>${u.type}</td>
-      <td>${u.area}</td>
-      <td>${u.price.toLocaleString()}</td>
-      <td><span class="gsas-score ${u.gsas >= 85 ? 'excellent' : 'good'}">${u.gsas}</span></td>
-      <td><span class="unit-status ${u.status}">${u.status}</span></td>
-      <td><button class="btn btn-secondary btn-sm" onclick="showUnitDetail('${u.id}')">View</button></td>
-    </tr>
-  `).join('');
+// Legacy stub — called from Step 5 review map
+function initMap(containerId, showPhase2) {
+  const el = document.getElementById(containerId);
+  if (!el) return null;
+  const m = L.map(containerId).setView([23.615, 58.593], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap',maxZoom:19}).addTo(m);
+  if (showPhase2 && typeof UNITS_P2 !== 'undefined') {
+    UNITS_P2.forEach(u=>{
+      const col=u.status==='available'?'#2ECC71':'#F39C12';
+      L.circleMarker([u.lat,u.lng],{radius:8,color:'#fff',weight:2,fillColor:col,fillOpacity:0.95}).addTo(m)
+       .bindPopup(`<b>${u.label}</b><br/>OMR ${u.price.toLocaleString()} · GSAS ${u.gsas}`);
+    });
+  }
+  return m;
 }
 
-function showUnitDetail(id) { toast(`Viewing Unit ${id} details`, 'info'); }
+// ═══════════════════════════════════════════════════
+// UNITS INVENTORY — collapsible per-project groups
+// ═══════════════════════════════════════════════════
+async function renderInventoryGroups() {
+  const container = document.getElementById('inventory-groups');
+  if(!container) return;
+  container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--gray-500)">Loading…</div>';
+
+  try {
+    const rp = await fetch('/api/v1/portal/developer/projects');
+    const dp = await rp.json();
+    const projects = dp.projects || [];
+
+    if(!projects.length) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-500)">No projects yet. Register your first project.</div>';
+      return;
+    }
+
+    let totalUnits = 0;
+    let html = '';
+
+    for (const proj of projects) {
+      const ru = await fetch(`/api/v1/portal/developer/projects/${proj.id}/units`);
+      const du = await ru.json();
+      const units = du.units || [];
+      totalUnits += units.length;
+
+      const av = units.filter(u=>u.status==='available').length;
+      const re = units.filter(u=>u.status==='reserved').length;
+      const so = units.filter(u=>u.status==='sold').length;
+      const isLive = proj.listing_visible===1 || proj.status==='active';
+      const groupId = 'inv-group-' + proj.id;
+
+      html += `
+        <div class="inv-group-header" onclick="toggleInvGroup('${groupId}')">
+          <span style="font-size:16px">🏗️</span>
+          <strong style="font-size:13px;color:var(--navy)">${proj.name}</strong>
+          <span style="font-size:11px;color:var(--gray-500)">${units.length} units</span>
+          <span class="chip ${isLive?'green':'gray'}" style="font-size:10px">${isLive?'Published':'Draft'}</span>
+          <span class="unit-status available" style="font-size:11px">${av} available</span>
+          <span class="unit-status reserved" style="font-size:11px">${re} reserved</span>
+          <span class="unit-status sold" style="font-size:11px">${so} sold</span>
+          <span class="inv-group-toggle open" id="${groupId}-toggle">▶</span>
+        </div>
+        <div class="inv-group-body" id="${groupId}">
+          <table class="inv-table">
+            <thead><tr>
+              <th>Unit #</th><th>Type</th><th>Area m²</th><th>Beds</th><th>Price (OMR)</th><th>GSAS</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody>
+              ${units.length ? units.map(u => `<tr>
+                <td><strong>${u.unit_number||u.id}</strong></td>
+                <td>${u.type||'—'}</td>
+                <td>${u.area_sqm||'—'}</td>
+                <td>${u.bedrooms||'—'}</td>
+                <td>${u.price ? Number(u.price).toLocaleString() : '—'}</td>
+                <td><span class="gsas-score ${(u.gsas_score||0)>=85?'excellent':'good'}">${u.gsas_score||'—'}</span></td>
+                <td><span class="unit-status ${u.status||'available'}">${u.status||'available'}</span></td>
+                <td style="white-space:nowrap">
+                  <button class="btn btn-secondary btn-sm" onclick="changeUnitStatus('${proj.id}','${u.id}','${u.status}')">Status</button>
+                  <button class="btn btn-secondary btn-sm" onclick="editUnitPrice('${proj.id}','${u.id}',${u.price||0})">Price</button>
+                </td>
+              </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--gray-500)">No units for this project.</td></tr>'}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    container.innerHTML = html;
+    const sub = document.getElementById('inv-subtitle');
+    if(sub) sub.textContent = `${projects.length} projects · ${totalUnits} total units`;
+
+  } catch(e) {
+    console.error('renderInventoryGroups', e);
+    container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--danger)">Failed to load inventory. Check API.</div>';
+  }
+}
+
+function toggleInvGroup(groupId) {
+  const body = document.getElementById(groupId);
+  const toggle = document.getElementById(groupId+'-toggle');
+  if(!body) return;
+  const collapsed = body.classList.toggle('collapsed');
+  if(toggle) toggle.classList.toggle('open', !collapsed);
+}
+
+function changeUnitStatus(projId, unitId, current) {
+  const statuses = ['available','reserved','sold'];
+  const next = statuses[(statuses.indexOf(current)+1) % statuses.length];
+  toast(`Unit ${unitId} status → ${next} (demo — no API call)`, 'info');
+}
+
+function editUnitPrice(projId, unitId, current) {
+  const np = prompt(`New price for unit ${unitId} (OMR):`, current);
+  if(np && !isNaN(np)) toast(`Unit ${unitId} price updated to OMR ${Number(np).toLocaleString()} (demo)`, 'success');
+}
 
 // ═══════════════════════════════════════════════════
 // CERTIFICATES
@@ -1119,7 +1345,10 @@ function wizSetStep(n) {
 function wizNext(from) {
   if(from===1) {
     const name = document.getElementById('reg-name').value.trim();
-    if(!name){ toast('Project name required','error'); return; }
+    if(!name){ toast('Project name is required','error'); return; }
+    const dev = document.getElementById('reg-dev').value.trim();
+    if(!dev){ toast('Developer company name is required','error'); return; }
+    if(!document.getElementById('reg-gov').value){ toast('Please select a governorate','warning'); return; }
     wizSetStep(2);
   } else if(from===2) {
     const uploaded = Object.keys(wizDocsUploaded).length;
@@ -1136,6 +1365,19 @@ function wizNext(from) {
 }
 
 function wizBack(from) { wizSetStep(from-1); }
+
+function resetWizard() {
+  wizCurrentStep = 1; wizProjectId = null; wizDocsUploaded = {}; wizParsedData = null; regMap = null;
+  ['reg-name','reg-location','reg-completion','reg-price-from','reg-price-to','reg-tagline','reg-dev','reg-cr','reg-image'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  ['reg-gov','reg-type'].forEach(id=>{ const el=document.getElementById(id); if(el) el.selectedIndex=0; });
+  ['solar','grey','roof','hvac','glazing','ev'].forEach(k=>{ const el=document.getElementById('feat-'+k); if(el) el.checked=false; });
+  const prev=document.getElementById('reg-img-preview'); if(prev){prev.src='';prev.style.display='none';}
+  const ph=document.getElementById('reg-img-placeholder'); if(ph) ph.style.display='';
+  wizSetStep(1);
+  toast('Form reset — ready for new project','info');
+}
 
 function triggerFileUpload(docType, filename) {
   const card = document.getElementById('doc-'+docType);
@@ -1299,6 +1541,9 @@ async function doRegisterProject(publish) {
   const pt   = document.getElementById('reg-price-to').value;
   const tag  = document.getElementById('reg-tagline').value;
   const imgUrl = document.getElementById('reg-image').value;
+  // collect green features from checkboxes
+  const featMap = {solar:'Solar PV',grey:'Greywater Recycling',roof:'Green Roof Gardens',hvac:'HVAC SEER ≥18',glazing:'Triple Glazing',ev:'EV Charging'};
+  const amenities = Object.entries(featMap).filter(([k])=>document.getElementById('feat-'+k)?.checked).map(([,v])=>v);
   const btn = document.getElementById('wiz-publish-btn');
   if(btn) { btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Processing…'; }
   try {
@@ -1312,7 +1557,7 @@ async function doRegisterProject(publish) {
         gsas_rating:'Gold', epc_rating: wizParsedData?.epc_rating||'A+',
         eia_reference: wizParsedData?.eia_ref||'EA/EIA/2026/MSC/0887',
         green_eligible:1, premium_tier:1,
-        amenities: JSON.stringify(['Solar PV 8.5kWp','Greywater Recycling','Green Roof Gardens','HVAC SEER 18','Triple Glazing','Community Pool','Gated Security']),
+        amenities: JSON.stringify(amenities),
         completion_date:'Q4 2027'
       })
     });
@@ -1337,6 +1582,176 @@ async function doRegisterProject(publish) {
     loadProjects();
     return true;
   } catch(e) { toast('API error: '+e.message,'error'); if(btn){btn.disabled=false;btn.innerHTML='📤 Register & Publish to Bank';} return false; }
+}
+
+// ═══════════════════════════════════════════════════
+// SALES STRATEGY
+// ═══════════════════════════════════════════════════
+let salesUnits = [];   // flat array of all units across all projects
+let salesProjects = [];
+let campaigns = [
+  {id:1, name:'EV2 Launch Promo', discount:3, units:'All Type A', start:'2026-09-01', end:'2026-11-30', status:'active'},
+  {id:2, name:'Q4 Type C Premium', discount:2, units:'Type C only', start:'2026-10-01', end:'2026-12-31', status:'scheduled'},
+];
+
+async function renderSalesStrategy() {
+  // Load projects + units once
+  try {
+    const rp = await fetch('/api/v1/portal/developer/projects');
+    const dp = await rp.json();
+    salesProjects = dp.projects || [];
+    salesUnits = [];
+    for (const proj of salesProjects) {
+      const ru = await fetch(`/api/v1/portal/developer/projects/${proj.id}/units`);
+      const du = await ru.json();
+      (du.units||[]).forEach(u => salesUnits.push({...u, projectName: proj.name}));
+    }
+  } catch(e) { console.error('renderSalesStrategy fetch', e); }
+
+  // KPIs
+  const total = salesUnits.length;
+  const av = salesUnits.filter(u=>u.status==='available').length;
+  const re = salesUnits.filter(u=>u.status==='reserved').length;
+  const so = salesUnits.filter(u=>u.status==='sold').length;
+  const absorption = total ? Math.round(((re+so)/total)*100) : 0;
+  const portfolio = salesUnits.reduce((s,u)=>s+(u.price||0),0);
+  const set = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('kpi-total-units', total);
+  set('kpi-available', av);
+  set('kpi-reserved', re);
+  set('kpi-sold', so);
+  set('kpi-absorption', absorption+'%');
+  set('kpi-absorption-delta', absorption>50?'↑ Strong velocity':'↗ Building momentum');
+  set('kpi-portfolio', total ? 'OMR '+(portfolio/1000000).toFixed(1)+'M' : '—');
+
+  // Price matrix: group by type
+  const byType = {};
+  salesUnits.forEach(u => {
+    const t = u.type||'Other';
+    if(!byType[t]) byType[t]={type:t,units:[],prices:[]};
+    byType[t].units.push(u);
+    if(u.price) byType[t].prices.push(Number(u.price));
+  });
+  const tbody = document.getElementById('price-matrix-tbody');
+  if(tbody) {
+    tbody.innerHTML = Object.values(byType).map(g => {
+      const avg = g.prices.length ? Math.round(g.prices.reduce((a,b)=>a+b,0)/g.prices.length) : 0;
+      const base = g.prices.length ? Math.min(...g.prices) : 0;
+      const avgArea = g.units.length ? Math.round(g.units.reduce((s,u)=>s+(u.area_sqm||0),0)/g.units.length) : 0;
+      return `<tr>
+        <td><strong>${g.type}</strong></td>
+        <td>${g.units.length}</td>
+        <td>${avgArea} m²</td>
+        <td class="price-cell" onclick="editBasePrice('${g.type}',${base})">OMR ${base.toLocaleString()}</td>
+        <td>OMR ${avg.toLocaleString()}</td>
+        <td><span class="chip gray">0%</span></td>
+        <td><button class="btn btn-secondary btn-sm" onclick="applyTypeDiscount('${g.type}')">Set Discount</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--gray-500)">No units found</td></tr>';
+  }
+
+  // Absorption bars
+  const absDiv = document.getElementById('absorption-chart');
+  if(absDiv) {
+    const bars = Object.values(byType).map(g => {
+      const pct = g.units.length ? Math.round(((g.units.filter(u=>u.status!=='available').length)/g.units.length)*100) : 0;
+      const col = pct>=70?'#2ECC71':pct>=40?'#F39C12':'#007F86';
+      return `<div class="abs-bar-wrap">
+        <div class="abs-bar-label">${g.type}</div>
+        <div class="abs-bar-track">
+          <div class="abs-bar-fill" style="width:${pct}%;background:${col}">
+            <span class="abs-bar-pct">${pct}%</span>
+          </div>
+        </div>
+        <span style="font-size:11px;color:var(--gray-500);width:50px;flex-shrink:0">${g.units.filter(u=>u.status!=='available').length}/${g.units.length}</span>
+      </div>`;
+    });
+    absDiv.innerHTML = bars.length ? bars.join('') : '<div style="color:var(--gray-500);text-align:center;padding:20px">No data</div>';
+  }
+
+  // Campaigns
+  renderCampaigns();
+
+  // Pipeline (load applications)
+  try {
+    const ra = await fetch('/api/v1/portal/applications');
+    const da = await ra.json();
+    renderPipeline(da.applications || []);
+  } catch { renderPipeline([]); }
+}
+
+function renderCampaigns() {
+  const list = document.getElementById('campaigns-list');
+  const count = document.getElementById('campaign-count');
+  const active = campaigns.filter(c=>c.status==='active').length;
+  if(count) count.textContent = active + ' active';
+  if(!list) return;
+  if(!campaigns.length) { list.innerHTML='<div style="text-align:center;color:var(--gray-500);padding:16px">No campaigns yet.</div>'; return; }
+  list.innerHTML = campaigns.map(c => `
+    <div class="campaign-card">
+      <div style="font-size:22px">${c.status==='active'?'🚀':c.status==='scheduled'?'📅':'📦'}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:13px;color:var(--navy)">${c.name}</div>
+        <div style="font-size:11px;color:var(--gray-500)">${c.start} → ${c.end} · ${c.units}</div>
+      </div>
+      <span class="chip ${c.discount>=5?'green':'blue'}" style="font-size:13px;font-weight:800">${c.discount}% off</span>
+      <span class="campaign-badge ${c.status}">${c.status}</span>
+      <button class="btn btn-secondary btn-sm" onclick="deleteCampaign(${c.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+function renderPipeline(apps) {
+  const tbody = document.getElementById('pipeline-tbody');
+  if(!tbody) return;
+  if(!apps.length) {
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gray-500)">No loan applications linked yet.</td></tr>';
+    return;
+  }
+  const statusColor = {approved:'green',pending:'amber',rejected:'gray'};
+  tbody.innerHTML = apps.map(a => `<tr>
+    <td><strong>${a.id}</strong></td>
+    <td>${a.applicant_name||'—'}</td>
+    <td>${a.unit_id||'—'}</td>
+    <td>${a.project_id||'—'}</td>
+    <td>${a.loan_amount ? Number(a.loan_amount).toLocaleString() : '—'}</td>
+    <td>${a.interest_rate ? Number(a.interest_rate).toFixed(2)+'%' : '—'}</td>
+    <td><span class="chip ${statusColor[a.status]||'gray'}">${a.status||'—'}</span></td>
+    <td style="font-size:11px;color:var(--gray-500)">${a.created_at?a.created_at.slice(0,10):'—'}</td>
+  </tr>`).join('');
+}
+
+function editBasePrice(type, current) {
+  const np = prompt(`New base price for ${type} (OMR):`, current);
+  if(np && !isNaN(np)) toast(`Base price for ${type} updated to OMR ${Number(np).toLocaleString()}`, 'success');
+}
+
+function applyTypeDiscount(type) {
+  const pct = prompt(`Discount % for ${type} units (e.g. 5):`, '0');
+  if(pct && !isNaN(pct)) toast(`${pct}% discount applied to ${type} units`, 'success');
+}
+
+function openBulkPriceModal() {
+  const pct = prompt('Adjust all unit prices by % (e.g. +5 or -3):', '0');
+  if(pct && !isNaN(pct)) toast(`Bulk price adjustment of ${pct}% applied to all units`, 'success');
+}
+
+function openNewCampaignModal() {
+  const name = prompt('Campaign name:');
+  if(!name) return;
+  const disc = prompt('Discount % (e.g. 5):','5');
+  const start = prompt('Start date (YYYY-MM-DD):','2026-10-01');
+  const end = prompt('End date (YYYY-MM-DD):','2026-12-31');
+  const units = prompt('Target units (e.g. All Type A, or All):','All');
+  campaigns.push({id: Date.now(), name, discount:Number(disc)||5, units, start, end, status:'scheduled'});
+  renderCampaigns();
+  toast(`Campaign "${name}" created`, 'success');
+}
+
+function deleteCampaign(id) {
+  campaigns = campaigns.filter(c=>c.id!==id);
+  renderCampaigns();
+  toast('Campaign removed','info');
 }
 
 // ═══════════════════════════════════════════════════
