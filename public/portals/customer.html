@@ -262,7 +262,6 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
   <div class="nav-links">
     <button class="nav-btn" onclick="showPage('home')" id="nb-home" data-en="Home" data-ar="الرئيسية">Home</button>
     <button class="nav-btn" onclick="showPage('properties')" id="nb-properties" data-en="Properties" data-ar="العقارات">Properties</button>
-    <button class="nav-btn" onclick="showPage('ecovillage')" id="nb-ecovillage" data-en="EcoVillage P2" data-ar="إيكو فيلاج">EcoVillage P2 🌿</button>
     <button class="nav-btn" onclick="showPage('calculator')" id="nb-calculator" data-en="Calculator" data-ar="الحاسبة">Calculator</button>
     <button class="nav-btn" onclick="showPage('tracking')" id="nb-tracking" data-en="My Application" data-ar="طلبي">My Application</button>
     <button class="nav-btn nav-cta" onclick="openWizard()" data-en="Apply Now" data-ar="تقدم الآن">Apply Now</button>
@@ -366,27 +365,9 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 
 <!-- ═══ PAGE: ECOVILLAGE PHASE 2 ═══ -->
 <div class="page" id="page-ecovillage">
-  <!-- Hero banner -->
-  <div style="position:relative;height:340px;overflow:hidden">
-    <img src="https://www.genspark.ai/api/files/s/pepLOOLC?cache_control=3600" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='linear-gradient(135deg,#002540,#007F86)'"/>
-    <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,37,64,.85) 40%,rgba(0,37,64,.3))"></div>
-    <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 48px">
-      <div>
-        <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(53,198,196,.2);border:1px solid rgba(53,198,196,.4);border-radius:999px;padding:5px 14px;color:#35C6C4;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:16px">🏆 GSAS GOLD · Score 91 · EPC A+</div>
-        <h1 style="font-size:2.4rem;font-weight:800;color:#fff;margin-bottom:10px;line-height:1.15">EcoVillage Muscat <em style="color:#35C6C4;font-style:normal">Phase 2</em></h1>
-        <p style="font-size:14px;color:rgba(255,255,255,.75);max-width:480px;line-height:1.7;margin-bottom:20px">Oman's first GSAS Gold certified eco-villa community. 18 villas across 3 types — solar-powered, net-zero water, green rooftops. Seeb district, Muscat.</p>
-        <div style="display:flex;gap:12px;flex-wrap:wrap">
-          <button class="btn-prime" onclick="document.getElementById('ev-map-section').scrollIntoView({behavior:'smooth'})">🗺️ Explore Site Map</button>
-          <button class="btn-ghost" onclick="document.getElementById('ev-calc-section').scrollIntoView({behavior:'smooth'})">🧮 Green Loan Calculator</button>
-        </div>
-      </div>
-    </div>
-    <!-- ESG badges overlay -->
-    <div style="position:absolute;top:20px;right:24px;display:flex;flex-direction:column;gap:8px">
-      <div style="background:rgba(22,132,91,.9);color:#fff;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;backdrop-filter:blur(6px)">🏆 GSAS GOLD 91/100</div>
-      <div style="background:rgba(0,127,134,.85);color:#fff;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;backdrop-filter:blur(6px)">⚡ EPC Rating A+</div>
-      <div style="background:rgba(0,37,64,.85);color:#35C6C4;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;backdrop-filter:blur(6px)">🌿 EIA Approved</div>
-    </div>
+  <!-- Hero banner — rendered dynamically by renderEvHero() when project data is loaded -->
+  <div id="ev-hero-banner" style="position:relative;height:340px;overflow:hidden;background:linear-gradient(135deg,#002540,#007F86)">
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:14px">Loading project…</div>
   </div>
 
   <!-- Stats bar -->
@@ -731,7 +712,7 @@ function showPage(id) {
   const nb = document.getElementById('nb-' + id);
   if (nb) nb.classList.add('active');
   if (id === 'tracking') loadTracking();
-  if (id === 'ecovillage') setTimeout(()=>{ initEvMap(); evCalcUpdate(); }, 150);
+  if (id === 'ecovillage') setTimeout(async ()=>{ renderEvHero(); await loadEvUnits(); initEvMap(); evCalcUpdate(); }, 150);
 }
 
 /* ─── CALCULATOR ─── */
@@ -1041,6 +1022,23 @@ async function loadProjects() {
       const gsas = p.gsas_overall_score || p.gsas_score || 0;
       const rate = gsas >= 85 ? '4.75' : gsas >= 70 ? '5.00' : '5.25';
       const isGold = gsas >= 85 && p.green_eligible;
+      // If this is a published green project, register it as the EcoVillage project
+      // and inject the nav button dynamically
+      if (isGold && !document.getElementById('nb-ecovillage')) {
+        evProjectData = { id: p.id, name: p.name, hero_image_url: p.hero_image_url,
+          gsas_score: gsas, epc_rating: p.epc_rating, location: p.location,
+          price_from: p.price_from, price_to: p.price_to, marketing_tagline: p.marketing_tagline };
+        // Inject nav button after Properties button
+        const nbProps = document.getElementById('nb-properties');
+        if (nbProps) {
+          const btn = document.createElement('button');
+          btn.className = 'nav-btn'; btn.id = 'nb-ecovillage';
+          btn.setAttribute('data-en','EcoVillage P2'); btn.setAttribute('data-ar','إيكو فيلاج');
+          btn.textContent = 'EcoVillage P2 🌿';
+          btn.onclick = () => showPage('ecovillage');
+          nbProps.insertAdjacentElement('afterend', btn);
+        }
+      }
       const priceFrom = p.price_from ? 'OMR ' + Number(p.price_from).toLocaleString() : 'Price TBC';
       const imgBg = p.hero_image_url
         ? `background:url('${p.hero_image_url}') center/cover no-repeat`
@@ -1164,26 +1162,59 @@ function openWizardForProject(projectId) {
 }
 
 /* ─── ECOVILLAGE PHASE 2 ─── */
-const EV_UNITS = [
-  {id:'EV-P2-A01',type:'A',area:340,beds:4,price:195000,gsas:91,lat:23.6135,lng:58.5920},
-  {id:'EV-P2-A02',type:'A',area:340,beds:4,price:198000,gsas:91,lat:23.6140,lng:58.5928},
-  {id:'EV-P2-A03',type:'A',area:342,beds:4,price:200000,gsas:92,lat:23.6145,lng:58.5936},
-  {id:'EV-P2-A04',type:'A',area:338,beds:4,price:202000,gsas:91,lat:23.6150,lng:58.5944},
-  {id:'EV-P2-A05',type:'A',area:340,beds:4,price:205000,gsas:90,lat:23.6155,lng:58.5932},
-  {id:'EV-P2-A06',type:'A',area:345,beds:4,price:208000,gsas:92,lat:23.6160,lng:58.5940},
-  {id:'EV-P2-A07',type:'A',area:340,beds:4,price:210000,gsas:91,lat:23.6165,lng:58.5948},
-  {id:'EV-P2-A08',type:'A',area:342,beds:4,price:215000,gsas:91,lat:23.6170,lng:58.5956},
-  {id:'EV-P2-B01',type:'B',area:280,beds:3,price:165000,gsas:90,lat:23.6125,lng:58.5950},
-  {id:'EV-P2-B02',type:'B',area:282,beds:3,price:168000,gsas:91,lat:23.6130,lng:58.5958},
-  {id:'EV-P2-B03',type:'B',area:280,beds:3,price:170000,gsas:90,lat:23.6135,lng:58.5966},
-  {id:'EV-P2-B04',type:'B',area:285,beds:3,price:172000,gsas:91,lat:23.6140,lng:58.5974},
-  {id:'EV-P2-B05',type:'B',area:280,beds:3,price:175000,gsas:90,lat:23.6145,lng:58.5962},
-  {id:'EV-P2-B06',type:'B',area:282,beds:3,price:178000,gsas:91,lat:23.6150,lng:58.5970},
-  {id:'EV-P2-C01',type:'C',area:420,beds:5,price:310000,gsas:92,lat:23.6120,lng:58.5938},
-  {id:'EV-P2-C02',type:'C',area:425,beds:5,price:325000,gsas:93,lat:23.6125,lng:58.5946},
-  {id:'EV-P2-C03',type:'C',area:418,beds:5,price:338000,gsas:92,lat:23.6130,lng:58.5982},
-  {id:'EV-P2-C04',type:'C',area:422,beds:5,price:345000,gsas:93,lat:23.6135,lng:58.5990},
-];
+// evProjectData is populated dynamically by loadProjects() when a published green project is found
+let evProjectData = null;
+let EV_UNITS = []; // loaded from API when ecovillage page opens
+
+async function loadEvUnits() {
+  if (!evProjectData) return;
+  if (EV_UNITS.length > 0) return; // already loaded
+  try {
+    const r = await fetch(`/api/v1/portal/projects/${evProjectData.id}/units`);
+    const d = await r.json();
+    EV_UNITS = (d.units || []).map(u => ({
+      id: u.unit_number || u.id,
+      type: u.type || 'A',
+      area: u.area_sqm || 0,
+      beds: u.bedrooms || 0,
+      price: u.price || 0,
+      gsas: u.gsas_score || evProjectData.gsas_score || 91,
+      lat: u.lat || 23.614,
+      lng: u.lng || 23.595
+    }));
+  } catch(e) { console.error('loadEvUnits:', e); }
+}
+
+function renderEvHero() {
+  const banner = document.getElementById('ev-hero-banner');
+  if (!banner || !evProjectData) return;
+  const p = evProjectData;
+  const gsas = p.gsas_score || 91;
+  const epc = p.epc_rating || 'A+';
+  const imgStyle = p.hero_image_url
+    ? `background:url('${p.hero_image_url}') center/cover no-repeat`
+    : 'background:linear-gradient(135deg,#002540,#007F86)';
+  const tagline = p.marketing_tagline || `Oman's first GSAS Gold certified eco-villa community. Seeb district, Muscat.`;
+  banner.style = `position:relative;height:340px;overflow:hidden;${imgStyle}`;
+  banner.innerHTML = `
+    <div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,37,64,.85) 40%,rgba(0,37,64,.3))"></div>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 48px">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(53,198,196,.2);border:1px solid rgba(53,198,196,.4);border-radius:999px;padding:5px 14px;color:#35C6C4;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:16px">🏆 GSAS GOLD · Score ${gsas} · EPC ${epc}</div>
+        <h1 style="font-size:2.4rem;font-weight:800;color:#fff;margin-bottom:10px;line-height:1.15">${p.name||'EcoVillage'} <em style="color:#35C6C4;font-style:normal">Phase 2</em></h1>
+        <p style="font-size:14px;color:rgba(255,255,255,.75);max-width:480px;line-height:1.7;margin-bottom:20px">${tagline}</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn-prime" onclick="document.getElementById('ev-map-section').scrollIntoView({behavior:'smooth'})">🗺️ Explore Site Map</button>
+          <button class="btn-ghost" onclick="document.getElementById('ev-calc-section').scrollIntoView({behavior:'smooth'})">🧮 Green Loan Calculator</button>
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;top:20px;right:24px;display:flex;flex-direction:column;gap:8px">
+      <div style="background:rgba(22,132,91,.9);color:#fff;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;backdrop-filter:blur(6px)">🏆 GSAS GOLD ${gsas}/100</div>
+      <div style="background:rgba(0,127,134,.85);color:#fff;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;backdrop-filter:blur(6px)">⚡ EPC Rating ${epc}</div>
+      <div style="background:rgba(0,37,64,.85);color:#35C6C4;padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;backdrop-filter:blur(6px)">🌿 EIA Approved</div>
+    </div>`;
+}
 
 function initEvMap() {
   if (evConsumerMap) return;
