@@ -241,10 +241,10 @@ INSERT OR IGNORE INTO developers VALUES ('d001','Al Madaen Real Estate','CR-2019
 INSERT OR IGNORE INTO developers VALUES ('d002','Muscat Hills Development','CR-2018-33201','Sara Al-Lawati','sara@muscathills.om','+968 2488 9900','PO Box 567, Muscat','active','2022-09-20','2018-07-10');
 INSERT OR IGNORE INTO developers VALUES ('d003','Gulf Horizon Properties','CR-2021-78543','Khalid Al-Farsi','khalid@gulfhorizon.om','+968 2456 7788','PO Box 890, Sohar','active','2024-01-05','2021-02-15');
 
-INSERT OR IGNORE INTO projects VALUES ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',36,12,8,16,78,'Gold','B','EIA/2024/201','{"type":"FeatureCollection","features":[]}','active',1,0,'2024-06-15','2025-11-30',1,'https://www.genspark.ai/api/files/s/Lpruc59V?cache_control=3600','Waterfront living with premium amenities in the heart of Muscat',95000,185000,NULL,'["Swimming Pool","Gym","24/7 Security","Covered Parking","Children''s Play Area"]');
-INSERT OR IGNORE INTO projects VALUES ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',18,18,0,0,82,'Gold','A',null,'{"type":"FeatureCollection","features":[]}','active',1,0,'2025-01-10','2025-12-01',1,'https://www.genspark.ai/api/files/s/nKbe89Q3?cache_control=3600','Spacious villas with panoramic views near Muscat International Airport',145000,220000,NULL,'["Private Garden","Rooftop Terrace","Central A/C","Smart Home","Visitor Parking"]');
-INSERT OR IGNORE INTO projects VALUES ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',60,0,0,60,null,null,null,null,'{"type":"FeatureCollection","features":[]}','archived',0,0,'2023-05-01','2025-06-30',0,'https://www.genspark.ai/api/files/s/uRuQ4F7X?cache_control=3600',null,null,null,null,'[]');
-INSERT OR IGNORE INTO projects VALUES ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',24,0,0,0,null,null,null,null,'{"type":"FeatureCollection","features":[]}','draft',0,0,'2026-08-31','2026-08-31',0,'https://www.genspark.ai/api/files/s/kO0wp7XX?cache_control=3600',null,null,null,null,'[]');
+INSERT OR IGNORE INTO projects VALUES ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',36,12,8,16,78,'Gold','B','EIA/2024/201','{"type":"FeatureCollection","features":[]}','active',1,0,'2024-06-15','2025-11-30',1,'/static/img/proj001_hero.jpg','Waterfront living with premium amenities in the heart of Muscat',95000,185000,NULL,'["Swimming Pool","Gym","24/7 Security","Covered Parking","Children''s Play Area"]');
+INSERT OR IGNORE INTO projects VALUES ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',18,18,0,0,82,'Gold','A',null,'{"type":"FeatureCollection","features":[]}','active',1,0,'2025-01-10','2025-12-01',1,'/static/img/proj002_hero.jpg','Spacious villas with panoramic views near Muscat International Airport',145000,220000,NULL,'["Private Garden","Rooftop Terrace","Central A/C","Smart Home","Visitor Parking"]');
+INSERT OR IGNORE INTO projects VALUES ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',60,0,0,60,null,null,null,null,'{"type":"FeatureCollection","features":[]}','archived',0,0,'2023-05-01','2025-06-30',0,'/static/img/proj003_hero.jpg',null,null,null,null,'[]');
+INSERT OR IGNORE INTO projects VALUES ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',24,0,0,0,null,null,null,null,'{"type":"FeatureCollection","features":[]}','draft',0,0,'2026-08-31','2026-08-31',0,'/static/img/proj004_hero.jpg',null,null,null,null,'[]');
 
 -- EcoVillage units and documents are uploaded LIVE during Act 2.
 
@@ -470,7 +470,7 @@ app.post('/reset-demo', async (c) => {
        36,12,8,16,78,'Gold','B','EIA/2024/201',
        '{"type":"FeatureCollection","features":[]}',
        'active',1,0,'2024-06-15','2025-11-30',
-       1,'https://www.genspark.ai/api/files/s/Lpruc59V?cache_control=3600',
+       1,'/static/img/proj001_hero.jpg',
        'Waterfront living with premium amenities in the heart of Muscat',
        95000,185000,NULL,
        '["Swimming Pool","Gym","24/7 Security","Covered Parking","Children''s Play Area"]')`).run()
@@ -481,7 +481,7 @@ app.post('/reset-demo', async (c) => {
        18,18,0,0,82,'Gold','A',NULL,
        '{"type":"FeatureCollection","features":[]}',
        'active',1,0,'2025-01-10','2025-12-01',
-       1,'https://www.genspark.ai/api/files/s/nKbe89Q3?cache_control=3600',
+       1,'/static/img/proj002_hero.jpg',
        'Spacious villas with panoramic views near Muscat International Airport',
        145000,220000,NULL,
        '["Private Garden","Rooftop Terrace","Central A/C","Smart Home","Visitor Parking"]')`).run()
@@ -492,7 +492,7 @@ app.post('/reset-demo', async (c) => {
        60,0,0,60,NULL,NULL,NULL,NULL,
        '{"type":"FeatureCollection","features":[]}',
        'archived',0,0,'2023-05-01','2025-06-30',
-       0,'https://www.genspark.ai/api/files/s/uRuQ4F7X?cache_control=3600',
+       0,'/static/img/proj003_hero.jpg',
        NULL,NULL,NULL,NULL,'[]')`).run()
 
     // proj004 – EcoVillage Muscat Phase 1 (draft, upcoming — reset to blank)
@@ -501,7 +501,7 @@ app.post('/reset-demo', async (c) => {
        24,0,0,0,NULL,NULL,NULL,NULL,
        '{"type":"FeatureCollection","features":[]}',
        'draft',0,0,'2026-08-31','2026-08-31',
-       0,'https://www.genspark.ai/api/files/s/kO0wp7XX?cache_control=3600',
+       0,'/static/img/proj004_hero.jpg',
        NULL,NULL,NULL,NULL,'[]')`).run()
 
     // ── 5b. Re-seed units for template projects ──────────────────────────

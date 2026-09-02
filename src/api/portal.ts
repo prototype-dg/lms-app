@@ -498,6 +498,47 @@ app.patch('/developer/projects/:id', async (c) => {
   return c.json({ success: true })
 })
 
+// ── Developer Portal: PATCH single unit (status, price, etc.) ────────────
+app.patch('/developer/projects/:pid/units/:uid', async (c) => {
+  const projectId = c.req.param('pid')
+  const unitId = c.req.param('uid')
+  const body = await c.req.json().catch(() => ({}) as any)
+  const ts = now()
+
+  const allowed = ['status', 'price', 'unit_number', 'type', 'area_sqm',
+    'bedrooms', 'bathrooms', 'image_url', 'gsas_score', 'features', 'floor_number']
+  const fields: string[] = []
+  const vals: any[] = []
+  for (const k of allowed) {
+    if (body[k] !== undefined) { fields.push(`${k}=?`); vals.push(body[k]) }
+  }
+  if (!fields.length) return c.json({ success: true, message: 'No fields to update' })
+  vals.push(unitId, projectId)
+
+  await c.env.DB.prepare(
+    `UPDATE units SET ${fields.join(',')} WHERE id=? AND project_id=?`
+  ).bind(...vals).run()
+
+  // Recount project unit stats after status change
+  if (body.status !== undefined) {
+    const counts = await c.env.DB.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN status='available' THEN 1 ELSE 0 END) as avail,
+        SUM(CASE WHEN status='reserved' THEN 1 ELSE 0 END) as res,
+        SUM(CASE WHEN status='sold' THEN 1 ELSE 0 END) as sold
+      FROM units WHERE project_id = ?
+    `).bind(projectId).first() as any
+    await c.env.DB.prepare(
+      `UPDATE projects SET total_units=?, available_units=?, reserved_units=?, sold_units=?, updated_at=? WHERE id=?`
+    ).bind(
+      counts?.total || 0, counts?.avail || 0, counts?.res || 0, counts?.sold || 0, ts, projectId
+    ).run()
+  }
+
+  return c.json({ success: true })
+})
+
 // ── Developer Portal: Get developer's projects ────────────────────────────
 app.get('/developer/projects', async (c) => {
   const developerId = c.req.query('developer_id') || 'd001'

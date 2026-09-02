@@ -674,7 +674,7 @@ body.ar .toast-container{right:auto;left:24px}
           <!-- Type A -->
           <div class="card" style="margin:0">
             <div style="position:relative;height:140px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;background:var(--gray-100)">
-              <img id="type-a-preview" src="https://www.genspark.ai/api/files/s/7hHwgjwr?cache_control=3600"
+              <img id="type-a-preview" src="/static/img/ev2_type_a.jpg"
                 style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
               <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:8px 10px">
                 <span style="color:#fff;font-size:12px;font-weight:700">Type A · Grand Family Villa</span>
@@ -691,7 +691,7 @@ body.ar .toast-container{right:auto;left:24px}
           <!-- Type B -->
           <div class="card" style="margin:0">
             <div style="position:relative;height:140px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;background:var(--gray-100)">
-              <img id="type-b-preview" src="https://www.genspark.ai/api/files/s/4Xs1irrT?cache_control=3600"
+              <img id="type-b-preview" src="/static/img/ev2_type_b.jpg"
                 style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
               <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:8px 10px">
                 <span style="color:#fff;font-size:12px;font-weight:700">Type B · Compact Villa</span>
@@ -708,7 +708,7 @@ body.ar .toast-container{right:auto;left:24px}
           <!-- Type C -->
           <div class="card" style="margin:0">
             <div style="position:relative;height:140px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;background:var(--gray-100)">
-              <img id="type-c-preview" src="https://www.genspark.ai/api/files/s/GdQeTTXz?cache_control=3600"
+              <img id="type-c-preview" src="/static/img/ev2_type_c.jpg"
                 style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
               <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:8px 10px">
                 <span style="color:#fff;font-size:12px;font-weight:700">Type C · Premium Signature Villa</span>
@@ -1203,17 +1203,17 @@ async function renderInventoryGroups() {
               <th>Unit #</th><th>Type</th><th>Area m²</th><th>Beds</th><th>Price (OMR)</th><th>GSAS</th><th>Status</th><th>Actions</th>
             </tr></thead>
             <tbody>
-              ${units.length ? units.map(u => `<tr>
+              ${units.length ? units.map(u => `<tr class="inv-row" onclick="openUnitDetail('${proj.id}','${u.id}',${JSON.stringify(JSON.stringify(u))})" style="cursor:pointer" title="Click to view unit details">
                 <td><strong>${u.unit_number||u.id}</strong></td>
                 <td>${u.type||'—'}</td>
                 <td>${u.area_sqm||'—'}</td>
                 <td>${u.bedrooms||'—'}</td>
                 <td>${u.price ? Number(u.price).toLocaleString() : '—'}</td>
                 <td><span class="gsas-score ${(u.gsas_score||0)>=85?'excellent':'good'}">${u.gsas_score||'—'}</span></td>
-                <td><span class="unit-status ${u.status||'available'}">${u.status||'available'}</span></td>
-                <td style="white-space:nowrap">
-                  <button class="btn btn-secondary btn-sm" onclick="changeUnitStatus('${proj.id}','${u.id}','${u.status}')">Status</button>
-                  <button class="btn btn-secondary btn-sm" onclick="editUnitPrice('${proj.id}','${u.id}',${u.price||0})">Price</button>
+                <td><span class="unit-status ${u.status||'available'}" id="ustatus-${u.id}">${u.status||'available'}</span></td>
+                <td style="white-space:nowrap" onclick="event.stopPropagation()">
+                  <button class="btn btn-secondary btn-sm" onclick="changeUnitStatus('${proj.id}','${u.id}','${u.status}',this)">⟳ Status</button>
+                  <button class="btn btn-secondary btn-sm" onclick="editUnitPrice('${proj.id}','${u.id}',${u.price||0},this)">✏️ Price</button>
                 </td>
               </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--gray-500)">No units for this project.</td></tr>'}
             </tbody>
@@ -1239,15 +1239,214 @@ function toggleInvGroup(groupId) {
   if(toggle) toggle.classList.toggle('open', !collapsed);
 }
 
-function changeUnitStatus(projId, unitId, current) {
+// ── Real unit status cycle with API call ──────────────────────────────────
+async function changeUnitStatus(projId, unitId, currentStatus, btn) {
   const statuses = ['available','reserved','sold'];
-  const next = statuses[(statuses.indexOf(current)+1) % statuses.length];
-  toast(`Unit ${unitId} status → ${next} (demo — no API call)`, 'info');
+  const next = statuses[(statuses.indexOf(currentStatus)+1) % statuses.length];
+  if(btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const r = await fetch(`/api/v1/portal/developer/projects/${projId}/units/${unitId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status: next})
+    });
+    if(!r.ok) throw new Error('API error');
+    // Update badge in table
+    const badge = document.getElementById('ustatus-' + unitId);
+    if(badge) { badge.className = `unit-status ${next}`; badge.textContent = next; }
+    // Update button's onclick for next cycle
+    if(btn) { btn.setAttribute('onclick', `changeUnitStatus('${projId}','${unitId}','${next}',this)`); }
+    toast(`Unit status updated → ${next}`, 'success');
+    // Also update unit detail panel if open
+    const detailStatus = document.getElementById('ud-status-badge');
+    if(detailStatus && detailStatus.dataset.uid === unitId) {
+      detailStatus.className = `unit-status ${next}`; detailStatus.textContent = next;
+      detailStatus.dataset.status = next;
+    }
+  } catch(e) {
+    toast('Failed to update status', 'error');
+  } finally {
+    if(btn) { btn.disabled = false; btn.textContent = '⟳ Status'; }
+  }
 }
 
-function editUnitPrice(projId, unitId, current) {
+// ── Real unit price update with API call ─────────────────────────────────
+async function editUnitPrice(projId, unitId, current, btn) {
   const np = prompt(`New price for unit ${unitId} (OMR):`, current);
-  if(np && !isNaN(np)) toast(`Unit ${unitId} price updated to OMR ${Number(np).toLocaleString()} (demo)`, 'success');
+  if(!np || isNaN(np)) return;
+  const price = Number(np);
+  if(btn) { btn.disabled = true; }
+  try {
+    const r = await fetch(`/api/v1/portal/developer/projects/${projId}/units/${unitId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({price})
+    });
+    if(!r.ok) throw new Error('API error');
+    toast(`Price updated → OMR ${price.toLocaleString()}`, 'success');
+    // Refresh inventory to show new price
+    renderInventoryGroups();
+  } catch(e) {
+    toast('Failed to update price', 'error');
+  } finally {
+    if(btn) { btn.disabled = false; }
+  }
+}
+
+// ── Unit Detail Panel ─────────────────────────────────────────────────────
+function openUnitDetail(projId, unitId, unitJson) {
+  const u = JSON.parse(unitJson);
+  window._unitDetailProjId = projId;
+  window._unitDetailUnitId = unitId;
+  window._unitDetailUnit = u;
+
+  const panel = document.getElementById('unit-detail-panel');
+  if(!panel) return;
+
+  // Determine image: use unit image_url or fall back to project type default
+  const imgUrl = u.image_url || null;
+
+  // Status color
+  const statusColors = {available:'#27AE60', reserved:'#C8891A', sold:'#003B5C'};
+  const st = u.status || 'available';
+
+  panel.innerHTML = `
+    <div class="ud-header">
+      <button class="ud-close" onclick="closeUnitDetail()">✕</button>
+      <div class="ud-img-wrap">
+        ${imgUrl
+          ? `<img src="${imgUrl}" class="ud-img" onerror="this.src='';this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+             <div class="ud-img-placeholder" style="display:none">🏠</div>`
+          : `<div class="ud-img-placeholder">🏠</div>`}
+      </div>
+      <div class="ud-title-row">
+        <div>
+          <div class="ud-unit-num">${u.unit_number || unitId}</div>
+          <div class="ud-unit-type">${u.type || '—'} · ${u.area_sqm || '—'} m²</div>
+        </div>
+        <span class="unit-status ${st}" id="ud-status-badge" data-uid="${unitId}" data-status="${st}">${st}</span>
+      </div>
+    </div>
+
+    <div class="ud-body">
+      <!-- Key metrics -->
+      <div class="ud-metrics">
+        <div class="ud-metric"><div class="ud-metric-val">${u.bedrooms || '—'}</div><div class="ud-metric-lbl">Bedrooms</div></div>
+        <div class="ud-metric"><div class="ud-metric-val">${u.bathrooms || '—'}</div><div class="ud-metric-lbl">Bathrooms</div></div>
+        <div class="ud-metric"><div class="ud-metric-val">${u.area_sqm || '—'}</div><div class="ud-metric-lbl">m²</div></div>
+        <div class="ud-metric"><div class="ud-metric-val" style="color:var(--teal)">${u.gsas_score || '—'}</div><div class="ud-metric-lbl">GSAS</div></div>
+      </div>
+
+      <!-- Pricing -->
+      <div class="ud-section">
+        <div class="ud-section-title">Pricing</div>
+        <div class="ud-row"><span>List Price</span><strong>${u.price ? 'OMR ' + Number(u.price).toLocaleString() : '—'}</strong></div>
+        <div class="ud-row"><span>Floor</span><strong>${u.floor_number ? 'Level ' + u.floor_number : '—'}</strong></div>
+      </div>
+
+      <!-- Status management -->
+      <div class="ud-section">
+        <div class="ud-section-title">Status Management</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          ${['available','reserved','sold'].map(s => `
+            <button class="btn btn-sm ${st===s?'btn-primary':'btn-secondary'}" id="ud-st-${s}"
+              onclick="setUnitStatusFromPanel('${projId}','${unitId}','${s}')">
+              ${s==='available'?'✅':s==='reserved'?'⏳':'🔒'} ${s.charAt(0).toUpperCase()+s.slice(1)}
+            </button>`).join('')}
+        </div>
+      </div>
+
+      <!-- Quick price edit -->
+      <div class="ud-section">
+        <div class="ud-section-title">Update Price</div>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <input type="number" id="ud-price-input" value="${u.price||''}" placeholder="Price in OMR"
+            style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px"/>
+          <button class="btn btn-primary btn-sm" onclick="saveUnitPriceFromPanel('${projId}','${unitId}')">Save</button>
+        </div>
+      </div>
+
+      <!-- Features -->
+      ${u.features && JSON.parse(u.features||'[]').length ? `
+      <div class="ud-section">
+        <div class="ud-section-title">Features</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+          ${JSON.parse(u.features||'[]').map(f=>`<span class="chip green">${f}</span>`).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- Location -->
+      ${u.lat && u.lng ? `
+      <div class="ud-section">
+        <div class="ud-section-title">Location</div>
+        <div class="ud-row"><span>Coordinates</span><strong>${Number(u.lat).toFixed(4)}, ${Number(u.lng).toFixed(4)}</strong></div>
+      </div>` : ''}
+
+      <!-- Floor plan placeholder -->
+      <div class="ud-section">
+        <div class="ud-section-title">Floor Plan</div>
+        <div style="background:var(--gray-100);border-radius:8px;height:160px;display:flex;align-items:center;justify-content:center;margin-top:8px;flex-direction:column;gap:8px">
+          <div style="font-size:32px">📐</div>
+          <div style="font-size:12px;color:var(--gray-500)">Upload floor plan in Documents tab</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  panel.classList.add('open');
+}
+
+function closeUnitDetail() {
+  const panel = document.getElementById('unit-detail-panel');
+  if(panel) panel.classList.remove('open');
+}
+
+async function setUnitStatusFromPanel(projId, unitId, newStatus) {
+  const btns = ['available','reserved','sold'].map(s=>document.getElementById('ud-st-'+s)).filter(Boolean);
+  btns.forEach(b=>b.disabled=true);
+  try {
+    const r = await fetch(`/api/v1/portal/developer/projects/${projId}/units/${unitId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status: newStatus})
+    });
+    if(!r.ok) throw new Error();
+    // Update panel badge
+    const badge = document.getElementById('ud-status-badge');
+    if(badge) { badge.className = `unit-status ${newStatus}`; badge.textContent = newStatus; badge.dataset.status = newStatus; }
+    // Update table badge
+    const tblBadge = document.getElementById('ustatus-' + unitId);
+    if(tblBadge) { tblBadge.className = `unit-status ${newStatus}`; tblBadge.textContent = newStatus; }
+    // Restyle buttons
+    ['available','reserved','sold'].forEach(s => {
+      const b = document.getElementById('ud-st-'+s);
+      if(b) b.className = `btn btn-sm ${s===newStatus?'btn-primary':'btn-secondary'}`;
+    });
+    toast(`Status updated → ${newStatus}`, 'success');
+  } catch(e) {
+    toast('Failed to update status', 'error');
+  } finally {
+    btns.forEach(b=>b.disabled=false);
+  }
+}
+
+async function saveUnitPriceFromPanel(projId, unitId) {
+  const inp = document.getElementById('ud-price-input');
+  if(!inp) return;
+  const price = Number(inp.value);
+  if(!price || isNaN(price)) { toast('Enter a valid price', 'error'); return; }
+  try {
+    const r = await fetch(`/api/v1/portal/developer/projects/${projId}/units/${unitId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({price})
+    });
+    if(!r.ok) throw new Error();
+    toast(`Price saved → OMR ${price.toLocaleString()}`, 'success');
+    renderInventoryGroups();
+  } catch(e) {
+    toast('Failed to save price', 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1403,10 +1602,10 @@ async function confirmPublish() {
 // ═══════════════════════════════════════════════════
 // ── Canonical unit-type image URLs (blob-hosted, permanent) ──────────────
 const EV2_IMAGES = {
-  hero:   'https://www.genspark.ai/api/files/s/znKlE71c?cache_control=3600', // EV2 aerial render
-  typeA:  'https://www.genspark.ai/api/files/s/7hHwgjwr?cache_control=3600', // Grand Family Villa
-  typeB:  'https://www.genspark.ai/api/files/s/4Xs1irrT?cache_control=3600', // Compact Villa
-  typeC:  'https://www.genspark.ai/api/files/s/GdQeTTXz?cache_control=3600', // Premium Signature Villa
+  hero:   '/static/img/ev2_hero.jpg', // EV2 aerial render
+  typeA:  '/static/img/ev2_type_a.jpg', // Grand Family Villa
+  typeB:  '/static/img/ev2_type_b.jpg', // Compact Villa
+  typeC:  '/static/img/ev2_type_c.jpg', // Premium Signature Villa
 };
 
 const UNITS_P2 = [
@@ -1676,7 +1875,7 @@ function renderReviewSummary() {
   const name = document.getElementById('reg-name').value;
   const loc  = document.getElementById('reg-location').value;
   document.getElementById('review-summary').innerHTML = `
-    <img src="https://www.genspark.ai/api/files/s/8nc68AvS?cache_control=3600" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:12px" onerror="this.style.display='none'"/>
+    <img src="/static/img/wizard_preview.jpg" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:12px" onerror="this.style.display='none'"/>
     <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
       <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Project</span><span style="font-weight:600">${name}</span></div>
       <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Location</span><span style="font-weight:600">${loc}</span></div>
@@ -1991,14 +2190,11 @@ async function loadProjects() {
       } else {
         grid.innerHTML = projects.map(p => {
           const isLive = p.listing_visible === 1 || p.status === 'active';
-          const proxyImg = p.hero_image_url
-            ? `/api/v1/img-proxy?url=${encodeURIComponent(p.hero_image_url)}`
-            : null;
           return `<div class="project-card${isLive?' active-project':''}" onclick="selectProject('${p.id}')">
-            <div class="project-img" style="${proxyImg?'background:none':'background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%)'};position:relative;overflow:hidden">
-              ${proxyImg?`<img src="${proxyImg}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy"/>`:'<div class="project-img-icon">🏗️</div>'}
+            <div class="project-img" style="${p.hero_image_url?'background:none':'background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%)'};position:relative;overflow:hidden">
+              ${p.hero_image_url?`<img src="${p.hero_image_url}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>`:'<div class="project-img-icon">🏗️</div>'}
               <div class="project-img-overlay" style="position:absolute;inset:0"></div>
-              <span class="project-status-badge badge-${isLive?'active':p.status||'draft'}" style="position:absolute;top:10px;right:10px;z-index:2">${isLive?'Live':p.status||'draft'}</span>
+              <span class="project-status-badge badge-${isLive?'active':p.status||'draft'}" style="position:absolute;top:10px;right:10px;z-index:2">${(p.status||'draft').toUpperCase()}</span>
             </div>
             <div class="project-body">
               <div class="project-name">${p.name}</div>
@@ -2042,7 +2238,7 @@ async function selectProject(id) {
     document.getElementById('ptab-overview').innerHTML = `
       <div style="margin-bottom:12px;border-radius:8px;overflow:hidden;height:130px;background:var(--gray-100)">
         ${proj.hero_image_url
-          ? `<img src="/api/v1/img-proxy?url=${encodeURIComponent(proj.hero_image_url)}" style="width:100%;height:100%;object-fit:cover"/>`
+          ? `<img src="${proj.hero_image_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`
           : `<div style="width:100%;height:100%;background:linear-gradient(135deg,var(--navy),var(--teal));display:flex;align-items:center;justify-content:center;font-size:40px">🏗️</div>`}
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
@@ -2111,7 +2307,42 @@ async function selectProject(id) {
 document.addEventListener('DOMContentLoaded', () => {
   loadProjects();
   showPage('dashboard');
+  // Close unit detail panel on Escape
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeUnitDetail(); });
 });
 </script>
+
+<!-- Unit Detail Side Panel -->
+<div id="unit-detail-panel" style="
+  position:fixed;right:0;top:0;bottom:0;width:360px;max-width:100vw;
+  background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.18);z-index:1100;
+  transform:translateX(100%);transition:transform .3s ease;
+  display:flex;flex-direction:column;overflow:hidden;
+">
+</div>
+
+<style>
+#unit-detail-panel.open { transform:translateX(0); }
+.ud-header { background:var(--navy); color:#fff; padding:0 0 16px; flex-shrink:0; }
+.ud-close { position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center; }
+.ud-close:hover { background:rgba(255,255,255,.3); }
+.ud-img-wrap { width:100%;height:180px;overflow:hidden;background:var(--teal);position:relative; }
+.ud-img { width:100%;height:100%;object-fit:cover; }
+.ud-img-placeholder { width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px;background:linear-gradient(135deg,var(--navy),var(--teal)); }
+.ud-title-row { display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0; }
+.ud-unit-num { font-size:20px;font-weight:800;color:#fff; }
+.ud-unit-type { font-size:12px;color:rgba(255,255,255,.7);margin-top:2px; }
+.ud-body { flex:1;overflow-y:auto;padding:16px; }
+.ud-metrics { display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px; }
+.ud-metric { text-align:center;background:var(--gray-100);border-radius:8px;padding:10px 4px; }
+.ud-metric-val { font-size:18px;font-weight:800;color:var(--navy); }
+.ud-metric-lbl { font-size:10px;color:var(--gray-500);margin-top:2px; }
+.ud-section { margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--gray-100); }
+.ud-section:last-child { border-bottom:none; }
+.ud-section-title { font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px; }
+.ud-row { display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13px; }
+.ud-row span { color:var(--gray-500); }
+.inv-row:hover { background:rgba(0,127,134,.05); }
+</style>
 </body>
 </html>
