@@ -206,7 +206,8 @@ body.ar .toast-container{right:auto;left:24px}
 @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
 /* PUBLISH FLOW */
-.publish-steps{display:flex;gap:0;margin-bottom:24px}
+.publish-steps{display:flex;gap:0;margin-bottom:24px;align-items:stretch}
+.prefill-btn{border-radius:6px !important;}
 .publish-step{flex:1;padding:12px;text-align:center;border-bottom:3px solid var(--gray-200);position:relative}
 .publish-step.done{border-bottom-color:var(--success)}
 .publish-step.active{border-bottom-color:var(--teal)}
@@ -504,7 +505,8 @@ body.ar .toast-container{right:auto;left:24px}
         <div class="publish-step" id="reg-step-2"><div class="publish-step-num">2</div><div class="publish-step-label">Documents</div></div>
         <div class="publish-step" id="reg-step-3"><div class="publish-step-num">3</div><div class="publish-step-label">AI Parsing</div></div>
         <div class="publish-step" id="reg-step-4"><div class="publish-step-num">4</div><div class="publish-step-label">Inventory</div></div>
-        <div class="publish-step" id="reg-step-5"><div class="publish-step-num">5</div><div class="publish-step-label">Review & Publish</div></div>
+        <div class="publish-step" id="reg-step-5"><div class="publish-step-num">5</div><div class="publish-step-label">Review &amp; Publish</div></div>
+        <button class="btn btn-secondary btn-sm prefill-btn" id="wiz-prefill-btn" onclick="prefillWizardStep(wizCurrentStep)" title="Auto-fill this step with EcoVillage Phase 2 demo data" style="margin-left:12px;align-self:center;white-space:nowrap;font-size:11px;padding:5px 12px;border:1.5px dashed var(--teal);color:var(--teal);background:rgba(0,127,134,.06)">⚡ Pre-Fill</button>
       </div>
 
       <!-- STEP 1: Project Info -->
@@ -1200,7 +1202,7 @@ async function renderInventoryGroups() {
         <div class="inv-group-body" id="${groupId}">
           <table class="inv-table">
             <thead><tr>
-              <th>Unit #</th><th>Type</th><th>Area m²</th><th>Beds</th><th>Price (OMR)</th><th>GSAS</th><th>Status</th><th>Actions</th>
+              <th>Unit #</th><th>Type</th><th>Area m²</th><th>Beds</th><th>Price (OMR)</th><th>GSAS</th><th>Status</th><th></th>
             </tr></thead>
             <tbody>
               ${units.length ? units.map(u => `<tr class="inv-row" onclick="openUnitDetail('${proj.id}','${u.id}',${JSON.stringify(JSON.stringify(u))})" style="cursor:pointer" title="Click to view unit details">
@@ -1212,8 +1214,7 @@ async function renderInventoryGroups() {
                 <td><span class="gsas-score ${(u.gsas_score||0)>=85?'excellent':'good'}">${u.gsas_score||'—'}</span></td>
                 <td><span class="unit-status ${u.status||'available'}" id="ustatus-${u.id}">${u.status||'available'}</span></td>
                 <td style="white-space:nowrap" onclick="event.stopPropagation()">
-                  <button class="btn btn-secondary btn-sm" onclick="changeUnitStatus('${proj.id}','${u.id}','${u.status}',this)">⟳ Status</button>
-                  <button class="btn btn-secondary btn-sm" onclick="editUnitPrice('${proj.id}','${u.id}',${u.price||0},this)">✏️ Price</button>
+                  <button class="btn btn-primary btn-sm" onclick="openUnitDetail('${proj.id}','${u.id}',${JSON.stringify(JSON.stringify(u))})">View Details →</button>
                 </td>
               </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--gray-500)">No units for this project.</td></tr>'}
             </tbody>
@@ -1761,6 +1762,119 @@ function resetWizard() {
   });
   wizSetStep(1);
   toast('Form reset — ready for new project','info');
+}
+
+// ── Pre-Fill wizard step with EcoVillage Phase 2 demo data ───────────────
+function prefillWizardStep(step) {
+  if(step === 1) {
+    // Project Info
+    document.getElementById('reg-name').value = 'EcoVillage Phase 2 – Seeb';
+    document.getElementById('reg-gov').value = 'Muscat';
+    document.getElementById('reg-location').value = 'Al Muna, Seeb, Muscat Governorate';
+    document.getElementById('reg-units').value = '18';
+    document.getElementById('reg-completion').value = 'Q4 2027';
+    document.getElementById('reg-price-from').value = '165000';
+    document.getElementById('reg-price-to').value = '345000';
+    document.getElementById('reg-tagline').value = "Oman's first GSAS Platinum eco-villa community — net-zero energy, biophilic design";
+    document.getElementById('reg-dev').value = 'Al Madaen Real Estate Development Co.';
+    document.getElementById('reg-cr').value = 'CR/2019/00487';
+    document.getElementById('reg-type').value = 'villa';
+    // Green features
+    ['solar','grey','roof','hvac','glazing','ev'].forEach(k => {
+      const el = document.getElementById('feat-'+k); if(el) el.checked = true;
+    });
+    // Hero image
+    switchImgTab('url');
+    const urlInput = document.getElementById('reg-image-url');
+    if(urlInput) { urlInput.value = '/static/img/ev2_hero.jpg'; previewHeroFromUrl('/static/img/ev2_hero.jpg'); }
+    toast('Step 1 pre-filled — EcoVillage Phase 2 project info ready ✓', 'success');
+
+  } else if(step === 2) {
+    // Documents — simulate all 5 docs uploaded
+    const docs = [
+      {id:'gsas', label:'GSAS Certificate (Gold · Score 91)', file:'GSAS_Certificate_EcoVillage_Phase2.pdf'},
+      {id:'epc',  label:'EPC Report (A+ · 43 kWh/m²/yr)',     file:'EPC_Report_EcoVillage_Phase2.pdf'},
+      {id:'eia',  label:'EIA Clearance (EA/EIA/2026/MSC/0887)',file:'EIA_Clearance_EcoVillage_Phase2.pdf'},
+      {id:'brochure', label:'Project Brochure (18 villas, 3 types)', file:'EcoVillage_Phase2_Brochure.pdf'},
+      {id:'specs', label:'Villa Specifications Excel',           file:'EcoVillage_Phase2_VillaSpecs.xlsx'},
+    ];
+    docs.forEach(d => {
+      wizDocsUploaded[d.id] = { filename: d.file, size: Math.floor(Math.random()*400+80)+'KB' };
+      const card = document.getElementById('doc-'+d.id);
+      const status = document.getElementById('doc-'+d.id+'-status');
+      if(card) card.className = 'cert-card verified';
+      if(status) { status.className='cert-status analyzing'; status.textContent='✅ '+d.label; }
+    });
+    toast('Step 2 pre-filled — all 5 documents marked as uploaded ✓', 'success');
+
+  } else if(step === 3) {
+    // AI Parsing — inject parsed results immediately
+    const body = document.getElementById('ai-parse-body');
+    if(!body) return;
+    wizParsedData = {
+      gsas_score: 91, gsas_rating: 'Gold', epc_rating: 'A+',
+      eia_reference: 'EA/EIA/2026/MSC/0887',
+      price_from: 165000, price_to: 345000
+    };
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--success);margin-bottom:10px">🏆 GSAS Certificate</div>
+          <div style="font-size:12px;display:flex;flex-direction:column;gap:5px">
+            <div><span style="color:var(--gray-500)">Rating:</span> <strong>Gold</strong></div>
+            <div><span style="color:var(--gray-500)">Score:</span> <strong>91 / 100</strong></div>
+            <div><span style="color:var(--gray-500)">Issued:</span> <strong>2026-06-14</strong></div>
+            <div><span style="color:var(--gray-500)">Authority:</span> <strong>Gulf Organisation for Research &amp; Development</strong></div>
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--success)">✅ Auto-verified · 97% confidence</div>
+        </div>
+        <div style="background:rgba(0,127,134,.06);border:1px solid rgba(0,127,134,.2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:10px">⚡ Energy Performance Certificate</div>
+          <div style="font-size:12px;display:flex;flex-direction:column;gap:5px">
+            <div><span style="color:var(--gray-500)">Rating:</span> <strong>A+</strong></div>
+            <div><span style="color:var(--gray-500)">Energy Use:</span> <strong>43 kWh/m²/yr</strong></div>
+            <div><span style="color:var(--gray-500)">CO₂:</span> <strong>12 kg/m²/yr</strong></div>
+            <div><span style="color:var(--gray-500)">Solar PV:</span> <strong>18 kWp per villa</strong></div>
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--success)">✅ Auto-verified · 95% confidence</div>
+        </div>
+        <div style="background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--success);margin-bottom:10px">🌿 EIA Clearance</div>
+          <div style="font-size:12px;display:flex;flex-direction:column;gap:5px">
+            <div><span style="color:var(--gray-500)">Reference:</span> <strong>EA/EIA/2026/MSC/0887</strong></div>
+            <div><span style="color:var(--gray-500)">Authority:</span> <strong>Ministry of Environment, Oman</strong></div>
+            <div><span style="color:var(--gray-500)">Valid Until:</span> <strong>2029-12-31</strong></div>
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--success)">✅ Auto-verified · 99% confidence</div>
+        </div>
+        <div style="background:rgba(243,156,18,.06);border:1px solid rgba(243,156,18,.2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:#C8891A;margin-bottom:10px">📊 Villa Specs (Excel)</div>
+          <div style="font-size:12px;display:flex;flex-direction:column;gap:5px">
+            <div><span style="color:var(--gray-500)">Units parsed:</span> <strong>18 villas</strong></div>
+            <div><span style="color:var(--gray-500)">Types:</span> <strong>A (8) · B (6) · C (4)</strong></div>
+            <div><span style="color:var(--gray-500)">Price range:</span> <strong>OMR 165K – 345K</strong></div>
+            <div><span style="color:var(--gray-500)">GPS coords:</span> <strong>All 18 units</strong></div>
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--success)">✅ All fields extracted · 94% confidence</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;background:rgba(0,59,92,.04);border-radius:8px;padding:12px;font-size:12px">
+        <strong>📋 AI Summary:</strong> All 5 documents verified. EcoVillage Phase 2 qualifies for <strong>Green Home Loan premium tier</strong>
+        (GSAS Gold, EPC A+, EIA cleared). Suggested green discount: <strong>−0.5% interest rate</strong>.
+        Unit inventory of 18 villas ready to import.
+      </div>`;
+    const nextBtn = document.getElementById('wiz-step3-next');
+    if(nextBtn) { nextBtn.style.display=''; nextBtn.classList.remove('hidden'); }
+    toast('Step 3 pre-filled — AI analysis results injected ✓', 'success');
+
+  } else if(step === 4) {
+    // Inventory — already populated from UNITS_P2, just confirm
+    toast('Step 4: Inventory is auto-populated from unit data. Review the 18 villas below ✓', 'info');
+
+  } else if(step === 5) {
+    // Review — already rendered, just confirm
+    toast('Step 5: Review summary populated from your project data. Click Register & Publish when ready ✓', 'info');
+  }
 }
 
 function triggerFileUpload(docType, filename) {
