@@ -111,6 +111,8 @@ CREATE TABLE IF NOT EXISTS units (
   lng REAL,
   status TEXT CHECK(status IN ('available','reserved','sold')) DEFAULT 'available',
   features TEXT DEFAULT '[]',
+  image_url TEXT,
+  gsas_score INTEGER,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
