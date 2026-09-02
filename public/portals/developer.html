@@ -17,7 +17,7 @@
   --shadow-md:0 4px 16px rgba(0,59,92,.10);--shadow-lg:0 8px 32px rgba(0,59,92,.16);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-ui);background:var(--gray-50);color:var(--gray-900);display:flex;height:100vh;overflow:hidden}
+body{font-family:var(--font-ui);background:var(--gray-50);color:var(--gray-900);display:flex;height:100vh;overflow:clip}
 body.ar{font-family:var(--font-ar);direction:rtl}
 
 /* SIDEBAR */
@@ -608,30 +608,37 @@ body.ar .toast-container{right:auto;left:24px}
           </div>
           <div class="card-body">
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px" id="doc-upload-grid">
-              <div class="cert-card" id="doc-gsas" onclick="triggerFileUpload('gsas','GSAS_Certificate_EcoVillage_Phase2.pdf')">
+              <!-- Hidden file inputs — one per doc type -->
+              <input type="file" id="file-input-gsas"    accept=".pdf,.PDF"  style="display:none" onchange="handleDocFile('gsas',this)"/>
+              <input type="file" id="file-input-epc"     accept=".pdf,.PDF"  style="display:none" onchange="handleDocFile('epc',this)"/>
+              <input type="file" id="file-input-eia"     accept=".pdf,.PDF"  style="display:none" onchange="handleDocFile('eia',this)"/>
+              <input type="file" id="file-input-brochure"accept=".pdf,.PDF"  style="display:none" onchange="handleDocFile('brochure',this)"/>
+              <input type="file" id="file-input-specs"   accept=".xlsx,.xls,.pdf,.PDF,.csv" style="display:none" onchange="handleDocFile('specs',this)"/>
+
+              <div class="cert-card" id="doc-gsas" onclick="document.getElementById('file-input-gsas').click()">
                 <div class="cert-icon">🏆</div><div class="cert-name">GSAS Certificate</div>
                 <div class="cert-desc">Gulf Sustainable Assessment System<br/>Gold tier · Score 91</div>
                 <div class="cert-status pending" id="doc-gsas-status">📤 Click to upload PDF</div>
               </div>
-              <div class="cert-card" id="doc-epc" onclick="triggerFileUpload('epc','EPC_Report_EcoVillage_Phase2.pdf')">
+              <div class="cert-card" id="doc-epc" onclick="document.getElementById('file-input-epc').click()">
                 <div class="cert-icon">⚡</div><div class="cert-name">EPC Report</div>
                 <div class="cert-desc">Energy Performance Certificate<br/>Rating A+ · 43 kWh/m²/yr</div>
                 <div class="cert-status pending" id="doc-epc-status">📤 Click to upload PDF</div>
               </div>
-              <div class="cert-card" id="doc-eia" onclick="triggerFileUpload('eia','EIA_Clearance_EcoVillage_Phase2.pdf')">
+              <div class="cert-card" id="doc-eia" onclick="document.getElementById('file-input-eia').click()">
                 <div class="cert-icon">🌿</div><div class="cert-name">EIA Clearance</div>
                 <div class="cert-desc">Environment Authority Oman<br/>Ref EA/EIA/2026/MSC/0887</div>
                 <div class="cert-status pending" id="doc-eia-status">📤 Click to upload PDF</div>
               </div>
-              <div class="cert-card" id="doc-brochure" onclick="triggerFileUpload('brochure','EcoVillage_Phase2_Brochure.pdf')">
+              <div class="cert-card" id="doc-brochure" onclick="document.getElementById('file-input-brochure').click()">
                 <div class="cert-icon">📄</div><div class="cert-name">Project Brochure</div>
                 <div class="cert-desc">Site plan · Villa types<br/>Community amenities</div>
                 <div class="cert-status pending" id="doc-brochure-status">📤 Click to upload PDF</div>
               </div>
-              <div class="cert-card" id="doc-specs" onclick="triggerFileUpload('specs','EcoVillage_Phase2_VillaSpecs.xlsx')">
+              <div class="cert-card" id="doc-specs" onclick="document.getElementById('file-input-specs').click()">
                 <div class="cert-icon">📊</div><div class="cert-name">Villa Specifications</div>
                 <div class="cert-desc">18 units · Pricing, GPS<br/>Area, type, ESG scores</div>
-                <div class="cert-status pending" id="doc-specs-status">📤 Click to upload XLSX</div>
+                <div class="cert-status pending" id="doc-specs-status">📤 Click to upload XLSX / PDF</div>
               </div>
               <div class="cert-card" style="cursor:default;background:var(--gray-50);border-style:solid;border-color:var(--gray-200)">
                 <div class="cert-icon" style="font-size:22px">ℹ️</div>
@@ -1796,29 +1803,15 @@ function prefillWizardStep(step) {
     ['solar','grey','roof','hvac','glazing','ev'].forEach(k => {
       const el = document.getElementById('feat-'+k); if(el) el.checked = true;
     });
-    // Hero image
-    switchImgTab('url');
-    const urlInput = document.getElementById('reg-image-url');
-    if(urlInput) { urlInput.value = '/static/img/ev2_hero.jpg'; previewHeroFromUrl('/static/img/ev2_hero.jpg'); }
-    toast('Step 1 pre-filled — EcoVillage Phase 2 project info ready ✓', 'success');
+    // Hero image — inform user which file to upload; do not simulate
+    toast('Step 1 pre-filled ✓', 'success');
+    setTimeout(() => toast('Hero image: upload an aerial photo or render of your project (JPG/PNG, 1200×800 px recommended). Use the "Upload File" tab on the left.', 'info', 9000), 400);
 
   } else if(step === 2) {
-    // Documents — simulate all 5 docs uploaded
-    const docs = [
-      {id:'gsas', label:'GSAS Certificate (Gold · Score 91)', file:'GSAS_Certificate_EcoVillage_Phase2.pdf'},
-      {id:'epc',  label:'EPC Report (A+ · 43 kWh/m²/yr)',     file:'EPC_Report_EcoVillage_Phase2.pdf'},
-      {id:'eia',  label:'EIA Clearance (EA/EIA/2026/MSC/0887)',file:'EIA_Clearance_EcoVillage_Phase2.pdf'},
-      {id:'brochure', label:'Project Brochure (18 villas, 3 types)', file:'EcoVillage_Phase2_Brochure.pdf'},
-      {id:'specs', label:'Villa Specifications Excel',           file:'EcoVillage_Phase2_VillaSpecs.xlsx'},
-    ];
-    docs.forEach(d => {
-      wizDocsUploaded[d.id] = { filename: d.file, size: Math.floor(Math.random()*400+80)+'KB' };
-      const card = document.getElementById('doc-'+d.id);
-      const status = document.getElementById('doc-'+d.id+'-status');
-      if(card) card.className = 'cert-card verified';
-      if(status) { status.className='cert-status analyzing'; status.textContent='✅ '+d.label; }
-    });
-    toast('Step 2 pre-filled — all 5 documents marked as uploaded ✓', 'success');
+    // Documents — show which files are needed; do NOT simulate uploads
+    toast('Step 2 — upload these 5 files by clicking each card:', 'info', 9000);
+    setTimeout(() => toast('1 · GSAS Certificate PDF  |  2 · EPC Report PDF  |  3 · EIA Clearance PDF', 'info', 10000), 500);
+    setTimeout(() => toast('4 · Project Brochure PDF  |  5 · Villa Specifications XLSX', 'info', 10000), 1100);
 
   } else if(step === 3) {
     // AI Parsing — inject parsed results immediately
@@ -1890,20 +1883,36 @@ function prefillWizardStep(step) {
   }
 }
 
-function triggerFileUpload(docType, filename) {
-  const card = document.getElementById('doc-'+docType);
+function handleDocFile(docType, input) {
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const card     = document.getElementById('doc-'+docType);
   const statusEl = document.getElementById('doc-'+docType+'-status');
-  card.className = 'cert-card uploading';
+  card.className    = 'cert-card uploading';
   statusEl.className = 'cert-status analyzing';
-  statusEl.textContent = '⏳ Uploading…';
-  setTimeout(() => {
-    wizDocsUploaded[docType] = filename;
-    card.className = 'cert-card verified';
+  statusEl.textContent = '⏳ Reading file…';
+
+  // Use FileReader to confirm the file is accessible (no server upload needed for demo)
+  const reader = new FileReader();
+  reader.onload = () => {
+    const sizeKB = (file.size / 1024).toFixed(0);
+    wizDocsUploaded[docType] = { filename: file.name, size: sizeKB + ' KB', file };
+    card.className    = 'cert-card verified';
     statusEl.className = 'cert-status verified';
-    statusEl.textContent = '✅ ' + filename;
+    statusEl.textContent = '✅ ' + file.name + ' (' + sizeKB + ' KB)';
     const count = Object.keys(wizDocsUploaded).length;
-    toast(`${filename} uploaded (${count}/5)`, 'success');
-  }, 1200 + Math.random()*600);
+    toast(`${file.name} ready (${count}/5)`, 'success');
+    // Reset input so the same file can be re-selected if needed
+    input.value = '';
+  };
+  reader.onerror = () => {
+    card.className    = 'cert-card flagged';
+    statusEl.className = 'cert-status pending';
+    statusEl.textContent = '❌ Could not read file — try again';
+    input.value = '';
+  };
+  // Read first 4 KB just to verify readability; we don't need the full content
+  reader.readAsArrayBuffer(file.slice(0, 4096));
 }
 
 function runAiParse() {
@@ -2278,13 +2287,13 @@ function deleteCampaign(id) {
 // ═══════════════════════════════════════════════════
 // TOAST
 // ═══════════════════════════════════════════════════
-function toast(msg, type='info') {
+function toast(msg, type='info', duration=4000) {
   const icons = {success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
   const el = document.createElement('div');
   el.className = `toast ${type}`;
   el.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
   document.getElementById('toast-container').appendChild(el);
-  setTimeout(() => el.remove(), 4000);
+  setTimeout(() => el.remove(), duration);
 }
 
 // ═══════════════════════════════════════════════════
