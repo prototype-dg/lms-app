@@ -241,10 +241,10 @@ INSERT OR IGNORE INTO developers VALUES ('d001','Al Madaen Real Estate','CR-2019
 INSERT OR IGNORE INTO developers VALUES ('d002','Muscat Hills Development','CR-2018-33201','Sara Al-Lawati','sara@muscathills.om','+968 2488 9900','PO Box 567, Muscat','active','2022-09-20','2018-07-10');
 INSERT OR IGNORE INTO developers VALUES ('d003','Gulf Horizon Properties','CR-2021-78543','Khalid Al-Farsi','khalid@gulfhorizon.om','+968 2456 7788','PO Box 890, Sohar','active','2024-01-05','2021-02-15');
 
-INSERT OR IGNORE INTO projects VALUES ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',36,12,8,16,78,'Gold','B','EIA/2024/201','{"type":"FeatureCollection","features":[]}','active',1,0,'2024-06-15','2025-11-30');
-INSERT OR IGNORE INTO projects VALUES ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',18,18,0,0,82,'Gold','A',null,'{"type":"FeatureCollection","features":[]}','active',1,0,'2025-01-10','2025-12-01');
-INSERT OR IGNORE INTO projects VALUES ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',60,0,0,60,null,null,null,null,'{"type":"FeatureCollection","features":[]}','archived',0,0,'2023-05-01','2025-06-30');
-INSERT OR IGNORE INTO projects VALUES ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',24,0,0,0,null,null,null,null,'{"type":"FeatureCollection","features":[]}','draft',0,0,'2026-08-31','2026-08-31');
+INSERT OR IGNORE INTO projects VALUES ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',36,12,8,16,78,'Gold','B','EIA/2024/201','{"type":"FeatureCollection","features":[]}','active',1,0,'2024-06-15','2025-11-30',1,'https://www.genspark.ai/api/files/s/Lpruc59V?cache_control=3600','Waterfront living with premium amenities in the heart of Muscat',95000,185000,NULL,'["Swimming Pool","Gym","24/7 Security","Covered Parking","Children''s Play Area"]');
+INSERT OR IGNORE INTO projects VALUES ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',18,18,0,0,82,'Gold','A',null,'{"type":"FeatureCollection","features":[]}','active',1,0,'2025-01-10','2025-12-01',1,'https://www.genspark.ai/api/files/s/nKbe89Q3?cache_control=3600','Spacious villas with panoramic views near Muscat International Airport',145000,220000,NULL,'["Private Garden","Rooftop Terrace","Central A/C","Smart Home","Visitor Parking"]');
+INSERT OR IGNORE INTO projects VALUES ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',60,0,0,60,null,null,null,null,'{"type":"FeatureCollection","features":[]}','archived',0,0,'2023-05-01','2025-06-30',0,'https://www.genspark.ai/api/files/s/uRuQ4F7X?cache_control=3600',null,null,null,null,'[]');
+INSERT OR IGNORE INTO projects VALUES ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',24,0,0,0,null,null,null,null,'{"type":"FeatureCollection","features":[]}','draft',0,0,'2026-08-31','2026-08-31',0,'https://www.genspark.ai/api/files/s/kO0wp7XX?cache_control=3600',null,null,null,null,'[]');
 
 -- EcoVillage units and documents are uploaded LIVE during Act 2.
 
@@ -445,24 +445,158 @@ app.post('/reset-demo', async (c) => {
     // ── 4. Clear all AI conversation threads ────────────────────────────
     try { await db.prepare("DELETE FROM ai_threads").run() } catch(_) { /* table may not exist */ }
 
-    // ── 5. Reset EcoVillage back to draft / hidden ──────────────────────
-    // IMPORTANT: app001.unit_id may point to a proj004 unit (EcoVillage).
-    // We must null out unit_id on ALL seed applications BEFORE deleting EcoVillage
-    // units — otherwise the FK constraint (applications.unit_id → units.id) fires.
+    // ── 5. Reset projects + units to template state ─────────────────────
+    const TEMPLATE_PROJECT_IDS = ['proj001','proj002','proj003','proj004']
+
+    // Null out unit_id on seed applications before deleting any units
     await db.prepare("UPDATE applications SET unit_id=NULL WHERE id IN ('app001','app002')").run()
 
-    // Now safe to delete EcoVillage units and documents
-    await db.prepare("DELETE FROM units WHERE project_id='proj004'").run()
-    await db.prepare("DELETE FROM documents WHERE entity_id='proj004'").run()
+    // Delete ALL units (template projects get re-seeded below; user projects are purged)
+    await db.prepare("DELETE FROM units").run()
 
-    // Reset EcoVillage project metadata to draft state
-    await db.prepare(`UPDATE projects SET
-        status='draft', listing_visible=0, green_eligible=0, premium_tier=0,
-        gsas_score=NULL, gsas_rating=NULL, epc_rating=NULL, eia_reference=NULL,
-        total_units=24, available_units=0, reserved_units=0, sold_units=0,
-        marketing_tagline=NULL, hero_image_url=NULL, completion_date=NULL,
-        updated_at=datetime('now')
-      WHERE id='proj004'`).run()
+    // Delete all user-created projects (keep only template 4)
+    await db.prepare(
+      `DELETE FROM projects WHERE id NOT IN ('proj001','proj002','proj003','proj004')`
+    ).run()
+    // Also purge documents for those deleted projects
+    await db.prepare(
+      `DELETE FROM documents WHERE entity_type='project' AND entity_id NOT IN ('proj001','proj002','proj003','proj004')`
+    ).run()
+
+    // ── 5a. Restore/re-seed ALL template project rows (INSERT OR REPLACE) ──
+    // proj001 – Al Mouj Residences (active, 36 units, 12 available, 8 reserved, 16 sold)
+    await db.prepare(`INSERT OR REPLACE INTO projects VALUES
+      ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',
+       36,12,8,16,78,'Gold','B','EIA/2024/201',
+       '{"type":"FeatureCollection","features":[]}',
+       'active',1,0,'2024-06-15','2025-11-30',
+       1,'https://www.genspark.ai/api/files/s/Lpruc59V?cache_control=3600',
+       'Waterfront living with premium amenities in the heart of Muscat',
+       95000,185000,NULL,
+       '["Swimming Pool","Gym","24/7 Security","Covered Parking","Children''s Play Area"]')`).run()
+
+    // proj002 – Seeb Heights Villas (active, 18 units all available)
+    await db.prepare(`INSERT OR REPLACE INTO projects VALUES
+      ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',
+       18,18,0,0,82,'Gold','A',NULL,
+       '{"type":"FeatureCollection","features":[]}',
+       'active',1,0,'2025-01-10','2025-12-01',
+       1,'https://www.genspark.ai/api/files/s/nKbe89Q3?cache_control=3600',
+       'Spacious villas with panoramic views near Muscat International Airport',
+       145000,220000,NULL,
+       '["Private Garden","Rooftop Terrace","Central A/C","Smart Home","Visitor Parking"]')`).run()
+
+    // proj003 – Mabella View Apartments (archived, 60 sold)
+    await db.prepare(`INSERT OR REPLACE INTO projects VALUES
+      ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',
+       60,0,0,60,NULL,NULL,NULL,NULL,
+       '{"type":"FeatureCollection","features":[]}',
+       'archived',0,0,'2023-05-01','2025-06-30',
+       0,'https://www.genspark.ai/api/files/s/uRuQ4F7X?cache_control=3600',
+       NULL,NULL,NULL,NULL,'[]')`).run()
+
+    // proj004 – EcoVillage Muscat Phase 1 (draft, upcoming — reset to blank)
+    await db.prepare(`INSERT OR REPLACE INTO projects VALUES
+      ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',
+       24,0,0,0,NULL,NULL,NULL,NULL,
+       '{"type":"FeatureCollection","features":[]}',
+       'draft',0,0,'2026-08-31','2026-08-31',
+       0,'https://www.genspark.ai/api/files/s/kO0wp7XX?cache_control=3600',
+       NULL,NULL,NULL,NULL,'[]')`).run()
+
+    // ── 5b. Re-seed units for template projects ──────────────────────────
+    // proj001 – Al Mouj Residences: 36 units, spread across Al Mouj waterfront area
+    const proj001Units = [
+      // Available (12)
+      ['unit-a001','proj001','A-101','apartment',95,2,2,95000,23.5955,58.5810,'available'],
+      ['unit-a002','proj001','A-102','apartment',98,2,2,98000,23.5958,58.5815,'available'],
+      ['unit-a003','proj001','A-103','apartment',102,2,2,102000,23.5961,58.5820,'available'],
+      ['unit-a004','proj001','B-201','apartment',118,3,2,120000,23.5964,58.5825,'available'],
+      ['unit-a005','proj001','B-202','apartment',120,3,2,125000,23.5967,58.5830,'available'],
+      ['unit-a006','proj001','B-203','apartment',122,3,2,128000,23.5970,58.5835,'available'],
+      ['unit-a007','proj001','C-301','apartment',145,3,3,148000,23.5973,58.5840,'available'],
+      ['unit-a008','proj001','C-302','apartment',148,3,3,152000,23.5976,58.5845,'available'],
+      ['unit-a009','proj001','D-401','apartment',165,4,3,162000,23.5979,58.5850,'available'],
+      ['unit-a010','proj001','D-402','apartment',168,4,3,168000,23.5982,58.5855,'available'],
+      ['unit-a011','proj001','E-501','apartment',180,4,3,175000,23.5985,58.5860,'available'],
+      ['unit-a012','proj001','E-502','apartment',182,4,3,180000,23.5988,58.5865,'available'],
+      // Reserved (8)
+      ['unit-a013','proj001','A-104','apartment',95,2,2,97000,23.5958,58.5808,'reserved'],
+      ['unit-a014','proj001','A-105','apartment',98,2,2,100000,23.5961,58.5812,'reserved'],
+      ['unit-a015','proj001','B-204','apartment',118,3,2,122000,23.5964,58.5818,'reserved'],
+      ['unit-a016','proj001','B-205','apartment',120,3,2,126000,23.5967,58.5822,'reserved'],
+      ['unit-a017','proj001','C-303','apartment',145,3,3,150000,23.5970,58.5828,'reserved'],
+      ['unit-a018','proj001','C-304','apartment',148,3,3,155000,23.5973,58.5832,'reserved'],
+      ['unit-a019','proj001','D-403','apartment',165,4,3,165000,23.5976,58.5838,'reserved'],
+      ['unit-a020','proj001','D-404','apartment',168,4,3,170000,23.5979,58.5842,'reserved'],
+      // Sold (16)
+      ['unit-a021','proj001','A-106','apartment',95,2,2,94000,23.5955,58.5805,'sold'],
+      ['unit-a022','proj001','A-107','apartment',98,2,2,97000,23.5957,58.5802,'sold'],
+      ['unit-a023','proj001','A-108','apartment',100,2,2,99000,23.5959,58.5799,'sold'],
+      ['unit-a024','proj001','B-206','apartment',118,3,2,120000,23.5962,58.5796,'sold'],
+      ['unit-a025','proj001','B-207','apartment',120,3,2,122000,23.5964,58.5793,'sold'],
+      ['unit-a026','proj001','B-208','apartment',122,3,2,124000,23.5966,58.5790,'sold'],
+      ['unit-a027','proj001','C-305','apartment',145,3,3,146000,23.5968,58.5787,'sold'],
+      ['unit-a028','proj001','C-306','apartment',148,3,3,150000,23.5970,58.5784,'sold'],
+      ['unit-a029','proj001','C-307','apartment',150,3,3,152000,23.5972,58.5781,'sold'],
+      ['unit-a030','proj001','D-405','apartment',165,4,3,162000,23.5974,58.5778,'sold'],
+      ['unit-a031','proj001','D-406','apartment',168,4,3,165000,23.5976,58.5775,'sold'],
+      ['unit-a032','proj001','E-503','apartment',180,4,3,172000,23.5978,58.5772,'sold'],
+      ['unit-a033','proj001','E-504','apartment',182,4,3,176000,23.5980,58.5769,'sold'],
+      ['unit-a034','proj001','F-601','apartment',185,4,3,182000,23.5982,58.5766,'sold'],
+      ['unit-a035','proj001','F-602','apartment',188,4,3,184000,23.5984,58.5763,'sold'],
+      ['unit-a036','proj001','F-603','apartment',190,4,3,185000,23.5986,58.5760,'sold'],
+    ]
+    for (const u of proj001Units) {
+      await db.prepare(`INSERT OR IGNORE INTO units
+        (id,project_id,unit_number,type,area_sqm,bedrooms,bathrooms,price,lat,lng,status,features,gsas_score,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`)
+        .bind(u[0],u[1],u[2],u[3],u[4],u[5],u[6],u[7],u[8],u[9],u[10],'["Swimming Pool","Gym","24/7 Security"]',78).run()
+    }
+
+    // proj002 – Seeb Heights Villas: 18 villas all available
+    const proj002Units = [
+      ['unit-b001','proj002','V-001','villa',280,4,3,145000,23.5985,58.4750,'available'],
+      ['unit-b002','proj002','V-002','villa',285,4,3,148000,23.5990,58.4755,'available'],
+      ['unit-b003','proj002','V-003','villa',290,4,3,152000,23.5995,58.4760,'available'],
+      ['unit-b004','proj002','V-004','villa',295,4,3,155000,23.6000,58.4765,'available'],
+      ['unit-b005','proj002','V-005','villa',300,5,4,162000,23.6005,58.4770,'available'],
+      ['unit-b006','proj002','V-006','villa',305,5,4,165000,23.6010,58.4775,'available'],
+      ['unit-b007','proj002','V-007','villa',310,5,4,170000,23.6015,58.4780,'available'],
+      ['unit-b008','proj002','V-008','villa',315,5,4,175000,23.6020,58.4785,'available'],
+      ['unit-b009','proj002','V-009','villa',280,4,3,148000,23.5985,58.4758,'available'],
+      ['unit-b010','proj002','V-010','villa',285,4,3,150000,23.5990,58.4763,'available'],
+      ['unit-b011','proj002','V-011','villa',290,4,3,155000,23.5995,58.4768,'available'],
+      ['unit-b012','proj002','V-012','villa',295,4,3,158000,23.6000,58.4773,'available'],
+      ['unit-b013','proj002','V-013','villa',300,5,4,165000,23.6005,58.4778,'available'],
+      ['unit-b014','proj002','V-014','villa',305,5,4,168000,23.6010,58.4783,'available'],
+      ['unit-b015','proj002','V-015','villa',310,5,4,172000,23.6015,58.4788,'available'],
+      ['unit-b016','proj002','V-016','villa',315,5,4,178000,23.6020,58.4793,'available'],
+      ['unit-b017','proj002','V-017','villa',320,5,4,185000,23.6025,58.4798,'available'],
+      ['unit-b018','proj002','V-018','villa',325,5,4,220000,23.6030,58.4803,'available'],
+    ]
+    for (const u of proj002Units) {
+      await db.prepare(`INSERT OR IGNORE INTO units
+        (id,project_id,unit_number,type,area_sqm,bedrooms,bathrooms,price,lat,lng,status,features,gsas_score,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`)
+        .bind(u[0],u[1],u[2],u[3],u[4],u[5],u[6],u[7],u[8],u[9],u[10],'["Private Garden","Rooftop Terrace","Smart Home"]',82).run()
+    }
+
+    // proj003 – Mabella View (archived, all 60 sold — just 6 representative pins)
+    const proj003Units = [
+      ['unit-c001','proj003','M-101','apartment',75,2,1,62000,23.5830,58.5540,'sold'],
+      ['unit-c002','proj003','M-102','apartment',78,2,1,64000,23.5835,58.5545,'sold'],
+      ['unit-c003','proj003','M-201','apartment',90,3,2,72000,23.5840,58.5550,'sold'],
+      ['unit-c004','proj003','M-202','apartment',92,3,2,74000,23.5845,58.5555,'sold'],
+      ['unit-c005','proj003','M-301','apartment',105,3,2,82000,23.5850,58.5560,'sold'],
+      ['unit-c006','proj003','M-302','apartment',108,3,2,85000,23.5855,58.5565,'sold'],
+    ]
+    for (const u of proj003Units) {
+      await db.prepare(`INSERT OR IGNORE INTO units
+        (id,project_id,unit_number,type,area_sqm,bedrooms,bathrooms,price,lat,lng,status,features,gsas_score,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`)
+        .bind(u[0],u[1],u[2],u[3],u[4],u[5],u[6],u[7],u[8],u[9],u[10],'[]',null).run()
+    }
 
     // ── 6. Restore seed applications to exact template state ─────────────
     // app001 may have had unit_id/project assigned during live demo; restore to template.
