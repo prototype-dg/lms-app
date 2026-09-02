@@ -401,33 +401,53 @@ app.post('/developer/projects/:id/documents', async (c) => {
 })
 
 // ── Developer Portal: Upload unit inventory ───────────────────────────────
+// GET units for a project (used by Site Map + Inventory)
+app.get('/developer/projects/:id/units', async (c) => {
+  const projectId = c.req.param('id')
+  const { results } = await c.env.DB.prepare(
+    'SELECT * FROM units WHERE project_id = ? ORDER BY unit_number'
+  ).bind(projectId).all()
+  return c.json({ units: results })
+})
+
 app.post('/developer/projects/:id/units', async (c) => {
   const projectId = c.req.param('id')
   const body = await c.req.json()
-  const { units = [], user_id = 'u010' } = body
   const ts = now()
 
+  // Accept both: single unit body OR { units: [...] } array
+  const unitList: any[] = Array.isArray(body.units) ? body.units : [body]
+
   let inserted = 0
-  for (const u of units) {
+  for (const u of unitList) {
     const unitId = generateId('unit')
     await c.env.DB.prepare(`
       INSERT OR IGNORE INTO units (id, project_id, unit_number, floor_number, type, area_sqm,
-      bedrooms, bathrooms, price, lat, lng, status, features, created_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).bind(unitId, projectId, u.unit_number, u.floor_number || 1,
-      u.type || 'villa', u.area_sqm, u.bedrooms || 4, u.bathrooms || 3,
-      u.price, u.lat || null, u.lng || null, 'available',
-      JSON.stringify(u.features || []), ts
+      bedrooms, bathrooms, price, lat, lng, status, features, image_url, gsas_score, created_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).bind(
+      unitId, projectId, u.unit_number, u.floor_number || 1,
+      u.type || 'villa', u.area_sqm || 0, u.bedrooms || 4, u.bathrooms || 3,
+      u.price || 0, u.lat || null, u.lng || null,
+      u.status || 'available',
+      typeof u.features === 'string' ? u.features : JSON.stringify(u.features || []),
+      u.image_url || null, u.gsas_score || null, ts
     ).run()
     inserted++
   }
 
-  // Update project unit counts
+  // Recount actual DB totals
+  const counts = await c.env.DB.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status='available' THEN 1 ELSE 0 END) as avail
+    FROM units WHERE project_id = ?
+  `).bind(projectId).first() as any
   await c.env.DB.prepare(
     'UPDATE projects SET total_units = ?, available_units = ?, updated_at = ? WHERE id = ?'
-  ).bind(inserted, inserted, ts, projectId).run()
+  ).bind(counts?.total || inserted, counts?.avail || inserted, ts, projectId).run()
 
-  return c.json({ success: true, units_created: inserted })
+  return c.json({ id: unitList.length === 1 ? undefined : undefined, success: true, units_created: inserted })
 })
 
 // ── Developer Portal: Publish project ─────────────────────────────────────
@@ -457,6 +477,25 @@ app.post('/developer/projects/:id/publish', async (c) => {
   })
 
   return c.json({ success: true, listing_visible: true })
+})
+
+// ── Developer Portal: PATCH project meta (hero_image_url etc.) ────────────
+app.patch('/developer/projects/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json().catch(() => ({}) as any)
+  const ts = now()
+  const allowed = ['hero_image_url','marketing_tagline','price_from','price_to',
+    'completion_date','amenities','gsas_score','gsas_rating','epc_rating',
+    'eia_reference','green_eligible','premium_tier','listing_visible','name','location','governorate']
+  const fields: string[] = []
+  const vals: any[] = []
+  for (const k of allowed) {
+    if (body[k] !== undefined) { fields.push(`${k}=?`); vals.push(body[k]) }
+  }
+  if (!fields.length) return c.json({ success: true })
+  vals.push(ts, id)
+  await c.env.DB.prepare(`UPDATE projects SET ${fields.join(',')}, updated_at=? WHERE id=?`).bind(...vals).run()
+  return c.json({ success: true })
 })
 
 // ── Developer Portal: Get developer's projects ────────────────────────────
