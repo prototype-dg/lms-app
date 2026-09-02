@@ -1045,7 +1045,7 @@ async function initSiteMap() {
   if (!el) return;
   if (siteMap) { siteMap.invalidateSize(); return; }
 
-  siteMap = L.map('site-map').setView([23.615, 58.593], 14);
+  siteMap = L.map('site-map').setView([23.58, 58.52], 11);  // initial fallback; fitBounds overrides after load
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors', maxZoom: 19
   }).addTo(siteMap);
@@ -1114,6 +1114,13 @@ async function initSiteMap() {
     const lr = document.getElementById('leg-reserved');  if(lr) lr.textContent = `Reserved (${re})`;
     const ls = document.getElementById('leg-sold');       if(ls) ls.textContent = `Sold (${so})`;
 
+    // Auto-fit map to all plotted units
+    if (siteMapAllUnits.length > 0) {
+      const allMarkers = siteMapAllUnits.map(x => x.mk);
+      const group = L.featureGroup(allMarkers);
+      siteMap.fitBounds(group.getBounds().pad(0.15));
+    }
+
   } catch(e) {
     console.error('initSiteMap', e);
     toast('Could not load units for map', 'error');
@@ -1134,7 +1141,7 @@ function siteMapFilter(status) {
 function initMap(containerId, showPhase2) {
   const el = document.getElementById(containerId);
   if (!el) return null;
-  const m = L.map(containerId).setView([23.615, 58.593], 14);
+  const m = L.map(containerId).setView([23.60, 58.59], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap',maxZoom:19}).addTo(m);
   if (showPhase2 && typeof UNITS_P2 !== 'undefined') {
     UNITS_P2.forEach(u=>{
@@ -1984,12 +1991,14 @@ async function loadProjects() {
       } else {
         grid.innerHTML = projects.map(p => {
           const isLive = p.listing_visible === 1 || p.status === 'active';
-          const imgStyle = p.hero_image_url
-            ? `background:url('${p.hero_image_url}') center/cover no-repeat`
-            : 'background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%)';
+          const proxyImg = p.hero_image_url
+            ? `/api/v1/img-proxy?url=${encodeURIComponent(p.hero_image_url)}`
+            : null;
           return `<div class="project-card${isLive?' active-project':''}" onclick="selectProject('${p.id}')">
-            <div class="project-img" style="${imgStyle}"><div class="project-img-overlay"></div>${!p.hero_image_url?'<div class="project-img-icon">🏗️</div>':''}
-              <span class="project-status-badge badge-${isLive?'active':p.status||'draft'}">${isLive?'Live':p.status||'draft'}</span>
+            <div class="project-img" style="${proxyImg?'background:none':'background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%)'};position:relative;overflow:hidden">
+              ${proxyImg?`<img src="${proxyImg}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy"/>`:'<div class="project-img-icon">🏗️</div>'}
+              <div class="project-img-overlay" style="position:absolute;inset:0"></div>
+              <span class="project-status-badge badge-${isLive?'active':p.status||'draft'}" style="position:absolute;top:10px;right:10px;z-index:2">${isLive?'Live':p.status||'draft'}</span>
             </div>
             <div class="project-body">
               <div class="project-name">${p.name}</div>
@@ -2033,7 +2042,7 @@ async function selectProject(id) {
     document.getElementById('ptab-overview').innerHTML = `
       <div style="margin-bottom:12px;border-radius:8px;overflow:hidden;height:130px;background:var(--gray-100)">
         ${proj.hero_image_url
-          ? `<img src="${proj.hero_image_url}" style="width:100%;height:100%;object-fit:cover"/>`
+          ? `<img src="/api/v1/img-proxy?url=${encodeURIComponent(proj.hero_image_url)}" style="width:100%;height:100%;object-fit:cover"/>`
           : `<div style="width:100%;height:100%;background:linear-gradient(135deg,var(--navy),var(--teal));display:flex;align-items:center;justify-content:center;font-size:40px">🏗️</div>`}
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
@@ -2084,8 +2093,14 @@ async function selectProject(id) {
         ${!proj.gsas_score&&!proj.epc_rating?`<div style="margin-top:8px;padding:12px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-500)">Register this project through the wizard to upload ESG certificates and unlock green financing rates.</div>`:''}
       </div>`;
 
-    // Show panel (reset to Overview tab first)
-    switchTab(document.querySelector('#project-panel-overlay .tab'), 'ptab-overview');
+    // Show panel — reset tabs safely without using switchTab (avoids null-ref crash)
+    document.querySelectorAll('#project-panel-overlay .tab').forEach((t,i) => {
+      t.classList.toggle('active', i===0);
+    });
+    ['ptab-overview','ptab-units','ptab-certs'].forEach((id,i) => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = i===0 ? 'block' : 'none';
+    });
     document.getElementById('project-panel-overlay').classList.add('open');
   } catch(e) {
     console.error('selectProject', e);

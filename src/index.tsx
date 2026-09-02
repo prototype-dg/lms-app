@@ -40,6 +40,29 @@ app.route('/api/v1/users', usersApi)
 app.route('/api/v1/seed', seedApi)
 app.route('/api/v1/portal', portalApi)
 
+// ── Image proxy: fetches Genspark blob URLs server-side (avoids 403 in browser) ──
+app.get('/api/v1/img-proxy', async (c) => {
+  const url = c.req.query('url')
+  if (!url || !url.startsWith('https://www.genspark.ai/')) {
+    return c.text('Invalid URL', 400)
+  }
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+    if (!res.ok) return c.text('Image fetch failed', 502)
+    const contentType = res.headers.get('content-type') || 'image/jpeg'
+    const buf = await res.arrayBuffer()
+    return new Response(buf, {
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=86400',
+        'Access-Control-Allow-Origin': '*',
+      }
+    })
+  } catch(e) {
+    return c.text('Proxy error', 502)
+  }
+})
+
 // Standalone rules endpoint (all rules, or filter by product)
 app.get('/api/v1/rules', async (c) => {
   const productId = c.req.query('product_id')
