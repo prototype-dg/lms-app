@@ -1156,6 +1156,9 @@ function initMap(containerId, showPhase2) {
 }
 
 // ═══════════════════════════════════════════════════
+// ── Global unit cache: unitId → unit object (avoids JSON-in-onclick escaping) ──
+window._unitCache = {};
+
 // UNITS INVENTORY — collapsible per-project groups
 // ═══════════════════════════════════════════════════
 async function renderInventoryGroups() {
@@ -1181,6 +1184,8 @@ async function renderInventoryGroups() {
       const du = await ru.json();
       const units = du.units || [];
       totalUnits += units.length;
+      // Cache units for onclick lookup (avoids JSON-in-HTML-attribute escaping bugs)
+      units.forEach(u => { window._unitCache[u.id] = {...u, _projId: proj.id}; });
 
       const av = units.filter(u=>u.status==='available').length;
       const re = units.filter(u=>u.status==='reserved').length;
@@ -1205,7 +1210,7 @@ async function renderInventoryGroups() {
               <th>Unit #</th><th>Type</th><th>Area m²</th><th>Beds</th><th>Price (OMR)</th><th>GSAS</th><th>Status</th><th></th>
             </tr></thead>
             <tbody>
-              ${units.length ? units.map(u => `<tr class="inv-row" onclick="openUnitDetail('${proj.id}','${u.id}',${JSON.stringify(JSON.stringify(u))})" style="cursor:pointer" title="Click to view unit details">
+              ${units.length ? units.map(u => `<tr class="inv-row" onclick="openUnitById('${u.id}')" style="cursor:pointer" title="Click to view unit details">
                 <td><strong>${u.unit_number||u.id}</strong></td>
                 <td>${u.type||'—'}</td>
                 <td>${u.area_sqm||'—'}</td>
@@ -1214,7 +1219,7 @@ async function renderInventoryGroups() {
                 <td><span class="gsas-score ${(u.gsas_score||0)>=85?'excellent':'good'}">${u.gsas_score||'—'}</span></td>
                 <td><span class="unit-status ${u.status||'available'}" id="ustatus-${u.id}">${u.status||'available'}</span></td>
                 <td style="white-space:nowrap" onclick="event.stopPropagation()">
-                  <button class="btn btn-primary btn-sm" onclick="openUnitDetail('${proj.id}','${u.id}',${JSON.stringify(JSON.stringify(u))})">View Details →</button>
+                  <button class="btn btn-primary btn-sm" onclick="openUnitById('${u.id}')">View Details →</button>
                 </td>
               </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--gray-500)">No units for this project.</td></tr>'}
             </tbody>
@@ -1295,8 +1300,16 @@ async function editUnitPrice(projId, unitId, current, btn) {
 }
 
 // ── Unit Detail Panel ─────────────────────────────────────────────────────
-function openUnitDetail(projId, unitId, unitJson) {
-  const u = JSON.parse(unitJson);
+// Thin wrapper: look up unit from cache, then call openUnitDetail
+function openUnitById(unitId) {
+  const u = window._unitCache && window._unitCache[unitId];
+  if(!u) { toast('Unit data not found — try refreshing inventory', 'error'); return; }
+  openUnitDetail(u._projId, unitId, u);
+}
+
+// Accept either a pre-parsed object OR a JSON string (legacy)
+function openUnitDetail(projId, unitId, unitOrJson) {
+  const u = (typeof unitOrJson === 'string') ? JSON.parse(unitOrJson) : unitOrJson;
   window._unitDetailProjId = projId;
   window._unitDetailUnitId = unitId;
   window._unitDetailUnit = u;
