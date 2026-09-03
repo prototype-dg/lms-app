@@ -288,6 +288,27 @@ body.ar .toast-container{right:auto;left:24px}
 .campaign-badge.scheduled{background:rgba(0,127,134,.12);color:var(--teal)}
 .campaign-badge.ended{background:var(--gray-100);color:var(--gray-500)}
 
+/* SALES STRATEGY — FORECAST SCENARIOS */
+.scenario-tabs{display:flex;gap:6px;margin-bottom:14px}
+.scenario-tab{padding:6px 16px;border-radius:20px;border:1.5px solid var(--gray-200);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray-600);transition:all .15s}
+.scenario-tab.active-scenario{background:var(--navy);color:#fff;border-color:var(--navy)}
+.forecast-bar-wrap{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.forecast-bar-label{font-size:12px;color:var(--gray-700);width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.forecast-bar-track{flex:1;height:14px;background:var(--gray-100);border-radius:7px;overflow:hidden}
+.forecast-bar-fill{height:100%;border-radius:7px;transition:width .7s ease}
+.forecast-bar-val{font-size:11px;font-weight:700;color:var(--navy);width:80px;text-align:right;flex-shrink:0}
+.kpi-mini{background:rgba(0,127,134,.06);border:1px solid rgba(0,127,134,.15);border-radius:8px;padding:10px 14px;text-align:center}
+.kpi-mini-val{font-size:18px;font-weight:900;color:var(--teal);line-height:1}
+.kpi-mini-label{font-size:10px;color:var(--gray-500);margin-top:2px}
+.discount-badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700}
+.discount-badge.high{background:rgba(231,76,60,.12);color:#C0392B}
+.discount-badge.med{background:rgba(243,156,18,.12);color:#C8891A}
+.discount-badge.low{background:rgba(46,204,113,.12);color:#27AE60}
+.avail-pill{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+.ss-section-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.velocity-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100);font-size:12px}
+.velocity-row:last-child{border-bottom:none}
+
 /* COLLAPSIBLE PROJECT GROUPS */
 .inv-group-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:2px;user-select:none}
 .inv-group-header:hover{background:var(--gray-100)}
@@ -814,55 +835,148 @@ body.ar .toast-container{right:auto;left:24px}
     <!-- ═══ SALES STRATEGY PAGE ═══ -->
     <div class="page" id="page-sales-strategy">
       <div class="section-header">
-        <div><div class="section-title">Sales Strategy</div><div class="section-sub">Price matrix · Campaigns · Pipeline KPIs · Absorption rate</div></div>
-        <button class="btn btn-primary btn-sm" onclick="openNewCampaignModal()">+ New Campaign</button>
+        <div><div class="section-title">Sales Strategy</div><div class="section-sub">Real-time pricing · Absorption velocity · Revenue forecast · Discount model</div></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="renderSalesStrategy()">↺ Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="openNewCampaignModal()">+ New Campaign</button>
+        </div>
       </div>
 
-      <!-- KPIs row -->
+      <!-- ── TOP KPIs ── -->
       <div class="kpi-grid" id="sales-kpi-grid">
         <div class="kpi-card"><div class="kpi-value" id="kpi-total-units">—</div><div class="kpi-label">Total Units</div></div>
         <div class="kpi-card"><div class="kpi-value" style="color:#2ECC71" id="kpi-available">—</div><div class="kpi-label">Available</div></div>
         <div class="kpi-card"><div class="kpi-value" style="color:#F39C12" id="kpi-reserved">—</div><div class="kpi-label">Reserved</div></div>
         <div class="kpi-card"><div class="kpi-value" style="color:#003B5C" id="kpi-sold">—</div><div class="kpi-label">Sold</div></div>
-        <div class="kpi-card"><div class="kpi-value" id="kpi-absorption">—%</div><div class="kpi-label">Absorption Rate</div><div class="kpi-delta up" id="kpi-absorption-delta"></div></div>
-        <div class="kpi-card"><div class="kpi-value" id="kpi-portfolio">—</div><div class="kpi-label">Portfolio Value (OMR)</div></div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="kpi-absorption">—%</div>
+          <div class="kpi-label">Portfolio Absorption</div>
+          <div class="kpi-delta up" id="kpi-absorption-delta"></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="kpi-revenue-realized">—</div>
+          <div class="kpi-label">Revenue Realized (OMR)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="kpi-revenue-pipeline">—</div>
+          <div class="kpi-label">Revenue Pipeline (OMR)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="kpi-portfolio">—</div>
+          <div class="kpi-label">Total Portfolio Value (OMR)</div>
+        </div>
       </div>
 
+      <!-- ── ROW 1: Per-Project Breakdown + Velocity ── -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-        <!-- Price Matrix -->
+
+        <!-- Per-Project Revenue Breakdown -->
         <div class="card">
           <div class="card-header">
-            <span class="card-title">Price Matrix by Unit Type</span>
-            <button class="btn btn-secondary btn-sm" onclick="openBulkPriceModal()">📊 Bulk Adjust</button>
+            <span class="card-title">📊 Revenue by Project</span>
           </div>
-          <div class="card-body" style="padding:0;overflow-x:auto">
-            <table class="inv-table price-matrix" id="price-matrix-table">
-              <thead><tr><th>Type</th><th>Count</th><th>Avg m²</th><th>Base Price</th><th>Current Avg</th><th>Discount</th><th>Action</th></tr></thead>
-              <tbody id="price-matrix-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--gray-500)">Loading…</td></tr></tbody>
-            </table>
+          <div class="card-body" id="project-revenue-breakdown">
+            <div style="text-align:center;color:var(--gray-500);padding:20px">Loading…</div>
           </div>
         </div>
 
-        <!-- Absorption Rate Chart -->
+        <!-- Sales Velocity & Absorption -->
         <div class="card">
-          <div class="card-header"><span class="card-title">Absorption Rate by Type</span></div>
-          <div class="card-body" id="absorption-chart">
+          <div class="card-header">
+            <span class="card-title">⚡ Sales Velocity by Project</span>
+          </div>
+          <div class="card-body" id="velocity-chart">
             <div style="text-align:center;color:var(--gray-500);padding:20px">Loading…</div>
           </div>
         </div>
       </div>
 
-      <!-- Active Campaigns -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header"><span class="card-title">Campaigns</span><span class="chip gray" id="campaign-count">0 active</span></div>
-        <div class="card-body" id="campaigns-list">
-          <div style="text-align:center;color:var(--gray-500);padding:20px">No campaigns yet. Create one to track discounts and promotions.</div>
+      <!-- ── ROW 2: Price Matrix + Discount Model ── -->
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
+
+        <!-- Price Matrix: per Project × Unit Type -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">💰 Pricing Matrix — Project × Unit Type</span>
+            <button class="btn btn-secondary btn-sm" onclick="openBulkPriceModal()">📊 Bulk Adjust</button>
+          </div>
+          <div class="card-body" style="padding:0;overflow-x:auto">
+            <table class="inv-table price-matrix" id="price-matrix-table">
+              <thead>
+                <tr>
+                  <th>Project</th><th>Type</th><th>Units</th><th>Avail%</th>
+                  <th>Base Price</th><th>Avg Price</th><th>Premium</th><th>Rec. Discount</th>
+                </tr>
+              </thead>
+              <tbody id="price-matrix-tbody">
+                <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--gray-500)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Discount Model by Availability -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">🏷️ Discount Model</span></div>
+          <div class="card-body">
+            <div style="font-size:11px;color:var(--gray-500);margin-bottom:10px">
+              Recommended discount tied to availability — reduces incentive as units sell out, increases to drive remaining inventory.
+            </div>
+            <div id="discount-model-grid" style="display:grid;gap:8px"></div>
+          </div>
         </div>
       </div>
 
-      <!-- Pipeline Applications -->
+      <!-- ── ROW 3: Predictive Revenue Forecast ── -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <span class="card-title">📈 Predictive Revenue Forecast</span>
+          <div class="scenario-tabs" id="scenario-tabs">
+            <button class="scenario-tab active-scenario" data-sc="base" onclick="switchScenario('base')">Base</button>
+            <button class="scenario-tab" data-sc="optimistic" onclick="switchScenario('optimistic')">Optimistic</button>
+            <button class="scenario-tab" data-sc="conservative" onclick="switchScenario('conservative')">Conservative</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-total-rev">—</div><div class="kpi-mini-label">Total Forecast Revenue</div></div>
+            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-remaining">—</div><div class="kpi-mini-label">Remaining to Sell</div></div>
+            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-months">—</div><div class="kpi-mini-label">Est. Months to Sell-Out</div></div>
+            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-monthly-rev">—</div><div class="kpi-mini-label">Avg Monthly Revenue</div></div>
+          </div>
+          <div class="ss-section-title">📊 Per-Project Forecast Revenue</div>
+          <div id="forecast-bars">
+            <div style="text-align:center;color:var(--gray-500);padding:12px">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ROW 4: Absorption Rate + Campaigns ── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+        <!-- Absorption Rate by Type across portfolio -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">🎯 Absorption Rate by Unit Type</span></div>
+          <div class="card-body" id="absorption-chart">
+            <div style="text-align:center;color:var(--gray-500);padding:20px">Loading…</div>
+          </div>
+        </div>
+
+        <!-- Active Campaigns -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🚀 Campaigns</span>
+            <span class="chip gray" id="campaign-count">0 active</span>
+          </div>
+          <div class="card-body" id="campaigns-list">
+            <div style="text-align:center;color:var(--gray-500);padding:20px">No campaigns yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ROW 5: Loan Application Pipeline ── -->
       <div class="card">
-        <div class="card-header"><span class="card-title">Loan Application Pipeline</span></div>
+        <div class="card-header"><span class="card-title">🏦 Loan Application Pipeline</span></div>
         <div class="card-body" style="padding:0">
           <table class="inv-table" id="pipeline-table">
             <thead><tr><th>App #</th><th>Customer</th><th>Unit</th><th>Project</th><th>Amount (OMR)</th><th>Rate</th><th>Status</th><th>Date</th></tr></thead>
@@ -1024,6 +1138,9 @@ function showPage(id) {
     if(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) n.classList.add('active');
   });
 
+  // FIX: Always close unit detail pane when navigating away
+  closeUnitDetail();
+
   if(id === 'map') { setTimeout(() => initSiteMap(), 150); }
   if(id === 'inventory') { renderInventoryGroups(); }
   if(id === 'sales-strategy') { renderSalesStrategy(); }
@@ -1137,13 +1254,34 @@ async function initSiteMap() {
 }
 
 function siteMapFilter(status) {
-  siteMapAllUnits.forEach(({mk, status: s}) => {
-    if (status === 'all' || s === status) {
+  // Update filter chip styling
+  document.querySelectorAll('.map-filter-btn').forEach(b => {
+    b.classList.toggle('active-filter', b.dataset.filter === status);
+  });
+
+  const visible = [];
+  siteMapAllUnits.forEach(({mk, status: s, projId}) => {
+    const show = status === 'all' || s === status;
+    if (show) {
       if (!siteMap.hasLayer(mk)) siteMap.addLayer(mk);
+      visible.push(mk);
     } else {
       if (siteMap.hasLayer(mk)) siteMap.removeLayer(mk);
     }
   });
+
+  // Re-zoom: fitBounds to visible markers, or show "nothing visible" hint
+  if (visible.length > 0) {
+    const group = L.featureGroup(visible);
+    siteMap.fitBounds(group.getBounds().pad(0.18));
+  } else if (siteMap) {
+    // No visible pins — show toast and reset to full view
+    toast('No units match this filter', 'info');
+    if (siteMapAllUnits.length > 0) {
+      const group = L.featureGroup(siteMapAllUnits.map(x => x.mk));
+      siteMap.fitBounds(group.getBounds().pad(0.18));
+    }
+  }
 }
 
 // Legacy stub — called from Step 5 review map
@@ -1715,13 +1853,40 @@ function previewHeroFromUrl(url) {
 
 function handleHeroFile(file) {
   if(!file) return;
+  // Resize to max 800px wide, JPEG quality 0.82 — keeps base64 under ~150KB
+  const MAX_W = 800, MAX_H = 600, QUALITY = 0.82;
   const reader = new FileReader();
   reader.onload = e => {
-    window._heroImageBlobUrl = e.target.result; // base64 data URL used as hero_image_url
-    const img = document.getElementById('reg-img-preview');
-    img.src = e.target.result;
-    document.getElementById('reg-img-clear').style.display = '';
-    document.getElementById('reg-img-name').textContent = '📎 ' + file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
+    const original = e.target.result;
+    const imgEl = new Image();
+    imgEl.onload = () => {
+      let w = imgEl.width, h = imgEl.height;
+      if(w > MAX_W || h > MAX_H) {
+        const ratio = Math.min(MAX_W/w, MAX_H/h);
+        w = Math.round(w*ratio); h = Math.round(h*ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+      const resized = canvas.toDataURL('image/jpeg', QUALITY);
+      window._heroImageBlobUrl = resized;
+      const preview = document.getElementById('reg-img-preview');
+      if(preview) { preview.src = resized; preview.style.display = 'block'; }
+      const ph = document.getElementById('reg-img-placeholder');
+      if(ph) ph.style.display = 'none';
+      document.getElementById('reg-img-clear').style.display = '';
+      document.getElementById('reg-img-name').textContent =
+        '📎 ' + file.name + ' → ' + (resized.length/1024).toFixed(0) + ' KB (resized)';
+    };
+    imgEl.onerror = () => {
+      // Fallback: use original without resize
+      window._heroImageBlobUrl = original;
+      const preview = document.getElementById('reg-img-preview');
+      if(preview) { preview.src = original; preview.style.display = 'block'; }
+      document.getElementById('reg-img-clear').style.display = '';
+      document.getElementById('reg-img-name').textContent = '📎 ' + file.name;
+    };
+    imgEl.src = original;
   };
   reader.readAsDataURL(file);
 }
@@ -2060,10 +2225,21 @@ async function doRegisterProject(publish) {
   const pf   = document.getElementById('reg-price-from').value;
   const pt   = document.getElementById('reg-price-to').value;
   const tag  = document.getElementById('reg-tagline').value;
-  // Hero image: prefer file-uploaded blob URL, then URL tab input
-  const imgUrl = window._heroImageBlobUrl
-    || document.getElementById('reg-image-url').value.trim()
-    || '';
+
+  // Hero image: prefer resized file blob URL, then URL tab input, then EV2 placeholder
+  // Also wait up to 3s in case FileReader is still processing (async race guard)
+  let imgUrl = window._heroImageBlobUrl || document.getElementById('reg-image-url')?.value.trim() || '';
+  if(!imgUrl) {
+    // Poll briefly if a file was selected but FileReader hasn't finished yet
+    const fileInput = document.getElementById('reg-image-file');
+    if(fileInput && fileInput.files && fileInput.files.length > 0) {
+      for(let i=0;i<30;i++) {
+        await new Promise(r=>setTimeout(r,100));
+        if(window._heroImageBlobUrl) { imgUrl = window._heroImageBlobUrl; break; }
+      }
+    }
+  }
+
   // collect green features from checkboxes
   const featMap = {solar:'Solar PV',grey:'Greywater Recycling',roof:'Green Roof Gardens',hvac:'HVAC SEER ≥18',glazing:'Triple Glazing',ev:'EV Charging'};
   const amenities = Object.entries(featMap).filter(([k])=>document.getElementById('feat-'+k)?.checked).map(([,v])=>v);
@@ -2096,13 +2272,14 @@ async function doRegisterProject(publish) {
         body: JSON.stringify({unit_number:u.label, type:u.type, area_sqm:u.area, bedrooms:u.bedrooms, price:u.price, lat:u.lat, lng:u.lng, gsas_score:u.gsas, status:'available', image_url:u.image_url||'', features:JSON.stringify(['Solar PV','Green Roof','High-Eff HVAC'])})
       });
     }
-    // Set EV2 hero image if none was explicitly uploaded
-    if (!imgUrl) {
-      await fetch('/api/v1/portal/developer/projects/'+pid, {
-        method:'PATCH', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({hero_image_url: EV2_IMAGES.hero})
-      }).catch(()=>{}); // best-effort; fallback also in 0004 migration
-    }
+    // ALWAYS PATCH hero image after project creation — guarantees image is saved
+    // even if POST body was too large or the FileReader finished after the POST fired
+    const finalImgUrl = imgUrl || EV2_IMAGES.hero;
+    await fetch('/api/v1/portal/developer/projects/'+pid, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({hero_image_url: finalImgUrl})
+    }).catch(err => console.warn('[wizard] hero image PATCH failed:', err));
+
     if(publish) {
       await fetch('/api/v1/portal/developer/projects/'+pid+'/publish', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
       toast('🎉 Project registered and published to bank portal!','success');
@@ -2115,17 +2292,39 @@ async function doRegisterProject(publish) {
 }
 
 // ═══════════════════════════════════════════════════
-// SALES STRATEGY
+// SALES STRATEGY — full real-data engine
 // ═══════════════════════════════════════════════════
-let salesUnits = [];   // flat array of all units across all projects
+let salesUnits = [];
 let salesProjects = [];
-let campaigns = [
-  {id:1, name:'EV2 Launch Promo', discount:3, units:'All Type A', start:'2026-09-01', end:'2026-11-30', status:'active'},
-  {id:2, name:'Q4 Type C Premium', discount:2, units:'Type C only', start:'2026-10-01', end:'2026-12-31', status:'scheduled'},
+let salesScenario = 'base'; // 'base' | 'optimistic' | 'conservative'
+let campaigns = [];
+
+// ── Scenario multipliers ──────────────────────────
+// Base: uses actual data velocity (30-day rolling avg)
+// Optimistic: +40% velocity, -0.5% discount floor
+// Conservative: -35% velocity, +1% discount floor
+const SCENARIO_MULT = {base:1.0, optimistic:1.4, conservative:0.65};
+const SCENARIO_DISC = {base:0, optimistic:-0.5, conservative:1.0};
+
+// ── Discount model: tiers by availability% ────────
+// Higher availability = lower absorption = need higher discount incentive
+const DISCOUNT_TIERS = [
+  {label:'Sold out (0–5% avail)',    min:0,  max:5,  discount:0,    note:'No incentive — full price'},
+  {label:'Near sold-out (5–20%)',    min:5,  max:20, discount:1,    note:'Token early-bird only'},
+  {label:'Selling fast (20–40%)',    min:20, max:40, discount:1.5,  note:'Loyalty / referral only'},
+  {label:'Active market (40–60%)',   min:40, max:60, discount:2.5,  note:'Standard campaign rate'},
+  {label:'Slow market (60–80%)',     min:60, max:80, discount:4,    note:'Bulk deal or broker bonus'},
+  {label:'Launch / distress (>80%)', min:80, max:100,discount:6,    note:'Aggressive launch incentive'},
 ];
 
+// ── OMR formatting helpers ────────────────────────
+const fmtOMR = v => v >= 1e6 ? 'OMR '+(v/1e6).toFixed(2)+'M'
+                 : v >= 1000 ? 'OMR '+(v/1000).toFixed(0)+'K'
+                 : 'OMR '+v.toLocaleString();
+const fmtNum = v => v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'K' : String(v);
+
 async function renderSalesStrategy() {
-  // Load projects + units once
+  // ── 1. Fetch all projects + units from real DB ──
   try {
     const rp = await fetch('/api/v1/portal/developer/projects');
     const dp = await rp.json();
@@ -2134,57 +2333,203 @@ async function renderSalesStrategy() {
     for (const proj of salesProjects) {
       const ru = await fetch(`/api/v1/portal/developer/projects/${proj.id}/units`);
       const du = await ru.json();
-      (du.units||[]).forEach(u => salesUnits.push({...u, projectName: proj.name}));
+      (du.units||[]).forEach(u => salesUnits.push({...u, projectName: proj.name, projectId: proj.id}));
     }
   } catch(e) { console.error('renderSalesStrategy fetch', e); }
 
-  // KPIs
+  // ── 2. Top-level KPIs ──────────────────────────
   const total = salesUnits.length;
   const av = salesUnits.filter(u=>u.status==='available').length;
   const re = salesUnits.filter(u=>u.status==='reserved').length;
   const so = salesUnits.filter(u=>u.status==='sold').length;
-  const absorption = total ? Math.round(((re+so)/total)*100) : 0;
-  const portfolio = salesUnits.reduce((s,u)=>s+(u.price||0),0);
+  const committed = re + so; // sold + reserved = committed revenue
+  const absorption = total ? Math.round((committed/total)*100) : 0;
+
+  // Revenue: sold = realized; reserved = pipeline; available = potential
+  const revRealized = salesUnits.filter(u=>u.status==='sold').reduce((s,u)=>s+(Number(u.price)||0),0);
+  const revPipeline = salesUnits.filter(u=>u.status==='reserved').reduce((s,u)=>s+(Number(u.price)||0),0);
+  const portfolio    = salesUnits.reduce((s,u)=>s+(Number(u.price)||0),0);
+
   const set = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   set('kpi-total-units', total);
   set('kpi-available', av);
   set('kpi-reserved', re);
   set('kpi-sold', so);
   set('kpi-absorption', absorption+'%');
-  set('kpi-absorption-delta', absorption>50?'↑ Strong velocity':'↗ Building momentum');
-  set('kpi-portfolio', total ? 'OMR '+(portfolio/1000000).toFixed(1)+'M' : '—');
+  set('kpi-absorption-delta', absorption>=70?'↑ Excellent velocity':absorption>=40?'↗ Building momentum':'→ Early stage');
+  set('kpi-revenue-realized', total ? fmtOMR(revRealized) : '—');
+  set('kpi-revenue-pipeline', total ? fmtOMR(revPipeline) : '—');
+  set('kpi-portfolio', total ? fmtOMR(portfolio) : '—');
 
-  // Price matrix: group by type
+  // ── 3. Per-project grouping ───────────────────
+  const byProject = {};
+  salesProjects.forEach(p => {
+    byProject[p.id] = { proj: p, units: [], names: new Set() };
+  });
+  salesUnits.forEach(u => {
+    if (!byProject[u.projectId]) byProject[u.projectId] = { proj:{id:u.projectId,name:u.projectName||u.projectId}, units:[], names:new Set() };
+    byProject[u.projectId].units.push(u);
+  });
+
+  // ── 4. Per-Project Revenue Breakdown ─────────
+  const revDiv = document.getElementById('project-revenue-breakdown');
+  if(revDiv) {
+    const projRevRows = Object.values(byProject).map(({proj,units}) => {
+      const pTotal = units.length;
+      if(!pTotal) return '';
+      const pSold = units.filter(u=>u.status==='sold').length;
+      const pRes  = units.filter(u=>u.status==='reserved').length;
+      const pAv   = units.filter(u=>u.status==='available').length;
+      const pAbs  = Math.round(((pSold+pRes)/pTotal)*100);
+      const pRev  = units.filter(u=>u.status==='sold').reduce((s,u)=>s+(Number(u.price)||0),0);
+      const pPipe = units.filter(u=>u.status==='reserved').reduce((s,u)=>s+(Number(u.price)||0),0);
+      const pFull = units.reduce((s,u)=>s+(Number(u.price)||0),0);
+      const barW  = portfolio > 0 ? Math.round((pRev+pPipe)/portfolio*100) : 0;
+      return `<div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--gray-100)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <div style="font-weight:700;font-size:13px;color:var(--navy)">${proj.name||proj.id}</div>
+          <span class="chip ${pAbs>=70?'green':pAbs>=40?'amber':'gray'}" style="font-size:10px">${pAbs}% absorbed</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:7px">
+          <div style="text-align:center;font-size:10px;color:var(--gray-500)">
+            <div style="font-weight:700;font-size:12px;color:#27AE60">${fmtOMR(pRev)}</div>Realized
+          </div>
+          <div style="text-align:center;font-size:10px;color:var(--gray-500)">
+            <div style="font-weight:700;font-size:12px;color:#C8891A">${fmtOMR(pPipe)}</div>Pipeline
+          </div>
+          <div style="text-align:center;font-size:10px;color:var(--gray-500)">
+            <div style="font-weight:700;font-size:12px;color:var(--navy)">${fmtOMR(pFull)}</div>Full Value
+          </div>
+        </div>
+        <div style="height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden;display:flex">
+          <div style="width:${pFull>0?Math.round(pRev/pFull*100):0}%;background:#27AE60;transition:width .7s"></div>
+          <div style="width:${pFull>0?Math.round(pPipe/pFull*100):0}%;background:#F39C12;transition:width .7s"></div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:4px;font-size:10px;color:var(--gray-500)">
+          <span>✅ ${pSold} sold</span><span>⏳ ${pRes} reserved</span><span>🏠 ${pAv} avail</span>
+        </div>
+      </div>`;
+    }).filter(Boolean);
+    revDiv.innerHTML = projRevRows.length
+      ? '<div style="max-height:340px;overflow-y:auto">'+projRevRows.join('')+'</div>'
+      : '<div style="text-align:center;color:var(--gray-500);padding:20px">No project data</div>';
+  }
+
+  // ── 5. Sales Velocity by Project ──────────────
+  // Velocity = units committed / months since project created (or since launch, min 1 month)
+  const velDiv = document.getElementById('velocity-chart');
+  if(velDiv) {
+    const nowMs = Date.now();
+    const velRows = Object.values(byProject).map(({proj,units}) => {
+      if(!units.length) return null;
+      const committed = units.filter(u=>u.status!=='available').length;
+      const total     = units.length;
+      // Estimate months active: use project created_at or fallback to 3 months
+      let monthsActive = 3;
+      if(proj.created_at) {
+        const createdMs = new Date(proj.created_at).getTime();
+        monthsActive = Math.max(1, Math.round((nowMs - createdMs)/(1000*60*60*24*30)));
+      }
+      const velocity  = committed / monthsActive; // units/month
+      const availUnits = units.filter(u=>u.status==='available').length;
+      const estMonths = velocity > 0 ? Math.ceil(availUnits / velocity) : null;
+      return { proj, committed, total, velocity, availUnits, estMonths, monthsActive };
+    }).filter(Boolean);
+
+    if(!velRows.length) { velDiv.innerHTML='<div style="color:var(--gray-500);text-align:center;padding:20px">No data</div>'; }
+    else {
+      const maxV = Math.max(...velRows.map(r=>r.velocity), 0.1);
+      velDiv.innerHTML = '<div>' + velRows.map(r => {
+        const pct = Math.round((r.velocity/maxV)*100);
+        const col = r.velocity>=2?'#27AE60':r.velocity>=0.5?'#F39C12':'#007F86';
+        const absP = r.total ? Math.round((r.committed/r.total)*100) : 0;
+        return `<div class="velocity-row">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:12px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.proj.name||r.proj.id}</div>
+            <div style="font-size:10px;color:var(--gray-500)">${r.committed}/${r.total} committed · ${r.monthsActive}mo active</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;margin-left:10px">
+            <div style="font-weight:800;font-size:13px;color:${col}">${r.velocity.toFixed(1)} u/mo</div>
+            <div style="font-size:10px;color:var(--gray-500)">${r.estMonths!=null?'~'+r.estMonths+' mo to sell-out':'No avail left'}</div>
+          </div>
+        </div>`;
+      }).join('') + '</div>';
+    }
+  }
+
+  // ── 6. Price Matrix: Project × Unit Type ──────
+  const tbody = document.getElementById('price-matrix-tbody');
+  if(tbody) {
+    const rows = [];
+    Object.values(byProject).forEach(({proj,units}) => {
+      if(!units.length) return;
+      const byType = {};
+      units.forEach(u => {
+        const t = u.type||'Other';
+        if(!byType[t]) byType[t]={type:t,units:[],prices:[]};
+        byType[t].units.push(u);
+        if(u.price) byType[t].prices.push(Number(u.price));
+      });
+      Object.values(byType).forEach(g => {
+        const base  = g.prices.length ? Math.min(...g.prices) : 0;
+        const avg   = g.prices.length ? Math.round(g.prices.reduce((a,b)=>a+b,0)/g.prices.length) : 0;
+        const avPct = g.units.length  ? Math.round(g.units.filter(u=>u.status==='available').length/g.units.length*100) : 0;
+        const premPct = base > 0 ? Math.round(((avg-base)/base)*100) : 0;
+        // Recommended discount from tier table
+        const tier  = DISCOUNT_TIERS.find(t=>avPct>=t.min && avPct<t.max) || DISCOUNT_TIERS[DISCOUNT_TIERS.length-1];
+        const recDisc = Math.max(0, tier.discount + SCENARIO_DISC[salesScenario]);
+        const discClass = recDisc>=4?'high':recDisc>=2?'med':'low';
+        const avColor  = avPct>=60?'#E74C3C':avPct>=30?'#F39C12':'#27AE60';
+        rows.push(`<tr>
+          <td style="text-align:left;font-weight:600;font-size:12px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${proj.name||proj.id}">${proj.name||proj.id}</td>
+          <td><strong>${g.type}</strong></td>
+          <td>${g.units.length}</td>
+          <td><span style="font-weight:700;color:${avColor}">${avPct}%</span></td>
+          <td class="price-cell" onclick="editBasePrice('${g.type}',${base})">OMR ${base.toLocaleString()}</td>
+          <td>OMR ${avg.toLocaleString()}</td>
+          <td>${premPct>0?'<span class="chip green" style="font-size:10px">+'+premPct+'%</span>':'<span class="chip gray" style="font-size:10px">—</span>'}</td>
+          <td><span class="discount-badge ${discClass}">${recDisc>0?recDisc.toFixed(1)+'% off':'Full price'}</span></td>
+        </tr>`);
+      });
+    });
+    tbody.innerHTML = rows.join('') || '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--gray-500)">No units found. Register a project with units first.</td></tr>';
+  }
+
+  // ── 7. Discount Model grid ────────────────────
+  const discGrid = document.getElementById('discount-model-grid');
+  if(discGrid) {
+    discGrid.innerHTML = DISCOUNT_TIERS.map(t => {
+      const eff = Math.max(0, t.discount + SCENARIO_DISC[salesScenario]);
+      const barW = Math.round(eff/8*100);
+      const col  = eff>=4?'#E74C3C':eff>=2?'#F39C12':'#27AE60';
+      return `<div style="border:1px solid var(--gray-200);border-radius:8px;padding:10px 12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <span style="font-size:11px;font-weight:700;color:var(--navy)">${t.label}</span>
+          <span style="font-size:13px;font-weight:900;color:${col}">${eff>0?eff.toFixed(1)+'%':'Full price'}</span>
+        </div>
+        <div style="height:6px;background:var(--gray-100);border-radius:3px;overflow:hidden;margin-bottom:4px">
+          <div style="width:${barW}%;height:100%;background:${col};border-radius:3px;transition:width .6s"></div>
+        </div>
+        <div style="font-size:10px;color:var(--gray-500)">${t.note}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── 8. Predictive Revenue Forecast ───────────
+  renderForecast(byProject);
+
+  // ── 9. Absorption Rate by Unit Type ──────────
   const byType = {};
   salesUnits.forEach(u => {
     const t = u.type||'Other';
-    if(!byType[t]) byType[t]={type:t,units:[],prices:[]};
+    if(!byType[t]) byType[t]={type:t,units:[]};
     byType[t].units.push(u);
-    if(u.price) byType[t].prices.push(Number(u.price));
   });
-  const tbody = document.getElementById('price-matrix-tbody');
-  if(tbody) {
-    tbody.innerHTML = Object.values(byType).map(g => {
-      const avg = g.prices.length ? Math.round(g.prices.reduce((a,b)=>a+b,0)/g.prices.length) : 0;
-      const base = g.prices.length ? Math.min(...g.prices) : 0;
-      const avgArea = g.units.length ? Math.round(g.units.reduce((s,u)=>s+(u.area_sqm||0),0)/g.units.length) : 0;
-      return `<tr>
-        <td><strong>${g.type}</strong></td>
-        <td>${g.units.length}</td>
-        <td>${avgArea} m²</td>
-        <td class="price-cell" onclick="editBasePrice('${g.type}',${base})">OMR ${base.toLocaleString()}</td>
-        <td>OMR ${avg.toLocaleString()}</td>
-        <td><span class="chip gray">0%</span></td>
-        <td><button class="btn btn-secondary btn-sm" onclick="applyTypeDiscount('${g.type}')">Set Discount</button></td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--gray-500)">No units found</td></tr>';
-  }
-
-  // Absorption bars
   const absDiv = document.getElementById('absorption-chart');
   if(absDiv) {
     const bars = Object.values(byType).map(g => {
-      const pct = g.units.length ? Math.round(((g.units.filter(u=>u.status!=='available').length)/g.units.length)*100) : 0;
+      const committed = g.units.filter(u=>u.status!=='available').length;
+      const pct = g.units.length ? Math.round((committed/g.units.length)*100) : 0;
       const col = pct>=70?'#2ECC71':pct>=40?'#F39C12':'#007F86';
       return `<div class="abs-bar-wrap">
         <div class="abs-bar-label">${g.type}</div>
@@ -2193,21 +2538,112 @@ async function renderSalesStrategy() {
             <span class="abs-bar-pct">${pct}%</span>
           </div>
         </div>
-        <span style="font-size:11px;color:var(--gray-500);width:50px;flex-shrink:0">${g.units.filter(u=>u.status!=='available').length}/${g.units.length}</span>
+        <span style="font-size:11px;color:var(--gray-500);width:50px;flex-shrink:0">${committed}/${g.units.length}</span>
       </div>`;
     });
     absDiv.innerHTML = bars.length ? bars.join('') : '<div style="color:var(--gray-500);text-align:center;padding:20px">No data</div>';
   }
 
-  // Campaigns
+  // ── 10. Campaigns ─────────────────────────────
   renderCampaigns();
 
-  // Pipeline (load applications)
+  // ── 11. Pipeline ─────────────────────────────
   try {
     const ra = await fetch('/api/v1/portal/applications');
     const da = await ra.json();
     renderPipeline(da.applications || []);
   } catch { renderPipeline([]); }
+}
+
+// ── Predictive forecast (scenario-aware) ─────────
+function renderForecast(byProject) {
+  const mult = SCENARIO_MULT[salesScenario];
+  const nowMs = Date.now();
+
+  let totalForecastRev = 0;
+  let totalRemainingUnits = 0;
+  let totalMonthsEstimate = 0;
+  let projCount = 0;
+
+  const projForecasts = Object.values(byProject).map(({proj, units}) => {
+    if(!units.length) return null;
+    const committed = units.filter(u=>u.status!=='available').length;
+    const available = units.filter(u=>u.status==='available');
+    const total = units.length;
+
+    // Estimate months active for velocity
+    let monthsActive = 3;
+    if(proj.created_at) {
+      const createdMs = new Date(proj.created_at).getTime();
+      monthsActive = Math.max(1, Math.round((nowMs - createdMs)/(1000*60*60*24*30)));
+    }
+    const rawVelocity = committed / monthsActive; // units/month actual
+    const adjVelocity = rawVelocity * mult;        // scenario-adjusted
+
+    // Avg price of available units (what we still expect to sell)
+    const avgAvailPrice = available.length > 0
+      ? available.reduce((s,u)=>s+(Number(u.price)||0),0) / available.length
+      : (units.length > 0 ? units.reduce((s,u)=>s+(Number(u.price)||0),0)/units.length : 0);
+
+    const estMonths = adjVelocity > 0 ? Math.ceil(available.length / adjVelocity) : null;
+    const projForecastRev = available.length * avgAvailPrice;
+    const projRealizedRev = units.filter(u=>u.status==='sold').reduce((s,u)=>s+(Number(u.price)||0),0);
+
+    totalForecastRev    += projRealizedRev + projForecastRev;
+    totalRemainingUnits += available.length;
+    if(estMonths != null) { totalMonthsEstimate += estMonths; projCount++; }
+
+    return { proj, projRealizedRev, projForecastRev, total, committed, available:available.length, adjVelocity, estMonths, avgAvailPrice };
+  }).filter(Boolean);
+
+  const avgMonths = projCount > 0 ? Math.round(totalMonthsEstimate/projCount) : null;
+  const avgMonthlyRev = avgMonths && avgMonths > 0 ? totalForecastRev/avgMonths : null;
+
+  const set = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('fc-total-rev', fmtOMR(totalForecastRev));
+  set('fc-remaining', totalRemainingUnits + ' units');
+  set('fc-months', avgMonths ? '~'+avgMonths+' months' : '—');
+  set('fc-monthly-rev', avgMonthlyRev ? fmtOMR(avgMonthlyRev)+'/mo' : '—');
+
+  const maxRev = Math.max(...projForecasts.map(p=>(p.projRealizedRev+p.projForecastRev)), 1);
+  const barsEl = document.getElementById('forecast-bars');
+  if(barsEl) {
+    if(!projForecasts.length) { barsEl.innerHTML='<div style="color:var(--gray-500);text-align:center;padding:12px">No data</div>'; return; }
+    barsEl.innerHTML = projForecasts.map(p => {
+      const total = p.projRealizedRev + p.projForecastRev;
+      const realPct = total>0 ? Math.round(p.projRealizedRev/total*100) : 0;
+      const forecastPct = 100 - realPct;
+      const barW = Math.round(total/maxRev*100);
+      return `<div class="forecast-bar-wrap">
+        <div class="forecast-bar-label" title="${p.proj.name||p.proj.id}">${p.proj.name||p.proj.id}</div>
+        <div class="forecast-bar-track" style="position:relative">
+          <div style="display:flex;height:100%;width:${barW}%;border-radius:7px;overflow:hidden">
+            <div style="width:${realPct}%;background:#27AE60;transition:width .7s" title="Realized"></div>
+            <div style="width:${forecastPct}%;background:#007F86;opacity:.6;transition:width .7s" title="Forecast"></div>
+          </div>
+        </div>
+        <div class="forecast-bar-val">${fmtOMR(total)}</div>
+      </div>
+      <div style="font-size:10px;color:var(--gray-500);padding:0 0 8px 140px">
+        ✅ ${fmtOMR(p.projRealizedRev)} realized · 
+        🔮 ${fmtOMR(p.projForecastRev)} forecast · 
+        ⚡ ${p.adjVelocity.toFixed(1)} u/mo · 
+        ${p.estMonths!=null?'~'+p.estMonths+' mo to sell-out':'No avail units'}
+      </div>`;
+    }).join('') + `<div style="display:flex;gap:16px;margin-top:8px;font-size:11px">
+      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#27AE60;border-radius:3px"></span>Realized (sold)</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#007F86;opacity:.6;border-radius:3px"></span>Forecast (avail at cur. velocity × scenario)</span>
+    </div>`;
+  }
+}
+
+function switchScenario(sc) {
+  salesScenario = sc;
+  document.querySelectorAll('.scenario-tab').forEach(t => {
+    t.classList.toggle('active-scenario', t.dataset.sc === sc);
+  });
+  // Re-render only the scenario-sensitive parts
+  renderSalesStrategy();
 }
 
 function renderCampaigns() {
@@ -2216,7 +2652,7 @@ function renderCampaigns() {
   const active = campaigns.filter(c=>c.status==='active').length;
   if(count) count.textContent = active + ' active';
   if(!list) return;
-  if(!campaigns.length) { list.innerHTML='<div style="text-align:center;color:var(--gray-500);padding:16px">No campaigns yet.</div>'; return; }
+  if(!campaigns.length) { list.innerHTML='<div style="text-align:center;color:var(--gray-500);padding:16px">No campaigns yet. Create one to track discounts and promotions.</div>'; return; }
   list.innerHTML = campaigns.map(c => `
     <div class="campaign-card">
       <div style="font-size:22px">${c.status==='active'?'🚀':c.status==='scheduled'?'📅':'📦'}</div>
@@ -2241,10 +2677,10 @@ function renderPipeline(apps) {
   const statusColor = {approved:'green',pending:'amber',rejected:'gray'};
   tbody.innerHTML = apps.map(a => `<tr>
     <td><strong>${a.id}</strong></td>
-    <td>${a.applicant_name||'—'}</td>
+    <td>${a.applicant_name||a.customer_name||'—'}</td>
     <td>${a.unit_id||'—'}</td>
     <td>${a.project_id||'—'}</td>
-    <td>${a.loan_amount ? Number(a.loan_amount).toLocaleString() : '—'}</td>
+    <td>${a.loan_amount ? 'OMR '+Number(a.loan_amount).toLocaleString() : '—'}</td>
     <td>${a.interest_rate ? Number(a.interest_rate).toFixed(2)+'%' : '—'}</td>
     <td><span class="chip ${statusColor[a.status]||'gray'}">${a.status||'—'}</span></td>
     <td style="font-size:11px;color:var(--gray-500)">${a.created_at?a.created_at.slice(0,10):'—'}</td>
@@ -2273,7 +2709,8 @@ function openNewCampaignModal() {
   const start = prompt('Start date (YYYY-MM-DD):','2026-10-01');
   const end = prompt('End date (YYYY-MM-DD):','2026-12-31');
   const units = prompt('Target units (e.g. All Type A, or All):','All');
-  campaigns.push({id: Date.now(), name, discount:Number(disc)||5, units, start, end, status:'scheduled'});
+  const stat  = 'scheduled';
+  campaigns.push({id: Date.now(), name, discount:Number(disc)||5, units, start, end, status:stat});
   renderCampaigns();
   toast(`Campaign "${name}" created`, 'success');
 }
@@ -2327,8 +2764,8 @@ async function loadProjects() {
         grid.innerHTML = projects.map(p => {
           const isLive = p.listing_visible === 1 || p.status === 'active';
           return `<div class="project-card${isLive?' active-project':''}" onclick="selectProject('${p.id}')">
-            <div class="project-img" style="${p.hero_image_url?'background:none':'background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%)'};position:relative;overflow:hidden">
-              ${p.hero_image_url?`<img src="${p.hero_image_url}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>`:'<div class="project-img-icon">🏗️</div>'}
+            <div class="project-img" id="pimg-${p.id}" style="${p.hero_image_url?'background:none':'background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%)'};position:relative;overflow:hidden">
+              ${p.hero_image_url?`<img src="${p.hero_image_url}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.style.background='linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%)';this.replaceWith(Object.assign(document.createElement('div'),{className:'project-img-icon',textContent:'🏗️'}))"/>`:'<div class="project-img-icon">🏗️</div>'}
               <div class="project-img-overlay" style="position:absolute;inset:0"></div>
               <span class="project-status-badge badge-${isLive?'active':p.status||'draft'}" style="position:absolute;top:10px;right:10px;z-index:2">${(p.status||'draft').toUpperCase()}</span>
             </div>
