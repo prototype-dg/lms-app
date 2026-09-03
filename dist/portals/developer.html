@@ -27,7 +27,7 @@ body.ar{font-family:var(--font-ar);direction:rtl}
 .sidebar-logo-wm{display:flex;flex-direction:column;line-height:1.25}
 .sidebar-logo-wm strong{color:#fff;font-size:12.5px;font-weight:700}
 .sidebar-logo-wm span{color:rgba(53,198,196,.85);font-size:9px;letter-spacing:1.5px;text-transform:uppercase}
-.sidebar-user{padding:16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-user{padding:14px 16px;display:flex;align-items:center;gap:10px;border-top:1px solid rgba(255,255,255,.1);margin-top:auto;flex-shrink:0}
 .sidebar-avatar{width:38px;height:38px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0}
 .sidebar-user-info{flex:1;min-width:0}
 .sidebar-user-name{color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -331,13 +331,6 @@ body.ar .toast-container{right:auto;left:24px}
       <span>Developer Portal</span>
     </div>
   </div>
-  <div class="sidebar-user">
-    <div class="sidebar-avatar">AH</div>
-    <div class="sidebar-user-info">
-      <div class="sidebar-user-name">Ahmed Al-Hinai</div>
-      <div class="sidebar-user-role">Developer Partner</div>
-    </div>
-  </div>
   <div class="sidebar-nav">
     <div class="nav-section" data-en="OVERVIEW" data-ar="نظرة عامة">OVERVIEW</div>
     <a class="nav-item active" onclick="showPage('dashboard')" href="#">
@@ -371,6 +364,13 @@ body.ar .toast-container{right:auto;left:24px}
       <span class="nav-icon">🗺️</span>
       <span data-en="All Units Map" data-ar="خريطة الوحدات">All Units Map</span>
     </a>
+  </div>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar">AH</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name">Ahmed Al-Hinai</div>
+      <div class="sidebar-user-role">Developer Partner</div>
+    </div>
   </div>
 </nav>
 
