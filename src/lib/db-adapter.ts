@@ -86,12 +86,26 @@ function runMigrations() {
       continue
     }
 
-    // Skip if already applied
+    // Skip if already applied — EXCEPT: if the seed migration is marked done
+    // but the products table is empty, force a re-seed (handles the case where
+    // migrations/ was missing from a previous deploy and the DB is hollow).
     const filename = path.basename(file)
     const already = sqlite.prepare('SELECT 1 FROM schema_migrations WHERE filename = ?').get(filename)
     if (already) {
-      console.log(`[db-adapter] Already applied, skipping: ${file}`)
-      continue
+      if (filename === '0002_seed.sql') {
+        const productCount = (sqlite.prepare('SELECT COUNT(*) as n FROM products').get() as { n: number }).n
+        if (productCount === 0) {
+          console.log(`[db-adapter] Seed marked applied but products table is empty — re-running seed`)
+          sqlite.prepare('DELETE FROM schema_migrations WHERE filename = ?').run(filename)
+          // fall through to re-apply
+        } else {
+          console.log(`[db-adapter] Already applied, skipping: ${file}`)
+          continue
+        }
+      } else {
+        console.log(`[db-adapter] Already applied, skipping: ${file}`)
+        continue
+      }
     }
 
     try {

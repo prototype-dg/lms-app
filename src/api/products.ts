@@ -3,6 +3,13 @@ import { Hono } from 'hono'
 import { generateId, now, logAudit } from '../lib/db'
 const app = new Hono<{ Bindings: NodeBindings }>()
 
+// List all products
+app.get('/', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    'SELECT * FROM products ORDER BY category, name'
+  ).all()
+  return c.json({ products: results })
+})
 
 app.get('/:id', async (c) => {
   const id = c.req.param('id')

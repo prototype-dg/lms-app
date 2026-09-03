@@ -8,7 +8,7 @@
     "build:azure": "echo 'Skipping vite build on Azure — dist/ is pre-committed';",
     "start": "node server.js",
     "deploy:azure": "npm run build && npm run zip && az webapp deploy --name app-lms-portal --resource-group Dima-Gibert-RG --src-path deploy.zip --type zip",
-    "zip": "zip -r deploy.zip dist/ public/ server.js package.json package-lock.json node_modules/"
+    "zip": "zip -r deploy.zip dist/ public/ server.js package.json package-lock.json migrations/ node_modules/"
   },
   "engines": {
     "node": ">=22.0.0"
