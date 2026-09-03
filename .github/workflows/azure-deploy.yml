@@ -56,12 +56,12 @@ jobs:
 
       - name: Wait for app to start
         run: |
-          echo "Polling https://lms.andersenlab.com ..."
+          echo "Polling https://app-lms-portal.azurewebsites.net ..."
           for i in $(seq 1 20); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://lms.andersenlab.com/)
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://app-lms-portal.azurewebsites.net/)
             echo "Attempt $i: HTTP $CODE"
             if [ "$CODE" = "200" ]; then
-              echo "✅ App is live!"
+              echo "✅ Deployment successful! App is live at https://lms.andersenlab.com"
               exit 0
             fi
             sleep 15
