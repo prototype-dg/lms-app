@@ -742,8 +742,8 @@ body.ar .toast-container{right:auto;left:24px}
           </div>
         </div>
         <div style="margin-top:12px;display:flex;justify-content:space-between">
-          <button class="btn btn-secondary" onclick="wizBack(3)">← Back</button>
-          <button class="btn btn-primary" id="wiz-step3-next" class="hidden" onclick="wizNext(3)">Confirm & Build Inventory →</button>
+          <button class="btn btn-secondary" onclick="wizBack(3)" data-en="← Back" data-ar="← رجوع">← Back</button>
+          <button class="btn btn-primary" id="wiz-step3-next" class="hidden" onclick="wizNext(3)" data-en="Confirm &amp; Build Inventory →" data-ar="تأكيد وبناء المخزون →">Confirm &amp; Build Inventory →</button>
         </div>
       </div>
 
@@ -886,10 +886,10 @@ body.ar .toast-container{right:auto;left:24px}
     <!-- ═══ SALES STRATEGY PAGE ═══ -->
     <div class="page" id="page-sales-strategy">
       <div class="section-header">
-        <div><div class="section-title">Sales Strategy</div><div class="section-sub">Real-time pricing · Absorption velocity · Revenue forecast · Discount model</div></div>
+        <div><div class="section-title" data-en="Sales Strategy" data-ar="استراتيجية المبيعات">Sales Strategy</div><div class="section-sub" data-en="Real-time pricing · Absorption velocity · Revenue forecast · Discount model" data-ar="تسعير آني · سرعة الامتصاص · توقعات الإيرادات · نموذج الخصم">Real-time pricing · Absorption velocity · Revenue forecast · Discount model</div></div>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-secondary btn-sm" onclick="renderSalesStrategy()">↺ Refresh</button>
-          <button class="btn btn-primary btn-sm" onclick="openNewCampaignModal()">+ New Campaign</button>
+          <button class="btn btn-secondary btn-sm" onclick="renderSalesStrategy()">↺ <span data-en="Refresh" data-ar="تحديث">Refresh</span></button>
+          <button class="btn btn-primary btn-sm" onclick="openNewCampaignModal()">+ <span data-en="New Campaign" data-ar="حملة جديدة">New Campaign</span></button>
         </div>
       </div>
 
@@ -901,49 +901,49 @@ body.ar .toast-container{right:auto;left:24px}
             <canvas id="units-donut-canvas"></canvas>
             <div class="donut-center">
               <div class="donut-center-val" id="kpi-total-units">—</div>
-              <div class="donut-center-lbl">Total Units</div>
+              <div class="donut-center-lbl" data-en="Total Units" data-ar="إجمالي الوحدات">Total Units</div>
             </div>
           </div>
           <div class="donut-legend">
-            <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#27AE60"></div><span id="kpi-sold">—</span> Sold</div>
-            <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#F39C12"></div><span id="kpi-reserved">—</span> Reserved</div>
-            <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#E0E7EF"></div><span id="kpi-available">—</span> Available</div>
+            <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#27AE60"></div><span id="kpi-sold">—</span> <span data-en="Sold" data-ar="مُباع">Sold</span></div>
+            <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#F39C12"></div><span id="kpi-reserved">—</span> <span data-en="Reserved" data-ar="محجوز">Reserved</span></div>
+            <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#E0E7EF"></div><span id="kpi-available">—</span> <span data-en="Available" data-ar="متاح">Available</span></div>
           </div>
         </div>
         <!-- Revenue horizontal bars -->
         <div class="rev-bar-col">
-          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">Revenue Breakdown</div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px" data-en="Revenue Breakdown" data-ar="تفاصيل الإيرادات">Revenue Breakdown</div>
           <div class="rev-bar-row">
-            <div class="rev-bar-name" style="color:#27AE60;font-weight:700">✅ Realized</div>
+            <div class="rev-bar-name" style="color:#27AE60;font-weight:700">✅ <span data-en="Realized" data-ar="محقق">Realized</span></div>
             <div class="rev-bar-track"><div class="rev-bar-fill" id="rev-bar-realized" style="background:#27AE60;width:0%"></div></div>
             <div class="rev-bar-amt" id="kpi-revenue-realized">—</div>
           </div>
           <div class="rev-bar-row">
-            <div class="rev-bar-name" style="color:#F39C12;font-weight:700">⏳ Pipeline</div>
+            <div class="rev-bar-name" style="color:#F39C12;font-weight:700">⏳ <span data-en="Pipeline" data-ar="في الطريق">Pipeline</span></div>
             <div class="rev-bar-track"><div class="rev-bar-fill" id="rev-bar-pipeline" style="background:#F39C12;width:0%"></div></div>
             <div class="rev-bar-amt" id="kpi-revenue-pipeline">—</div>
           </div>
           <div class="rev-bar-row">
-            <div class="rev-bar-name" style="color:#ADB5BD;font-weight:700">🏠 Available</div>
+            <div class="rev-bar-name" style="color:#ADB5BD;font-weight:700">🏠 <span data-en="Available" data-ar="متاح">Available</span></div>
             <div class="rev-bar-track"><div class="rev-bar-fill" id="rev-bar-available" style="background:#ADB5BD;width:0%"></div></div>
             <div class="rev-bar-amt" id="rev-available-amt">—</div>
           </div>
-          <div style="font-size:10px;color:var(--gray-500);margin-top:8px">Total portfolio value: <strong id="kpi-portfolio">—</strong></div>
+          <div style="font-size:10px;color:var(--gray-500);margin-top:8px"><span data-en="Total portfolio value:" data-ar="إجمالي قيمة المحفظة:">Total portfolio value:</span> <strong id="kpi-portfolio">—</strong></div>
         </div>
         <!-- Stats column -->
         <div class="kpi-stat-col">
-          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">Portfolio Health</div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px" data-en="Portfolio Health" data-ar="صحة المحفظة">Portfolio Health</div>
           <div class="kpi-stat-item absorption">
             <div class="kpi-stat-icon">📈</div>
-            <div><div class="kpi-stat-val" id="kpi-absorption">—%</div><div class="kpi-stat-lbl">Portfolio Absorption</div></div>
+            <div><div class="kpi-stat-val" id="kpi-absorption">—%</div><div class="kpi-stat-lbl" data-en="Portfolio Absorption" data-ar="نسبة امتصاص المحفظة">Portfolio Absorption</div></div>
           </div>
           <div class="kpi-stat-item realized">
             <div class="kpi-stat-icon">🎯</div>
-            <div><div class="kpi-stat-val" id="kpi-sell-rate">—</div><div class="kpi-stat-lbl">Avg. Sell Rate</div></div>
+            <div><div class="kpi-stat-val" id="kpi-sell-rate">—</div><div class="kpi-stat-lbl" data-en="Avg. Sell Rate" data-ar="متوسط معدل البيع">Avg. Sell Rate</div></div>
           </div>
           <div class="kpi-stat-item pipeline">
             <div class="kpi-stat-icon">🚀</div>
-            <div><div class="kpi-stat-val" id="kpi-campaign-boost">—</div><div class="kpi-stat-lbl">Campaign Boost</div></div>
+            <div><div class="kpi-stat-val" id="kpi-campaign-boost">—</div><div class="kpi-stat-lbl" data-en="Campaign Boost" data-ar="تعزيز الحملة">Campaign Boost</div></div>
           </div>
         </div>
       </div>
@@ -954,7 +954,7 @@ body.ar .toast-container{right:auto;left:24px}
         <!-- Per-Project Revenue Breakdown -->
         <div class="card">
           <div class="card-header">
-            <span class="card-title">📊 Revenue by Project</span>
+            <span class="card-title" data-en="📊 Revenue by Project" data-ar="📊 الإيرادات حسب المشروع">📊 Revenue by Project</span>
           </div>
           <div class="card-body" id="project-revenue-breakdown">
             <div style="text-align:center;color:var(--gray-500);padding:20px">Loading…</div>
@@ -964,7 +964,7 @@ body.ar .toast-container{right:auto;left:24px}
         <!-- Sales Velocity & Absorption -->
         <div class="card">
           <div class="card-header">
-            <span class="card-title">⚡ Sales Velocity by Project</span>
+            <span class="card-title" data-en="⚡ Sales Velocity by Project" data-ar="⚡ سرعة المبيعات حسب المشروع">⚡ Sales Velocity by Project</span>
           </div>
           <div class="card-body" id="velocity-chart">
             <div style="text-align:center;color:var(--gray-500);padding:20px">Loading…</div>
@@ -978,15 +978,15 @@ body.ar .toast-container{right:auto;left:24px}
         <!-- Price Matrix: per Project × Unit Type -->
         <div class="card">
           <div class="card-header">
-            <span class="card-title">💰 Pricing Matrix — Project × Unit Type</span>
-            <button class="btn btn-secondary btn-sm" onclick="openBulkPriceModal()">📊 Bulk Adjust</button>
+            <span class="card-title" data-en="💰 Pricing Matrix — Project × Unit Type" data-ar="💰 مصفوفة التسعير — المشروع × نوع الوحدة">💰 Pricing Matrix — Project × Unit Type</span>
+            <button class="btn btn-secondary btn-sm" onclick="openBulkPriceModal()">📊 <span data-en="Bulk Adjust" data-ar="تعديل جماعي">Bulk Adjust</span></button>
           </div>
           <div class="card-body" style="padding:0;overflow-x:auto">
             <table class="inv-table price-matrix" id="price-matrix-table">
               <thead>
                 <tr>
-                  <th>Project</th><th>Type</th><th>Units</th><th>Avail%</th>
-                  <th>Base Price</th><th>Avg Price</th><th>Premium</th><th>Rec. Discount</th>
+                  <th data-en="Project" data-ar="المشروع">Project</th><th data-en="Type" data-ar="النوع">Type</th><th data-en="Units" data-ar="الوحدات">Units</th><th data-en="Avail%" data-ar="نسبة المتاح">Avail%</th>
+                  <th data-en="Base Price" data-ar="السعر الأساسي">Base Price</th><th data-en="Avg Price" data-ar="متوسط السعر">Avg Price</th><th data-en="Premium" data-ar="علاوة">Premium</th><th data-en="Rec. Discount" data-ar="الخصم الموصى به">Rec. Discount</th>
                 </tr>
               </thead>
               <tbody id="price-matrix-tbody">
@@ -998,10 +998,10 @@ body.ar .toast-container{right:auto;left:24px}
 
         <!-- Discount Model by Availability -->
         <div class="card">
-          <div class="card-header"><span class="card-title">🏷️ Discount Model</span></div>
+          <div class="card-header"><span class="card-title" data-en="🏷️ Discount Model" data-ar="🏷️ نموذج الخصم">🏷️ Discount Model</span></div>
           <div class="card-body">
             <div style="font-size:11px;color:var(--gray-500);margin-bottom:10px">
-              Recommended discount tied to availability — reduces incentive as units sell out, increases to drive remaining inventory.
+              <span data-en="Recommended discount tied to availability — reduces incentive as units sell out, increases to drive remaining inventory." data-ar="خصم موصى به مرتبط بالتوفر — يقل الحافز كلما نفدت الوحدات، ويزيد لتحفيز المخزون المتبقي.">Recommended discount tied to availability — reduces incentive as units sell out, increases to drive remaining inventory.</span>
             </div>
             <div id="discount-model-grid" style="display:grid;gap:8px"></div>
           </div>
@@ -1011,24 +1011,24 @@ body.ar .toast-container{right:auto;left:24px}
       <!-- ── ROW 3: Predictive Revenue Forecast ── -->
       <div class="card" style="margin-bottom:16px">
         <div class="card-header">
-          <span class="card-title">📈 Predictive Revenue Forecast</span>
+          <span class="card-title" data-en="📈 Predictive Revenue Forecast" data-ar="📈 توقعات الإيرادات التنبؤية">📈 Predictive Revenue Forecast</span>
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <div class="scenario-tabs" id="scenario-tabs">
-              <button class="scenario-tab active-scenario" data-sc="base" onclick="switchScenario('base')">Base</button>
-              <button class="scenario-tab" data-sc="optimistic" onclick="switchScenario('optimistic')">Optimistic</button>
-              <button class="scenario-tab" data-sc="conservative" onclick="switchScenario('conservative')">Conservative</button>
+              <button class="scenario-tab active-scenario" data-sc="base" onclick="switchScenario('base')" data-en="Base" data-ar="أساسي">Base</button>
+              <button class="scenario-tab" data-sc="optimistic" onclick="switchScenario('optimistic')" data-en="Optimistic" data-ar="تفاؤلي">Optimistic</button>
+              <button class="scenario-tab" data-sc="conservative" onclick="switchScenario('conservative')" data-en="Conservative" data-ar="متحفظ">Conservative</button>
             </div>
             <span id="fc-campaign-note" style="font-size:11px;font-weight:700;color:#27AE60"></span>
           </div>
         </div>
         <div class="card-body">
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
-            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-total-rev">—</div><div class="kpi-mini-label">Total Forecast Revenue</div></div>
-            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-remaining">—</div><div class="kpi-mini-label">Remaining to Sell</div></div>
-            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-months">—</div><div class="kpi-mini-label">Est. Months to Sell-Out</div></div>
-            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-monthly-rev">—</div><div class="kpi-mini-label">Avg Monthly Revenue</div></div>
+            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-total-rev">—</div><div class="kpi-mini-label" data-en="Total Forecast Revenue" data-ar="إجمالي الإيرادات المتوقعة">Total Forecast Revenue</div></div>
+            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-remaining">—</div><div class="kpi-mini-label" data-en="Remaining to Sell" data-ar="المتبقي للبيع">Remaining to Sell</div></div>
+            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-months">—</div><div class="kpi-mini-label" data-en="Est. Months to Sell-Out" data-ar="الأشهر المتوقعة حتى البيع الكامل">Est. Months to Sell-Out</div></div>
+            <div class="kpi-mini"><div class="kpi-mini-val" id="fc-monthly-rev">—</div><div class="kpi-mini-label" data-en="Avg Monthly Revenue" data-ar="متوسط الإيراد الشهري">Avg Monthly Revenue</div></div>
           </div>
-          <div class="ss-section-title">📊 Per-Project Forecast Revenue</div>
+          <div class="ss-section-title" data-en="📊 Per-Project Forecast Revenue" data-ar="📊 توقعات الإيراد لكل مشروع">📊 Per-Project Forecast Revenue</div>
           <div id="forecast-bars">
             <div style="text-align:center;color:var(--gray-500);padding:12px">Loading…</div>
           </div>
@@ -1040,7 +1040,7 @@ body.ar .toast-container{right:auto;left:24px}
 
         <!-- Absorption Rate by Type across portfolio -->
         <div class="card">
-          <div class="card-header"><span class="card-title">🎯 Absorption Rate by Unit Type</span></div>
+          <div class="card-header"><span class="card-title" data-en="🎯 Absorption Rate by Unit Type" data-ar="🎯 معدل الامتصاص حسب نوع الوحدة">🎯 Absorption Rate by Unit Type</span></div>
           <div class="card-body" id="absorption-chart">
             <div style="text-align:center;color:var(--gray-500);padding:20px">Loading…</div>
           </div>
@@ -1049,21 +1049,21 @@ body.ar .toast-container{right:auto;left:24px}
         <!-- Active Campaigns -->
         <div class="card">
           <div class="card-header">
-            <span class="card-title">🚀 Campaigns</span>
+            <span class="card-title" data-en="🚀 Campaigns" data-ar="🚀 الحملات">🚀 Campaigns</span>
             <span class="chip gray" id="campaign-count">0 active</span>
           </div>
           <div class="card-body" id="campaigns-list">
-            <div style="text-align:center;color:var(--gray-500);padding:20px">No campaigns yet.</div>
+            <div style="text-align:center;color:var(--gray-500);padding:20px" data-en="No campaigns yet." data-ar="لا توجد حملات بعد.">No campaigns yet.</div>
           </div>
         </div>
       </div>
 
       <!-- ── ROW 5: Loan Application Pipeline ── -->
       <div class="card">
-        <div class="card-header"><span class="card-title">🏦 Loan Application Pipeline</span></div>
+        <div class="card-header"><span class="card-title" data-en="🏦 Loan Application Pipeline" data-ar="🏦 مسار طلبات التمويل">🏦 Loan Application Pipeline</span></div>
         <div class="card-body" style="padding:0">
           <table class="inv-table" id="pipeline-table">
-            <thead><tr><th>App #</th><th>Customer</th><th>Unit</th><th>Project</th><th>Amount (OMR)</th><th>Rate</th><th>Status</th><th>Date</th></tr></thead>
+            <thead><tr><th data-en="App #" data-ar="رقم الطلب">App #</th><th data-en="Customer" data-ar="العميل">Customer</th><th data-en="Unit" data-ar="الوحدة">Unit</th><th data-en="Project" data-ar="المشروع">Project</th><th data-en="Amount (OMR)" data-ar="المبلغ (ريال)">Amount (OMR)</th><th data-en="Rate" data-ar="السعر">Rate</th><th data-en="Status" data-ar="الحالة">Status</th><th data-en="Date" data-ar="التاريخ">Date</th></tr></thead>
             <tbody id="pipeline-tbody"><tr><td colspan="8" style="text-align:center;padding:20px;color:var(--gray-500)">Loading…</td></tr></tbody>
           </table>
         </div>
@@ -1077,27 +1077,27 @@ body.ar .toast-container{right:auto;left:24px}
 <div class="cmodal-overlay hidden" id="campaign-modal-overlay" onclick="closeCampaignModalIfOutside(event)">
   <div class="cmodal" onclick="event.stopPropagation()">
     <div class="cmodal-head">
-      <h2>🚀 New Marketing Campaign</h2>
-      <button class="btn btn-secondary btn-sm" onclick="closeCampaignModal()">✕ Close</button>
+      <h2 data-en="🚀 New Marketing Campaign" data-ar="🚀 حملة تسويقية جديدة">🚀 New Marketing Campaign</h2>
+      <button class="btn btn-secondary btn-sm" onclick="closeCampaignModal()" data-en="✕ Close" data-ar="✕ إغلاق">✕ Close</button>
     </div>
     <div class="cmodal-body">
       <!-- Basic info -->
-      <div class="cmodal-section">Campaign Details</div>
+      <div class="cmodal-section" data-en="Campaign Details" data-ar="تفاصيل الحملة">Campaign Details</div>
       <div class="cmodal-row single">
         <div class="cform-group">
-          <label class="cform-label">Campaign Name *</label>
+          <label class="cform-label" data-en="Campaign Name *" data-ar="اسم الحملة *">Campaign Name *</label>
           <input class="cform-input" id="cm-name" placeholder="e.g. Eid Al-Adha Early Bird" oninput="updateCampaignPreview()"/>
         </div>
       </div>
       <div class="cmodal-row">
         <div class="cform-group">
-          <label class="cform-label">Target Project *</label>
+          <label class="cform-label" data-en="Target Project *" data-ar="المشروع المستهدف *">Target Project *</label>
           <select class="cform-select" id="cm-project" onchange="updateCampaignPreview()">
             <option value="all">All Projects</option>
           </select>
         </div>
         <div class="cform-group">
-          <label class="cform-label">Target Unit Type</label>
+          <label class="cform-label" data-en="Target Unit Type" data-ar="نوع الوحدة المستهدف">Target Unit Type</label>
           <select class="cform-select" id="cm-unit-type" onchange="updateCampaignPreview()">
             <option value="all">All Types</option>
           </select>
@@ -1105,50 +1105,50 @@ body.ar .toast-container{right:auto;left:24px}
       </div>
       <div class="cmodal-row">
         <div class="cform-group">
-          <label class="cform-label">Start Date *</label>
+          <label class="cform-label" data-en="Start Date *" data-ar="تاريخ البدء *">Start Date *</label>
           <input class="cform-input" id="cm-start" type="date" oninput="updateCampaignPreview()"/>
         </div>
         <div class="cform-group">
-          <label class="cform-label">End Date *</label>
+          <label class="cform-label" data-en="End Date *" data-ar="تاريخ الانتهاء *">End Date *</label>
           <input class="cform-input" id="cm-end" type="date" oninput="updateCampaignPreview()"/>
         </div>
       </div>
 
       <!-- Pricing levers -->
-      <div class="cmodal-section">Pricing Strategy</div>
+      <div class="cmodal-section" data-en="Pricing Strategy" data-ar="استراتيجية التسعير">Pricing Strategy</div>
       <div class="cmodal-row triple">
         <div class="cform-group">
-          <label class="cform-label">Discount % *</label>
+          <label class="cform-label" data-en="Discount % *" data-ar="نسبة الخصم % *">Discount % *</label>
           <input class="cform-input" id="cm-discount" type="number" min="0" max="20" step="0.5" value="5" oninput="updateCampaignPreview()"/>
-          <span class="cform-hint">Applied to unit asking price</span>
+          <span class="cform-hint" data-en="Applied to unit asking price" data-ar="يطبّق على سعر الوحدة المطلوب">Applied to unit asking price</span>
         </div>
         <div class="cform-group">
-          <label class="cform-label">Velocity Boost %</label>
+          <label class="cform-label" data-en="Velocity Boost %" data-ar="تعزيز السرعة %">Velocity Boost %</label>
           <input class="cform-input" id="cm-velocity-boost" type="number" min="0" max="100" step="5" value="20" oninput="updateCampaignPreview()"/>
-          <span class="cform-hint">Expected sales rate increase</span>
+          <span class="cform-hint" data-en="Expected sales rate increase" data-ar="الزيادة المتوقعة في معدل المبيعات">Expected sales rate increase</span>
         </div>
         <div class="cform-group">
-          <label class="cform-label">Commission %</label>
+          <label class="cform-label" data-en="Commission %" data-ar="نسبة العمولة %">Commission %</label>
           <input class="cform-input" id="cm-commission" type="number" min="0" max="5" step="0.25" value="1" oninput="updateCampaignPreview()"/>
-          <span class="cform-hint">Broker / agent fee</span>
+          <span class="cform-hint" data-en="Broker / agent fee" data-ar="عمولة السمسار / الوكيل">Broker / agent fee</span>
         </div>
       </div>
 
       <!-- Budget -->
-      <div class="cmodal-section">Budget</div>
+      <div class="cmodal-section" data-en="Budget" data-ar="الميزانية">Budget</div>
       <div class="cmodal-row triple">
         <div class="cform-group">
-          <label class="cform-label">Marketing Spend (OMR)</label>
+          <label class="cform-label" data-en="Marketing Spend (OMR)" data-ar="الإنفاق التسويقي (ريال)">Marketing Spend (OMR)</label>
           <input class="cform-input" id="cm-budget" type="number" min="0" step="500" value="5000" oninput="updateCampaignPreview()"/>
-          <span class="cform-hint">Advertising, events, collateral</span>
+          <span class="cform-hint" data-en="Advertising, events, collateral" data-ar="إعلانات، فعاليات، مواد دعاية">Advertising, events, collateral</span>
         </div>
         <div class="cform-group">
-          <label class="cform-label">Target Units to Sell</label>
+          <label class="cform-label" data-en="Target Units to Sell" data-ar="الوحدات المستهدفة للبيع">Target Units to Sell</label>
           <input class="cform-input" id="cm-target-units" type="number" min="1" step="1" value="5" oninput="updateCampaignPreview()"/>
-          <span class="cform-hint">Units expected during campaign</span>
+          <span class="cform-hint" data-en="Units expected during campaign" data-ar="الوحدات المتوقع بيعها خلال الحملة">Units expected during campaign</span>
         </div>
         <div class="cform-group">
-          <label class="cform-label">Campaign Status</label>
+          <label class="cform-label" data-en="Campaign Status" data-ar="حالة الحملة">Campaign Status</label>
           <select class="cform-select" id="cm-status">
             <option value="scheduled">Scheduled</option>
             <option value="active">Active Now</option>
@@ -1157,29 +1157,29 @@ body.ar .toast-container{right:auto;left:24px}
       </div>
 
       <div class="cform-group" style="margin-bottom:14px">
-        <label class="cform-label">Notes / Strategy</label>
+        <label class="cform-label" data-en="Notes / Strategy" data-ar="ملاحظات / الاستراتيجية">Notes / Strategy</label>
         <textarea class="cform-textarea" id="cm-notes" placeholder="Target audience, channels, key message…"></textarea>
       </div>
 
       <!-- Live Impact Preview -->
-      <div class="cmodal-section">📊 Predicted Sales Impact</div>
+      <div class="cmodal-section" data-en="📊 Predicted Sales Impact" data-ar="📊 تأثير المبيعات المتوقع">📊 Predicted Sales Impact</div>
       <div class="campaign-impact" id="campaign-impact-panel">
-        <div class="campaign-impact-title">⚡ Real-time forecast based on current inventory &amp; velocity data</div>
+        <div class="campaign-impact-title" data-en="⚡ Real-time forecast based on current inventory &amp; velocity data" data-ar="⚡ توقع آني بناءً على بيانات المخزون وسرعة المبيعات الحالية">⚡ Real-time forecast based on current inventory &amp; velocity data</div>
         <div class="campaign-impact-grid" id="campaign-impact-grid">
-          <div class="cimpact-card"><div class="cimpact-val" id="ci-units-sold">—</div><div class="cimpact-lbl">Est. Units Sold</div></div>
-          <div class="cimpact-card"><div class="cimpact-val green" id="ci-gross-rev">—</div><div class="cimpact-lbl">Gross Revenue (OMR)</div></div>
-          <div class="cimpact-card"><div class="cimpact-val red" id="ci-total-cost">—</div><div class="cimpact-lbl">Total Cost (OMR)</div></div>
-          <div class="cimpact-card"><div class="cimpact-val" id="ci-net-rev">—</div><div class="cimpact-lbl">Net Revenue (OMR)</div></div>
-          <div class="cimpact-card"><div class="cimpact-val amber" id="ci-roi">—</div><div class="cimpact-lbl">ROI</div></div>
-          <div class="cimpact-card"><div class="cimpact-val" id="ci-break-even">—</div><div class="cimpact-lbl">Break-Even Units</div></div>
-          <div class="cimpact-card"><div class="cimpact-val" id="ci-duration">—</div><div class="cimpact-lbl">Duration (days)</div></div>
-          <div class="cimpact-card"><div class="cimpact-val" id="ci-velocity-after">—</div><div class="cimpact-lbl">Velocity After (u/mo)</div></div>
+          <div class="cimpact-card"><div class="cimpact-val" id="ci-units-sold">—</div><div class="cimpact-lbl" data-en="Est. Units Sold" data-ar="الوحدات المتوقعة">Est. Units Sold</div></div>
+          <div class="cimpact-card"><div class="cimpact-val green" id="ci-gross-rev">—</div><div class="cimpact-lbl" data-en="Gross Revenue (OMR)" data-ar="الإيراد الإجمالي (ريال)">Gross Revenue (OMR)</div></div>
+          <div class="cimpact-card"><div class="cimpact-val red" id="ci-total-cost">—</div><div class="cimpact-lbl" data-en="Total Cost (OMR)" data-ar="إجمالي التكلفة (ريال)">Total Cost (OMR)</div></div>
+          <div class="cimpact-card"><div class="cimpact-val" id="ci-net-rev">—</div><div class="cimpact-lbl" data-en="Net Revenue (OMR)" data-ar="صافي الإيراد (ريال)">Net Revenue (OMR)</div></div>
+          <div class="cimpact-card"><div class="cimpact-val amber" id="ci-roi">—</div><div class="cimpact-lbl" data-en="ROI" data-ar="العائد على الاستثمار">ROI</div></div>
+          <div class="cimpact-card"><div class="cimpact-val" id="ci-break-even">—</div><div class="cimpact-lbl" data-en="Break-Even Units" data-ar="وحدات نقطة التعادل">Break-Even Units</div></div>
+          <div class="cimpact-card"><div class="cimpact-val" id="ci-duration">—</div><div class="cimpact-lbl" data-en="Duration (days)" data-ar="المدة (أيام)">Duration (days)</div></div>
+          <div class="cimpact-card"><div class="cimpact-val" id="ci-velocity-after">—</div><div class="cimpact-lbl" data-en="Velocity After (u/mo)" data-ar="السرعة بعدها (و/شهر)">Velocity After (u/mo)</div></div>
         </div>
       </div>
     </div>
     <div class="cmodal-foot">
-      <button class="btn btn-secondary" onclick="closeCampaignModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveCampaign()">💾 Save Campaign</button>
+      <button class="btn btn-secondary" onclick="closeCampaignModal()" data-en="Cancel" data-ar="إلغاء">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCampaign()" data-en="💾 Save Campaign" data-ar="💾 حفظ الحملة">💾 Save Campaign</button>
     </div>
   </div>
 </div>
@@ -1430,10 +1430,10 @@ async function initSiteMap() {
     const re = siteMapAllUnits.filter(x=>x.status==='reserved').length;
     const so = siteMapAllUnits.filter(x=>x.status==='sold').length;
     const sub = document.getElementById('map-subtitle');
-    if (sub) sub.textContent = `${totalUnits} units across ${projects.length} projects · click any pin for details`;
-    const la = document.getElementById('leg-available'); if(la) la.textContent = `Available (${av})`;
-    const lr = document.getElementById('leg-reserved');  if(lr) lr.textContent = `Reserved (${re})`;
-    const ls = document.getElementById('leg-sold');       if(ls) ls.textContent = `Sold (${so})`;
+    if (sub) sub.textContent = isAr ? `${totalUnits} وحدة في ${projects.length} مشروع · اضغط على أي دبوس للتفاصيل` : `${totalUnits} units across ${projects.length} projects · click any pin for details`;
+    const la = document.getElementById('leg-available'); if(la) la.textContent = isAr ? `متاح (${av})` : `Available (${av})`;
+    const lr = document.getElementById('leg-reserved');  if(lr) lr.textContent = isAr ? `محجوز (${re})` : `Reserved (${re})`;
+    const ls = document.getElementById('leg-sold');       if(ls) ls.textContent = isAr ? `مُباع (${so})` : `Sold (${so})`;
 
     // Auto-fit map to all plotted units
     if (siteMapAllUnits.length > 0) {
@@ -1538,16 +1538,16 @@ async function renderInventoryGroups() {
           <span style="font-size:16px">🏗️</span>
           <strong style="font-size:13px;color:var(--navy)">${proj.name}</strong>
           <span style="font-size:11px;color:var(--gray-500)">${units.length} units</span>
-          <span class="chip ${isLive?'green':'gray'}" style="font-size:10px">${isLive?'Published':'Draft'}</span>
-          <span class="unit-status available" style="font-size:11px">${av} available</span>
-          <span class="unit-status reserved" style="font-size:11px">${re} reserved</span>
-          <span class="unit-status sold" style="font-size:11px">${so} sold</span>
+          <span class="chip ${isLive?'green':'gray'}" style="font-size:10px">${isLive?(isAr?'منشور':'Published'):(isAr?'مسودة':'Draft')}</span>
+          <span class="unit-status available" style="font-size:11px">${av} ${isAr?'متاح':'available'}</span>
+          <span class="unit-status reserved" style="font-size:11px">${re} ${isAr?'محجوز':'reserved'}</span>
+          <span class="unit-status sold" style="font-size:11px">${so} ${isAr?'مُباع':'sold'}</span>
           <span class="inv-group-toggle open" id="${groupId}-toggle">▶</span>
         </div>
         <div class="inv-group-body" id="${groupId}">
           <table class="inv-table">
             <thead><tr>
-              <th>Unit #</th><th>Type</th><th>Area m²</th><th>Beds</th><th>Price (OMR)</th><th>GSAS</th><th>Status</th><th></th>
+              <th>${isAr?'رقم الوحدة':'Unit #'}</th><th>${isAr?'النوع':'Type'}</th><th>${isAr?'المساحة م²':'Area m²'}</th><th>${isAr?'غرف':'Beds'}</th><th>${isAr?'السعر (ريال)':'Price (OMR)'}</th><th>GSAS</th><th>${isAr?'الحالة':'Status'}</th><th></th>
             </tr></thead>
             <tbody>
               ${units.length ? units.map(u => `<tr class="inv-row" onclick="openUnitById('${u.id}')" style="cursor:pointer" title="Click to view unit details">
@@ -1557,11 +1557,11 @@ async function renderInventoryGroups() {
                 <td>${u.bedrooms||'—'}</td>
                 <td>${u.price ? Number(u.price).toLocaleString() : '—'}</td>
                 <td><span class="gsas-score ${(u.gsas_score||0)>=85?'excellent':'good'}">${u.gsas_score||'—'}</span></td>
-                <td><span class="unit-status ${u.status||'available'}" id="ustatus-${u.id}">${u.status||'available'}</span></td>
+                <td><span class="unit-status ${u.status||'available'}" id="ustatus-${u.id}">${isAr?(u.status==='available'?'متاح':u.status==='reserved'?'محجوز':'مُباع'):(u.status||'available')}</span></td>
                 <td style="white-space:nowrap" onclick="event.stopPropagation()">
-                  <button class="btn btn-primary btn-sm" onclick="openUnitById('${u.id}')">View Details →</button>
+                  <button class="btn btn-primary btn-sm" onclick="openUnitById('${u.id}')">${isAr?'عرض التفاصيل ←':'View Details →'}</button>
                 </td>
-              </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--gray-500)">No units for this project.</td></tr>'}
+              </tr>`).join('') : `<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--gray-500)">${isAr?'لا توجد وحدات لهذا المشروع.':'No units for this project.'}</td></tr>`}
             </tbody>
           </table>
         </div>`;
@@ -1678,52 +1678,52 @@ function openUnitDetail(projId, unitId, unitOrJson) {
           <div class="ud-unit-num">${u.unit_number || unitId}</div>
           <div class="ud-unit-type">${u.type || '—'} · ${u.area_sqm || '—'} m²</div>
         </div>
-        <span class="unit-status ${st}" id="ud-status-badge" data-uid="${unitId}" data-status="${st}">${st}</span>
+        <span class="unit-status ${st}" id="ud-status-badge" data-uid="${unitId}" data-status="${st}">${isAr?(st==='available'?'متاح':st==='reserved'?'محجوز':'مُباع'):st}</span>
       </div>
     </div>
 
     <div class="ud-body">
       <!-- Key metrics -->
       <div class="ud-metrics">
-        <div class="ud-metric"><div class="ud-metric-val">${u.bedrooms || '—'}</div><div class="ud-metric-lbl">Bedrooms</div></div>
-        <div class="ud-metric"><div class="ud-metric-val">${u.bathrooms || '—'}</div><div class="ud-metric-lbl">Bathrooms</div></div>
+        <div class="ud-metric"><div class="ud-metric-val">${u.bedrooms || '—'}</div><div class="ud-metric-lbl">${isAr ? 'غرف النوم' : 'Bedrooms'}</div></div>
+        <div class="ud-metric"><div class="ud-metric-val">${u.bathrooms || '—'}</div><div class="ud-metric-lbl">${isAr ? 'دورات مياه' : 'Bathrooms'}</div></div>
         <div class="ud-metric"><div class="ud-metric-val">${u.area_sqm || '—'}</div><div class="ud-metric-lbl">m²</div></div>
         <div class="ud-metric"><div class="ud-metric-val" style="color:var(--teal)">${u.gsas_score || '—'}</div><div class="ud-metric-lbl">GSAS</div></div>
       </div>
 
       <!-- Pricing -->
       <div class="ud-section">
-        <div class="ud-section-title">Pricing</div>
-        <div class="ud-row"><span>List Price</span><strong>${u.price ? 'OMR ' + Number(u.price).toLocaleString() : '—'}</strong></div>
-        <div class="ud-row"><span>Floor</span><strong>${u.floor_number ? 'Level ' + u.floor_number : '—'}</strong></div>
+        <div class="ud-section-title">${isAr ? 'التسعير' : 'Pricing'}</div>
+        <div class="ud-row"><span>${isAr ? 'سعر القائمة' : 'List Price'}</span><strong>${u.price ? 'OMR ' + Number(u.price).toLocaleString() : '—'}</strong></div>
+        <div class="ud-row"><span>${isAr ? 'الطابق' : 'Floor'}</span><strong>${u.floor_number ? 'Level ' + u.floor_number : '—'}</strong></div>
       </div>
 
       <!-- Status management -->
       <div class="ud-section">
-        <div class="ud-section-title">Status Management</div>
+        <div class="ud-section-title">${isAr ? 'إدارة الحالة' : 'Status Management'}</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
           ${['available','reserved','sold'].map(s => `
             <button class="btn btn-sm ${st===s?'btn-primary':'btn-secondary'}" id="ud-st-${s}"
               onclick="setUnitStatusFromPanel('${projId}','${unitId}','${s}')">
-              ${s==='available'?'✅':s==='reserved'?'⏳':'🔒'} ${s.charAt(0).toUpperCase()+s.slice(1)}
+              ${s==='available'?'✅':s==='reserved'?'⏳':'🔒'} ${isAr ? (s==='available'?'متاح':s==='reserved'?'محجوز':'مُباع') : s.charAt(0).toUpperCase()+s.slice(1)}
             </button>`).join('')}
         </div>
       </div>
 
       <!-- Quick price edit -->
       <div class="ud-section">
-        <div class="ud-section-title">Update Price</div>
+        <div class="ud-section-title">${isAr ? 'تحديث السعر' : 'Update Price'}</div>
         <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-          <input type="number" id="ud-price-input" value="${u.price||''}" placeholder="Price in OMR"
+          <input type="number" id="ud-price-input" value="${u.price||''}" placeholder="${isAr ? 'السعر بالريال' : 'Price in OMR'}"
             style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px"/>
-          <button class="btn btn-primary btn-sm" onclick="saveUnitPriceFromPanel('${projId}','${unitId}')">Save</button>
+          <button class="btn btn-primary btn-sm" onclick="saveUnitPriceFromPanel('${projId}','${unitId}')">${isAr ? 'حفظ' : 'Save'}</button>
         </div>
       </div>
 
       <!-- Features -->
       ${u.features && JSON.parse(u.features||'[]').length ? `
       <div class="ud-section">
-        <div class="ud-section-title">Features</div>
+        <div class="ud-section-title">${isAr ? 'المميزات' : 'Features'}</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
           ${JSON.parse(u.features||'[]').map(f=>`<span class="chip green">${f}</span>`).join('')}
         </div>
@@ -1732,23 +1732,23 @@ function openUnitDetail(projId, unitId, unitOrJson) {
       <!-- Location -->
       ${u.lat && u.lng ? `
       <div class="ud-section">
-        <div class="ud-section-title">Location</div>
-        <div class="ud-row"><span>Coordinates</span><strong>${Number(u.lat).toFixed(4)}, ${Number(u.lng).toFixed(4)}</strong></div>
+        <div class="ud-section-title">${isAr ? 'الموقع' : 'Location'}</div>
+        <div class="ud-row"><span>${isAr ? 'الإحداثيات' : 'Coordinates'}</span><strong>${Number(u.lat).toFixed(4)}, ${Number(u.lng).toFixed(4)}</strong></div>
       </div>` : ''}
 
       <!-- Floor plan placeholder -->
       <div class="ud-section">
-        <div class="ud-section-title">Floor Plan</div>
+        <div class="ud-section-title">${isAr ? 'مخطط الطابق' : 'Floor Plan'}</div>
         <div style="background:var(--gray-100);border-radius:8px;height:160px;display:flex;align-items:center;justify-content:center;margin-top:8px;flex-direction:column;gap:8px">
           <div style="font-size:32px">📐</div>
-          <div style="font-size:12px;color:var(--gray-500)">Upload floor plan in Documents tab</div>
+          <div style="font-size:12px;color:var(--gray-500)">${isAr ? 'ارفع المخطط في تبويب الوثائق' : 'Upload floor plan in Documents tab'}</div>
         </div>
       </div>
 
       <!-- Close button at bottom -->
       <div class="ud-section" style="border-bottom:none;padding-bottom:4px">
         <button class="ud-close-bottom" onclick="closeUnitDetail()">
-          <span style="font-size:16px">✕</span> Close Panel
+          <span style="font-size:16px">✕</span> ${isAr ? 'إغلاق اللوحة' : 'Close Panel'}
         </button>
       </div>
     </div>
@@ -1774,18 +1774,19 @@ async function setUnitStatusFromPanel(projId, unitId, newStatus) {
     if(!r.ok) throw new Error();
     // Update panel badge
     const badge = document.getElementById('ud-status-badge');
-    if(badge) { badge.className = `unit-status ${newStatus}`; badge.textContent = newStatus; badge.dataset.status = newStatus; }
+    const statusLbl = isAr?(newStatus==='available'?'متاح':newStatus==='reserved'?'محجوز':'مُباع'):newStatus;
+    if(badge) { badge.className = `unit-status ${newStatus}`; badge.textContent = statusLbl; badge.dataset.status = newStatus; }
     // Update table badge
     const tblBadge = document.getElementById('ustatus-' + unitId);
-    if(tblBadge) { tblBadge.className = `unit-status ${newStatus}`; tblBadge.textContent = newStatus; }
+    if(tblBadge) { tblBadge.className = `unit-status ${newStatus}`; tblBadge.textContent = statusLbl; }
     // Restyle buttons
     ['available','reserved','sold'].forEach(s => {
       const b = document.getElementById('ud-st-'+s);
       if(b) b.className = `btn btn-sm ${s===newStatus?'btn-primary':'btn-secondary'}`;
     });
-    toast(`Status updated → ${newStatus}`, 'success');
+    toast(isAr ? `تم تحديث الحالة → ${statusLbl}` : `Status updated → ${newStatus}`, 'success');
   } catch(e) {
-    toast('Failed to update status', 'error');
+    toast(isAr ? 'فشل تحديث الحالة' : 'Failed to update status', 'error');
   } finally {
     btns.forEach(b=>b.disabled=false);
   }
@@ -2902,10 +2903,10 @@ function renderForecast(byProject) {
         ✅ ${fmtOMR(p.projRealizedRev)} · 🔮 ${fmtOMR(p.projForecastRev)} · ⚡ ${p.adjVelocity.toFixed(1)} u/mo${discNote}${campBoostNote} · ${p.estMonths!=null?'~'+p.estMonths+' mo to sell-out':'No avail units'}
       </div>`;
     }).join('') + `<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;flex-wrap:wrap">
-      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#27AE60;border-radius:3px"></span>Realized (sold)</span>
-      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#007F86;opacity:.65;border-radius:3px"></span>Forecast (velocity × scenario × campaigns)</span>
-      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ADB5BD"></span>Draft</span>
-      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#27AE60"></span>Active</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#27AE60;border-radius:3px"></span>${isAr?'محقق (مُباع)':'Realized (sold)'}</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#007F86;opacity:.65;border-radius:3px"></span>${isAr?'متوقع (السرعة × السيناريو × الحملات)':'Forecast (velocity × scenario × campaigns)'}</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ADB5BD"></span>${isAr?'مسودة':'Draft'}</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#27AE60"></span>${isAr?'نشط':'Active'}</span>
     </div>`;
   }
 }
@@ -2925,12 +2926,12 @@ function renderCampaigns() {
   if(count) count.textContent = active + ' active';
   if(!list) return;
   if(!campaigns.length) {
-    list.innerHTML='<div style="text-align:center;color:var(--gray-500);padding:16px">No campaigns yet. Create one to boost sales velocity and see the revenue impact instantly.</div>';
+    list.innerHTML=`<div style="text-align:center;color:var(--gray-500);padding:16px">${isAr?'لا توجد حملات بعد. أنشئ حملة لتعزيز سرعة المبيعات ورؤية تأثيرها الفوري على الإيرادات.':'No campaigns yet. Create one to boost sales velocity and see the revenue impact instantly.'}</div>`;
     return;
   }
   list.innerHTML = campaigns.map(c => {
-    const projName = c.projectId==='all' ? 'All Projects' : (salesProjects.find(p=>p.id===c.projectId)||{}).name || c.projectId;
-    const typeName = c.unitType==='all' ? 'All Types' : (c.unitType||'All Types');
+    const projName = c.projectId==='all' ? (isAr?'جميع المشاريع':'All Projects') : (salesProjects.find(p=>p.id===c.projectId)||{}).name || c.projectId;
+    const typeName = c.unitType==='all' ? (isAr?'جميع الأنواع':'All Types') : (c.unitType||(isAr?'جميع الأنواع':'All Types'));
     return `<div class="campaign-card">
       <div style="font-size:22px">${c.status==='active'?'🚀':c.status==='scheduled'?'📅':'📦'}</div>
       <div style="flex:1;min-width:0">
@@ -2943,7 +2944,7 @@ function renderCampaigns() {
         ${c.velocityBoost>0?`<span class="chip amber" style="font-size:10px;font-weight:700">+${c.velocityBoost}% vel.</span>`:''}
         ${c.budget>0?`<span style="font-size:10px;color:var(--gray-500)">Budget: OMR ${Number(c.budget).toLocaleString()}</span>`:''}
       </div>
-      <span class="campaign-badge ${c.status}">${c.status}</span>
+      <span class="campaign-badge ${c.status}">${isAr?(c.status==='active'?'نشطة':c.status==='scheduled'?'مجدولة':'منتهية'):c.status}</span>
       <button class="btn btn-secondary btn-sm" onclick="deleteCampaign(${c.id})" style="flex-shrink:0">✕</button>
     </div>`;
   }).join('');
@@ -2953,7 +2954,7 @@ function renderPipeline(apps) {
   const tbody = document.getElementById('pipeline-tbody');
   if(!tbody) return;
   if(!apps.length) {
-    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gray-500)">No loan applications linked yet.</td></tr>';
+    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gray-500)">${isAr?'لا توجد طلبات تمويل مرتبطة بعد.':'No loan applications linked yet.'}</td></tr>`;
     return;
   }
   const statusColor = {approved:'green',pending:'amber',rejected:'gray'};
