@@ -235,6 +235,43 @@ INSERT OR IGNORE INTO audit_logs VALUES ('al003','u002','Aisha Al-Balushi','comp
 INSERT OR IGNORE INTO audit_logs VALUES ('al004','u003','Omar Al-Mantheri','risk_officer','CREDIT_REVIEW_APPROVED','application','app001','{"reference":"HL-240892","dbr":46,"ltv":78,"stress_test":"passed"}','manual',null,'CBO Circular 2024-01','10.10.50.33','2024-09-16 11:00:00');
 `
 
+// ── Seed/run endpoint ────────────────────────────────────────────────────
+// Idempotent seed: applies schema and INSERT OR IGNORE seed data.
+// Safe to call on any existing DB — will not overwrite live data.
+// Called by the landing-page "Initialize System Data" button after reset-demo.
+app.post('/run', async (c) => {
+  const db = c.env.DB
+  try {
+    // Re-apply schema (all IF NOT EXISTS guards — safe on existing DB)
+    const schemaSql = SCHEMA_SQL
+    const statements = schemaSql.split(';').map(s => s.trim()).filter(s => s.length > 0)
+    for (const stmt of statements) {
+      try { await db.prepare(stmt).run() } catch (_) { /* ignore already-exists errors */ }
+    }
+
+    // Re-apply portal columns (ALTER TABLE — ignore "duplicate column" errors)
+    const portalSql = PORTAL_COLUMNS_SQL
+    const portalStmts = portalSql.split(';').map(s => s.trim()).filter(s => s.length > 0)
+    for (const stmt of portalStmts) {
+      try { await db.prepare(stmt).run() } catch (_) { /* duplicate column — safe to ignore */ }
+    }
+
+    // Re-apply seed data (INSERT OR IGNORE — won't overwrite existing rows)
+    const seedSql = SEED_SQL
+    const seedStmts = seedSql.split(';').map(s => s.trim()).filter(s => s.length > 0 && !s.startsWith('--'))
+    for (const stmt of seedStmts) {
+      try { await db.prepare(stmt).run() } catch (_) { /* ignore duplicate key errors */ }
+    }
+
+    return c.json({
+      success: true,
+      message: 'Seed data applied successfully. All tables and reference data are in place.'
+    })
+  } catch (e: any) {
+    return c.json({ success: false, error: e.message }, 500)
+  }
+})
+
 // ── Demo reset endpoint ───────────────────────────────────────────────────
 // Full hard-reset: returns DB to the exact pre-presentation template state.
 // All user-created products, applications, threads, and live data are purged.
