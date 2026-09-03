@@ -22,10 +22,27 @@ jobs:
       - name: Install production dependencies
         run: npm ci --omit=dev
 
+      - name: Verify key files exist
+        run: |
+          echo "--- Checking required files ---"
+          ls -lh server.js dist/index.js
+          ls -lh node_modules/@hono/node-server/dist/index.js
+          ls -lh node_modules/better-sqlite3/build/Release/better_sqlite3.node
+          echo "--- node_modules size ---"
+          du -sh node_modules/
+
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Ensure WEBSITE_RUN_FROM_PACKAGE is set
+        run: |
+          az webapp config appsettings set \
+            --name app-lms-portal \
+            --resource-group Dima-Gibert-RG \
+            --settings WEBSITE_RUN_FROM_PACKAGE=1
+          echo "✅ WEBSITE_RUN_FROM_PACKAGE=1 confirmed"
 
       - name: Create deployment zip (with node_modules)
         run: |
@@ -39,31 +56,39 @@ jobs:
             --exclude "vite.config*" \
             --exclude "tsconfig*" \
             --exclude "wrangler*" \
-            --exclude "ecosystem*"
+            --exclude "ecosystem*" \
+            --exclude ".deployment"
           echo "Zip size: $(du -sh deploy.zip)"
+          echo "Key paths inside zip:"
+          unzip -l deploy.zip | grep -E "(server\.js|dist/index\.js|node_modules/@hono|node_modules/better)" | head -10
 
-      - name: Deploy to Azure (WEBSITE_RUN_FROM_PACKAGE — zip mounted directly)
-        # This mode mounts the zip as read-only filesystem — node_modules never stripped
+      - name: Deploy zip to Azure (synchronous — waits for completion)
         run: |
           az webapp deploy \
             --name app-lms-portal \
             --resource-group Dima-Gibert-RG \
             --src-path deploy.zip \
-            --type zip \
-            --async true
-          echo "✅ Zip uploaded and mounted"
+            --type zip
+          echo "✅ Deployment completed"
 
-      - name: Wait for app to start
+      - name: Restart app to pick up new package
+        run: |
+          az webapp restart \
+            --name app-lms-portal \
+            --resource-group Dima-Gibert-RG
+          echo "✅ App restarted"
+
+      - name: Wait for app to start (10 min, non-fatal timeout)
         run: |
           echo "Polling https://app-lms-portal.azurewebsites.net ..."
-          for i in $(seq 1 24); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://app-lms-portal.azurewebsites.net/)
-            echo "$(date -u '+%H:%M:%S') Attempt $i: HTTP $CODE"
+          for i in $(seq 1 40); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://app-lms-portal.azurewebsites.net/ 2>/dev/null || echo "000")
+            echo "$(date -u '+%H:%M:%S') Attempt $i/40: HTTP $CODE"
             if [ "$CODE" = "200" ]; then
-              echo "✅ App is live at https://lms.andersenlab.com"
+              echo "✅ App is live! https://lms.andersenlab.com"
               exit 0
             fi
             sleep 15
           done
-          echo "⚠️ Did not get 200 within 6 minutes"
+          echo "⚠️ App did not return 200 within 10 minutes — check Azure logs"
           exit 1
