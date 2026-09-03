@@ -20,7 +20,8 @@ const sqlite = new BetterSqlite3(dbPath)
 sqlite.pragma('journal_mode = WAL')
 sqlite.pragma('foreign_keys = ON')
 
-// Auto-apply migrations on startup (idempotent — IF NOT EXISTS guards every DDL)
+// Auto-apply migrations on startup — tracked via schema_migrations table
+// so each file runs exactly once, even on a pre-existing /home/data/app.db
 const MIGRATION_FILES = [
   './migrations/0001_initial.sql',
   './migrations/0002_seed.sql',
@@ -34,6 +35,49 @@ function runMigrations() {
     console.log('[db-adapter] migrations/ directory not found — skipping auto-migration')
     return
   }
+
+  // Create a migration-tracking table if it doesn't exist yet
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      filename TEXT PRIMARY KEY,
+      applied_at TEXT DEFAULT (datetime('now'))
+    )
+  `)
+
+  // Adopt a pre-existing database: if schema_migrations is empty but the
+  // products table already exists, the DB was migrated before tracking was
+  // introduced. Mark all migrations whose side-effects are already present
+  // as applied so they don't re-run against the evolved schema.
+  const tracked = sqlite.prepare('SELECT COUNT(*) as n FROM schema_migrations').get() as { n: number }
+  if (tracked.n === 0) {
+    const productsExists = sqlite.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='products'"
+    ).get()
+    if (productsExists) {
+      // Check how many columns products already has
+      const cols = sqlite.prepare("PRAGMA table_info(products)").all() as Array<{name: string}>
+      const colCount = cols.length
+      console.log(`[db-adapter] Adopting pre-existing DB (products has ${colCount} columns) — marking migrations as applied`)
+      // Always mark 0001 (schema) and 0002 (seed) as done since the table exists
+      sqlite.prepare('INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)').run('0001_initial.sql')
+      sqlite.prepare('INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)').run('0002_seed.sql')
+      // Mark 0003 (portal columns) as done if those columns are already present
+      const hasPortalCol = cols.some(c => c.name === 'portal_visible')
+      if (hasPortalCol) {
+        sqlite.prepare('INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)').run('0003_portal_columns.sql')
+      }
+      // Mark 0004 (project_images) as done if that table/column exists
+      const hasImagesTable = sqlite.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='project_images'"
+      ).get()
+      const projectCols = sqlite.prepare("PRAGMA table_info(projects)").all() as Array<{name: string}>
+      const hasImageUrlCol = projectCols.some(c => c.name === 'image_urls')
+      if (hasImagesTable || hasImageUrlCol) {
+        sqlite.prepare('INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)').run('0004_project_images.sql')
+      }
+    }
+  }
+
   console.log('[db-adapter] Running auto-migrations...')
   for (const file of MIGRATION_FILES) {
     const filePath = path.resolve(file)
@@ -41,14 +85,27 @@ function runMigrations() {
       console.log(`[db-adapter] Migration not found, skipping: ${file}`)
       continue
     }
+
+    // Skip if already applied
+    const filename = path.basename(file)
+    const already = sqlite.prepare('SELECT 1 FROM schema_migrations WHERE filename = ?').get(filename)
+    if (already) {
+      console.log(`[db-adapter] Already applied, skipping: ${file}`)
+      continue
+    }
+
     try {
       const sql = fs.readFileSync(filePath, 'utf8')
       sqlite.exec(sql)
+      sqlite.prepare('INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)').run(filename)
       console.log(`[db-adapter] Applied: ${file}`)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
-      // Ignore "already exists" errors — migrations are idempotent
-      if (!msg.includes('already exists')) {
+      // Swallow DDL-only "already exists" errors (e.g. CREATE TABLE on re-run without tracking)
+      if (msg.includes('already exists') || msg.includes('duplicate column')) {
+        sqlite.prepare('INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)').run(filename)
+        console.log(`[db-adapter] Already applied (idempotent): ${file}`)
+      } else {
         console.error(`[db-adapter] Error applying ${file}:`, msg)
         throw e
       }

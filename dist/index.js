@@ -886,6 +886,12 @@ function Le() {
 		console.log("[db-adapter] migrations/ directory not found — skipping auto-migration");
 		return;
 	}
+	if (I.exec("\n    CREATE TABLE IF NOT EXISTS schema_migrations (\n      filename TEXT PRIMARY KEY,\n      applied_at TEXT DEFAULT (datetime('now'))\n    )\n  "), I.prepare("SELECT COUNT(*) as n FROM schema_migrations").get().n === 0 && I.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='products'").get()) {
+		let e = I.prepare("PRAGMA table_info(products)").all(), t = e.length;
+		console.log(`[db-adapter] Adopting pre-existing DB (products has ${t} columns) — marking migrations as applied`), I.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0001_initial.sql"), I.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0002_seed.sql"), e.some((e) => e.name === "portal_visible") && I.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0003_portal_columns.sql");
+		let n = I.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='project_images'").get(), r = I.prepare("PRAGMA table_info(projects)").all().some((e) => e.name === "image_urls");
+		(n || r) && I.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0004_project_images.sql");
+	}
 	console.log("[db-adapter] Running auto-migrations...");
 	for (let e of Ie) {
 		let t = r.resolve(e);
@@ -893,12 +899,18 @@ function Le() {
 			console.log(`[db-adapter] Migration not found, skipping: ${e}`);
 			continue;
 		}
+		let i = r.basename(e);
+		if (I.prepare("SELECT 1 FROM schema_migrations WHERE filename = ?").get(i)) {
+			console.log(`[db-adapter] Already applied, skipping: ${e}`);
+			continue;
+		}
 		try {
 			let r = n.readFileSync(t, "utf8");
-			I.exec(r), console.log(`[db-adapter] Applied: ${e}`);
+			I.exec(r), I.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run(i), console.log(`[db-adapter] Applied: ${e}`);
 		} catch (t) {
 			let n = t instanceof Error ? t.message : String(t);
-			if (!n.includes("already exists")) throw console.error(`[db-adapter] Error applying ${e}:`, n), t;
+			if (n.includes("already exists") || n.includes("duplicate column")) I.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run(i), console.log(`[db-adapter] Already applied (idempotent): ${e}`);
+			else throw console.error(`[db-adapter] Error applying ${e}:`, n), t;
 		}
 	}
 	let t = I.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
