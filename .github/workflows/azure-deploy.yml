@@ -35,44 +35,23 @@ jobs:
             --exclude ".env*" \
             --exclude "data/*" \
             --exclude ".wrangler/*" \
-            --exclude "ecosystem.config.cjs" \
+            --exclude "src/*" \
             --exclude "vite.config*" \
             --exclude "tsconfig*" \
             --exclude "wrangler*" \
-            --exclude "src/*"
+            --exclude "ecosystem*"
           echo "Zip size: $(du -sh deploy.zip)"
 
-      - name: Disable Oryx build (we ship node_modules ourselves)
+      - name: Deploy to Azure (WEBSITE_RUN_FROM_PACKAGE — zip mounted directly)
+        # This mode mounts the zip as read-only filesystem — node_modules never stripped
         run: |
-          az webapp config appsettings set \
+          az webapp deploy \
             --name app-lms-portal \
             --resource-group Dima-Gibert-RG \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
-
-      - name: Deploy via Kudu REST API (preserves node_modules)
-        run: |
-          # Get AAD token for management API
-          TOKEN=$(az account get-access-token \
-            --resource https://management.azure.com/ \
-            --query accessToken -o tsv)
-          
-          # Use the /api/zipdeploy endpoint which does NOT strip node_modules
-          HTTP_CODE=$(curl -s -o /tmp/deploy-response.txt -w "%{http_code}" \
-            -X POST \
-            "https://app-lms-portal.scm.azurewebsites.net/api/zipdeploy?isAsync=true&clean=true" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/zip" \
-            --data-binary @deploy.zip \
-            --max-time 300)
-          
-          echo "Kudu zipdeploy response: HTTP $HTTP_CODE"
-          cat /tmp/deploy-response.txt
-          
-          if [ "$HTTP_CODE" != "202" ] && [ "$HTTP_CODE" != "200" ]; then
-            echo "❌ Deploy failed with HTTP $HTTP_CODE"
-            exit 1
-          fi
-          echo "✅ Zip deployed successfully"
+            --src-path deploy.zip \
+            --type zip \
+            --async true
+          echo "✅ Zip uploaded and mounted"
 
       - name: Wait for app to start
         run: |
