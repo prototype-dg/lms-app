@@ -901,8 +901,16 @@ function Le() {
 		}
 		let i = r.basename(e);
 		if (I.prepare("SELECT 1 FROM schema_migrations WHERE filename = ?").get(i)) {
-			console.log(`[db-adapter] Already applied, skipping: ${e}`);
-			continue;
+			if (i === "0002_seed.sql") {
+				if (I.prepare("SELECT COUNT(*) as n FROM products").get().n === 0) console.log("[db-adapter] Seed marked applied but products table is empty — re-running seed"), I.prepare("DELETE FROM schema_migrations WHERE filename = ?").run(i);
+				else {
+					console.log(`[db-adapter] Already applied, skipping: ${e}`);
+					continue;
+				}
+			} else {
+				console.log(`[db-adapter] Already applied, skipping: ${e}`);
+				continue;
+			}
 		}
 		try {
 			let r = n.readFileSync(t, "utf8");
@@ -967,7 +975,10 @@ async function V(e, { userId: t = "system", userName: n = "System", userRole: r 
 //#endregion
 //#region src/api/products.ts
 var H = new F();
-H.get("/:id", async (e) => {
+H.get("/", async (e) => {
+	let { results: t } = await e.env.DB.prepare("SELECT * FROM products ORDER BY category, name").all();
+	return e.json({ products: t });
+}), H.get("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(t).first();
 	if (!n) return e.json({ error: "Not found" }, 404);
 	let { results: r } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id = ? OR product_id IS NULL ORDER BY category, name").bind(t).all();
