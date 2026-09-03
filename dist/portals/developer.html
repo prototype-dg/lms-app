@@ -6,6 +6,7 @@
 <title>Developer Portal — Sohar International Green Home</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --navy:#003B5C;--teal:#007F86;--seaglass:#35C6C4;--sand:#F4F0E7;--amber:#F4B35B;
@@ -308,6 +309,56 @@ body.ar .toast-container{right:auto;left:24px}
 .ss-section-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .velocity-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100);font-size:12px}
 .velocity-row:last-child{border-bottom:none}
+/* CAMPAIGN MODAL */
+.cmodal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center}
+.cmodal-overlay.hidden{display:none}
+.cmodal{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:620px;max-width:96vw;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column}
+.cmodal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid var(--gray-200);position:sticky;top:0;background:#fff;z-index:1}
+.cmodal-head h2{font-size:17px;font-weight:800;color:var(--navy)}
+.cmodal-body{padding:20px 22px;flex:1}
+.cmodal-foot{padding:14px 22px;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:#fff}
+.cmodal-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.cmodal-row.single{grid-template-columns:1fr}
+.cmodal-row.triple{grid-template-columns:1fr 1fr 1fr}
+.cform-group{display:flex;flex-direction:column;gap:4px}
+.cform-label{font-size:12px;font-weight:700;color:var(--gray-700)}
+.cform-input,.cform-select,.cform-textarea{padding:8px 11px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;color:var(--gray-900);transition:border .15s;background:#fff}
+.cform-input:focus,.cform-select:focus,.cform-textarea:focus{outline:none;border-color:var(--teal)}
+.cform-textarea{resize:vertical;min-height:60px}
+.cform-hint{font-size:10px;color:var(--gray-500);margin-top:2px}
+.cmodal-section{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gray-500);margin:16px 0 10px;padding-bottom:4px;border-bottom:1px solid var(--gray-100)}
+/* Campaign impact preview panel */
+.campaign-impact{background:linear-gradient(135deg,rgba(0,59,92,.04),rgba(0,127,134,.06));border:1.5px solid rgba(0,127,134,.25);border-radius:var(--radius-md);padding:14px 16px;margin-top:4px}
+.campaign-impact-title{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.campaign-impact-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cimpact-card{background:#fff;border-radius:8px;padding:9px 10px;text-align:center;border:1px solid var(--gray-200)}
+.cimpact-val{font-size:15px;font-weight:900;color:var(--teal);line-height:1}
+.cimpact-val.red{color:#E74C3C}.cimpact-val.green{color:#27AE60}.cimpact-val.amber{color:#F39C12}
+.cimpact-lbl{font-size:9px;color:var(--gray-500);margin-top:2px}
+/* Revenue / unit visual KPI row */
+.kpi-visual-row{display:grid;grid-template-columns:160px 1fr 1fr;gap:16px;align-items:start;margin-bottom:20px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:16px 20px}
+.donut-wrap{position:relative;width:130px;height:130px;flex-shrink:0}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.donut-center-val{font-size:22px;font-weight:900;color:var(--navy);line-height:1}
+.donut-center-lbl{font-size:9px;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.donut-legend{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.donut-leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--gray-700)}
+.donut-leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.rev-bar-col{display:flex;flex-direction:column;justify-content:center;gap:0}
+.rev-bar-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--gray-100)}
+.rev-bar-row:last-child{border-bottom:none}
+.rev-bar-name{font-size:11px;color:var(--gray-500);width:90px;flex-shrink:0}
+.rev-bar-track{flex:1;height:10px;background:var(--gray-100);border-radius:5px;overflow:hidden}
+.rev-bar-fill{height:100%;border-radius:5px;transition:width .8s ease}
+.rev-bar-amt{font-size:12px;font-weight:700;color:var(--navy);width:90px;text-align:right;flex-shrink:0}
+.kpi-stat-col{display:flex;flex-direction:column;gap:8px;justify-content:center}
+.kpi-stat-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--gray-50);border-radius:8px;border-left:3px solid var(--gray-200)}
+.kpi-stat-item.realized{border-left-color:#27AE60}
+.kpi-stat-item.pipeline{border-left-color:#F39C12}
+.kpi-stat-item.absorption{border-left-color:var(--teal)}
+.kpi-stat-icon{font-size:18px;line-height:1}
+.kpi-stat-val{font-size:16px;font-weight:900;color:var(--navy);line-height:1}
+.kpi-stat-lbl{font-size:10px;color:var(--gray-500);margin-top:1px}
 
 /* COLLAPSIBLE PROJECT GROUPS */
 .inv-group-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:2px;user-select:none}
@@ -842,28 +893,58 @@ body.ar .toast-container{right:auto;left:24px}
         </div>
       </div>
 
-      <!-- ── TOP KPIs ── -->
-      <div class="kpi-grid" id="sales-kpi-grid">
-        <div class="kpi-card"><div class="kpi-value" id="kpi-total-units">—</div><div class="kpi-label">Total Units</div></div>
-        <div class="kpi-card"><div class="kpi-value" style="color:#2ECC71" id="kpi-available">—</div><div class="kpi-label">Available</div></div>
-        <div class="kpi-card"><div class="kpi-value" style="color:#F39C12" id="kpi-reserved">—</div><div class="kpi-label">Reserved</div></div>
-        <div class="kpi-card"><div class="kpi-value" style="color:#003B5C" id="kpi-sold">—</div><div class="kpi-label">Sold</div></div>
-        <div class="kpi-card">
-          <div class="kpi-value" id="kpi-absorption">—%</div>
-          <div class="kpi-label">Portfolio Absorption</div>
-          <div class="kpi-delta up" id="kpi-absorption-delta"></div>
+      <!-- ── VISUAL KPI ROW: Donut + Revenue bars + Stats ── -->
+      <div class="kpi-visual-row">
+        <!-- Donut: unit status breakdown -->
+        <div>
+          <div class="donut-wrap">
+            <canvas id="units-donut-canvas"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-val" id="kpi-total-units">—</div>
+              <div class="donut-center-lbl">Total Units</div>
+            </div>
+          </div>
+          <div class="donut-legend">
+            <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#27AE60"></div><span id="kpi-sold">—</span> Sold</div>
+            <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#F39C12"></div><span id="kpi-reserved">—</span> Reserved</div>
+            <div class="donut-leg-item"><div class="donut-leg-dot" style="background:#E0E7EF"></div><span id="kpi-available">—</span> Available</div>
+          </div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-value" id="kpi-revenue-realized">—</div>
-          <div class="kpi-label">Revenue Realized (OMR)</div>
+        <!-- Revenue horizontal bars -->
+        <div class="rev-bar-col">
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">Revenue Breakdown</div>
+          <div class="rev-bar-row">
+            <div class="rev-bar-name" style="color:#27AE60;font-weight:700">✅ Realized</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" id="rev-bar-realized" style="background:#27AE60;width:0%"></div></div>
+            <div class="rev-bar-amt" id="kpi-revenue-realized">—</div>
+          </div>
+          <div class="rev-bar-row">
+            <div class="rev-bar-name" style="color:#F39C12;font-weight:700">⏳ Pipeline</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" id="rev-bar-pipeline" style="background:#F39C12;width:0%"></div></div>
+            <div class="rev-bar-amt" id="kpi-revenue-pipeline">—</div>
+          </div>
+          <div class="rev-bar-row">
+            <div class="rev-bar-name" style="color:#ADB5BD;font-weight:700">🏠 Available</div>
+            <div class="rev-bar-track"><div class="rev-bar-fill" id="rev-bar-available" style="background:#ADB5BD;width:0%"></div></div>
+            <div class="rev-bar-amt" id="rev-available-amt">—</div>
+          </div>
+          <div style="font-size:10px;color:var(--gray-500);margin-top:8px">Total portfolio value: <strong id="kpi-portfolio">—</strong></div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-value" id="kpi-revenue-pipeline">—</div>
-          <div class="kpi-label">Revenue Pipeline (OMR)</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-value" id="kpi-portfolio">—</div>
-          <div class="kpi-label">Total Portfolio Value (OMR)</div>
+        <!-- Stats column -->
+        <div class="kpi-stat-col">
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px">Portfolio Health</div>
+          <div class="kpi-stat-item absorption">
+            <div class="kpi-stat-icon">📈</div>
+            <div><div class="kpi-stat-val" id="kpi-absorption">—%</div><div class="kpi-stat-lbl">Portfolio Absorption</div></div>
+          </div>
+          <div class="kpi-stat-item realized">
+            <div class="kpi-stat-icon">🎯</div>
+            <div><div class="kpi-stat-val" id="kpi-sell-rate">—</div><div class="kpi-stat-lbl">Avg. Sell Rate</div></div>
+          </div>
+          <div class="kpi-stat-item pipeline">
+            <div class="kpi-stat-icon">🚀</div>
+            <div><div class="kpi-stat-val" id="kpi-campaign-boost">—</div><div class="kpi-stat-lbl">Campaign Boost</div></div>
+          </div>
         </div>
       </div>
 
@@ -931,10 +1012,13 @@ body.ar .toast-container{right:auto;left:24px}
       <div class="card" style="margin-bottom:16px">
         <div class="card-header">
           <span class="card-title">📈 Predictive Revenue Forecast</span>
-          <div class="scenario-tabs" id="scenario-tabs">
-            <button class="scenario-tab active-scenario" data-sc="base" onclick="switchScenario('base')">Base</button>
-            <button class="scenario-tab" data-sc="optimistic" onclick="switchScenario('optimistic')">Optimistic</button>
-            <button class="scenario-tab" data-sc="conservative" onclick="switchScenario('conservative')">Conservative</button>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div class="scenario-tabs" id="scenario-tabs">
+              <button class="scenario-tab active-scenario" data-sc="base" onclick="switchScenario('base')">Base</button>
+              <button class="scenario-tab" data-sc="optimistic" onclick="switchScenario('optimistic')">Optimistic</button>
+              <button class="scenario-tab" data-sc="conservative" onclick="switchScenario('conservative')">Conservative</button>
+            </div>
+            <span id="fc-campaign-note" style="font-size:11px;font-weight:700;color:#27AE60"></span>
           </div>
         </div>
         <div class="card-body">
@@ -988,6 +1072,117 @@ body.ar .toast-container{right:auto;left:24px}
 
   </div><!-- end .content -->
 </div><!-- end .main -->
+
+<!-- ═══ CAMPAIGN CREATION MODAL ═══ -->
+<div class="cmodal-overlay hidden" id="campaign-modal-overlay" onclick="closeCampaignModalIfOutside(event)">
+  <div class="cmodal" onclick="event.stopPropagation()">
+    <div class="cmodal-head">
+      <h2>🚀 New Marketing Campaign</h2>
+      <button class="btn btn-secondary btn-sm" onclick="closeCampaignModal()">✕ Close</button>
+    </div>
+    <div class="cmodal-body">
+      <!-- Basic info -->
+      <div class="cmodal-section">Campaign Details</div>
+      <div class="cmodal-row single">
+        <div class="cform-group">
+          <label class="cform-label">Campaign Name *</label>
+          <input class="cform-input" id="cm-name" placeholder="e.g. Eid Al-Adha Early Bird" oninput="updateCampaignPreview()"/>
+        </div>
+      </div>
+      <div class="cmodal-row">
+        <div class="cform-group">
+          <label class="cform-label">Target Project *</label>
+          <select class="cform-select" id="cm-project" onchange="updateCampaignPreview()">
+            <option value="all">All Projects</option>
+          </select>
+        </div>
+        <div class="cform-group">
+          <label class="cform-label">Target Unit Type</label>
+          <select class="cform-select" id="cm-unit-type" onchange="updateCampaignPreview()">
+            <option value="all">All Types</option>
+          </select>
+        </div>
+      </div>
+      <div class="cmodal-row">
+        <div class="cform-group">
+          <label class="cform-label">Start Date *</label>
+          <input class="cform-input" id="cm-start" type="date" oninput="updateCampaignPreview()"/>
+        </div>
+        <div class="cform-group">
+          <label class="cform-label">End Date *</label>
+          <input class="cform-input" id="cm-end" type="date" oninput="updateCampaignPreview()"/>
+        </div>
+      </div>
+
+      <!-- Pricing levers -->
+      <div class="cmodal-section">Pricing Strategy</div>
+      <div class="cmodal-row triple">
+        <div class="cform-group">
+          <label class="cform-label">Discount % *</label>
+          <input class="cform-input" id="cm-discount" type="number" min="0" max="20" step="0.5" value="5" oninput="updateCampaignPreview()"/>
+          <span class="cform-hint">Applied to unit asking price</span>
+        </div>
+        <div class="cform-group">
+          <label class="cform-label">Velocity Boost %</label>
+          <input class="cform-input" id="cm-velocity-boost" type="number" min="0" max="100" step="5" value="20" oninput="updateCampaignPreview()"/>
+          <span class="cform-hint">Expected sales rate increase</span>
+        </div>
+        <div class="cform-group">
+          <label class="cform-label">Commission %</label>
+          <input class="cform-input" id="cm-commission" type="number" min="0" max="5" step="0.25" value="1" oninput="updateCampaignPreview()"/>
+          <span class="cform-hint">Broker / agent fee</span>
+        </div>
+      </div>
+
+      <!-- Budget -->
+      <div class="cmodal-section">Budget</div>
+      <div class="cmodal-row triple">
+        <div class="cform-group">
+          <label class="cform-label">Marketing Spend (OMR)</label>
+          <input class="cform-input" id="cm-budget" type="number" min="0" step="500" value="5000" oninput="updateCampaignPreview()"/>
+          <span class="cform-hint">Advertising, events, collateral</span>
+        </div>
+        <div class="cform-group">
+          <label class="cform-label">Target Units to Sell</label>
+          <input class="cform-input" id="cm-target-units" type="number" min="1" step="1" value="5" oninput="updateCampaignPreview()"/>
+          <span class="cform-hint">Units expected during campaign</span>
+        </div>
+        <div class="cform-group">
+          <label class="cform-label">Campaign Status</label>
+          <select class="cform-select" id="cm-status">
+            <option value="scheduled">Scheduled</option>
+            <option value="active">Active Now</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="cform-group" style="margin-bottom:14px">
+        <label class="cform-label">Notes / Strategy</label>
+        <textarea class="cform-textarea" id="cm-notes" placeholder="Target audience, channels, key message…"></textarea>
+      </div>
+
+      <!-- Live Impact Preview -->
+      <div class="cmodal-section">📊 Predicted Sales Impact</div>
+      <div class="campaign-impact" id="campaign-impact-panel">
+        <div class="campaign-impact-title">⚡ Real-time forecast based on current inventory &amp; velocity data</div>
+        <div class="campaign-impact-grid" id="campaign-impact-grid">
+          <div class="cimpact-card"><div class="cimpact-val" id="ci-units-sold">—</div><div class="cimpact-lbl">Est. Units Sold</div></div>
+          <div class="cimpact-card"><div class="cimpact-val green" id="ci-gross-rev">—</div><div class="cimpact-lbl">Gross Revenue (OMR)</div></div>
+          <div class="cimpact-card"><div class="cimpact-val red" id="ci-total-cost">—</div><div class="cimpact-lbl">Total Cost (OMR)</div></div>
+          <div class="cimpact-card"><div class="cimpact-val" id="ci-net-rev">—</div><div class="cimpact-lbl">Net Revenue (OMR)</div></div>
+          <div class="cimpact-card"><div class="cimpact-val amber" id="ci-roi">—</div><div class="cimpact-lbl">ROI</div></div>
+          <div class="cimpact-card"><div class="cimpact-val" id="ci-break-even">—</div><div class="cimpact-lbl">Break-Even Units</div></div>
+          <div class="cimpact-card"><div class="cimpact-val" id="ci-duration">—</div><div class="cimpact-lbl">Duration (days)</div></div>
+          <div class="cimpact-card"><div class="cimpact-val" id="ci-velocity-after">—</div><div class="cimpact-lbl">Velocity After (u/mo)</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="cmodal-foot">
+      <button class="btn btn-secondary" onclick="closeCampaignModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCampaign()">💾 Save Campaign</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ PROJECT PANEL OVERLAY ═══ -->
 <div class="panel-overlay" id="project-panel-overlay" onclick="closePanelIfOutside(event)">
@@ -2297,7 +2492,8 @@ async function doRegisterProject(publish) {
 let salesUnits = [];
 let salesProjects = [];
 let salesScenario = 'base'; // 'base' | 'optimistic' | 'conservative'
-let campaigns = [];
+let campaigns = [];          // live campaign objects — drive forecast adjustments
+let _unitsDonutChart = null; // Chart.js instance — destroy+recreate on each render
 
 // ── Scenario multipliers ──────────────────────────
 // Base: uses actual data velocity (30-day rolling avg)
@@ -2324,7 +2520,7 @@ const fmtOMR = v => v >= 1e6 ? 'OMR '+(v/1e6).toFixed(2)+'M'
 const fmtNum = v => v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'K' : String(v);
 
 async function renderSalesStrategy() {
-  // ── 1. Fetch all projects + units from real DB ──
+  // ── 1. Fetch ALL developer projects (all statuses, inc. drafts & new) ──
   try {
     const rp = await fetch('/api/v1/portal/developer/projects');
     const dp = await rp.json();
@@ -2342,24 +2538,60 @@ async function renderSalesStrategy() {
   const av = salesUnits.filter(u=>u.status==='available').length;
   const re = salesUnits.filter(u=>u.status==='reserved').length;
   const so = salesUnits.filter(u=>u.status==='sold').length;
-  const committed = re + so; // sold + reserved = committed revenue
+  const committed = re + so;
   const absorption = total ? Math.round((committed/total)*100) : 0;
 
-  // Revenue: sold = realized; reserved = pipeline; available = potential
-  const revRealized = salesUnits.filter(u=>u.status==='sold').reduce((s,u)=>s+(Number(u.price)||0),0);
-  const revPipeline = salesUnits.filter(u=>u.status==='reserved').reduce((s,u)=>s+(Number(u.price)||0),0);
+  const revRealized  = salesUnits.filter(u=>u.status==='sold').reduce((s,u)=>s+(Number(u.price)||0),0);
+  const revPipeline  = salesUnits.filter(u=>u.status==='reserved').reduce((s,u)=>s+(Number(u.price)||0),0);
+  const revAvailable = salesUnits.filter(u=>u.status==='available').reduce((s,u)=>s+(Number(u.price)||0),0);
   const portfolio    = salesUnits.reduce((s,u)=>s+(Number(u.price)||0),0);
 
+  // Campaign effects: active/scheduled campaigns aggregate velocity boost
+  const activeCampaigns = campaigns.filter(c=>c.status==='active'||c.status==='scheduled');
+  const totalVelocityBoost = activeCampaigns.reduce((s,c)=>s+(Number(c.velocityBoost)||0),0);
+  const campaignBoostLabel = totalVelocityBoost > 0 ? '+'+totalVelocityBoost+'% velocity' : 'No active campaigns';
+
   const set = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  set('kpi-total-units', total);
+  set('kpi-total-units', total || '—');
   set('kpi-available', av);
   set('kpi-reserved', re);
   set('kpi-sold', so);
   set('kpi-absorption', absorption+'%');
-  set('kpi-absorption-delta', absorption>=70?'↑ Excellent velocity':absorption>=40?'↗ Building momentum':'→ Early stage');
+  set('kpi-sell-rate', total>0 ? (committed/Math.max(1,salesProjects.length)).toFixed(1)+' u/proj' : '—');
+  set('kpi-campaign-boost', campaignBoostLabel);
   set('kpi-revenue-realized', total ? fmtOMR(revRealized) : '—');
   set('kpi-revenue-pipeline', total ? fmtOMR(revPipeline) : '—');
-  set('kpi-portfolio', total ? fmtOMR(portfolio) : '—');
+  set('rev-available-amt',    total ? fmtOMR(revAvailable) : '—');
+  set('kpi-portfolio',        total ? fmtOMR(portfolio) : '—');
+
+  // Revenue bar widths (relative to portfolio total)
+  const barPct = v => portfolio>0 ? Math.max(2,Math.round(v/portfolio*100))+'%' : '0%';
+  const setBarW = (id,v)=>{const el=document.getElementById(id);if(el)el.style.width=barPct(v);};
+  setBarW('rev-bar-realized',  revRealized);
+  setBarW('rev-bar-pipeline',  revPipeline);
+  setBarW('rev-bar-available', revAvailable);
+
+  // Donut chart — unit status breakdown
+  const donutCanvas = document.getElementById('units-donut-canvas');
+  if(donutCanvas && typeof Chart !== 'undefined') {
+    if(_unitsDonutChart) { _unitsDonutChart.destroy(); _unitsDonutChart = null; }
+    _unitsDonutChart = new Chart(donutCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: ['Sold','Reserved','Available'],
+        datasets: [{
+          data: [Math.max(so,0.001), Math.max(re,0.001), Math.max(av,0.001)],
+          backgroundColor: ['#27AE60','#F39C12','#E0E7EF'],
+          borderWidth: 2, borderColor: '#fff', hoverOffset: 6
+        }]
+      },
+      options: {
+        cutout: '68%',
+        plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw===0.001?0:ctx.raw}`}} },
+        animation: { duration:800 }
+      }
+    });
+  }
 
   // ── 3. Per-project grouping ───────────────────
   const byProject = {};
@@ -2556,9 +2788,35 @@ async function renderSalesStrategy() {
 }
 
 // ── Predictive forecast (scenario-aware) ─────────
+// ── Compute effective campaign multiplier for a given project+type ───────────
+// Campaigns with matching project/unitType add their velocity boost and discount
+function getCampaignEffect(projId, unitType) {
+  const active = campaigns.filter(c => c.status === 'active' || c.status === 'scheduled');
+  let totalVelocityBoost = 0; // %
+  let totalDiscountAdd   = 0; // percentage points
+  active.forEach(c => {
+    const projMatch = !c.projectId || c.projectId === 'all' || c.projectId === projId;
+    const typeMatch = !c.unitType  || c.unitType  === 'all' || c.unitType  === unitType;
+    if(projMatch && typeMatch) {
+      totalVelocityBoost += Number(c.velocityBoost) || 0;
+      totalDiscountAdd   += Number(c.discount)      || 0;
+    }
+  });
+  return { velocityMult: 1 + totalVelocityBoost/100, discountAdd: totalDiscountAdd };
+}
+
+// ── Global campaign velocity multiplier (across all projects) ─────────────
+function getGlobalCampaignVelocityMult() {
+  const active = campaigns.filter(c=>c.status==='active'||c.status==='scheduled');
+  const totalBoost = active.reduce((s,c)=>s+(Number(c.velocityBoost)||0),0);
+  return 1 + totalBoost/100;
+}
+
 function renderForecast(byProject) {
-  const mult = SCENARIO_MULT[salesScenario];
-  const nowMs = Date.now();
+  const scenMult = SCENARIO_MULT[salesScenario];
+  const campMult = getGlobalCampaignVelocityMult(); // campaigns compound on top of scenario
+  const mult     = scenMult * campMult;
+  const nowMs    = Date.now();
 
   let totalForecastRev = 0;
   let totalRemainingUnits = 0;
@@ -2569,70 +2827,78 @@ function renderForecast(byProject) {
     if(!units.length) return null;
     const committed = units.filter(u=>u.status!=='available').length;
     const available = units.filter(u=>u.status==='available');
-    const total = units.length;
 
-    // Estimate months active for velocity
     let monthsActive = 3;
     if(proj.created_at) {
       const createdMs = new Date(proj.created_at).getTime();
       monthsActive = Math.max(1, Math.round((nowMs - createdMs)/(1000*60*60*24*30)));
     }
-    const rawVelocity = committed / monthsActive; // units/month actual
-    const adjVelocity = rawVelocity * mult;        // scenario-adjusted
+    const rawVelocity = committed / monthsActive;
+    const adjVelocity = rawVelocity * mult; // scenario × campaign
 
-    // Avg price of available units (what we still expect to sell)
     const avgAvailPrice = available.length > 0
       ? available.reduce((s,u)=>s+(Number(u.price)||0),0) / available.length
-      : (units.length > 0 ? units.reduce((s,u)=>s+(Number(u.price)||0),0)/units.length : 0);
+      : (units.length>0 ? units.reduce((s,u)=>s+(Number(u.price)||0),0)/units.length : 0);
+
+    // Apply campaign discounts to available unit price forecast
+    const campEffect = getCampaignEffect(proj.id, null);
+    const effAvailPrice = avgAvailPrice * (1 - campEffect.discountAdd/100);
 
     const estMonths = adjVelocity > 0 ? Math.ceil(available.length / adjVelocity) : null;
-    const projForecastRev = available.length * avgAvailPrice;
+    const projForecastRev = available.length * effAvailPrice;
     const projRealizedRev = units.filter(u=>u.status==='sold').reduce((s,u)=>s+(Number(u.price)||0),0);
 
     totalForecastRev    += projRealizedRev + projForecastRev;
     totalRemainingUnits += available.length;
     if(estMonths != null) { totalMonthsEstimate += estMonths; projCount++; }
 
-    return { proj, projRealizedRev, projForecastRev, total, committed, available:available.length, adjVelocity, estMonths, avgAvailPrice };
+    return { proj, projRealizedRev, projForecastRev, committed, available:available.length, adjVelocity, estMonths, avgAvailPrice, effAvailPrice, campEffect };
   }).filter(Boolean);
 
-  const avgMonths = projCount > 0 ? Math.round(totalMonthsEstimate/projCount) : null;
-  const avgMonthlyRev = avgMonths && avgMonths > 0 ? totalForecastRev/avgMonths : null;
+  const avgMonths    = projCount>0 ? Math.round(totalMonthsEstimate/projCount) : null;
+  const avgMonthlyRev = avgMonths && avgMonths>0 ? totalForecastRev/avgMonths : null;
 
   const set = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  set('fc-total-rev', fmtOMR(totalForecastRev));
-  set('fc-remaining', totalRemainingUnits + ' units');
-  set('fc-months', avgMonths ? '~'+avgMonths+' months' : '—');
+  set('fc-total-rev',   fmtOMR(totalForecastRev));
+  set('fc-remaining',   totalRemainingUnits + ' units');
+  set('fc-months',      avgMonths ? '~'+avgMonths+' months' : '—');
   set('fc-monthly-rev', avgMonthlyRev ? fmtOMR(avgMonthlyRev)+'/mo' : '—');
 
-  const maxRev = Math.max(...projForecasts.map(p=>(p.projRealizedRev+p.projForecastRev)), 1);
+  // Campaign boost indicator next to scenario tabs
+  const campLabel = campMult > 1 ? ` (+${Math.round((campMult-1)*100)}% from campaigns)` : '';
+  set('fc-campaign-note', campLabel ? `🚀 Campaign boost active${campLabel}` : '');
+
+  const maxRev = Math.max(...projForecasts.map(p=>p.projRealizedRev+p.projForecastRev), 1);
   const barsEl = document.getElementById('forecast-bars');
   if(barsEl) {
-    if(!projForecasts.length) { barsEl.innerHTML='<div style="color:var(--gray-500);text-align:center;padding:12px">No data</div>'; return; }
+    if(!projForecasts.length) { barsEl.innerHTML='<div style="color:var(--gray-500);text-align:center;padding:12px">No data — register and add units to a project first.</div>'; return; }
     barsEl.innerHTML = projForecasts.map(p => {
-      const total = p.projRealizedRev + p.projForecastRev;
-      const realPct = total>0 ? Math.round(p.projRealizedRev/total*100) : 0;
-      const forecastPct = 100 - realPct;
-      const barW = Math.round(total/maxRev*100);
+      const totalRev = p.projRealizedRev + p.projForecastRev;
+      const realPct  = totalRev>0 ? Math.round(p.projRealizedRev/totalRev*100) : 0;
+      const barW     = Math.round(totalRev/maxRev*100);
+      const discNote = p.campEffect.discountAdd>0 ? ` · 🏷️ −${p.campEffect.discountAdd}% campaign` : '';
+      const campBoostNote = p.campEffect.velocityMult>1 ? ` · 🚀 +${Math.round((p.campEffect.velocityMult-1)*100)}% vel.` : '';
+      const statusCol = p.proj.status==='active'?'#27AE60':p.proj.status==='draft'?'#ADB5BD':'#F39C12';
       return `<div class="forecast-bar-wrap">
-        <div class="forecast-bar-label" title="${p.proj.name||p.proj.id}">${p.proj.name||p.proj.id}</div>
-        <div class="forecast-bar-track" style="position:relative">
+        <div class="forecast-bar-label" title="${p.proj.name||p.proj.id}">
+          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${statusCol};margin-right:4px"></span>${p.proj.name||p.proj.id}
+        </div>
+        <div class="forecast-bar-track">
           <div style="display:flex;height:100%;width:${barW}%;border-radius:7px;overflow:hidden">
             <div style="width:${realPct}%;background:#27AE60;transition:width .7s" title="Realized"></div>
-            <div style="width:${forecastPct}%;background:#007F86;opacity:.6;transition:width .7s" title="Forecast"></div>
+            <div style="width:${100-realPct}%;background:#007F86;opacity:.65;transition:width .7s" title="Forecast"></div>
           </div>
         </div>
-        <div class="forecast-bar-val">${fmtOMR(total)}</div>
+        <div class="forecast-bar-val">${fmtOMR(totalRev)}</div>
       </div>
-      <div style="font-size:10px;color:var(--gray-500);padding:0 0 8px 140px">
-        ✅ ${fmtOMR(p.projRealizedRev)} realized · 
-        🔮 ${fmtOMR(p.projForecastRev)} forecast · 
-        ⚡ ${p.adjVelocity.toFixed(1)} u/mo · 
-        ${p.estMonths!=null?'~'+p.estMonths+' mo to sell-out':'No avail units'}
+      <div style="font-size:10px;color:var(--gray-500);padding:0 0 9px 144px">
+        ✅ ${fmtOMR(p.projRealizedRev)} · 🔮 ${fmtOMR(p.projForecastRev)} · ⚡ ${p.adjVelocity.toFixed(1)} u/mo${discNote}${campBoostNote} · ${p.estMonths!=null?'~'+p.estMonths+' mo to sell-out':'No avail units'}
       </div>`;
-    }).join('') + `<div style="display:flex;gap:16px;margin-top:8px;font-size:11px">
+    }).join('') + `<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;flex-wrap:wrap">
       <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#27AE60;border-radius:3px"></span>Realized (sold)</span>
-      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#007F86;opacity:.6;border-radius:3px"></span>Forecast (avail at cur. velocity × scenario)</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;background:#007F86;opacity:.65;border-radius:3px"></span>Forecast (velocity × scenario × campaigns)</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ADB5BD"></span>Draft</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#27AE60"></span>Active</span>
     </div>`;
   }
 }
@@ -2642,29 +2908,38 @@ function switchScenario(sc) {
   document.querySelectorAll('.scenario-tab').forEach(t => {
     t.classList.toggle('active-scenario', t.dataset.sc === sc);
   });
-  // Re-render only the scenario-sensitive parts
   renderSalesStrategy();
 }
 
 function renderCampaigns() {
-  const list = document.getElementById('campaigns-list');
+  const list  = document.getElementById('campaigns-list');
   const count = document.getElementById('campaign-count');
   const active = campaigns.filter(c=>c.status==='active').length;
   if(count) count.textContent = active + ' active';
   if(!list) return;
-  if(!campaigns.length) { list.innerHTML='<div style="text-align:center;color:var(--gray-500);padding:16px">No campaigns yet. Create one to track discounts and promotions.</div>'; return; }
-  list.innerHTML = campaigns.map(c => `
-    <div class="campaign-card">
+  if(!campaigns.length) {
+    list.innerHTML='<div style="text-align:center;color:var(--gray-500);padding:16px">No campaigns yet. Create one to boost sales velocity and see the revenue impact instantly.</div>';
+    return;
+  }
+  list.innerHTML = campaigns.map(c => {
+    const projName = c.projectId==='all' ? 'All Projects' : (salesProjects.find(p=>p.id===c.projectId)||{}).name || c.projectId;
+    const typeName = c.unitType==='all' ? 'All Types' : (c.unitType||'All Types');
+    return `<div class="campaign-card">
       <div style="font-size:22px">${c.status==='active'?'🚀':c.status==='scheduled'?'📅':'📦'}</div>
-      <div style="flex:1">
+      <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:13px;color:var(--navy)">${c.name}</div>
-        <div style="font-size:11px;color:var(--gray-500)">${c.start} → ${c.end} · ${c.units}</div>
+        <div style="font-size:11px;color:var(--gray-500)">${c.start} → ${c.end} · ${projName} · ${typeName}</div>
+        ${c.notes?`<div style="font-size:10px;color:var(--gray-500);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.notes}</div>`:''}
       </div>
-      <span class="chip ${c.discount>=5?'green':'blue'}" style="font-size:13px;font-weight:800">${c.discount}% off</span>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+        <span class="chip ${c.discount>=5?'green':'blue'}" style="font-size:13px;font-weight:800">${c.discount}% off</span>
+        ${c.velocityBoost>0?`<span class="chip amber" style="font-size:10px;font-weight:700">+${c.velocityBoost}% vel.</span>`:''}
+        ${c.budget>0?`<span style="font-size:10px;color:var(--gray-500)">Budget: OMR ${Number(c.budget).toLocaleString()}</span>`:''}
+      </div>
       <span class="campaign-badge ${c.status}">${c.status}</span>
-      <button class="btn btn-secondary btn-sm" onclick="deleteCampaign(${c.id})">✕</button>
-    </div>
-  `).join('');
+      <button class="btn btn-secondary btn-sm" onclick="deleteCampaign(${c.id})" style="flex-shrink:0">✕</button>
+    </div>`;
+  }).join('');
 }
 
 function renderPipeline(apps) {
@@ -2692,33 +2967,170 @@ function editBasePrice(type, current) {
   if(np && !isNaN(np)) toast(`Base price for ${type} updated to OMR ${Number(np).toLocaleString()}`, 'success');
 }
 
-function applyTypeDiscount(type) {
-  const pct = prompt(`Discount % for ${type} units (e.g. 5):`, '0');
-  if(pct && !isNaN(pct)) toast(`${pct}% discount applied to ${type} units`, 'success');
-}
-
 function openBulkPriceModal() {
   const pct = prompt('Adjust all unit prices by % (e.g. +5 or -3):', '0');
   if(pct && !isNaN(pct)) toast(`Bulk price adjustment of ${pct}% applied to all units`, 'success');
 }
 
+// ═══════════════════════════════════════════════════
+// CAMPAIGN MODAL — full-form dialog
+// ═══════════════════════════════════════════════════
 function openNewCampaignModal() {
-  const name = prompt('Campaign name:');
-  if(!name) return;
-  const disc = prompt('Discount % (e.g. 5):','5');
-  const start = prompt('Start date (YYYY-MM-DD):','2026-10-01');
-  const end = prompt('End date (YYYY-MM-DD):','2026-12-31');
-  const units = prompt('Target units (e.g. All Type A, or All):','All');
-  const stat  = 'scheduled';
-  campaigns.push({id: Date.now(), name, discount:Number(disc)||5, units, start, end, status:stat});
-  renderCampaigns();
-  toast(`Campaign "${name}" created`, 'success');
+  // Populate project dropdown from live data
+  const projSel = document.getElementById('cm-project');
+  if(projSel) {
+    projSel.innerHTML = '<option value="all">All Projects</option>' +
+      salesProjects.map(p=>`<option value="${p.id}">${p.name||p.id}</option>`).join('');
+  }
+  // Populate unit type dropdown from live units data
+  const typeSel = document.getElementById('cm-unit-type');
+  if(typeSel) {
+    const types = [...new Set(salesUnits.map(u=>u.type).filter(Boolean))];
+    typeSel.innerHTML = '<option value="all">All Types</option>' +
+      types.map(t=>`<option value="${t}">${t}</option>`).join('');
+  }
+  // Default dates
+  const today = new Date();
+  const in3mo  = new Date(today.getTime() + 90*24*60*60*1000);
+  const fmt = d => d.toISOString().slice(0,10);
+  const startEl = document.getElementById('cm-start');
+  const endEl   = document.getElementById('cm-end');
+  if(startEl && !startEl.value) startEl.value = fmt(today);
+  if(endEl   && !endEl.value)   endEl.value   = fmt(in3mo);
+
+  document.getElementById('campaign-modal-overlay').classList.remove('hidden');
+  updateCampaignPreview();
+}
+
+function closeCampaignModal() {
+  document.getElementById('campaign-modal-overlay').classList.add('hidden');
+}
+
+function closeCampaignModalIfOutside(e) {
+  if(e.target === document.getElementById('campaign-modal-overlay')) closeCampaignModal();
+}
+
+function updateCampaignPreview() {
+  // Gather form values
+  const projId       = document.getElementById('cm-project')?.value || 'all';
+  const unitType     = document.getElementById('cm-unit-type')?.value || 'all';
+  const discountPct  = parseFloat(document.getElementById('cm-discount')?.value) || 0;
+  const velocityBoost= parseFloat(document.getElementById('cm-velocity-boost')?.value) || 0;
+  const commissionPct= parseFloat(document.getElementById('cm-commission')?.value) || 0;
+  const budget       = parseFloat(document.getElementById('cm-budget')?.value) || 0;
+  const targetUnits  = parseInt(document.getElementById('cm-target-units')?.value) || 0;
+  const startVal     = document.getElementById('cm-start')?.value;
+  const endVal       = document.getElementById('cm-end')?.value;
+
+  // Duration
+  let durationDays = 90;
+  if(startVal && endVal) {
+    durationDays = Math.max(1, Math.round((new Date(endVal)-new Date(startVal))/(1000*60*60*24)));
+  }
+
+  // Determine target units in scope
+  let scopeUnits = salesUnits.filter(u=>u.status==='available');
+  if(projId !== 'all')   scopeUnits = scopeUnits.filter(u=>u.projectId===projId);
+  if(unitType !== 'all') scopeUnits = scopeUnits.filter(u=>u.type===unitType);
+
+  // Avg price of scope (already available units)
+  const avgPrice = scopeUnits.length>0
+    ? scopeUnits.reduce((s,u)=>s+(Number(u.price)||0),0)/scopeUnits.length : 0;
+
+  // Effective selling price after discount
+  const effPrice = avgPrice * (1 - discountPct/100);
+
+  // How many units will sell: use targetUnits capped by available scope
+  const unitsToSell = Math.min(targetUnits, scopeUnits.length);
+
+  // Gross revenue from campaign sales
+  const grossRev = unitsToSell * effPrice;
+
+  // Total cost: marketing budget + commission on gross + discount sacrifice
+  const discountSacrifice = unitsToSell * avgPrice * (discountPct/100);
+  const commissionCost    = grossRev * (commissionPct/100);
+  const totalCost         = budget + commissionCost + discountSacrifice;
+
+  // Net revenue = gross - commission - budget (discount is already in effPrice)
+  const netRev = grossRev - commissionCost - budget;
+
+  // ROI = (netRev - discountSacrifice) / (budget + commissionCost) * 100
+  const totalInvest = budget + commissionCost;
+  const roi = totalInvest > 0 ? ((netRev - discountSacrifice) / totalInvest * 100) : null;
+
+  // Break-even units (cover budget+commission costs)
+  const breakEven = effPrice > 0 ? Math.ceil((budget) / (effPrice * (commissionPct/100 < 1 ? 1-commissionPct/100 : 0.01))) : 0;
+
+  // Velocity after campaign (current base + boost)
+  const nowMs = Date.now();
+  let baseVelocity = 0;
+  salesProjects.forEach(p => {
+    const pUnits = salesUnits.filter(u=>u.projectId===p.id);
+    const pCommitted = pUnits.filter(u=>u.status!=='available').length;
+    let months = 3;
+    if(p.created_at) months = Math.max(1, Math.round((nowMs-new Date(p.created_at).getTime())/(1000*60*60*24*30)));
+    baseVelocity += pCommitted/months;
+  });
+  const velocityAfter = baseVelocity * (1 + velocityBoost/100);
+
+  // Update preview cards
+  const setCI = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  setCI('ci-units-sold',    unitsToSell || '—');
+  setCI('ci-gross-rev',     avgPrice>0 ? fmtOMR(grossRev) : '—');
+  setCI('ci-total-cost',    fmtOMR(totalCost));
+  setCI('ci-net-rev',       avgPrice>0 ? fmtOMR(netRev) : '—');
+  setCI('ci-roi',           roi!=null ? (roi>=0?'+':'')+roi.toFixed(1)+'%' : '—');
+  setCI('ci-break-even',    breakEven > 0 ? breakEven+' units' : '—');
+  setCI('ci-duration',      durationDays+' days');
+  setCI('ci-velocity-after', velocityAfter.toFixed(1)+' u/mo');
+
+  // Colour ROI card
+  const roiEl = document.getElementById('ci-roi');
+  if(roiEl) {
+    roiEl.className = 'cimpact-val ' + (roi==null?'':roi>=20?'green':roi>=0?'amber':'red');
+  }
+  const netEl = document.getElementById('ci-net-rev');
+  if(netEl) netEl.className = 'cimpact-val ' + (netRev>=0?'green':'red');
+}
+
+function saveCampaign() {
+  const name = document.getElementById('cm-name')?.value.trim();
+  if(!name) { toast('Campaign name is required','warning'); return; }
+  const start = document.getElementById('cm-start')?.value;
+  const end   = document.getElementById('cm-end')?.value;
+  if(!start || !end) { toast('Start and end dates are required','warning'); return; }
+  if(new Date(end) <= new Date(start)) { toast('End date must be after start date','warning'); return; }
+
+  const campaign = {
+    id:           Date.now(),
+    name,
+    projectId:    document.getElementById('cm-project')?.value || 'all',
+    unitType:     document.getElementById('cm-unit-type')?.value || 'all',
+    discount:     parseFloat(document.getElementById('cm-discount')?.value) || 0,
+    velocityBoost:parseFloat(document.getElementById('cm-velocity-boost')?.value) || 0,
+    commission:   parseFloat(document.getElementById('cm-commission')?.value) || 0,
+    budget:       parseFloat(document.getElementById('cm-budget')?.value) || 0,
+    targetUnits:  parseInt(document.getElementById('cm-target-units')?.value) || 0,
+    notes:        document.getElementById('cm-notes')?.value.trim() || '',
+    start, end,
+    status:       document.getElementById('cm-status')?.value || 'scheduled',
+  };
+
+  campaigns.push(campaign);
+  closeCampaignModal();
+
+  // Clear form for next time
+  ['cm-name','cm-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+
+  // Rebuild the full sales strategy so all panels reflect the new campaign
+  renderSalesStrategy();
+  toast(`Campaign "${name}" created — forecast updated`, 'success');
 }
 
 function deleteCampaign(id) {
   campaigns = campaigns.filter(c=>c.id!==id);
-  renderCampaigns();
-  toast('Campaign removed','info');
+  renderSalesStrategy(); // full re-render so forecast updates
+  toast('Campaign removed — forecast updated','info');
 }
 
 // ═══════════════════════════════════════════════════
