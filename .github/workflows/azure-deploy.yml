@@ -13,9 +13,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
+      - name: Azure Login
+        uses: azure/login@v2
         with:
-          app-name: app-lms-portal
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: .
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create deployment zip (no node_modules)
+        run: |
+          zip -r deploy.zip . \
+            --exclude "*.git*" \
+            --exclude "node_modules/*" \
+            --exclude "*.zip" \
+            --exclude ".env*" \
+            --exclude "data/*"
+
+      - name: Deploy to Azure Web App
+        run: |
+          az webapp deploy \
+            --name app-lms-portal \
+            --resource-group Dima-Gibert-RG \
+            --src-path deploy.zip \
+            --type zip \
+            --clean true \
+            --async false
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting for app to start..."
+          sleep 30
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://lms.andersenlab.com/)
+          echo "HTTP response: $HTTP_CODE"
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "⚠️ App returned $HTTP_CODE — may still be starting"
+          fi
