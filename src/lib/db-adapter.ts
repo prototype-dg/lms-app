@@ -20,6 +20,46 @@ const sqlite = new BetterSqlite3(dbPath)
 sqlite.pragma('journal_mode = WAL')
 sqlite.pragma('foreign_keys = ON')
 
+// Auto-apply migrations on startup (idempotent — IF NOT EXISTS guards every DDL)
+const MIGRATION_FILES = [
+  './migrations/0001_initial.sql',
+  './migrations/0002_seed.sql',
+  './migrations/0003_portal_columns.sql',
+  './migrations/0004_project_images.sql',
+]
+
+function runMigrations() {
+  const migrationsDir = path.resolve('./migrations')
+  if (!fs.existsSync(migrationsDir)) {
+    console.log('[db-adapter] migrations/ directory not found — skipping auto-migration')
+    return
+  }
+  console.log('[db-adapter] Running auto-migrations...')
+  for (const file of MIGRATION_FILES) {
+    const filePath = path.resolve(file)
+    if (!fs.existsSync(filePath)) {
+      console.log(`[db-adapter] Migration not found, skipping: ${file}`)
+      continue
+    }
+    try {
+      const sql = fs.readFileSync(filePath, 'utf8')
+      sqlite.exec(sql)
+      console.log(`[db-adapter] Applied: ${file}`)
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      // Ignore "already exists" errors — migrations are idempotent
+      if (!msg.includes('already exists')) {
+        console.error(`[db-adapter] Error applying ${file}:`, msg)
+        throw e
+      }
+    }
+  }
+  const tables = sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all() as Array<{name: string}>
+  console.log('[db-adapter] Tables:', tables.map(t => t.name).join(', '))
+}
+
+runMigrations()
+
 type Row = Record<string, unknown>
 
 interface D1Result {
