@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Back-Office Console – Sohar International</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="app-shell" id="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <svg class="sidebar-logo-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 78c25-6 44-25 50-50 5-16 17-27 33-35-4 29-16 54-35 72-15 14-32 21-48 22z" fill="#35c6c4"/>
+        <path d="M6 82c29-8 53-28 71-55 10-16 21-25 33-33-9 26-22 49-42 66-17 14-37 21-62 25z" fill="#f4b35b" opacity=".9"/>
+      </svg>
+      <div class="sidebar-logo-text">sohar international<small>Back-Office Console</small></div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="avatar" id="userAvatar">FA</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="userName">Fatima Al-Rashdi</div>
+          <div class="sidebar-user-role" id="userRole">Product Management</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <header class="topbar">
+      <span class="topbar-title" id="pageTitle">Products</span>
+      <span class="topbar-subtitle" id="pageSubtitle"></span>
+      <div class="topbar-spacer"></div>
+      <div class="topbar-actions">
+        <!-- Role switcher -->
+        <div class="portal-switch">
+          <button class="portal-switch-btn active" onclick="switchRole('product_manager')" id="role-pm">Product Manager</button>
+          <button class="portal-switch-btn" onclick="switchRole('compliance_officer')" id="role-co">Compliance</button>
+          <button class="portal-switch-btn" onclick="switchRole('risk_officer')" id="role-ro">Risk</button>
+          <button class="portal-switch-btn" onclick="switchRole('operations')" id="role-ops">Operations</button>
+        </div>
+        <div class="lang-toggle">
+          <button class="lang-btn active" onclick="setLang('en')">EN</button>
+          <button class="lang-btn" onclick="setLang('ar')">ع</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="window.location='/'"><i class="fas fa-th"></i></button>
+        <div style="position:relative">
+          <button class="btn btn-ghost btn-sm"><i class="fas fa-bell"></i></button>
+          <span class="badge-count" style="position:absolute;top:-4px;right:-4px">3</span>
+        </div>
+      </div>
+    </header>
+    <main class="main-content" id="mainContent">
+      <div class="page"><div class="empty-state"><div class="spinner-lg"></div><p>Loading…</p></div></div>
+    </main>
+  </div>
+</div>
+
+<!-- SLIDE PANEL (product detail / application detail) -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+<div class="slide-panel" id="slidePanel">
+  <div class="slide-panel-header">
+    <h3 id="panelTitle">Detail</h3>
+    <button class="close-btn" onclick="closePanel()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="slide-panel-body" id="panelBody"></div>
+</div>
+
+<div id="toastContainer" style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;"></div>
+<div id="modalContainer"></div>
+
+<script>
+/* ======================== MARKDOWN RENDERER ======================== */
+function markdownToHtml(text) {
+  return text
+    // Bold **text** or __text__
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.+?)__/g, '<strong>$1</strong>')
+    // Italic *text*
+    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+    // Numbered list: lines starting with "1. " etc → wrap whole block
+    .replace(/((?:^|\n)\d+\.\s.+)+/g, function(block) {
+      const items = block.trim().split(/\n/).map(l => l.replace(/^\d+\.\s+/, ''));
+      return '<ol style="margin:.5rem 0 .5rem 1.2rem;line-height:1.9">' + items.map(i => '<li>' + i + '</li>').join('') + '</ol>';
+    })
+    // Bullet list: lines starting with "- " or "• "
+    .replace(/((?:^|\n)[\-•]\s.+)+/g, function(block) {
+      const items = block.trim().split(/\n/).map(l => l.replace(/^[\-•]\s+/, ''));
+      return '<ul style="margin:.5rem 0 .5rem 1.2rem;line-height:1.9">' + items.map(i => '<li>' + i + '</li>').join('') + '</ul>';
+    })
+    // Line breaks
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+}
+
+/* ======================== STATE ======================== */
+const API = '';
+let currentRole = 'product_manager';
+let currentLang = 'en';
+let selectedProduct = null;
+let selectedTab = 'general';
+let products = [];
+let rules = [];
+let auditLogs = [];
+let applications = [];
+
+const ROLES = {
+  product_manager: { name:'Fatima Al-Rashdi', nameAr:'فاطمة الراشدي', dept:'Product Management', avatar:'FA',
+    nav:['products','rules','workflows','compliance_config','audit_logs'] },
+  compliance_officer: { name:'Aisha Al-Balushi', nameAr:'عائشة البلوشي', dept:'Compliance & ESG', avatar:'AB',
+    nav:['tasks','esg_review','regulatory_reports','audit_logs','aml_alerts'] },
+  risk_officer: { name:'Omar Al-Mantheri', nameAr:'عمر المنذري', dept:'Credit Risk', avatar:'OM',
+    nav:['tasks','credit_review','stress_tests','regulatory_reports','audit_logs'] },
+  operations: { name:'Khalid Al-Rawahi', nameAr:'خالد الرواحي', dept:'Operations', avatar:'KR',
+    nav:['escrow','disbursements','audit_logs'] }
+};
+
+const NAV_ITEMS = {
+  products:           { icon:'fa-box', label:'Products', labelAr:'المنتجات' },
+  rules:              { icon:'fa-gavel', label:'Rules Engine', labelAr:'محرك القواعد' },
+  workflows:          { icon:'fa-sitemap', label:'Workflows', labelAr:'سير العمل' },
+  compliance_config:  { icon:'fa-shield-halved', label:'Compliance', labelAr:'الامتثال' },
+  audit_logs:         { icon:'fa-list-check', label:'Audit Logs', labelAr:'سجلات التدقيق' },
+  tasks:              { icon:'fa-inbox', label:'Tasks', labelAr:'المهام' },
+  esg_review:         { icon:'fa-leaf', label:'ESG Review', labelAr:'مراجعة ESG' },
+  regulatory_reports: { icon:'fa-file-chart-pie', label:'Regulatory Reports', labelAr:'التقارير التنظيمية' },
+  aml_alerts:         { icon:'fa-triangle-exclamation', label:'AML Alerts', labelAr:'تنبيهات غسل الأموال' },
+  credit_review:      { icon:'fa-chart-bar', label:'Credit Review', labelAr:'مراجعة الائتمان' },
+  stress_tests:       { icon:'fa-vials', label:'Stress Tests', labelAr:'اختبارات الضغط' },
+  escrow:             { icon:'fa-vault', label:'Escrow & Disbursement', labelAr:'الضمان والصرف' },
+  disbursements:      { icon:'fa-money-bill-transfer', label:'Disbursements', labelAr:'الصرفيات' }
+};
+
+/* ======================== INIT ======================== */
+window.onload = async () => {
+  renderSidebar();
+  await loadProducts();
+  renderPage('products');
+};
+
+const ROLE_BTN_ID = {
+  product_manager: 'role-pm',
+  compliance_officer: 'role-co',
+  risk_officer: 'role-ro',
+  operations: 'role-ops'
+};
+
+function switchRole(role) {
+  currentRole = role;
+  document.querySelectorAll('.portal-switch-btn').forEach(b => b.classList.remove('active'));
+  const btnId = ROLE_BTN_ID[role];
+  if (btnId) document.getElementById(btnId)?.classList.add('active');
+  const r = ROLES[role];
+  document.getElementById('userAvatar').textContent = r.avatar;
+  document.getElementById('userName').textContent = currentLang==='ar' ? r.nameAr : r.name;
+  document.getElementById('userRole').textContent = r.dept;
+  renderSidebar();
+  const firstNav = ROLES[role].nav[0];
+  renderPage(firstNav);
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  const isAr = lang === 'ar';
+  document.body.style.direction = isAr ? 'rtl' : 'ltr';
+  document.documentElement.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+  document.documentElement.setAttribute('lang', isAr ? 'ar' : 'en');
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim()===(isAr?'ع':'EN')));
+  // Update all data-en/data-ar text nodes
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = isAr ? (el.getAttribute('data-ar') || el.getAttribute('data-en')) : el.getAttribute('data-en');
+  });
+  renderSidebar();
+  const r = ROLES[currentRole];
+  document.getElementById('userName').textContent = isAr ? r.nameAr : r.name;
+}
+
+function renderSidebar() {
+  const nav = document.getElementById('sidebarNav');
+  const items = ROLES[currentRole].nav;
+  nav.innerHTML = items.map(key => {
+    const item = NAV_ITEMS[key];
+    return `<div class="sidebar-item" onclick="renderPage('${key}')" id="nav-${key}">
+      <i class="fas ${item.icon}"></i>
+      <span>${currentLang==='ar' ? item.labelAr : item.label}</span>
+    </div>`;
+  }).join('');
+}
+
+function setActiveNav(key) {
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('nav-'+key)?.classList.add('active');
+}
+
+/* ======================== PAGE ROUTER ======================== */
+async function renderPage(page) {
+  setActiveNav(page);
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '<div class="page"><div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--grey-300)"></i></div></div>';
+  
+  switch(page) {
+    case 'products': await loadProducts(); await renderProducts(); break;
+    case 'rules': await renderRules(); break;
+    case 'audit_logs': await renderAuditLogs(); break;
+    case 'tasks': await renderComplianceTasks(); break;
+    case 'esg_review': await renderEsgReview(); break;
+    case 'credit_review': await renderCreditReview(); break;
+    case 'escrow': await renderEscrow(); break;
+    case 'regulatory_reports': await renderReports(); break;
+    default: {
+      const pageLabel = NAV_ITEMS[page] ? (currentLang==='ar' ? NAV_ITEMS[page].labelAr : NAV_ITEMS[page].label) : page.replace(/_/g,' ');
+      document.getElementById('pageTitle').textContent = pageLabel;
+      document.getElementById('pageSubtitle').textContent = '';
+      main.innerHTML = renderEmptySection(page, pageLabel);
+    }
+  }
+}
+
+/* ======================== EMPTY SECTION PLACEHOLDER ======================== */
+function renderEmptySection(page, label) {
+  const SECTION_META = {
+    workflows: {
+      icon: 'fa-sitemap',
+      title: currentLang==='ar' ? 'إدارة سير العمل' : 'Workflow Management',
+      desc: currentLang==='ar' ? 'تكوين مسارات الموافقة والمراجعة متعددة المستويات.' : 'Configure multi-stage approval and review paths for loan processing.',
+      items: currentLang==='ar' ? ['مراجعة الامتثال والمخاطر','موافقة مدير المنتج','سير عمل ESG مزدوج','مراجعة المكتب الإقليمي'] : ['Compliance & Risk dual review','Product Manager sign-off','ESG dual-approval workflow','Regional desk review']
+    },
+    compliance_config: {
+      icon: 'fa-shield-halved',
+      title: currentLang==='ar' ? 'إعدادات الامتثال' : 'Compliance Configuration',
+      desc: currentLang==='ar' ? 'ضبط معايير الامتثال ومتطلبات مكافحة غسيل الأموال وقواعد PDPL.' : 'Manage AML thresholds, PDPL data handling rules, and CBO regulatory parameters.',
+      items: currentLang==='ar' ? ['عتبات مكافحة غسل الأموال','قواعد حماية البيانات PDPL','معايير الامتثال للبنك المركزي','إعداد المراجعة الدورية'] : ['AML screening thresholds','PDPL data retention rules','CBO parameter governance','Periodic review cadence']
+    },
+    aml_alerts: {
+      icon: 'fa-triangle-exclamation',
+      title: currentLang==='ar' ? 'تنبيهات مكافحة غسل الأموال' : 'AML Alerts',
+      desc: currentLang==='ar' ? 'مراجعة حالات التحقق من العناية الواجبة المحسّنة وتنبيهات المعاملات المشبوهة.' : 'Review enhanced due-diligence cases and suspicious transaction alerts raised by the screening engine.',
+      items: currentLang==='ar' ? ['فحص العملاء','تنبيهات المعاملات المشبوهة','قوائم العقوبات الدولية','مراجعة البيانات البيومترية'] : ['Customer screening queue','Suspicious transaction alerts','Sanctions list matches','PEP & adverse media flags']
+    },
+    stress_tests: {
+      icon: 'fa-vials',
+      title: currentLang==='ar' ? 'اختبارات الضغط' : 'Stress Test Scenarios',
+      desc: currentLang==='ar' ? 'تشغيل وتحليل سيناريوهات ضغط محفظة الائتمان وفق متطلبات البنك المركزي.' : 'Run and analyse credit portfolio stress scenarios per CBO capital adequacy requirements.',
+      items: currentLang==='ar' ? ['ارتفاع معدل الفائدة 350 نقطة أساس','انخفاض أسعار العقارات 30%','تدهور نسبة عبء الديون','سيناريوهات الانكماش الاقتصادي'] : ['Rate shock +350bps','Property price decline −30%','DBR deterioration scenario','Macro downturn sensitivity']
+    },
+    disbursements: {
+      icon: 'fa-money-bill-transfer',
+      title: currentLang==='ar' ? 'الصرفيات' : 'Disbursement Queue',
+      desc: currentLang==='ar' ? 'إدارة طوابير الصرف والمدفوعات للمقاولين والموردين المعتمدين.' : 'Manage contractor payment queues, approved tranche releases, and supplier fund transfers.',
+      items: currentLang==='ar' ? ['مدفوعات الشرائح المعتمدة','حسابات الضمان','تحويلات المقاولين','طلبات الدفع المعلقة'] : ['Approved tranche queue','Escrow account settlements','Contractor fund transfers','Pending payment requests']
+    }
+  };
+  const meta = SECTION_META[page] || {
+    icon: 'fa-layer-group',
+    title: label,
+    desc: currentLang==='ar' ? 'هذا القسم متاح لمستخدمي الدور المناسب.' : 'This section is available to users with the appropriate role assignment.',
+    items: []
+  };
+  return `<div class="page">
+    <div style="max-width:640px;margin:0 auto;padding:2rem 1rem">
+      <div style="width:64px;height:64px;border-radius:16px;background:rgba(0,127,134,.1);display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem">
+        <i class="fas ${meta.icon}" style="font-size:1.6rem;color:var(--teal)"></i>
+      </div>
+      <h2 style="margin-bottom:.5rem;color:var(--navy)">${meta.title}</h2>
+      <p style="color:var(--grey-500);font-size:.9rem;line-height:1.6;margin-bottom:1.5rem">${meta.desc}</p>
+      ${meta.items.length ? `
+      <div style="background:var(--grey-100);border-radius:var(--radius-md);padding:1rem">
+        <div style="font-size:.75rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.75rem">${currentLang==='ar'?'الميزات الرئيسية':'Key capabilities'}</div>
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:.5rem">
+          ${meta.items.map(item=>`<li style="display:flex;align-items:center;gap:.625rem;font-size:.85rem"><i class="fas fa-check-circle" style="color:var(--teal);font-size:.75rem;flex-shrink:0"></i>${item}</li>`).join('')}
+        </ul>
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+/* ======================== PRODUCTS PAGE ======================== */
+async function loadProducts() {
+  try {
+    const r = await fetch('/api/v1/products');
+    const d = await r.json();
+    products = d.products || [];
+  } catch(e) { products = []; }
+}
+
+async function renderProducts() {
+  document.getElementById('pageTitle').textContent = 'Products';
+  document.getElementById('pageSubtitle').textContent = '';
+
+  const statusColor = {active:'badge-active', draft:'badge-draft', archived:'badge-archived'};
+  const catMeta = {
+    home_loan:     { icon:'fa-house',         label:'Home Loans',     color:'#007F86' },
+    auto_loan:     { icon:'fa-car',            label:'Auto Finance',   color:'#35C6C4' },
+    personal_loan: { icon:'fa-user',           label:'Personal Loans', color:'#F4B35B' },
+    sme:           { icon:'fa-briefcase',      label:'SME Finance',    color:'#003B5C' },
+    commercial:    { icon:'fa-building',       label:'Commercial',     color:'#6c757d' },
+    education:     { icon:'fa-graduation-cap', label:'Education',      color:'#a855f7' },
+  };
+  const catOrder = ['home_loan','auto_loan','personal_loan','sme','commercial','education'];
+  const groups = {};
+  for (const cat of catOrder) groups[cat] = [];
+  for (const p of products) {
+    if (!groups[p.category]) groups[p.category] = [];
+    groups[p.category].push(p);
+  }
+
+  const productCard = p => {
+    const meta = catMeta[p.category] || {icon:'fa-file', label:p.category, color:'#aaa'};
+    const isEsg = p.esg_required_docs && p.esg_required_docs !== '[]';
+    return `<div class="product-card ${isEsg?'green':''}" onclick="openProductDetail('${p.id}')" style="cursor:pointer">
+        <div class="product-card-header">
+          <div>
+            <div class="product-card-title"><i class="fas ${meta.icon}" style="color:${meta.color};margin-right:.4rem;font-size:.8rem"></i>${p.name}</div>
+            <div class="product-card-meta">${meta.label}</div>
+          </div>
+          <span class="badge ${statusColor[p.status]||'badge-draft'}">${p.status}</span>
+        </div>
+        ${isEsg ? '<span class="badge badge-esg" style="margin-bottom:.5rem"><i class="fas fa-leaf"></i> ESG Product</span>' : ''}
+        <p style="font-size:.78rem;color:var(--grey-500);margin:.5rem 0;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.description||''}</p>
+        <div class="product-card-stats">
+          <div class="product-stat"><strong>${p.base_rate||5.5}%</strong>Base Rate</div>
+          <div class="product-stat"><strong>${(p.applications_ytd||0).toLocaleString()}</strong>Apps YTD</div>
+          <div class="product-stat"><strong>${p.max_ltv||90}%</strong>Max LTV</div>
+        </div>
+      </div>`;
+  };
+
+  const groupSections = catOrder.filter(cat => groups[cat] && groups[cat].length > 0).map(cat => {
+    const meta = catMeta[cat] || {icon:'fa-file', label:cat, color:'#aaa'};
+    return `<div style="margin-bottom:2rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.875rem;padding-bottom:.5rem;border-bottom:2px solid var(--grey-100)">
+          <i class="fas ${meta.icon}" style="color:${meta.color};font-size:.9rem"></i>
+          <span style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--grey-600)">${meta.label}</span>
+          <span style="font-size:.72rem;color:var(--grey-400);margin-left:.25rem">${groups[cat].length} product${groups[cat].length!==1?'s':''}</span>
+        </div>
+        <div class="product-grid">${groups[cat].map(productCard).join('')}</div>
+      </div>`;
+  }).join('');
+
+  const activeCount = products.filter(p=>p.status==='active').length;
+  const draftCount  = products.filter(p=>p.status==='draft').length;
+  const appsYtd    = products.reduce((s,p)=>s+(p.applications_ytd||0),0);
+  const catCount   = catOrder.filter(c=>groups[c]&&groups[c].length>0).length;
+
+  document.getElementById('mainContent').innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div><h2>Product Library</h2><p style="margin-top:.25rem">Active and draft banking products</p></div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <div class="search-bar" style="width:200px"><i class="fas fa-search"></i><input type="text" placeholder="Search…" oninput="filterProducts(this.value)"></div>
+        <button class="btn btn-ghost btn-sm" onclick="showCloneModal()"><i class="fas fa-copy"></i> Clone</button>
+        <button class="btn btn-ghost btn-sm" onclick="showNewProductModal()"><i class="fas fa-plus"></i> Manual</button>
+        <button class="btn btn-amber" onclick="openAiStudio()" style="font-weight:700"><i class="fas fa-robot"></i> Create with AI</button>
+      </div>
+    </div>
+    <div onclick="openAiStudio()" style="background:linear-gradient(135deg,var(--navy-dark) 0%,var(--navy) 50%,#004d5c 100%);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1.75rem;cursor:pointer;display:flex;align-items:center;gap:1.25rem;border:1px solid rgba(53,198,196,.2);transition:opacity .2s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+      <div style="width:44px;height:44px;border-radius:50%;background:rgba(53,198,196,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-robot" style="color:var(--sea);font-size:1.1rem"></i></div>
+      <div style="flex:1"><div style="font-weight:700;color:#fff;font-size:.95rem;margin-bottom:.2rem">AI Product Studio</div><div style="font-size:.78rem;color:rgba(255,255,255,.6)">Launch a new regulated product in minutes — AI reads CBO circulars, generates rules, builds portal content, and publishes.</div></div>
+      <div style="color:rgba(255,255,255,.4);font-size:1.2rem"><i class="fas fa-chevron-right"></i></div>
+    </div>
+    <div class="metric-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.75rem;">
+      <div class="metric-card"><div class="metric-value">${activeCount}</div><div class="metric-label">Active Products</div></div>
+      <div class="metric-card"><div class="metric-value">${appsYtd.toLocaleString()}</div><div class="metric-label">Applications YTD</div></div>
+      <div class="metric-card"><div class="metric-value">${draftCount}</div><div class="metric-label">In Draft</div></div>
+      <div class="metric-card"><div class="metric-value">${catCount}</div><div class="metric-label">Categories</div></div>
+    </div>
+    <div id="productGrid">${groupSections}</div>
+  </div>`;
+}
+
+function filterProducts(q) {
+  const lq = q.toLowerCase();
+  document.querySelectorAll('.product-card').forEach(card => {
+    const name = (card.querySelector('.product-card-title')||{textContent:''}).textContent.toLowerCase();
+    card.style.display = name.includes(lq) ? '' : 'none';
+  });
+  // Hide category section headers when all their cards are hidden
+  document.querySelectorAll('#productGrid > div').forEach(section => {
+    const grid = section.querySelector('.product-grid');
+    if (!grid) return;
+    const visible = [...grid.querySelectorAll('.product-card')].some(c => c.style.display !== 'none');
+    section.style.display = visible ? '' : 'none';
+  });
+}
+
+/* ======================== AI PRODUCT STUDIO (standalone) ======================== */
+function openAiStudio() {
+  // Reset state
+  aiThreadId = null; aiProductDraft = null;
+  openPanel('AI Product Studio');
+  document.getElementById('panelBody').innerHTML = `
+    <div class="ai-assistant" style="border-radius:var(--radius-md);overflow:hidden">
+      <div class="ai-header" style="padding:1rem 1.25rem">
+        <div class="ai-icon"><i class="fas fa-robot" style="color:var(--sea-glass)"></i></div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:.95rem">AI Product Studio</div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.5)">Iterative conversation · Reads CBO regulations · Generates rules & portal content</div>
+        </div>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none" onclick="resetAiChat(null)"><i class="fas fa-redo"></i> Reset</button>
+      </div>
+      <div style="padding:1rem 1.25rem">
+        <div id="ai-chat-log" style="min-height:200px;max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;padding:4px 0"></div>
+        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;display:flex;gap:.5rem;align-items:flex-end">
+          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="Type here to describe the new product highlights…" style="flex:1;min-height:0;resize:none;background:transparent;border:none;color:rgba(255,255,255,.9);outline:none;font-size:.84rem"></textarea>
+          <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat(null)" style="height:44px;padding:0 16px;flex-shrink:0"><i class="fas fa-paper-plane"></i></button>
+        </div>
+        <div id="ai-confirm-bar" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:8px;align-items:center;gap:10px">
+          <span style="font-size:.82rem;color:rgba(255,255,255,.85);flex:1">Product ready. Review the draft above, then confirm to save and publish to portals.</span>
+          <button class="btn btn-success btn-sm" onclick="confirmAiProduct(null)"><i class="fas fa-rocket"></i> Confirm &amp; Publish</button>
+        </div>
+      </div>
+    </div>
+    `;
+  // Auto-send welcome context if first time
+  setTimeout(() => {
+    appendChatBubble('assistant', 'Hello, I\'m your AI Product Manager. I can help you create a new regulated banking product from scratch.<br><br>I\'ll ask you a series of questions, read the relevant CBO regulations from the knowledge base, generate the product configuration, eligibility rules, and portal marketing content — then present everything for your review before publishing.<br><br><strong>What type of product would you like to create?</strong>');
+  }, 200);
+}
+
+/* ======================== PRODUCT DETAIL PANEL ======================== */
+async function openProductDetail(id) {
+  selectedProduct = id;
+  openPanel('Loading product…');
+  try {
+    const r = await fetch(`/api/v1/products/${id}`);
+    const d = await r.json();
+    const p = d.product;
+    const productRules = d.rules || [];
+    renderProductPanel(p, productRules);
+  } catch(e) { document.getElementById('panelBody').innerHTML = '<p>Error loading product</p>'; }
+}
+
+/* ======================== DOCUMENT CATALOGUE HELPERS ======================== */
+
+// Master catalogue: key → human-readable label grouped by category
+const DOC_CATALOGUE = [
+  // Identity
+  { key:'civil_id', label:'Civil ID / National ID', group:'Identity' },
+  { key:'passport_copy', label:'Passport Copy', group:'Identity' },
+  { key:'driving_license', label:'Driving License', group:'Identity' },
+  { key:'valid_work_permit_residence_card', label:'Work Permit / Residence Card', group:'Identity' },
+  // Income & Employment
+  { key:'salary_certificate', label:'Salary Certificate (< 3 months)', group:'Income & Employment' },
+  { key:'employer_letter', label:'Employer Confirmation Letter', group:'Income & Employment' },
+  { key:'approved_employer_confirmation', label:'Approved Employer List Confirmation', group:'Income & Employment' },
+  { key:'noc_from_employer', label:'NOC from Employer', group:'Income & Employment' },
+  // Bank & Financial
+  { key:'bank_statements_3m', label:'Bank Statements (3 months)', group:'Financial' },
+  { key:'bank_statements_6m', label:'Bank Statements (6 months)', group:'Financial' },
+  { key:'bank_statements_12m', label:'Bank Statements (12 months)', group:'Financial' },
+  { key:'existing_mortgage_statement', label:'Existing Mortgage Statement', group:'Financial' },
+  { key:'audited_financials_2yr', label:'Audited Financials (2 years)', group:'Financial' },
+  { key:'audited_financials_3yr', label:'Audited Financials (3 years)', group:'Financial' },
+  // Property & Collateral
+  { key:'property_deed', label:'Property Deed / Title', group:'Property' },
+  { key:'property_title_deed', label:'Property Title Deed', group:'Property' },
+  { key:'property_deed_freehold_zone', label:'Property Deed (IZ Freehold Zone)', group:'Property' },
+  { key:'independent_valuation_report', label:'Independent Valuation Report', group:'Property' },
+  { key:'noc_from_primary_lender', label:'NOC from Primary Lender', group:'Property' },
+  { key:'lease_agreements', label:'Lease Agreements', group:'Property' },
+  // Utility & Proof of Residence
+  { key:'utility_bill', label:'Utility Bill (< 3 months)', group:'Proof of Residence' },
+  // Vehicle (Auto Finance)
+  { key:'vehicle_proforma_invoice', label:'Vehicle Proforma Invoice', group:'Vehicle' },
+  { key:'insurance_quotation', label:'Vehicle Insurance Quotation', group:'Vehicle' },
+  // Corporate / SME / Commercial
+  { key:'commercial_registration_certificate', label:'Commercial Registration Certificate (CR)', group:'Corporate' },
+  { key:'memorandum_of_association', label:'Memorandum of Association (MOA)', group:'Corporate' },
+  { key:'cr_extract', label:'CR Extract (Ministry of Commerce)', group:'Corporate' },
+  { key:'tax_clearance_certificate', label:'Tax Clearance Certificate', group:'Corporate' },
+  { key:'business_profile', label:'Business Profile / Company Profile', group:'Corporate' },
+  { key:'board_resolution', label:'Board Resolution (for signatories)', group:'Corporate' },
+  // Education
+  { key:'university_offer_letter_or_enrollment', label:'University Offer Letter or Enrollment', group:'Education' },
+  { key:'fee_schedule_from_institution', label:'Fee Schedule from Institution', group:'Education' },
+  // ESG / Green
+  { key:'gsas_certificate', label:'GSAS Certificate (GORD-issued)', group:'ESG / Green' },
+  { key:'epc_certificate', label:'Energy Performance Certificate (EPC)', group:'ESG / Green' },
+  { key:'eia_clearance', label:'EIA Clearance (Environment Authority)', group:'ESG / Green' },
+  { key:'green_building_compliance_report', label:'Green Building Compliance Report', group:'ESG / Green' },
+];
+
+function docLabel(key) {
+  const found = DOC_CATALOGUE.find(d => d.key === key);
+  return found ? found.label : key.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Track which product we're editing docs for
+let _docEditProductId = null;
+let _docEditCurrentList = [];
+let _catalogueSelectedKeys = new Set();
+
+function openDocCatalogue(productId) {
+  _docEditProductId = productId;
+  _catalogueSelectedKeys = new Set();
+  // Get current docs from the displayed list
+  const prod = products.find(x => x.id === productId);
+  _docEditCurrentList = prod ? (() => { try { return JSON.parse(prod.required_docs||'[]'); } catch{return[];} })() : [];
+
+  // Group catalogue by category
+  const groups = {};
+  DOC_CATALOGUE.forEach(d => {
+    if (!groups[d.group]) groups[d.group] = [];
+    groups[d.group].push(d);
+  });
+
+  const alreadyAdded = new Set(_docEditCurrentList);
+  let html = '';
+  for (const [group, items] of Object.entries(groups)) {
+    html += `<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--grey-400);letter-spacing:.06em;margin:.6rem 0 .25rem">${group}</div>`;
+    items.forEach(item => {
+      const already = alreadyAdded.has(item.key);
+      html += `<label style="display:flex;align-items:center;gap:.5rem;padding:.35rem .5rem;border-radius:6px;cursor:${already?'not-allowed':'pointer'};background:${already?'var(--grey-50)':'white'};opacity:${already?'.5':'1'};border:1px solid transparent" ${already?'':'onmouseover="this.style.background=\'var(--grey-50)\'" onmouseout="this.style.background=\'white\'"'}>
+        <input type="checkbox" value="${item.key}" ${already?'disabled checked':''}
+          onchange="toggleCatalogueItem('${item.key}',this.checked)"
+          style="accent-color:var(--navy)">
+        <span style="font-size:.82rem;font-weight:500;color:var(--navy-dark)">${item.label}</span>
+        <code style="margin-left:auto;font-size:.67rem;color:var(--grey-400)">${item.key}</code>
+      </label>`;
+    });
+  }
+  document.getElementById('catalogueItems').innerHTML = html;
+
+  const modal = document.getElementById('docCatalogueModal');
+  modal.style.display = 'flex';
+}
+
+function toggleCatalogueItem(key, checked) {
+  if (checked) _catalogueSelectedKeys.add(key);
+  else _catalogueSelectedKeys.delete(key);
+}
+
+function closeDocCatalogue() {
+  const modal = document.getElementById('docCatalogueModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveSelectedDocs(productId) {
+  if (_catalogueSelectedKeys.size === 0) { closeDocCatalogue(); return; }
+  const prod = products.find(x => x.id === productId);
+  const current = prod ? (() => { try { return JSON.parse(prod.required_docs||'[]'); } catch{return[];} })() : [];
+  const newList = [...current, ...[..._catalogueSelectedKeys].filter(k => !current.includes(k))];
+  await patchProductDocs(productId, newList);
+  closeDocCatalogue();
+}
+
+async function removeDoc(productId, docKey) {
+  const prod = products.find(x => x.id === productId);
+  const current = prod ? (() => { try { return JSON.parse(prod.required_docs||'[]'); } catch{return[];} })() : [];
+  const newList = current.filter(k => k !== docKey);
+  await patchProductDocs(productId, newList);
+}
+
+async function addManualDoc(productId) {
+  const input = document.getElementById('manualDocInput');
+  const raw = input ? input.value.trim() : '';
+  if (!raw) return;
+  // Normalise: lowercase, spaces → underscores, strip special chars
+  const key = raw.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  if (!key) { toast('Invalid document key','error'); return; }
+  const prod = products.find(x => x.id === productId);
+  const current = prod ? (() => { try { return JSON.parse(prod.required_docs||'[]'); } catch{return[];} })() : [];
+  if (current.includes(key)) { toast('Document already in list','info'); return; }
+  await patchProductDocs(productId, [...current, key]);
+  if (input) input.value = '';
+}
+
+async function patchProductDocs(productId, newDocList) {
+  try {
+    const r = await fetch(`/api/v1/products/${productId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ required_docs: JSON.stringify(newDocList) })
+    });
+    const d = await r.json();
+    if (d.success) {
+      // Update local cache
+      const prod = products.find(x => x.id === productId);
+      if (prod) prod.required_docs = JSON.stringify(newDocList);
+      toast('Documents updated', 'success');
+      // Re-open the same tab to refresh display
+      switchProductTab('documents', productId);
+    } else { toast(d.error||'Failed to update documents','error'); }
+  } catch(e) { toast(e.message,'error'); }
+}
+
+/* ======================== PRODUCT PANEL RENDER ======================== */
+
+function renderProductPanel(p, productRules) {
+  document.getElementById('panelTitle').textContent = p.name;
+  const tabs = ['general','pricing','eligibility','documents','workflow','ai_config','ai_assistant'];
+  const tabLabels = {general:'General',pricing:'Pricing',eligibility:'Eligibility',documents:'Documents',workflow:'Workflow',ai_config:'AI Config',ai_assistant:'🤖 AI Studio'};
+  const catLabels = {home_loan:'Home Loan',auto_loan:'Auto Finance',personal_loan:'Personal Loan',sme:'SME Finance',commercial:'Commercial',education:'Education Finance'};
+
+  const esgDocs = (() => { try { return JSON.parse(p.esg_required_docs||'[]'); } catch{return[];} })();
+  const reqDocs = (() => { try { return JSON.parse(p.required_docs||'[]'); } catch{return[];} })();
+  const materials = (() => { try { return JSON.parse(p.approved_materials||'[]'); } catch{return[];} })();
+  const vendors = (() => { try { return JSON.parse(p.approved_vendors||'[]'); } catch{return[];} })();
+
+  // Product-type helpers
+  const isEsg = esgDocs.length > 0;
+  const isSecured = ['home_loan','auto_loan','sme','commercial'].includes(p.category);
+  const isHomeLoan = p.category === 'home_loan';
+  const isAutoLoan = p.category === 'auto_loan';
+  const isPersonalOrEdu = ['personal_loan','education'].includes(p.category);
+
+  // Term label — home/commercial/SME use years; auto may use months
+  const termLabel = isAutoLoan ? 'Term (years / months)' : 'years';
+
+  const tabContent = {
+    general: `
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Product Name</label><input class="form-control" value="${p.name}" id="pName"></div>
+        <div class="form-group"><label class="form-label">Category</label><input class="form-control" value="${catLabels[p.category]||p.category}" disabled style="color:var(--grey-600);background:var(--grey-50)"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" rows="3" id="pDesc">${p.description||''}</textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Min Term (${isAutoLoan?'months':'years'})</label><input class="form-control" type="number" value="${p.min_term}" id="pMinTerm"></div>
+        <div class="form-group"><label class="form-label">Max Term (${isAutoLoan?'months':'years'})</label><input class="form-control" type="number" value="${p.max_term}" id="pMaxTerm"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Min Amount (OMR)</label><input class="form-control" type="number" value="${p.min_amount}" id="pMinAmount"></div>
+        <div class="form-group"><label class="form-label">Max Amount (OMR)</label><input class="form-control" type="number" value="${p.max_amount}" id="pMaxAmount"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.75rem;margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--grey-100)">
+        <span class="badge ${p.status==='active'?'badge-active':'badge-draft'}">${p.status}</span>
+        ${isEsg?'<span class="badge badge-esg"><i class="fas fa-leaf"></i> ESG Product</span>':''}
+        <button class="btn btn-navy btn-sm" style="margin-left:auto" onclick="saveProductChanges('${p.id}')"><i class="fas fa-save"></i> Save Changes</button>
+      </div>`,
+
+    pricing: `
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-header"><h4>Base Rate Configuration</h4></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Base Rate (%)</label><input class="form-control" type="number" step=".01" value="${p.base_rate||5.5}" id="pRate"></div>
+            <div class="form-group"><label class="form-label">Max DBR (%)</label><input class="form-control" type="number" value="${p.max_dbr||60}" id="pMaxDbr"></div>
+          </div>
+          ${isSecured ? `
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Max LTV (%)</label><input class="form-control" type="number" value="${p.max_ltv||90}" id="pMaxLtv">
+              <small style="color:var(--grey-400);font-size:.72rem">${isAutoLoan?'Secured against vehicle value':isHomeLoan?'CBO cap: 90% Omani, 75% expat':'Max loan-to-collateral value'}</small>
+            </div>
+            <div class="form-group"><label class="form-label">Green DBR (%)</label><input class="form-control" type="number" value="${p.green_dbr||p.max_dbr||60}" id="pGreenDbr">
+              <small style="color:var(--grey-400);font-size:.72rem">DBR limit for ESG-linked applications</small>
+            </div>
+          </div>` : `
+          <div class="form-row">
+            <div class="form-group" style="opacity:.5;pointer-events:none"><label class="form-label">Max LTV (%)</label><input class="form-control" type="number" value="0" disabled><small style="color:var(--grey-400);font-size:.72rem">N/A — unsecured product</small></div>
+            <div class="form-group"><label class="form-label">Green DBR (%)</label><input class="form-control" type="number" value="${p.green_dbr||p.max_dbr||45}" id="pGreenDbr"></div>
+          </div>`}
+          ${isEsg ? `
+          <div class="form-row" style="border-top:1px solid var(--grey-100);margin-top:.75rem;padding-top:.75rem">
+            <div class="form-group"><label class="form-label" style="color:var(--success)"><i class="fas fa-leaf"></i> GSAS Min Score</label><input class="form-control" type="number" value="${p.gsas_min_score||70}" id="pGsasMin"></div>
+            <div class="form-group"><label class="form-label" style="color:var(--success)"><i class="fas fa-leaf"></i> GSAS Premium Score</label><input class="form-control" type="number" value="${p.gsas_premium_score||85}" id="pGsasPremium"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label" style="color:var(--success)"><i class="fas fa-leaf"></i> Green Discount Standard (%)</label><input class="form-control" type="number" step=".01" value="${p.green_discount_standard||0.5}" id="pGreenDiscStd"></div>
+            <div class="form-group"><label class="form-label" style="color:var(--success)"><i class="fas fa-leaf"></i> Green Discount Premium (%)</label><input class="form-control" type="number" step=".01" value="${p.green_discount_premium||0.75}" id="pGreenDiscPrem"></div>
+          </div>` : ''}
+          <button class="btn btn-navy btn-sm" style="margin-top:.5rem" onclick="saveProductChanges('${p.id}')"><i class="fas fa-save"></i> Save Pricing</button>
+        </div>
+      </div>
+      ${isEsg ? `
+      <div class="card" style="border-left:4px solid var(--success)">
+        <div class="card-header" style="background:var(--success-light)">
+          <h4 style="color:var(--success)"><i class="fas fa-leaf"></i> ESG Pricing Modifiers</h4>
+          <button class="btn btn-sm btn-success" onclick="toast('ESG modifier saved','success')"><i class="fas fa-save"></i> Save</button>
+        </div>
+        <div class="card-body">
+          <div style="background:var(--grey-100);border-radius:var(--radius-md);overflow:hidden">
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:.5rem .75rem;font-size:.7rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;border-bottom:1px solid var(--grey-200)">
+              <span>Condition</span><span>Discount</span><span>Applied Rate</span><span>Action</span>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:.625rem .75rem;font-size:.82rem;border-bottom:1px solid var(--grey-100);align-items:center">
+              <span>GSAS Score ≥ <strong>${p.gsas_premium_score||85}</strong></span>
+              <span style="color:var(--success);font-weight:600">-${p.green_discount_premium||0.75}%</span>
+              <span style="color:var(--navy);font-weight:700">${((p.base_rate||5.5)-(p.green_discount_premium||0.75)).toFixed(2)}%</span>
+              <button class="btn btn-ghost btn-sm" onclick="toast('Modifier active','success')"><i class="fas fa-check"></i></button>
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:.625rem .75rem;font-size:.82rem;align-items:center">
+              <span>GSAS Score ≥ <strong>${p.gsas_min_score||70}</strong> and &lt; ${p.gsas_premium_score||85}</span>
+              <span style="color:var(--success);font-weight:600">-${p.green_discount_standard||0.5}%</span>
+              <span style="color:var(--navy);font-weight:700">${((p.base_rate||5.5)-(p.green_discount_standard||0.5)).toFixed(2)}%</span>
+              <button class="btn btn-ghost btn-sm"><i class="fas fa-check"></i></button>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:.75rem" onclick="toast('Use the AI Assistant tab to generate new ESG pricing modifiers from regulatory text','info')"><i class="fas fa-plus"></i> Add Modifier</button>
+        </div>
+      </div>` : `<p style="color:var(--grey-500);font-size:.85rem;padding:.5rem 0"><i class="fas fa-info-circle"></i> No ESG pricing modifiers — this is a standard product. ESG discount fields are only available on Green/ESG products.</p>`}`,
+
+    eligibility: `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <h4>Eligibility Rules</h4>
+        <span style="font-size:.75rem;color:var(--grey-500)">Showing rules applicable to ${catLabels[p.category]||p.category}</span>
+      </div>
+      ${(() => {
+        // Filter rules by relevance to product type
+        const relevantCategories = ['creditworthiness','compliance','stress_test'];
+        if (isSecured) relevantCategories.push('collateral');
+        if (isEsg) relevantCategories.push('esg');
+        if (isHomeLoan) relevantCategories.push('eligibility','product');
+        const filtered = productRules.filter(r => r.is_active && relevantCategories.includes(r.category));
+        if (!filtered.length) return '<p style="color:var(--grey-500);font-size:.85rem">No eligibility rules configured.</p>';
+        return '<div style="background:var(--grey-100);border-radius:var(--radius-lg);overflow:hidden">' +
+          '<div style="display:grid;grid-template-columns:2fr 1.2fr 1.5fr 1.5fr .8fr;padding:.5rem .75rem;font-size:.7rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;border-bottom:1px solid var(--grey-200)">' +
+          '<span>Rule Name</span><span>Category</span><span>Condition</span><span>Reference</span><span>Severity</span></div>' +
+          filtered.map(r => `
+          <div style="display:grid;grid-template-columns:2fr 1.2fr 1.5fr 1.5fr .8fr;padding:.625rem .75rem;font-size:.8rem;border-bottom:1px solid var(--grey-100);align-items:center">
+            <span style="font-weight:500">${r.name}</span>
+            <span class="rule-category-tag rule-cat-${r.category}" style="font-size:.68rem">${r.category}</span>
+            <span style="font-family:monospace;font-size:.75rem;color:var(--teal)">${r.metric} ${r.operator} ${r.threshold_value??r.threshold_condition??'–'}</span>
+            <span style="font-size:.72rem;color:var(--grey-500)">${r.regulatory_reference||'–'}</span>
+            <span class="badge ${r.severity==='hard'?'badge-red':'badge-amber'}">${r.severity}</span>
+          </div>`).join('') + '</div>';
+      })()}`,
+
+    documents: `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <h4>Document Requirements</h4>
+        <button class="btn btn-navy btn-sm" onclick="openDocCatalogue('${p.id}')"><i class="fas fa-plus"></i> Add from Catalogue</button>
+      </div>
+      <div id="docList" style="margin-bottom:1.25rem">
+        ${reqDocs.length ? reqDocs.map((d,i)=>`
+        <div style="display:flex;align-items:center;gap:.5rem;padding:.45rem .6rem;background:var(--grey-50);border:1px solid var(--grey-200);border-radius:6px;margin-bottom:.35rem" id="docItem_${i}">
+          <i class="fas fa-file-alt" style="color:var(--navy);font-size:.8rem;flex-shrink:0"></i>
+          <span style="flex:1;font-size:.83rem;font-weight:500;color:var(--navy-dark)">${docLabel(d)}</span>
+          <code style="font-size:.68rem;color:var(--grey-400);font-family:monospace">${d}</code>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 6px;color:var(--danger)" onclick="removeDoc('${p.id}','${d}')"><i class="fas fa-times"></i></button>
+        </div>`).join('') : '<p style="color:var(--grey-400);font-size:.83rem;font-style:italic;padding:.5rem 0">No documents configured. Add from catalogue or enter manually.</p>'}
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;border-top:1px solid var(--grey-100);padding-top:.75rem">
+        <input class="form-control" id="manualDocInput" placeholder="Enter custom document key (e.g. customs_clearance)" style="font-size:.83rem">
+        <button class="btn btn-navy btn-sm" style="white-space:nowrap" onclick="addManualDoc('${p.id}')"><i class="fas fa-plus"></i> Add</button>
+      </div>
+      ${isEsg ? `
+      <div style="background:var(--success-light);border-radius:var(--radius-md);padding:1rem;border:1px solid rgba(22,132,91,.15);margin-top:1.25rem">
+        <p style="font-size:.8rem;color:var(--success);font-weight:600;margin-bottom:.75rem"><i class="fas fa-leaf"></i> ESG Certificates (Mandatory — set by AI Studio)</p>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+          ${esgDocs.map(d=>`<span class="badge badge-green"><i class="fas fa-certificate"></i> ${d.replace(/_/g,' ')}</span>`).join('')}
+        </div>
+        ${materials.length ? `<p style="font-size:.75rem;color:var(--grey-500);margin:.75rem 0 .35rem">Approved Materials: ${materials.join(', ')}</p>` : ''}
+        ${vendors.length ? `<p style="font-size:.75rem;color:var(--grey-500);margin:.35rem 0 0">Approved Vendors: ${vendors.join(', ')}</p>` : ''}
+      </div>` : ''}
+
+      <!-- Document Catalogue Modal (hidden) -->
+      <div id="docCatalogueModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+        <div style="background:white;border-radius:12px;padding:1.5rem;max-width:560px;width:95%;max-height:80vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.2)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+            <h4 style="color:var(--navy)"><i class="fas fa-folder-open"></i> Document Catalogue</h4>
+            <button class="btn btn-ghost btn-sm" onclick="closeDocCatalogue()"><i class="fas fa-times"></i></button>
+          </div>
+          <p style="font-size:.8rem;color:var(--grey-500);margin-bottom:1rem">Select one or more documents to add to <strong>${p.name}</strong>. Already-added documents are greyed out.</p>
+          <div id="catalogueItems" style="display:flex;flex-direction:column;gap:.35rem"></div>
+          <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem;border-top:1px solid var(--grey-100);padding-top:.75rem">
+            <button class="btn btn-ghost" onclick="closeDocCatalogue()">Cancel</button>
+            <button class="btn btn-navy" onclick="saveSelectedDocs('${p.id}')"><i class="fas fa-save"></i> Add Selected</button>
+          </div>
+        </div>
+      </div>`,
+
+    workflow: `
+      <h4 style="margin-bottom:1rem">Workflow Configuration</h4>
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-body">
+          ${isHomeLoan || isAutoLoan ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;${isHomeLoan?'margin-bottom:1rem':''}">
+            <div>
+              <div style="font-weight:600;font-size:.875rem">Partner Developer Inventory</div>
+              <div style="font-size:.78rem;color:var(--grey-500)">Allow applications from registered developer projects</div>
+            </div>
+            <label class="toggle"><input type="checkbox" ${p.allow_partner_inventory?'checked':''} onchange="toast('Setting saved','success')"><span class="toggle-slider"></span></label>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;${isEsg?'margin-bottom:1rem':''}">
+            <div>
+              <div style="font-weight:600;font-size:.875rem">Bring Your Own Property (BYOP)</div>
+              <div style="font-size:.78rem;color:var(--grey-500)">Allow customers to apply with their own property${isAutoLoan?' / vehicle':''}</div>
+            </div>
+            <label class="toggle"><input type="checkbox" ${p.allow_byop?'checked':''} onchange="toast('Setting saved','success')"><span class="toggle-slider"></span></label>
+          </div>` : `
+          <div style="padding:.5rem 0;color:var(--grey-400);font-size:.82rem;font-style:italic">
+            <i class="fas fa-info-circle"></i> Partner inventory and BYOP settings are only applicable to Home Loan and Auto Finance products.
+          </div>`}
+          ${isEsg ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:${isHomeLoan||isAutoLoan?'1rem':'0'};${isHomeLoan||isAutoLoan?'border-top:1px solid var(--grey-100)':''}">
+            <div>
+              <div style="font-weight:600;font-size:.875rem;color:var(--success)"><i class="fas fa-leaf"></i> Maker-Checker for ESG Discount</div>
+              <div style="font-size:.78rem;color:var(--grey-500)">Requires Compliance + Risk dual approval before applying green rate discount</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked onchange="toast('Setting saved','success')"><span class="toggle-slider"></span></label>
+          </div>` : ''}
+        </div>
+      </div>
+      ${isHomeLoan ? `
+      <div class="card">
+        <div class="card-header"><h4>Construction Milestones</h4><span style="font-size:.72rem;color:var(--grey-400)">Home loans only</span></div>
+        <div class="card-body">
+          ${['Foundation & Groundwork (25%)','Roof & Envelope (30%)','MEP & Solar (25%)','Finishing & Handover (20%)'].map((s,i)=>`
+          <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid var(--grey-100)">
+            <span style="width:22px;height:22px;border-radius:50%;background:var(--teal);color:white;font-size:.7rem;display:flex;align-items:center;justify-content:center;font-weight:700">${i+1}</span>
+            <span style="font-size:.85rem;flex:1">${s}</span>
+            ${isEsg?'<span class="badge badge-green">Green material check</span>':'<span class="badge badge-navy">Standard check</span>'}
+          </div>`).join('')}
+        </div>
+      </div>` : `
+      <div style="padding:.5rem;color:var(--grey-400);font-size:.82rem;font-style:italic">
+        <i class="fas fa-info-circle"></i> Construction milestone disbursement is only applicable to Home Loan products.
+      </div>`}`,
+
+    ai_config: `
+      <h4 style="margin-bottom:1rem">AI Configuration</h4>
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-header" style="background:linear-gradient(135deg,var(--navy-dark),var(--navy))">
+          <h4 style="color:white"><i class="fas fa-robot"></i> Document AI Settings</h4>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">AI Confidence Threshold for Auto-Verification (%)</label>
+            <div style="display:flex;align-items:center;gap:1rem">
+              <input type="range" min="60" max="99" value="${p.ai_confidence_threshold||90}" id="confidenceSlider" oninput="document.getElementById('confVal').textContent=this.value+'%'" style="flex:1">
+              <span id="confVal" style="font-weight:700;color:var(--navy);min-width:40px">${p.ai_confidence_threshold||90}%</span>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:1rem">
+            <label class="form-label">Action if Below Threshold</label>
+            <select class="form-control">
+              <option selected>Route to Compliance Review</option>
+              <option>Route to Risk Officer</option>
+              <option>Auto-Reject</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">AI Model</label>
+            <select class="form-control">
+              <option>GPT-4o (Complex schema, high accuracy)</option>
+              <option>GPT-4o Mini (Standard rules, fast)</option>
+            </select>
+          </div>
+          <button class="btn btn-navy btn-sm" onclick="saveAiConfig('${p.id}')"><i class="fas fa-save"></i> Save AI Config</button>
+        </div>
+      </div>`,
+
+    ai_assistant: `
+      <div class="ai-assistant">
+        <div class="ai-header">
+          <div class="ai-icon"><i class="fas fa-robot" style="color:var(--sea-glass)"></i></div>
+          <div><div style="font-weight:600;font-size:.9rem">AI Product Studio</div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.5)">Multi-turn conversation &middot; Creates full product: name, rates, rules, schema</div></div>
+          <button class="btn btn-sm" style="margin-left:auto;background:rgba(255,255,255,.1);color:white;border:none" onclick="resetAiChat('${p.id}')"><i class="fas fa-redo"></i> New</button>
+        </div>
+        <div id="ai-chat-log" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:10px;padding:4px 0"></div>
+        <div style="display:flex;gap:.5rem;align-items:flex-end">
+          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="Type here to describe the new product highlights…" style="flex:1;min-height:0;resize:none"></textarea>
+          <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat('${p.id}')" style="height:48px;padding:0 18px"><i class="fas fa-paper-plane"></i></button>
+        </div>
+        <div id="ai-confirm-bar" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:8px;align-items:center;gap:10px">
+          <span style="font-size:.82rem;color:rgba(255,255,255,.85);flex:1">Product ready. Confirm to save and publish.</span>
+          <button class="btn btn-success btn-sm" onclick="confirmAiProduct('${p.id}')"><i class="fas fa-rocket"></i> Confirm &amp; Save</button>
+        </div>
+      </div>`
+  };
+
+  document.getElementById('panelBody').innerHTML = `
+    <div class="tabs">${tabs.map(t=>`<div class="tab ${t===selectedTab?'active':''}" onclick="switchProductTab('${t}','${p.id}')">${tabLabels[t]}</div>`).join('')}</div>
+    <div class="tab-content" id="productTabContent">
+      ${tabContent[selectedTab]||''}
+    </div>
+    <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--grey-200);display:flex;gap:.75rem;">
+      ${p.status!=='active' ? `<button class="btn btn-success" onclick="publishProduct('${p.id}')"><i class="fas fa-rocket"></i> Publish Product</button>` : '<span class="badge badge-active" style="align-self:center"><i class="fas fa-check-circle"></i> Live</span>'}
+      <button class="btn btn-ghost" onclick="cloneProduct('${p.id}','${p.name}')"><i class="fas fa-copy"></i> Clone</button>
+    </div>`;
+  openPanel(p.name);
+}
+
+function switchProductTab(tab, productId) {
+  selectedTab = tab;
+  openProductDetail(productId);
+}
+
+/* ======================== AI PRODUCT STUDIO (multi-turn) ======================== */
+let aiThreadId = null;
+let aiProductDraft = null;
+
+function resetAiChat(productId) {
+  aiThreadId = null; aiProductDraft = null;
+  const log = document.getElementById('ai-chat-log');
+  if (log) log.innerHTML = '';
+  const bar = document.getElementById('ai-confirm-bar');
+  if (bar) bar.style.display = 'none';
+}
+
+function appendChatBubble(role, html) {
+  const log = document.getElementById('ai-chat-log');
+  if (!log) return;
+  const isUser = role === 'user';
+  const el = document.createElement('div');
+  el.style.cssText = 'display:flex;justify-content:' + (isUser?'flex-end':'flex-start');
+  el.innerHTML = '<div style="max-width:85%;padding:9px 13px;border-radius:12px;font-size:.82rem;line-height:1.5;background:' + (isUser?'rgba(53,198,196,.2)':' rgba(255,255,255,.07)') + ';color:rgba(255,255,255,.9)">' + html + '</div>';
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function sendAiChat(productId) {
+  const input = document.getElementById('aiChatInput');
+  const msg = input ? input.value.trim() : '';
+  if (!msg) return;
+  appendChatBubble('user', msg);
+  if (input) input.value = '';
+  const btn = document.getElementById('aiChatSendBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
+  appendChatBubble('assistant', 'Thinking...');
+  try {
+    const chatBody = { message: msg, thread_id: aiThreadId, user_id:'u001', user_name:'Product Manager' };
+    if (productId) chatBody.product_id = productId;
+    else chatBody.context = { purpose: 'product_creation' };
+    const r = await fetch('/api/v1/ai/products/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(chatBody)
+    });
+    const d = await r.json();
+    const log2 = document.getElementById('ai-chat-log');
+    if (log2 && log2.lastChild) log2.removeChild(log2.lastChild);
+    if (d.thread_id) aiThreadId = d.thread_id;
+    let replyHtml = markdownToHtml(d.reply || d.message || 'Done.');
+    if (d.product_draft) {
+      aiProductDraft = d.product_draft;
+      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:6px;font-size:.78rem"><strong>Product Draft</strong><br><b>' + (d.product_draft.name||'') + '</b> &middot; ' + (d.product_draft.base_rate||'') + '% &middot; up to OMR ' + Number(d.product_draft.max_amount||0).toLocaleString() + '</div>';
+    }
+    if (d.rules_draft && d.rules_draft.length) {
+      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(0,127,134,.12);border:1px solid rgba(0,127,134,.3);border-radius:6px;font-size:.78rem"><strong>Rules Draft (' + d.rules_draft.length + ')</strong><br>' + d.rules_draft.map(function(x){return '&bull; '+(x.name||x.metric||'rule');}).join('<br>') + '</div>';
+    }
+    if (d.schema_draft) {
+      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(244,179,91,.1);border:1px solid rgba(244,179,91,.3);border-radius:6px;font-size:.78rem"><strong>GSAS Schema</strong> &mdash; ' + Object.keys(d.schema_draft).length + ' fields defined</div>';
+    }
+    appendChatBubble('assistant', replyHtml);
+    // Show confirm bar when AI signals readiness — action field OR product_draft present after turn 3+
+    if (d.action === 'ready_to_confirm' || d.action === 'show_draft' ||
+        (aiProductDraft && d.action !== 'none')) {
+      const bar = document.getElementById('ai-confirm-bar');
+      if (bar) bar.style.display = 'flex';
+    }
+  } catch(e) {
+    const log3 = document.getElementById('ai-chat-log');
+    if (log3 && log3.lastChild) log3.removeChild(log3.lastChild);
+    appendChatBubble('assistant', 'Error: ' + e.message);
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>'; }
+}
+
+async function confirmAiProduct(productId) {
+  if (!aiThreadId && !aiProductDraft) { toast('No product draft to confirm','error'); return; }
+  const btn = document.querySelector('#ai-confirm-bar .btn-success');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving…'; }
+  try {
+    // Send both thread_id AND any locally-held draft as a safety fallback.
+    // The backend prefers the thread's saved result, but will use the body draft
+    // if the thread result is missing (e.g. if a prior turn wiped it).
+    const body = { thread_id: aiThreadId, user_id:'u001' };
+    if (productId) body.product_id = productId;
+    if (aiProductDraft) body.product_draft = aiProductDraft;
+    const r = await fetch('/api/v1/ai/products/confirm', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.success || d.product_id) {
+      const newId = d.product_id || productId;
+      toast('✅ Product published! Now live on customer portal.', 'success');
+      appendChatBubble('assistant', `<strong>Done!</strong> The product has been saved and published.<br><br>
+        ${newId ? `<span onclick="openProductDetail('${newId}')" style="color:var(--sea);cursor:pointer;text-decoration:underline">→ Open product configuration</span>` : ''}
+        <br><small style="opacity:.5">Customer portal will show it after refresh. Developer portal updated.</small>`);
+      const bar = document.getElementById('ai-confirm-bar');
+      if (bar) bar.style.display = 'none';
+      aiThreadId = null; aiProductDraft = null;
+      // Close panel, refresh products list and re-render the products page
+      closePanel();
+      await loadProducts();
+      await renderProducts();
+    } else { toast(d.error||'Confirm failed', 'error'); }
+  } catch(e) { toast(e.message, 'error'); }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-rocket"></i> Confirm &amp; Publish'; }
+}
+
+/* ======================== RULES PAGE ======================== */
+async function renderRules() {
+  document.getElementById('pageTitle').textContent = 'Rules Engine';
+  document.getElementById('pageSubtitle').textContent = '15 active CBO rules';
+  try {
+    const pid = selectedProduct || (products[0] && products[0].id) || 'p001';
+    const r = await fetch(`/api/v1/products/${pid}/rules`);
+    const d = await r.json();
+    rules = d.rules || [];
+  } catch(e) { rules = []; }
+  
+  const catColors = { creditworthiness:'rule-cat-creditworthiness', collateral:'rule-cat-collateral', esg:'rule-cat-esg', compliance:'rule-cat-compliance', stress_test:'rule-cat-stress_test', product:'rule-cat-product', eligibility:'rule-cat-eligibility' };
+  
+  document.getElementById('mainContent').innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div><h2>Rules Engine</h2><p>CBO-compliant regulatory rules library</p></div>
+      <button class="btn btn-navy" onclick="toast('Open AI Assistant to generate new rules','info')"><i class="fas fa-robot"></i> Generate from Regulatory Text</button>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h4>Active Rules (${rules.filter(r=>r.is_active).length})</h4>
+        <div class="search-bar" style="width:200px"><i class="fas fa-search"></i><input type="text" placeholder="Search rules…"></div>
+      </div>
+      <div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1.5fr 2fr 1fr;padding:.5rem .75rem;font-size:.7rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;background:var(--grey-100);border-bottom:1px solid var(--grey-200)">
+          <span>Rule Name</span><span>Category</span><span>Condition</span><span>Regulatory Reference</span><span>Severity</span>
+        </div>
+        ${rules.map(r => `
+        <div style="display:grid;grid-template-columns:2fr 1fr 1.5fr 2fr 1fr;padding:.625rem .75rem;font-size:.82rem;border-bottom:1px solid var(--grey-100);align-items:center" class="${r.source==='ai_generated'?'ai-row':''}">
+          <div>
+            <span style="font-weight:500;color:var(--navy)">${r.name}</span>
+            ${r.source==='ai_generated'?'<span class="ai-confidence-tag"><i class="fas fa-robot"></i> AI ${r.ai_confidence||94}%</span>':''}
+          </div>
+          <span class="rule-category-tag ${catColors[r.category]||''}">${r.category}</span>
+          <code style="font-size:.75rem;color:var(--teal)">${r.metric} ${r.operator} ${r.threshold_value??r.threshold_condition??'–'}</code>
+          <span style="font-size:.75rem;color:var(--grey-500)">${r.regulatory_reference||'–'}</span>
+          <span class="badge ${r.severity==='hard'?'badge-red':'badge-amber'}">${r.severity||'hard'}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ======================== COMPLIANCE TASKS ======================== */
+async function renderComplianceTasks() {
+  document.getElementById('pageTitle').textContent = 'Compliance Task Queue';
+  document.getElementById('pageSubtitle').textContent = 'ESG & Credit Review';
+  try {
+    const r = await fetch('/api/v1/compliance/queue');
+    const d = await r.json();
+    applications = d.applications || [];
+  } catch(e) { applications = []; }
+  
+  const cols = {
+    pending: applications.filter(a => ['submitted','credit_scoring','esg_review'].includes(a.status)),
+    in_progress: applications.filter(a => a.status==='credit_review'),
+    approved: applications.filter(a => a.status==='approved'),
+    rejected: applications.filter(a => a.status==='rejected')
+  };
+  const colLabels = {pending:'Pending Review', in_progress:'In Progress', approved:'Approved', rejected:'Rejected'};
+  const colColors = {pending:'var(--amber)', in_progress:'var(--teal)', approved:'var(--success)', rejected:'var(--danger)'};
+
+  document.getElementById('mainContent').innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div><h2>Task Queue</h2><p>Applications awaiting compliance & ESG review</p></div>
+      <span class="badge badge-amber" style="font-size:.8rem;padding:.4rem .9rem">
+        <i class="fas fa-exclamation-triangle"></i> ${cols.pending.length} Pending
+      </span>
+    </div>
+    <div class="kanban">
+      ${Object.entries(cols).map(([key, apps]) => `
+      <div class="kanban-col">
+        <div class="kanban-col-header" style="color:${colColors[key]}">
+          ${colLabels[key]} <span class="kanban-count">${apps.length}</span>
+        </div>
+        ${apps.map(a => `
+        <div class="kanban-card ${a.priority==='high'?'priority':''}" onclick="openComplianceDetail('${a.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem">
+            <span style="font-family:monospace;font-size:.75rem;color:var(--teal);font-weight:600">${a.reference}</span>
+            ${a.priority==='high'?'<span class="badge badge-amber" style="font-size:.65rem">HIGH PRIORITY</span>':''}
+          </div>
+          <div style="font-weight:600;font-size:.85rem;color:var(--navy);margin-bottom:.25rem">${a.customer_name||a.customer_display_name}</div>
+          <div style="font-size:.78rem;color:var(--grey-500);margin-bottom:.5rem">${a.product_name||''}</div>
+          <div style="display:flex;justify-content:space-between;font-size:.78rem">
+            <span>OMR ${(a.loan_amount||0).toLocaleString()}</span>
+            ${a.gsas_score?`<span style="color:var(--success)"><i class="fas fa-leaf"></i> GSAS ${a.gsas_score}</span>`:''}
+          </div>
+        </div>`).join('')}
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+async function openComplianceDetail(appId) {
+  openPanel('Loading application…');
+  try {
+    const [compR, appR] = await Promise.all([
+      fetch(`/api/v1/compliance/esg/${appId}`),
+      fetch(`/api/v1/applications/${appId}`)
+    ]);
+    const compD = await compR.json();
+    const appD = await appR.json();
+    renderCompliancePanel(compD, appD);
+  } catch(e) { document.getElementById('panelBody').innerHTML = '<p>Error loading</p>'; }
+}
+
+function renderCompliancePanel(comp, appData) {
+  const app = appData.application || {};
+  const esg = comp.esg_status || {};
+  const credit = comp.credit_metrics || {};
+  const rec = esg.ai_recommendation || {};
+  document.getElementById('panelTitle').textContent = `Review: ${app.reference||'Application'}`;
+  
+  const ragIcon = { green:'🟢', amber:'🟡', red:'🔴' };
+  const statusLabel = { auto_verified:'Auto-Verified', manual_review:'Review Required', approved:'Approved', rejected:'Rejected', pending:'Pending' };
+
+  document.getElementById('panelBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <!-- Left: Application Summary -->
+      <div>
+        <h4 style="margin-bottom:.75rem">Application Summary</h4>
+        <div class="card">
+          <div class="card-body" style="font-size:.82rem">
+            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--grey-200)">
+              <div class="avatar avatar-lg">${(app.customer_name||'SA').split(' ').map(w=>w[0]).join('').substring(0,2)}</div>
+              <div>
+                <div style="font-weight:700;font-size:.95rem;color:var(--navy)">${app.customer_name||'–'}</div>
+                <div style="color:var(--grey-500)">OMR ${(app.loan_amount||0).toLocaleString()} · ${app.loan_term||25} yrs</div>
+              </div>
+            </div>
+            ${[
+              ['Application Ref',`<span style="font-family:monospace;color:var(--teal)">${app.reference||'–'}</span>`],
+              ['Product', app.product_name||'—'],
+              ['Property', app.property_address||'EcoVillage Muscat, Villa B1'],
+              ['GSAS Score', `<strong style="color:var(--success)">${app.gsas_score||89} / 100 (Gold)</strong>`],
+              ['Applied Rate', `<strong style="color:var(--navy)">${app.applied_rate||4.75}%</strong> <span style="color:var(--success);font-size:.75rem">(${((app.standard_rate||5.5)-(app.applied_rate||4.75)).toFixed(2)}% green discount)</span>`],
+              ['Monthly Payment', `OMR ${(app.monthly_payment||1139.13).toLocaleString()}`],
+              ['Submitted', new Date(app.created_at||Date.now()).toLocaleDateString()]
+            ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--grey-100)"><span style="color:var(--grey-500)">${k}</span><span>${v}</span></div>`).join('')}
+          </div>
+        </div>
+
+        <h4 style="margin:1rem 0 .75rem">Credit Metrics</h4>
+        <div class="card">
+          <div class="card-body">
+            ${[
+              ['DBR', `${credit.dbr?.value||48}%`, credit.dbr?.status==='pass', `Max ${credit.dbr?.max||55}% for green products`],
+              ['LTV', `${credit.ltv?.value||80}%`, credit.ltv?.status==='pass', `Max ${credit.ltv?.max||90}%`],
+              ['MALA\'A Score', credit.malaa_score?.value||750, credit.malaa_score?.status==='pass', `Min 650`],
+              ['Stress Test (9%)', 'Passed', true, 'Rate +350bps simulated']
+            ].map(([label,value,pass,detail]) => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--grey-100)">
+                <div>
+                  <div style="font-size:.82rem;font-weight:500">${label}</div>
+                  <div style="font-size:.72rem;color:var(--grey-500)">${detail}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem">
+                  <span style="font-weight:700;font-size:.9rem">${value}</span>
+                  <i class="fas fa-${pass?'check-circle':'times-circle'}" style="color:var(--${pass?'success':'danger'})"></i>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: ESG Dashboard -->
+      <div>
+        <h4 style="margin-bottom:.75rem">ESG Compliance Dashboard</h4>
+        <div class="rag-panel" style="margin-bottom:1rem">
+          <div class="rag-item rag-${esg.gsas?.color||'green'}">
+            <div class="rag-icon">${ragIcon[esg.gsas?.color||'green']}</div>
+            <div class="rag-info">
+              <div class="rag-title">GSAS Certificate</div>
+              <div class="rag-detail">${statusLabel[esg.gsas?.status]||'Auto-Verified'} · Score ${esg.gsas?.score||89} · ${esg.gsas?.rating||'Gold'} · #${esg.gsas?.certificate_number||'GSAS-2026-078'}</div>
+              <div class="confidence-bar" style="width:120px;margin-top:.25rem"><div class="confidence-bar-fill confidence-high" style="width:${esg.gsas?.confidence||96}%"></div></div>
+              <div style="font-size:.7rem;color:var(--grey-500);margin-top:.1rem">${esg.gsas?.confidence||96}% confidence</div>
+            </div>
+          </div>
+          <div class="rag-item rag-${esg.epc?.color||'amber'}">
+            <div class="rag-icon">${ragIcon[esg.epc?.color||'amber']}</div>
+            <div class="rag-info">
+              <div class="rag-title">Energy Performance Certificate</div>
+              <div class="rag-detail">${statusLabel[esg.epc?.status]||'Review Required'} · Rating ${esg.epc?.rating||'A'} · Expires ${esg.epc?.expiry||'2027-05-01'}</div>
+              <div class="confidence-bar" style="width:120px;margin-top:.25rem"><div class="confidence-bar-fill confidence-med" style="width:${esg.epc?.confidence||88}%"></div></div>
+              <div style="font-size:.7rem;color:var(--grey-500);margin-top:.1rem">${esg.epc?.confidence||88}% confidence · Image quality reduced accuracy</div>
+            </div>
+          </div>
+          <div class="rag-item rag-${esg.eia?.color||'green'}">
+            <div class="rag-icon">${ragIcon[esg.eia?.color||'green']}</div>
+            <div class="rag-info">
+              <div class="rag-title">Environmental Impact Assessment</div>
+              <div class="rag-detail">${statusLabel[esg.eia?.status]||'Auto-Verified'} · Ref ${esg.eia?.reference||'EIA/2026/442'} · ${esg.eia?.issuer||'Environment Authority'}</div>
+              <div class="confidence-bar" style="width:120px;margin-top:.25rem"><div class="confidence-bar-fill confidence-high" style="width:${esg.eia?.confidence||95}%"></div></div>
+              <div style="font-size:.7rem;color:var(--grey-500);margin-top:.1rem">${esg.eia?.confidence||95}% confidence</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Recommendation -->
+        <div style="background:linear-gradient(135deg,var(--navy-dark),var(--navy));border-radius:var(--radius-lg);padding:1rem;color:white;margin-bottom:1rem">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+            <i class="fas fa-robot" style="color:var(--sea-glass)"></i>
+            <span style="font-size:.78rem;color:rgba(255,255,255,.6)">AI Recommendation</span>
+          </div>
+          <div style="font-weight:600;color:var(--sea-glass);font-size:.9rem;margin-bottom:.25rem">${rec.action||'Approve with Note'}</div>
+          <div style="font-size:.8rem;color:rgba(255,255,255,.7)">${rec.detail||'Review EPC document manually. Rating A confirmed; expiry 2027 acceptable. Recommend approval.'}</div>
+        </div>
+
+        <!-- EPC Document View -->
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-header" style="background:var(--warning-light)">
+            <h4 style="color:var(--warning)"><i class="fas fa-exclamation-triangle"></i> EPC – Manual Review</h4>
+          </div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-size:.8rem">
+              <div style="background:var(--grey-100);border-radius:var(--radius-md);padding:.75rem;text-align:center">
+                <div style="color:var(--grey-500);font-size:.72rem;margin-bottom:.5rem">Original Document (simulated)</div>
+                <i class="fas fa-file-pdf" style="font-size:2rem;color:var(--danger)"></i>
+                <div style="margin-top:.5rem;font-size:.75rem;color:var(--grey-700)">EPC_Report_VillaB1.pdf</div>
+              </div>
+              <div>
+                <div style="font-size:.72rem;color:var(--grey-500);margin-bottom:.5rem">AI Extracted Data</div>
+                ${[['Rating','A'],['Expiry','2027-05-01'],['Property','EVM-B1'],['Assessor','Green Build Oman']].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem 0;border-bottom:1px solid var(--grey-100);font-size:.78rem"><span style="color:var(--grey-500)">${k}</span><strong>${v}</strong></div>`).join('')}
+              </div>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="margin-top:.75rem" onclick="overrideDocConfidence('doc002')">
+              <i class="fas fa-user-check"></i> Override AI Confidence – Accept & Trust
+            </button>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;flex-direction:column;gap:.625rem">
+          <button class="btn btn-success" onclick="approveEsg('${app.id}')">
+            <i class="fas fa-shield-check"></i> Approve ESG Compliance
+          </button>
+          <button class="btn btn-ghost" onclick="generateReport()">
+            <i class="fas fa-file-chart-line"></i> Generate Compliance Report
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="rejectApplication('${app.id}')">
+            <i class="fas fa-times"></i> Reject Application
+          </button>
+        </div>
+      </div>
+    </div>`;
+  openPanel(`Review: ${app.reference||app.id||'Application'}`);
+}
+
+async function overrideDocConfidence(docId) {
+  await fetch(`/api/v1/documents/${docId}/override`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ user_id:'u002', user_name:'Aisha Al-Balushi', reason:'Visual verification completed. Document legible. Rating and expiry confirmed.', regulatory_reference:'OEESC Section 5.1' })
+  });
+  toast('Manual override recorded – EPC accepted','success');
+}
+
+async function approveEsg(appId) {
+  await fetch(`/api/v1/compliance/${appId}/approve-esg`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ user_id:'u002', user_name:'Aisha Al-Balushi', notes:'ESG documents verified. EPC manually confirmed.' })
+  });
+  toast('ESG Compliance Approved. Awaiting Credit Risk approval.','success');
+  closePanel();
+  await renderComplianceTasks();
+}
+
+async function rejectApplication(appId) {
+  if (!confirm('Reject this application?')) return;
+  await fetch(`/api/v1/compliance/${appId}/reject`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ user_id:'u002', reason:'ESG requirements not met' })
+  });
+  toast('Application rejected','error');
+  closePanel();
+  await renderComplianceTasks();
+}
+
+/* ======================== CREDIT REVIEW ======================== */
+async function renderCreditReview() {
+  document.getElementById('pageTitle').textContent = 'Credit Risk Review';
+  await renderComplianceTasks();
+}
+
+/* ======================== ESG REVIEW ======================== */
+async function renderEsgReview() {
+  document.getElementById('pageTitle').textContent = 'ESG Review';
+  await renderComplianceTasks();
+}
+
+/* ======================== AUDIT LOGS ======================== */
+async function renderAuditLogs() {
+  document.getElementById('pageTitle').textContent = 'Audit Trail';
+  document.getElementById('pageSubtitle').textContent = 'Immutable compliance log';
+  try {
+    const r = await fetch('/api/v1/audit?limit=30');
+    const d = await r.json();
+    auditLogs = d.audit_logs || [];
+  } catch(e) { auditLogs = []; }
+  
+  const actionIcon = { PRODUCT_CLONED:'fa-copy', PRODUCT_CONFIG_UPDATED:'fa-pen', AI_RULE_GENERATED:'fa-robot', AI_RULE_CONFIRMED:'fa-check-double', AI_SCHEMA_GENERATED:'fa-code', PRODUCT_PUBLISHED:'fa-rocket', PROJECT_CREATED:'fa-plus', DOCUMENT_AUTO_VERIFIED:'fa-shield-check', DOCUMENT_FLAGGED_REVIEW:'fa-flag', DOCUMENT_OVERRIDE:'fa-user-check', APPLICATION_SUBMITTED:'fa-paper-plane', CREDIT_SCORING_COMPLETE:'fa-chart-bar', ESG_COMPLIANCE_APPROVED:'fa-leaf', ESCROW_TRANCHE_RELEASED:'fa-money-bill-transfer' };
+  const actionColor = { ai_generated:'ai', manual:'manual', system:'system' };
+
+  document.getElementById('mainContent').innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div><h2>Audit Trail</h2><p>Immutable log of all actions, AI recommendations, and manual overrides</p></div>
+      <button class="btn btn-ghost btn-sm" onclick="toast('Audit report exported','success')"><i class="fas fa-download"></i> Export</button>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="audit-timeline">
+          ${auditLogs.map(log => {
+            const icon = actionIcon[log.action] || 'fa-circle';
+            const cls = actionColor[log.source] || 'manual';
+            const details = (() => { try { return JSON.parse(log.details||'{}'); } catch{return {};} })();
+            return `
+            <div class="audit-item">
+              <div class="audit-dot ${cls}"><i class="fas ${icon}" style="font-size:.75rem"></i></div>
+              <div class="audit-content">
+                <div class="audit-action">
+                  ${log.action.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase())}
+                  ${log.ai_confidence ? `<span class="ai-confidence-tag"><i class="fas fa-robot"></i> ${log.ai_confidence}%</span>` : ''}
+                </div>
+                <div class="audit-meta">${log.user_name||'System'} · ${log.user_role||''} · ${log.entity_type||''} ${log.entity_id||''} · ${new Date(log.created_at).toLocaleString()}</div>
+                ${log.regulatory_reference ? `<div style="font-size:.72rem;color:var(--teal);margin-top:.2rem"><i class="fas fa-gavel"></i> ${log.regulatory_reference}</div>` : ''}
+                ${Object.keys(details).length ? `<div class="audit-detail">${JSON.stringify(details, null, 0).substring(0,200)}</div>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ======================== REPORTS ======================== */
+async function renderReports() {
+  document.getElementById('pageTitle').textContent = 'Regulatory Reports';
+  document.getElementById('mainContent').innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div><h2>Regulatory Reports</h2><p>AI-generated compliance reports for CBO and internal governance</p></div>
+    </div>
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="card-header"><h4>🤖 AI Report Generator</h4></div>
+      <div class="card-body">
+        <div class="ai-assistant" style="background:linear-gradient(135deg,var(--navy-dark),var(--navy))">
+          <div class="ai-header"><div class="ai-icon"><i class="fas fa-robot" style="color:var(--sea-glass)"></i></div><div><div style="font-weight:600;font-size:.9rem">Compliance Report Generator</div><div style="font-size:.75rem;color:rgba(255,255,255,.5)">Natural language → structured report</div></div></div>
+          <textarea class="ai-textarea" id="reportPrompt" rows="3" placeholder="Generate a compliance report for all Green Home Loan applications in the last 30 days. Include: application ID, customer name, GSAS score, DBR, LTV, ESG verification status, approval decision. Flag any applications where ESG verification was manually overridden."></textarea>
+          <button class="btn btn-amber btn-sm" style="margin-top:.75rem" onclick="generateReport()"><i class="fas fa-bolt"></i> Generate Report</button>
+        </div>
+        <div id="reportOutput" style="margin-top:1rem"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function generateReport() {
+  const prompt = document.getElementById('reportPrompt')?.value || 'Generate compliance report for Green Home Loan applications';
+  const output = document.getElementById('reportOutput');
+  if (output) output.innerHTML = '<div class="ai-thinking"><div class="ai-thinking-dots"><span>●</span><span>●</span><span>●</span></div> Generating report…</div>';
+  try {
+    const r = await fetch('/api/v1/ai/reports/generate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prompt }) });
+    const d = await r.json();
+    if (output) renderReport(d, output);
+  } catch(e) { if (output) output.innerHTML = '<p>Error generating report</p>'; }
+}
+
+function renderReport(d, container) {
+  const s = d.summary || {};
+  container.innerHTML = `
+    <div class="card fade-in">
+      <div class="card-header" style="background:var(--navy);color:white">
+        <h4 style="color:white">${d.title||'Compliance Report'}</h4>
+        <div style="display:flex;gap:.5rem">
+          <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:white;border:none" onclick="toast('PDF exported','success')"><i class="fas fa-file-pdf"></i> Export PDF</button>
+          <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:white;border:none" onclick="toast('Excel exported','success')"><i class="fas fa-file-excel"></i> Export Excel</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="metric-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.5rem">
+          ${[['Total','total_applications'],['Approved','approved'],['Pending','pending'],['Rejected','rejected'],['Avg GSAS','avg_gsas_score']].map(([l,k])=>`<div class="metric-card"><div class="metric-value">${s[k]??'–'}</div><div class="metric-label">${l}</div></div>`).join('')}
+        </div>
+        ${(d.sections||[]).map(sec=>`<div style="margin-bottom:1.25rem"><h4 style="margin-bottom:.5rem">${sec.heading}</h4><p style="font-size:.85rem">${sec.content}</p></div>`).join('')}
+        ${d.flagged_items?.length ? `<div style="background:var(--warning-light);border-radius:var(--radius-md);padding:1rem;margin-top:1rem">
+          <h4 style="color:var(--warning);margin-bottom:.75rem"><i class="fas fa-flag"></i> Flagged Items</h4>
+          ${d.flagged_items.map(f=>`<div style="font-size:.82rem;padding:.4rem 0;border-bottom:1px solid rgba(0,0,0,.05)"><strong>${f.application_ref}</strong>: ${f.issue} – <em>${f.recommendation}</em></div>`).join('')}
+        </div>` : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem">
+          ${(d.metrics||[]).map(m=>`<span class="badge badge-${m.status==='green'?'green':m.status==='amber'?'amber':'red'}">${m.label}: ${m.value}</span>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ======================== ESCROW PAGE ======================== */
+async function renderEscrow() {
+  document.getElementById('pageTitle').textContent = 'Escrow & Disbursement';
+  try {
+    const appRef = localStorage.getItem('bo_active_app_ref') || '';
+    if (!appRef) {
+      document.getElementById('mainContent').innerHTML = '<div class="page"><div class="card"><div class="card-body" style="text-align:center;padding:3rem;color:var(--grey-500)"><i class="fas fa-file-invoice" style="font-size:2.5rem;margin-bottom:1rem;display:block"></i><p>No active application selected.</p><p style="font-size:.85rem;margin-top:.5rem">Select an application from the Applications list to view its escrow stages.</p></div></div></div>';
+      return;
+    }
+    const r = await fetch(`/api/v1/portal/applications/${appRef}/status`);
+    const d = await r.json();
+    const app = d.application || {};
+    const stages = d.construction_stages || [];
+    const appId = app.id || appRef;
+    
+    document.getElementById('mainContent').innerHTML = `<div class="page">
+      <h2 style="margin-bottom:1.25rem">Escrow Management</h2>
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-header">
+          <div>
+            <h4>${app.reference || appRef} – ${app.applicant_name || 'Applicant'}</h4>
+            <div style="font-size:.78rem;color:var(--grey-500)">${app.project_name || ''} · OMR ${(app.loan_amount||0).toLocaleString()} escrow</div>
+          </div>
+          <span class="badge badge-active">${app.status || 'Active'}</span>
+        </div>
+        <div class="card-body">
+          <div class="stage-timeline">
+            ${stages.length ? stages.map(stage => `
+            <div class="stage-item ${stage.status}">
+              <div class="stage-number ${stage.status}">${stage.status==='completed'||stage.status==='paid'?'✓':stage.stage_number}</div>
+              <div class="stage-info">
+                <div class="stage-name">${stage.stage_name}</div>
+                <div class="stage-material"><i class="fas fa-leaf" style="color:var(--success)"></i> ${stage.required_material}</div>
+                ${stage.payment_reference ? `<div style="font-size:.75rem;color:var(--teal);margin-top:.25rem"><i class="fas fa-check-circle"></i> Paid · Ref: ${stage.payment_reference}</div>` : ''}
+              </div>
+              <div style="text-align:right">
+                <div class="stage-amount">OMR ${(stage.tranche_amount||0).toLocaleString()}</div>
+                <div style="font-size:.75rem;color:var(--grey-500)">${stage.tranche_percentage||25}% of total</div>
+                ${stage.status==='active' ? `<button class="btn btn-success btn-sm" style="margin-top:.5rem" onclick="releaseTranche('${stage.id}','${appId}',${stage.tranche_amount||50000})"><i class="fas fa-money-bill-transfer"></i> Release</button>` : ''}
+              </div>
+            </div>`).join('') : '<p style="color:var(--grey-500);text-align:center;padding:2rem">No escrow stages found for this application.</p>'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  } catch(e) { document.getElementById('mainContent').innerHTML = '<div class="page"><p>Error loading escrow data</p></div>'; }
+}
+
+async function releaseTranche(stageId, appId, amount) {
+  const r = await fetch(`/api/v1/escrow/${appId}/release-tranche`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ stage_id: stageId, amount, user_id:'u004', user_name:'Khalid Al-Rawahi' })
+  });
+  const d = await r.json();
+  toast(`Payment Released: OMR ${amount.toLocaleString()} · Ref: ${d.transaction_reference||'TRX-'+Date.now()}`, 'success');
+  await renderEscrow();
+}
+
+/* ======================== PRODUCT CLONE / NEW ======================== */
+function showCloneModal() {
+  const opts = products.filter(p=>p.status==='active').map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  showModal('Clone Product', `
+    <div class="form-group"><label class="form-label">Clone from</label><select class="form-control" id="cloneSource">${opts}</select></div>
+    <div class="form-group"><label class="form-label">New Product Name</label><input class="form-control" id="cloneName" value="" placeholder="New product name…"></div>
+  `, async () => {
+    const sourceId = document.getElementById('cloneSource').value;
+    const name = document.getElementById('cloneName').value;
+    if (!name) return toast('Enter a product name','error');
+    const r = await fetch(`/api/v1/products/clone/${sourceId}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, user_id:'u001' }) });
+    const d = await r.json();
+    if (d.success) { toast(`Product "${name}" cloned successfully`,'success'); await loadProducts(); await renderProducts(); closeModal(); }
+  });
+}
+
+function showNewProductModal() {
+  showModal('Create Product Manually', `
+    <p style="font-size:.78rem;color:var(--grey-500);margin-bottom:.75rem">Creates a draft product. Open it to configure all rules, eligibility, documents, and portal content.</p>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Product Name *</label><input class="form-control" id="newName" placeholder="e.g. Premium Home Loan"></div>
+      <div class="form-group"><label class="form-label">Category *</label>
+        <select class="form-control" id="newCat">
+          <option value="home_loan">Home Loan</option>
+          <option value="auto_loan">Auto Finance</option>
+          <option value="personal_loan">Personal Loan</option>
+          <option value="sme">SME Finance</option>
+          <option value="commercial">Commercial</option>
+          <option value="education">Education</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="newDesc" rows="2" placeholder="Brief product description…"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Base Rate (%)</label><input class="form-control" type="number" id="newRate" value="5.5" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Max LTV (%)</label><input class="form-control" type="number" id="newLtv" value="90"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Max DBR (%)</label><input class="form-control" type="number" id="newDbr" value="60"></div>
+      <div class="form-group"><label class="form-label">Max Term (years)</label><input class="form-control" type="number" id="newTerm" value="25"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Min Amount (OMR)</label><input class="form-control" type="number" id="newMinAmt" value="10000"></div>
+      <div class="form-group"><label class="form-label">Max Amount (OMR)</label><input class="form-control" type="number" id="newMaxAmt" value="500000"></div>
+    </div>
+  `, async () => {
+    const name = document.getElementById('newName').value.trim();
+    if (!name) return toast('Enter a product name','error');
+    const body = {
+      name, status:'draft', created_by:'u001', user_id:'u001', user_name:'Fatima Al-Rashdi',
+      category: document.getElementById('newCat').value,
+      description: document.getElementById('newDesc').value,
+      base_rate: parseFloat(document.getElementById('newRate').value)||5.5,
+      max_ltv: parseInt(document.getElementById('newLtv').value)||90,
+      max_dbr: parseInt(document.getElementById('newDbr').value)||60,
+      max_term: parseInt(document.getElementById('newTerm').value)||25,
+      min_term: 1,
+      min_amount: parseInt(document.getElementById('newMinAmt').value)||10000,
+      max_amount: parseInt(document.getElementById('newMaxAmt').value)||500000,
+    };
+    const r = await fetch('/api/v1/products', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.success || d.product_id) {
+      toast(`Draft product "${name}" created — open it to configure rules and portal content`,'success');
+      await loadProducts();
+      await renderProducts();
+      closeModal();
+      if (d.product_id) setTimeout(() => openProductDetail(d.product_id), 300);
+    } else { toast(d.error||'Create failed','error'); }
+  });
+}
+
+async function saveProductChanges(id) {
+  const get = (eid) => { const el = document.getElementById(eid); return el ? el.value : null; };
+  const payload = { user_id: 'u001', user_name: 'Fatima Al-Rashdi' };
+  const fields = {
+    name: get('pName'), description: get('pDesc'),
+    min_term: get('pMinTerm') ? parseInt(get('pMinTerm')) : null,
+    max_term: get('pMaxTerm') ? parseInt(get('pMaxTerm')) : null,
+    min_amount: get('pMinAmount') ? parseInt(get('pMinAmount')) : null,
+    max_amount: get('pMaxAmount') ? parseInt(get('pMaxAmount')) : null,
+    base_rate: get('pRate') ? parseFloat(get('pRate')) : null,
+    max_dbr: get('pMaxDbr') ? parseFloat(get('pMaxDbr')) : null,
+    max_ltv: get('pMaxLtv') ? parseFloat(get('pMaxLtv')) : null,
+    green_dbr: get('pGreenDbr') ? parseFloat(get('pGreenDbr')) : null,
+    gsas_min_score: get('pGsasMin') ? parseInt(get('pGsasMin')) : null,
+    gsas_premium_score: get('pGsasPremium') ? parseInt(get('pGsasPremium')) : null,
+    green_discount_standard: get('pGreenDiscStd') ? parseFloat(get('pGreenDiscStd')) : null,
+    green_discount_premium: get('pGreenDiscPrem') ? parseFloat(get('pGreenDiscPrem')) : null,
+  };
+  // Only include non-null changed fields
+  for (const [k,v] of Object.entries(fields)) { if (v !== null && v !== '') payload[k] = v; }
+  try {
+    const r = await fetch(`/api/v1/products/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const d = await r.json();
+    if (d.success) {
+      toast('Changes saved successfully', 'success');
+      await loadProducts();
+      await openProductDetail(id);
+    } else { toast(d.error||'Save failed', 'error'); }
+  } catch(e) { toast('Save failed: ' + e.message, 'error'); }
+}
+
+async function publishProduct(id) {
+  const r = await fetch(`/api/v1/products/${id}/publish`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id:'u001', user_name:'Fatima Al-Rashdi' }) });
+  const d = await r.json();
+  if (d.success) { toast('Product published – now live!','success'); await loadProducts(); await openProductDetail(id); }
+}
+
+async function cloneProduct(id, name) {
+  const newName = prompt('New product name:', name + ' (Copy)');
+  if (!newName) return;
+  const r = await fetch(`/api/v1/products/clone/${id}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: newName, user_id:'u001' }) });
+  const d = await r.json();
+  if (d.success) { toast(`Cloned as "${newName}"`,'success'); await loadProducts(); await renderProducts(); }
+}
+
+async function saveAiConfig(productId) {
+  const threshold = document.getElementById('confidenceSlider')?.value || 90;
+  await fetch(`/api/v1/products/${productId}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ai_confidence_threshold: parseInt(threshold), user_id:'u001', user_name:'Fatima Al-Rashdi' }) });
+  toast('AI configuration saved','success');
+}
+
+/* ======================== PANEL / MODAL HELPERS ======================== */
+function openPanel(title) {
+  document.getElementById('panelTitle').textContent = title;
+  document.getElementById('panelOverlay').classList.add('open');
+  document.getElementById('slidePanel').classList.add('open');
+}
+function closePanel() {
+  document.getElementById('panelOverlay').classList.remove('open');
+  document.getElementById('slidePanel').classList.remove('open');
+}
+function showModal(title, body, onConfirm) {
+  const mc = document.getElementById('modalContainer');
+  mc.innerHTML = `<div class="modal-overlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header"><h3>${title}</h3><button class="close-btn" onclick="closeModal()"><i class="fas fa-times"></i></button></div>
+      <div class="modal-body">${body}</div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-navy" id="modalConfirmBtn">Confirm</button>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('modalConfirmBtn').onclick = onConfirm;
+}
+function closeModal() { document.getElementById('modalContainer').innerHTML = ''; }
+function toast(msg, type='info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = `<i class="fas fa-${type==='success'?'check-circle':type==='error'?'exclamation-circle':'info-circle'}"></i> ${msg}`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4500);
+}
+function logAuditEntry(action, entityType, entityId, detail) {
+  fetch('/api/v1/audit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action, entity_type: entityType, entity_id: entityId, details: { detail }, user_id:'u001', user_name:'Fatima Al-Rashdi', user_role:'product_manager', source:'manual' }) }).catch(()=>{});
+}
+</script>
+
+<style>
+.toggle { position:relative; display:inline-block; width:40px; height:22px; }
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; cursor:pointer; inset:0; background:var(--grey-300); border-radius:22px; transition:.3s; }
+.toggle-slider:before { content:''; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:white; border-radius:50%; transition:.3s; }
+.toggle input:checked + .toggle-slider { background:var(--teal); }
+.toggle input:checked + .toggle-slider:before { transform:translateX(18px); }
+.ai-row { background: rgba(53,198,196,.03); }
+.spinner-lg { width:32px; height:32px; border:3px solid var(--grey-200); border-top-color:var(--teal); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 1rem; }
+@keyframes spin { to{transform:rotate(360deg);} }
+</style>
+</body>
+</html>

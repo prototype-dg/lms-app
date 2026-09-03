@@ -1,0 +1,2486 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Developer Portal — Sohar International Green Home</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --navy:#003B5C;--teal:#007F86;--seaglass:#35C6C4;--sand:#F4F0E7;--amber:#F4B35B;
+  --success:#2ECC71;--warning:#F39C12;--danger:#E74C3C;--white:#fff;--gray-50:#F8F9FA;
+  --gray-100:#F1F3F5;--gray-200:#E9ECEF;--gray-300:#DEE2E6;--gray-500:#ADB5BD;
+  --gray-700:#495057;--gray-900:#212529;
+  --font-ui:'Inter',system-ui,sans-serif;--font-ar:'Noto Sans Arabic',sans-serif;
+  --radius-sm:6px;--radius-md:10px;--radius-lg:16px;--shadow-sm:0 1px 3px rgba(0,0,0,.08);
+  --shadow-md:0 4px 16px rgba(0,59,92,.10);--shadow-lg:0 8px 32px rgba(0,59,92,.16);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-ui);background:var(--gray-50);color:var(--gray-900);display:flex;height:100vh;overflow:clip}
+body.ar{font-family:var(--font-ar);direction:rtl}
+
+/* SIDEBAR */
+.sidebar{width:240px;background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar-logo{padding:16px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:8px}
+.sidebar-logo svg{width:50px;height:50px;flex-shrink:0}
+.sidebar-logo-wm{display:flex;flex-direction:column;line-height:1.25}
+.sidebar-logo-wm strong{color:#fff;font-size:12.5px;font-weight:700}
+.sidebar-logo-wm span{color:rgba(53,198,196,.85);font-size:9px;letter-spacing:1.5px;text-transform:uppercase}
+.sidebar-user{padding:16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-avatar{width:38px;height:38px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0}
+.sidebar-user-info{flex:1;min-width:0}
+.sidebar-user-name{color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-user-role{color:var(--seaglass);font-size:11px}
+.sidebar-nav{padding:8px 0;flex:1}
+.nav-section{padding:8px 16px 4px;color:rgba(255,255,255,.4);font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;color:rgba(255,255,255,.75);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-decoration:none}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{background:rgba(53,198,196,.15);color:var(--seaglass);border-right:3px solid var(--seaglass)}
+body.ar .nav-item.active{border-right:none;border-left:3px solid var(--seaglass)}
+.nav-item .nav-icon{width:18px;text-align:center;font-size:16px}
+.nav-badge{margin-left:auto;background:var(--amber);color:var(--navy);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700}
+body.ar .nav-badge{margin-left:0;margin-right:auto}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:60px;background:#fff;border-bottom:1px solid var(--gray-200);flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:700;color:var(--navy)}
+.topbar-sub{font-size:12px;color:var(--gray-500);margin-top:1px}
+.topbar-actions{display:flex;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;text-decoration:none;font-family:inherit}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-primary:hover{background:#006b70}
+.btn-secondary{background:var(--gray-100);color:var(--gray-700);border:1px solid var(--gray-200)}
+.btn-secondary:hover{background:var(--gray-200)}
+.btn-success{background:var(--success);color:#fff}
+.btn-amber{background:var(--amber);color:var(--navy)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-danger{background:var(--danger);color:#fff}
+.lang-toggle{display:flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:var(--radius-sm);padding:4px 10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--gray-700);border:none;font-family:inherit}
+
+/* LAYOUT */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* CARDS */
+.card{background:#fff;border-radius:var(--radius-md);border:1px solid var(--gray-200);box-shadow:var(--shadow-sm)}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:700;color:var(--navy)}
+.card-body{padding:20px}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:#fff;border-radius:var(--radius-md);border:1px solid var(--gray-200);padding:16px 20px;display:flex;align-items:center;gap:14px}
+.stat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.stat-icon.navy{background:rgba(0,59,92,.1)}
+.stat-icon.teal{background:rgba(0,127,134,.1)}
+.stat-icon.seaglass{background:rgba(53,198,196,.1)}
+.stat-icon.amber{background:rgba(244,179,91,.15)}
+.stat-label{font-size:11px;color:var(--gray-500);margin-bottom:2px}
+.stat-value{font-size:22px;font-weight:800;color:var(--navy)}
+
+/* PROJECT LIST */
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.project-card{background:#fff;border-radius:var(--radius-md);border:1px solid var(--gray-200);overflow:hidden;cursor:pointer;transition:all .2s;box-shadow:var(--shadow-sm)}
+.project-card:hover{border-color:var(--teal);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.project-card.active-project{border-color:var(--seaglass);box-shadow:0 0 0 2px rgba(53,198,196,.2)}
+.project-img{height:140px;background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.project-img-overlay{position:absolute;inset:0;background:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="30" r="15" fill="rgba(255,255,255,.05)"/><circle cx="70" cy="60" r="25" fill="rgba(255,255,255,.05)"/><circle cx="50" cy="10" r="8" fill="rgba(255,255,255,.05)"/></svg>');background-size:cover}
+.project-img-icon{font-size:48px;z-index:1}
+.project-status-badge{position:absolute;top:10px;right:10px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase}
+.badge-active{background:rgba(46,204,113,.9);color:#fff}
+.badge-pending{background:rgba(244,179,91,.9);color:var(--navy)}
+.badge-draft{background:rgba(173,181,189,.8);color:var(--gray-900)}
+.project-body{padding:16px}
+.project-name{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.project-location{font-size:12px;color:var(--gray-500);display:flex;align-items:center;gap:4px;margin-bottom:10px}
+.project-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.project-meta-item{font-size:11px}
+.project-meta-label{color:var(--gray-500);margin-bottom:1px}
+.project-meta-value{font-weight:600;color:var(--gray-700)}
+.project-progress{margin-top:12px}
+.progress-bar-wrap{height:6px;background:var(--gray-200);border-radius:3px;margin-top:4px;overflow:hidden}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--teal),var(--seaglass));border-radius:3px;transition:width .6s ease}
+
+/* TABS */
+.tabs{display:flex;gap:2px;background:var(--gray-100);border-radius:var(--radius-sm);padding:3px;margin-bottom:20px}
+.tab{padding:7px 16px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;color:var(--gray-500);transition:all .15s;border:none;background:none;font-family:inherit}
+.tab.active{background:#fff;color:var(--navy);box-shadow:var(--shadow-sm)}
+
+/* MAP */
+#ecovillage-map{height:420px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--gray-200)}
+.map-legend{display:flex;gap:16px;padding:10px 0;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-700)}
+.legend-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+/* CERT UPLOAD */
+.cert-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.cert-card{border:2px dashed var(--gray-300);border-radius:var(--radius-md);padding:20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.cert-card:hover{border-color:var(--teal);background:rgba(0,127,134,.03)}
+.cert-card.uploading{border-color:var(--amber);border-style:solid}
+.cert-card.verified{border-color:var(--success);border-style:solid;background:rgba(46,204,113,.03)}
+.cert-card.flagged{border-color:var(--warning);border-style:solid;background:rgba(243,156,18,.03)}
+.cert-icon{font-size:32px;margin-bottom:10px}
+.cert-name{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.cert-desc{font-size:11px;color:var(--gray-500);margin-bottom:12px}
+.cert-status{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600}
+.cert-status.verified{color:var(--success)}
+.cert-status.flagged{color:var(--warning)}
+.cert-status.pending{color:var(--gray-500)}
+.cert-status.analyzing{color:var(--teal)}
+
+/* AI ANALYSIS PANEL */
+.ai-panel{background:linear-gradient(135deg,#f0fafa 0%,#e8f4f8 100%);border:1px solid rgba(53,198,196,.3);border-radius:var(--radius-md);padding:20px;margin-top:16px}
+.ai-panel-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.ai-badge{background:var(--teal);color:#fff;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.5px}
+.confidence-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.confidence-label{font-size:12px;color:var(--gray-700);width:140px;flex-shrink:0}
+.confidence-bar-wrap{flex:1;height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden}
+.confidence-bar{height:100%;border-radius:4px;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+.confidence-bar.high{background:linear-gradient(90deg,#2ECC71,#27AE60)}
+.confidence-bar.medium{background:linear-gradient(90deg,#F39C12,#E67E22)}
+.confidence-bar.low{background:linear-gradient(90deg,#E74C3C,#C0392B)}
+.confidence-pct{font-size:12px;font-weight:700;width:36px;text-align:right;color:var(--gray-700)}
+.finding-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;margin:2px}
+.finding-tag.pass{background:rgba(46,204,113,.15);color:#27AE60}
+.finding-tag.warn{background:rgba(243,156,18,.15);color:#E67E22}
+.finding-tag.fail{background:rgba(231,76,60,.15);color:#C0392B}
+
+/* INVENTORY TABLE */
+.inv-table{width:100%;border-collapse:collapse;font-size:13px}
+.inv-table th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;background:var(--gray-50);border-bottom:1px solid var(--gray-200)}
+.inv-table td{padding:10px 12px;border-bottom:1px solid var(--gray-100)}
+.inv-table tr:hover td{background:var(--gray-50)}
+body.ar .inv-table th, body.ar .inv-table td{text-align:right}
+.unit-status{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.unit-status.available{background:rgba(46,204,113,.12);color:#27AE60}
+.unit-status.reserved{background:rgba(244,179,91,.15);color:#C8891A}
+.unit-status.sold{background:rgba(0,59,92,.1);color:var(--navy)}
+.gsas-score{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700}
+.gsas-score.excellent{background:rgba(46,204,113,.15);color:#27AE60}
+.gsas-score.good{background:rgba(0,127,134,.12);color:var(--teal)}
+
+/* PANEL OVERLAY */
+.panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;backdrop-filter:blur(2px)}
+.panel-overlay.open{display:flex;justify-content:flex-end}
+body.ar .panel-overlay.open{justify-content:flex-start}
+.slide-panel{width:560px;height:100%;background:#fff;box-shadow:-8px 0 40px rgba(0,0,0,.15);display:flex;flex-direction:column;animation:slideIn .25s ease}
+body.ar .slide-panel{box-shadow:8px 0 40px rgba(0,0,0,.15);animation:slideInAr .25s ease}
+@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes slideInAr{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+.panel-header{padding:20px 24px;border-bottom:1px solid var(--gray-200);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+.panel-header-info{flex:1}
+.panel-title{font-size:16px;font-weight:700;color:var(--navy)}
+.panel-subtitle{font-size:12px;color:var(--gray-500);margin-top:2px}
+.panel-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray-500);line-height:1;padding:4px}
+.panel-body{flex:1;overflow-y:auto;padding:24px}
+.panel-footer{padding:16px 24px;border-top:1px solid var(--gray-200);display:flex;gap:10px;justify-content:flex-end}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:var(--radius-lg);width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:700;color:var(--navy)}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray-500)}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--gray-200);display:flex;gap:10px;justify-content:flex-end}
+
+/* FORM */
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:6px}
+.form-control{width:100%;padding:9px 12px;border:1px solid var(--gray-300);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;color:var(--gray-900);transition:border .15s}
+.form-control:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,127,134,.1)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+select.form-control{cursor:pointer}
+
+/* TOAST */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+body.ar .toast-container{right:auto;left:24px}
+.toast{background:#fff;border-radius:var(--radius-md);padding:12px 16px;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:10px;min-width:280px;border-left:4px solid var(--teal);animation:toastIn .3s ease}
+.toast.success{border-left-color:var(--success)}
+.toast.error{border-left-color:var(--danger)}
+.toast.warning{border-left-color:var(--amber)}
+.toast-icon{font-size:18px}
+.toast-msg{font-size:13px;font-weight:500;color:var(--gray-900);flex:1}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* PUBLISH FLOW */
+.publish-steps{display:flex;gap:0;margin-bottom:24px;align-items:stretch}
+.prefill-btn{border-radius:6px !important;}
+.publish-step{flex:1;padding:12px;text-align:center;border-bottom:3px solid var(--gray-200);position:relative}
+.publish-step.done{border-bottom-color:var(--success)}
+.publish-step.active{border-bottom-color:var(--teal)}
+.publish-step-num{width:24px;height:24px;border-radius:50%;background:var(--gray-200);color:var(--gray-700);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-bottom:4px}
+.publish-step.done .publish-step-num{background:var(--success);color:#fff}
+.publish-step.active .publish-step-num{background:var(--teal);color:#fff}
+.publish-step-label{font-size:11px;color:var(--gray-500);font-weight:600}
+.publish-step.active .publish-step-label{color:var(--teal)}
+
+/* LOADING SPINNER */
+.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* SECTION PAGES */
+.page{display:none}
+.page.active{display:block}
+
+/* SECTION HEADER */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.section-title{font-size:20px;font-weight:800;color:var(--navy)}
+.section-sub{font-size:13px;color:var(--gray-500);margin-top:2px}
+
+/* NEW PROJECT BANNER */
+.hero-banner{background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%);border-radius:var(--radius-lg);padding:28px 32px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden}
+.hero-banner::before{content:'';position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.05)}
+.hero-banner::after{content:'';position:absolute;right:60px;bottom:-60px;width:150px;height:150px;border-radius:50%;background:rgba(53,198,196,.15)}
+.hero-title{font-size:22px;font-weight:800;margin-bottom:6px;position:relative;z-index:1}
+.hero-sub{font-size:13px;opacity:.8;position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(53,198,196,.25);border:1px solid rgba(53,198,196,.4);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;margin-top:12px;position:relative;z-index:1}
+
+/* STATUS CHIP */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.chip.green{background:rgba(46,204,113,.15);color:#27AE60}
+.chip.amber{background:rgba(244,179,91,.15);color:#C8891A}
+.chip.blue{background:rgba(0,127,134,.12);color:var(--teal)}
+.chip.gray{background:var(--gray-100);color:var(--gray-500)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--gray-300);border-radius:3px}
+
+/* ANIMATION */
+.fade-in{animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.analyzing-overlay{position:absolute;inset:0;background:rgba(0,59,92,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;border-radius:var(--radius-md)}
+.analyzing-pulse{width:48px;height:48px;border:3px solid rgba(53,198,196,.4);border-top-color:var(--seaglass);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px}
+.hidden{display:none!important}
+
+/* PRICE MATRIX TABLE */
+.price-matrix th{background:var(--navy);color:#fff;padding:9px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center}
+.price-matrix td{padding:9px 14px;text-align:center;font-size:13px;border-bottom:1px solid var(--gray-100)}
+.price-matrix tr:hover td{background:rgba(0,127,134,.04)}
+.price-cell{font-weight:700;color:var(--navy);cursor:pointer;border-radius:4px;padding:3px 6px;transition:background .15s}
+.price-cell:hover{background:rgba(0,127,134,.12);color:var(--teal)}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.kpi-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:14px 16px;position:relative}
+.kpi-value{font-size:26px;font-weight:900;color:var(--navy);line-height:1}
+.kpi-label{font-size:11px;color:var(--gray-500);margin-top:3px}
+.kpi-delta{font-size:11px;font-weight:700;margin-top:4px}
+.kpi-delta.up{color:var(--success)}
+.kpi-delta.down{color:var(--danger)}
+
+/* ABSORPTION CHART */
+.abs-bar-wrap{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.abs-bar-label{width:80px;font-size:12px;color:var(--gray-700);flex-shrink:0;text-align:right}
+.abs-bar-track{flex:1;height:16px;background:var(--gray-100);border-radius:8px;overflow:hidden;position:relative}
+.abs-bar-fill{height:100%;border-radius:8px;transition:width .8s ease;display:flex;align-items:center;padding-left:8px}
+.abs-bar-pct{font-size:10px;font-weight:700;color:#fff;white-space:nowrap}
+
+/* CAMPAIGN CARD */
+.campaign-card{border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:14px 16px;display:flex;align-items:center;gap:14px;background:#fff;margin-bottom:10px}
+.campaign-badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700}
+.campaign-badge.active{background:rgba(46,204,113,.15);color:#27AE60}
+.campaign-badge.scheduled{background:rgba(0,127,134,.12);color:var(--teal)}
+.campaign-badge.ended{background:var(--gray-100);color:var(--gray-500)}
+
+/* COLLAPSIBLE PROJECT GROUPS */
+.inv-group-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:2px;user-select:none}
+.inv-group-header:hover{background:var(--gray-100)}
+.inv-group-toggle{font-size:12px;color:var(--gray-500);transition:transform .2s;margin-left:auto}
+.inv-group-toggle.open{transform:rotate(90deg)}
+.inv-group-body{border:1px solid var(--gray-200);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);margin-bottom:12px;overflow:hidden}
+.inv-group-body.collapsed{display:none}
+</style>
+</head>
+<body>
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+      <path d="M10 78c25-6 44-25 50-50 5-16 17-27 33-35-4 29-16 54-35 72-15 14-32 21-48 22z" fill="#35c6c4"/>
+      <path d="M6 82c29-8 53-28 71-55 10-16 21-25 33-33-9 26-22 49-42 66-17 14-37 21-62 25z" fill="#f4b35b" opacity=".9"/>
+    </svg>
+    <div class="sidebar-logo-wm">
+      <strong>sohar international</strong>
+      <span>Developer Portal</span>
+    </div>
+  </div>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar">AH</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name">Ahmed Al-Hinai</div>
+      <div class="sidebar-user-role">Developer Partner</div>
+    </div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section" data-en="OVERVIEW" data-ar="نظرة عامة">OVERVIEW</div>
+    <a class="nav-item active" onclick="showPage('dashboard')" href="#">
+      <span class="nav-icon">📊</span>
+      <span data-en="Dashboard" data-ar="لوحة التحكم">Dashboard</span>
+    </a>
+
+    <div class="nav-section" data-en="1 · PROJECTS" data-ar="١ · المشاريع">1 · PROJECTS</div>
+    <a class="nav-item" onclick="showPage('projects')" href="#">
+      <span class="nav-icon">🏗️</span>
+      <span data-en="My Projects" data-ar="مشاريعي">My Projects</span>
+      <span class="nav-badge" id="nav-badge-projects">0</span>
+    </a>
+    <a class="nav-item" onclick="showPage('newproject')" href="#">
+      <span class="nav-icon">➕</span>
+      <span data-en="Register Project" data-ar="تسجيل مشروع">Register Project</span>
+    </a>
+
+    <div class="nav-section" data-en="2 · SALES" data-ar="٢ · المبيعات">2 · SALES</div>
+    <a class="nav-item" onclick="showPage('sales-strategy')" href="#">
+      <span class="nav-icon">📈</span>
+      <span data-en="Sales Strategy" data-ar="استراتيجية المبيعات">Sales Strategy</span>
+    </a>
+    <a class="nav-item" onclick="showPage('inventory')" href="#">
+      <span class="nav-icon">🏠</span>
+      <span data-en="Units Inventory" data-ar="مخزون الوحدات">Units Inventory</span>
+    </a>
+
+    <div class="nav-section" data-en="3 · SITE MAP" data-ar="٣ · خريطة الموقع">3 · SITE MAP</div>
+    <a class="nav-item" onclick="showPage('map')" href="#">
+      <span class="nav-icon">🗺️</span>
+      <span data-en="All Units Map" data-ar="خريطة الوحدات">All Units Map</span>
+    </a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" data-en="Developer & Partner Portal" data-ar="بوابة المطورين والشركاء">Developer & Partner Portal</div>
+      <div class="topbar-sub" data-en="EcoVillage Muscat · Ahmed Al-Hinai Development Co." data-ar="إيكو فيلاج مسقط · شركة أحمد الحنائي للتطوير">EcoVillage Muscat · Ahmed Al-Hinai Development Co.</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="lang-toggle" onclick="toggleLang()">🌐 <span id="lang-label">عربي</span></button>
+      <button class="btn btn-primary btn-sm" onclick="showPage('newproject')">+ <span data-en="New Project" data-ar="مشروع جديد">New Project</span></button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ═══ DASHBOARD PAGE ═══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon navy">🏗️</div>
+          <div><div class="stat-label" data-en="Active Projects" data-ar="المشاريع النشطة">Active Projects</div><div class="stat-value">3</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon teal">🏠</div>
+          <div><div class="stat-label" data-en="Total Units" data-ar="إجمالي الوحدات">Total Units</div><div class="stat-value">96</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon seaglass">✅</div>
+          <div><div class="stat-label" data-en="Approved Loans" data-ar="القروض المعتمدة">Approved Loans</div><div class="stat-value">23</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon amber">💰</div>
+          <div><div class="stat-label" data-en="Funded (OMR)" data-ar="الممول (ريال)">Funded (OMR)</div><div class="stat-value">4.6M</div></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" data-en="Recent Activity" data-ar="النشاط الأخير">Recent Activity</span>
+          </div>
+          <div class="card-body" style="padding:0">
+            <table class="inv-table">
+              <thead><tr><th data-en="Event" data-ar="الحدث">Event</th><th data-en="Project" data-ar="المشروع">Project</th><th data-en="Date" data-ar="التاريخ">Date</th><th data-en="Status" data-ar="الحالة">Status</th></tr></thead>
+              <tbody>
+                <tr><td>GSAS Certificate Uploaded</td><td>EcoVillage Muscat</td><td>28 Jan 2025</td><td><span class="chip green">✅ Verified</span></td></tr>
+                <tr><td>EPC Report Uploaded</td><td>EcoVillage Muscat</td><td>27 Jan 2025</td><td><span class="chip amber">⚠ Review</span></td></tr>
+                <tr><td>Unit B1 Reserved</td><td>EcoVillage Muscat</td><td>26 Jan 2025</td><td><span class="chip blue">🔵 Active</span></td></tr>
+                <tr><td>Loan App GHL-250001 Linked</td><td>EcoVillage Muscat</td><td>25 Jan 2025</td><td><span class="chip green">✅ Linked</span></td></tr>
+                <tr><td>EIA Approval Received</td><td>EcoVillage Muscat</td><td>20 Jan 2025</td><td><span class="chip green">✅ Verified</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title" data-en="ESG Score" data-ar="نقاط ESG">ESG Score</span></div>
+          <div class="card-body" style="text-align:center">
+            <div style="font-size:64px;font-weight:900;color:var(--teal);line-height:1">89</div>
+            <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px">GSAS Rating · EcoVillage Muscat</div>
+            <div style="background:linear-gradient(90deg,#E74C3C 0%,#F39C12 40%,#2ECC71 70%,#27AE60 100%);height:8px;border-radius:4px;position:relative;margin-bottom:6px">
+              <div style="position:absolute;left:74%;top:-4px;width:16px;height:16px;background:var(--navy);border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--gray-500);margin-bottom:16px"><span>0</span><span>50</span><span>100</span></div>
+            <div style="font-size:11px;color:var(--success);font-weight:700">🏆 GSAS 4-Star Equivalent</div>
+            <div style="font-size:11px;color:var(--gray-500);margin-top:4px">Qualifies for 4.75% preferential rate</div>
+            <button class="btn btn-primary btn-sm" style="margin-top:16px;width:100%" onclick="showPage('certificates')" data-en="View Certificates" data-ar="عرض الشهادات">View Certificates</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PROJECTS PAGE ═══ -->
+    <div class="page" id="page-projects">
+      <div class="section-header">
+        <div><div class="section-title" data-en="My Projects" data-ar="مشاريعي">My Projects</div><div class="section-sub" data-en="3 active projects · 96 total units" data-ar="3 مشاريع نشطة · 96 وحدة">3 active projects · 96 total units</div></div>
+        <button class="btn btn-primary" onclick="showPage('newproject')">+ <span data-en="Register New Project" data-ar="تسجيل مشروع جديد">Register New Project</span></button>
+      </div>
+      <div class="project-grid" id="project-grid">
+        <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--gray-500)">Loading projects…</div>
+      </div>
+    </div>
+
+    <!-- ═══ SITE MAP PAGE ═══ -->
+    <div class="page" id="page-map">
+      <div class="section-header">
+        <div>
+          <div class="section-title" data-en="Site Map — All Projects" data-ar="خريطة الموقع — كل المشاريع">Site Map — All Projects</div>
+          <div class="section-sub" id="map-subtitle">Loading units…</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:12px;color:var(--gray-500)">Filter:</span>
+          <button class="btn btn-secondary btn-sm" id="map-filter-all" onclick="siteMapFilter('all')">All</button>
+          <button class="btn btn-sm" style="background:rgba(46,204,113,.15);color:#27AE60;border:1px solid rgba(46,204,113,.3)" onclick="siteMapFilter('available')">🟢 Available</button>
+          <button class="btn btn-sm" style="background:rgba(244,179,91,.15);color:#C8891A;border:1px solid rgba(244,179,91,.3)" onclick="siteMapFilter('reserved')">🟠 Reserved</button>
+          <button class="btn btn-sm" style="background:rgba(0,59,92,.1);color:var(--navy);border:1px solid rgba(0,59,92,.2)" onclick="siteMapFilter('sold')">🔵 Sold</button>
+        </div>
+      </div>
+      <div id="site-map" style="height:480px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--gray-200)"></div>
+      <div class="map-legend" style="margin-top:12px" id="map-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#2ECC71"></div><span id="leg-available">Available</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#F39C12"></div><span id="leg-reserved">Reserved</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#003B5C"></div><span id="leg-sold">Sold</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(0,127,134,.3);border:2px solid #007F86;border-radius:2px"></div><span>Project boundary</span></div>
+      </div>
+    </div>
+
+    <!-- ═══ UNITS INVENTORY PAGE ═══ -->
+    <div class="page" id="page-inventory">
+      <div class="section-header">
+        <div>
+          <div class="section-title" data-en="Units Inventory" data-ar="مخزون الوحدات">Units Inventory</div>
+          <div class="section-sub" id="inv-subtitle">All projects · Loading…</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="renderInventoryGroups()">↺ Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="publishInventory()">📤 Publish to Bank</button>
+        </div>
+      </div>
+      <div id="inventory-groups">
+        <div style="text-align:center;padding:32px;color:var(--gray-500)">Loading inventory…</div>
+      </div>
+    </div>
+
+    <!-- ═══ CERTIFICATES PAGE ═══ -->
+    <div class="page" id="page-certificates">
+      <div class="section-header">
+        <div><div class="section-title" data-en="Green Certificates" data-ar="الشهادات الخضراء">Green Certificates</div><div class="section-sub" data-en="EcoVillage Muscat · AI-powered validation" data-ar="إيكو فيلاج مسقط · التحقق بالذكاء الاصطناعي">EcoVillage Muscat · AI-powered validation</div></div>
+        <span class="chip green">GSAS 89 · Eligible for 4.75%</span>
+      </div>
+      <div class="cert-grid" id="cert-grid">
+        <!-- Populated by JS -->
+      </div>
+      <div id="ai-analysis-panel" class="hidden">
+        <!-- AI results injected here -->
+      </div>
+    </div>
+
+    <!-- ═══ REGISTER PROJECT PAGE ═══ -->
+    <div class="page" id="page-newproject">
+      <div class="section-header">
+        <div><div class="section-title" data-en="Register New Project" data-ar="تسجيل مشروع جديد">Register New Project</div><div class="section-sub" data-en="Partner onboarding · ESG certification · Inventory setup" data-ar="تأهيل الشريك · شهادات ESG · إعداد المخزون">Partner onboarding · ESG certification · Inventory setup</div></div>
+        <button class="btn btn-secondary btn-sm" onclick="resetWizard()">↺ Reset Form</button>
+      </div>
+
+      <!-- Wizard step indicator -->
+      <div class="publish-steps" id="reg-steps-bar">
+        <div class="publish-step active" id="reg-step-1"><div class="publish-step-num">1</div><div class="publish-step-label">Project Info</div></div>
+        <div class="publish-step" id="reg-step-2"><div class="publish-step-num">2</div><div class="publish-step-label">Documents</div></div>
+        <div class="publish-step" id="reg-step-3"><div class="publish-step-num">3</div><div class="publish-step-label">AI Parsing</div></div>
+        <div class="publish-step" id="reg-step-4"><div class="publish-step-num">4</div><div class="publish-step-label">Inventory</div></div>
+        <div class="publish-step" id="reg-step-5"><div class="publish-step-num">5</div><div class="publish-step-label">Review &amp; Publish</div></div>
+        <button class="btn btn-secondary btn-sm prefill-btn" id="wiz-prefill-btn" onclick="prefillWizardStep(wizCurrentStep)" title="Auto-fill this step with EcoVillage Phase 2 demo data" style="margin-left:12px;align-self:center;white-space:nowrap;font-size:11px;padding:5px 12px;border:1.5px dashed var(--teal);color:var(--teal);background:rgba(0,127,134,.06)">⚡ Pre-Fill</button>
+      </div>
+
+      <!-- STEP 1: Project Info -->
+      <div id="wiz-step-1">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Project Details</span></div>
+            <div class="card-body">
+              <div class="form-group"><label class="form-label">Project Name *</label><input class="form-control" id="reg-name" value="" placeholder="e.g. Green Hills Residences"/></div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Governorate</label>
+                  <select class="form-control" id="reg-gov"><option value="">— Select —</option><option>Muscat</option><option>Dhofar</option><option>Al Batinah</option><option>Al Dakhiliyah</option><option>Al Sharqiyah</option><option>Al Buraymi</option></select></div>
+                <div class="form-group"><label class="form-label">Area / District</label><input class="form-control" id="reg-location" value="" placeholder="e.g. Al Mouj, Muscat"/></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Total Units</label><input class="form-control" type="number" id="reg-units" value="" min="1" placeholder="e.g. 24"/></div>
+                <div class="form-group"><label class="form-label">Est. Completion</label><input class="form-control" id="reg-completion" value="" placeholder="e.g. Q3 2027"/></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">Price From (OMR)</label><input class="form-control" type="number" id="reg-price-from" value="" placeholder="e.g. 120000"/></div>
+                <div class="form-group"><label class="form-label">Price To (OMR)</label><input class="form-control" type="number" id="reg-price-to" value="" placeholder="e.g. 350000"/></div>
+              </div>
+              <div class="form-group"><label class="form-label">Marketing Tagline</label><input class="form-control" id="reg-tagline" value="" placeholder="e.g. Oman's first GSAS Gold certified eco-villa community"/></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Developer &amp; Green Profile</span></div>
+            <div class="card-body">
+              <div class="form-group"><label class="form-label">Developer Company *</label><input class="form-control" id="reg-dev" value="" placeholder="e.g. Al-Hinai Development Co."/></div>
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">CR Number</label><input class="form-control" id="reg-cr" value="" placeholder="e.g. 1234567"/></div>
+                <div class="form-group"><label class="form-label">Project Type</label>
+                  <select class="form-control" id="reg-type"><option value="">— Select —</option><option value="villa">Villa</option><option value="apartment">Apartment</option><option value="townhouse">Townhouse</option><option value="mixed">Mixed-Use</option></select></div>
+              </div>
+              <div class="form-group" style="margin-top:4px"><label class="form-label">Green Features</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-solar"/> Solar PV</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-grey"/> Greywater Recycling</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-roof"/> Green Roof Gardens</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-hvac"/> HVAC SEER ≥ 18</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-glazing"/> Triple Glazing</label>
+                  <label style="display:flex;align-items:center;gap:7px;font-size:12px"><input type="checkbox" id="feat-ev"/> EV Charging</label>
+                </div>
+              </div>
+              <!-- ── Hero Image Upload Widget ── -->
+              <div class="form-group" style="margin-top:12px">
+                <label class="form-label">Project Hero Image</label>
+                <!-- Tab toggle -->
+                <div style="display:flex;gap:0;border:1px solid var(--gray-200);border-radius:6px;overflow:hidden;margin-bottom:8px">
+                  <button type="button" id="img-tab-upload" onclick="switchImgTab('upload')"
+                    style="flex:1;padding:5px 0;font-size:11px;font-weight:600;border:none;cursor:pointer;background:var(--navy);color:#fff;transition:background .15s">
+                    📁 Upload File
+                  </button>
+                  <button type="button" id="img-tab-url" onclick="switchImgTab('url')"
+                    style="flex:1;padding:5px 0;font-size:11px;font-weight:600;border:none;cursor:pointer;background:var(--gray-100);color:var(--gray-600);transition:background .15s">
+                    🔗 Paste URL
+                  </button>
+                </div>
+                <!-- File upload panel -->
+                <div id="img-panel-upload">
+                  <label id="img-drop-zone"
+                    style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:72px;border:2px dashed var(--gray-300);border-radius:6px;cursor:pointer;background:var(--gray-50);transition:border-color .15s"
+                    ondragover="event.preventDefault();this.style.borderColor='var(--navy)'"
+                    ondragleave="this.style.borderColor='var(--gray-300)'"
+                    ondrop="handleHeroDrop(event)">
+                    <input type="file" id="reg-image-file" accept="image/*" style="display:none" onchange="handleHeroFile(this.files[0])"/>
+                    <span style="font-size:20px">🖼️</span>
+                    <span style="font-size:11px;color:var(--gray-500)">Click or drag &amp; drop image (JPG/PNG/WebP)</span>
+                  </label>
+                </div>
+                <!-- URL paste panel -->
+                <div id="img-panel-url" style="display:none">
+                  <input class="form-control" id="reg-image-url" value="" placeholder="https://example.com/hero.jpg"
+                    style="font-size:11px" oninput="previewHeroFromUrl(this.value)"/>
+                </div>
+                <!-- Shared preview box -->
+                <div style="margin-top:8px;border-radius:6px;overflow:hidden;height:90px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;position:relative">
+                  <img id="reg-img-preview" src="" style="width:100%;height:100%;object-fit:cover;display:none"
+                    onload="this.style.display='block';document.getElementById('reg-img-placeholder').style.display='none'"
+                    onerror="this.style.display='none';document.getElementById('reg-img-placeholder').style.display=''"/>
+                  <span id="reg-img-placeholder" style="font-size:11px;color:var(--gray-400)">Image preview</span>
+                  <button type="button" id="reg-img-clear" onclick="clearHeroImage()"
+                    style="display:none;position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer">✕ Clear</button>
+                </div>
+                <div id="reg-img-name" style="font-size:10px;color:var(--gray-500);margin-top:3px;min-height:14px"></div>
+              </div>
+              <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="wizNext(1)">Continue to Documents →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: Document Upload -->
+      <div id="wiz-step-2" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Upload ESG Certification Documents</span>
+            <span class="chip gray">Upload the 5 EcoVillage Phase 2 documents</span>
+          </div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px" id="doc-upload-grid">
+              <!-- Hidden file inputs — one per doc type -->
+              <input type="file" id="file-input-gsas"    accept=".pdf,.PDF"  style="display:none" onchange="handleDocFile('gsas',this)"/>
+              <input type="file" id="file-input-epc"     accept=".pdf,.PDF"  style="display:none" onchange="handleDocFile('epc',this)"/>
+              <input type="file" id="file-input-eia"     accept=".pdf,.PDF"  style="display:none" onchange="handleDocFile('eia',this)"/>
+              <input type="file" id="file-input-brochure"accept=".pdf,.PDF"  style="display:none" onchange="handleDocFile('brochure',this)"/>
+              <input type="file" id="file-input-specs"   accept=".xlsx,.xls,.pdf,.PDF,.csv" style="display:none" onchange="handleDocFile('specs',this)"/>
+
+              <div class="cert-card" id="doc-gsas" onclick="document.getElementById('file-input-gsas').click()">
+                <div class="cert-icon">🏆</div><div class="cert-name">GSAS Certificate</div>
+                <div class="cert-desc">Gulf Sustainable Assessment System<br/>Gold tier · Score 91</div>
+                <div class="cert-status pending" id="doc-gsas-status">📤 Click to upload PDF</div>
+              </div>
+              <div class="cert-card" id="doc-epc" onclick="document.getElementById('file-input-epc').click()">
+                <div class="cert-icon">⚡</div><div class="cert-name">EPC Report</div>
+                <div class="cert-desc">Energy Performance Certificate<br/>Rating A+ · 43 kWh/m²/yr</div>
+                <div class="cert-status pending" id="doc-epc-status">📤 Click to upload PDF</div>
+              </div>
+              <div class="cert-card" id="doc-eia" onclick="document.getElementById('file-input-eia').click()">
+                <div class="cert-icon">🌿</div><div class="cert-name">EIA Clearance</div>
+                <div class="cert-desc">Environment Authority Oman<br/>Ref EA/EIA/2026/MSC/0887</div>
+                <div class="cert-status pending" id="doc-eia-status">📤 Click to upload PDF</div>
+              </div>
+              <div class="cert-card" id="doc-brochure" onclick="document.getElementById('file-input-brochure').click()">
+                <div class="cert-icon">📄</div><div class="cert-name">Project Brochure</div>
+                <div class="cert-desc">Site plan · Villa types<br/>Community amenities</div>
+                <div class="cert-status pending" id="doc-brochure-status">📤 Click to upload PDF</div>
+              </div>
+              <div class="cert-card" id="doc-specs" onclick="document.getElementById('file-input-specs').click()">
+                <div class="cert-icon">📊</div><div class="cert-name">Villa Specifications</div>
+                <div class="cert-desc">18 units · Pricing, GPS<br/>Area, type, ESG scores</div>
+                <div class="cert-status pending" id="doc-specs-status">📤 Click to upload XLSX / PDF</div>
+              </div>
+              <div class="cert-card" style="cursor:default;background:var(--gray-50);border-style:solid;border-color:var(--gray-200)">
+                <div class="cert-icon" style="font-size:22px">ℹ️</div>
+                <div class="cert-name" style="font-size:12px">Optional Documents</div>
+                <div class="cert-desc">Floor plans, structural report,<br/>NOC from municipality</div>
+                <div class="cert-status pending" style="color:var(--gray-400)">Optional</div>
+              </div>
+            </div>
+            <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+              <button class="btn btn-secondary" onclick="wizBack(2)">← Back</button>
+              <button class="btn btn-primary" id="wiz-step2-next" onclick="wizNext(2)">Run AI Analysis →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: AI Parsing Results -->
+      <div id="wiz-step-3" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">AI Document Analysis</span>
+            <span class="ai-badge">GPT-4o Vision</span>
+          </div>
+          <div class="card-body" id="ai-parse-body">
+            <div style="text-align:center;padding:32px">
+              <div class="analyzing-pulse" style="margin:0 auto 12px"></div>
+              <div style="font-size:14px;font-weight:600;color:var(--teal)">Analyzing documents…</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;justify-content:space-between">
+          <button class="btn btn-secondary" onclick="wizBack(3)">← Back</button>
+          <button class="btn btn-primary" id="wiz-step3-next" class="hidden" onclick="wizNext(3)">Confirm & Build Inventory →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: Inventory Preview -->
+      <div id="wiz-step-4" class="hidden">
+
+        <!-- ── Villa Type Image Cards ── -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px">
+          <!-- Type A -->
+          <div class="card" style="margin:0">
+            <div style="position:relative;height:140px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;background:var(--gray-100)">
+              <img id="type-a-preview" src="/static/img/ev2_type_a.jpg"
+                style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:8px 10px">
+                <span style="color:#fff;font-size:12px;font-weight:700">Type A · Grand Family Villa</span>
+              </div>
+              <label style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.5);color:#fff;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;display:flex;align-items:center;gap:4px">
+                <input type="file" accept="image/*" style="display:none" onchange="replaceTypeImg('a',this.files[0])"/> 📷 Change
+              </label>
+            </div>
+            <div style="padding:10px 12px">
+              <div style="font-size:11px;color:var(--gray-600)">8 units · 338–345 m² · 4 beds</div>
+              <div style="font-size:11px;color:var(--gray-500);margin-top:2px">OMR 195K – 215K · GSAS ≥90</div>
+            </div>
+          </div>
+          <!-- Type B -->
+          <div class="card" style="margin:0">
+            <div style="position:relative;height:140px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;background:var(--gray-100)">
+              <img id="type-b-preview" src="/static/img/ev2_type_b.jpg"
+                style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:8px 10px">
+                <span style="color:#fff;font-size:12px;font-weight:700">Type B · Compact Villa</span>
+              </div>
+              <label style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.5);color:#fff;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;display:flex;align-items:center;gap:4px">
+                <input type="file" accept="image/*" style="display:none" onchange="replaceTypeImg('b',this.files[0])"/> 📷 Change
+              </label>
+            </div>
+            <div style="padding:10px 12px">
+              <div style="font-size:11px;color:var(--gray-600)">6 units · 280–285 m² · 3 beds</div>
+              <div style="font-size:11px;color:var(--gray-500);margin-top:2px">OMR 165K – 178K · GSAS ≥90</div>
+            </div>
+          </div>
+          <!-- Type C -->
+          <div class="card" style="margin:0">
+            <div style="position:relative;height:140px;overflow:hidden;border-radius:var(--radius-md) var(--radius-md) 0 0;background:var(--gray-100)">
+              <img id="type-c-preview" src="/static/img/ev2_type_c.jpg"
+                style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:8px 10px">
+                <span style="color:#fff;font-size:12px;font-weight:700">Type C · Premium Signature Villa</span>
+              </div>
+              <label style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.5);color:#fff;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;display:flex;align-items:center;gap:4px">
+                <input type="file" accept="image/*" style="display:none" onchange="replaceTypeImg('c',this.files[0])"/> 📷 Change
+              </label>
+            </div>
+            <div style="padding:10px 12px">
+              <div style="font-size:11px;color:var(--gray-600)">4 units · 418–425 m² · 5 beds</div>
+              <div style="font-size:11px;color:var(--gray-500);margin-top:2px">OMR 310K – 345K · GSAS ≥92</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Unit Inventory — 18 Villas (parsed from Excel)</span>
+            <span class="chip green">✅ Auto-populated from VillaSpecs.xlsx</span>
+          </div>
+          <div class="card-body" style="padding:0">
+            <table class="inv-table" id="reg-units-table">
+              <thead><tr><th>#</th><th>Villa ID</th><th>Type</th><th>Area m²</th><th>Bed</th><th>Price (OMR)</th><th>GSAS</th><th>GPS</th><th>Status</th></tr></thead>
+              <tbody id="reg-units-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div class="stat-card"><div class="stat-icon seaglass">🏠</div><div><div class="stat-label">Total Units</div><div class="stat-value" id="inv-total">18</div></div></div>
+          <div class="stat-card"><div class="stat-icon teal">💰</div><div><div class="stat-label">Portfolio Value</div><div class="stat-value" id="inv-value">OMR 3.7M</div></div></div>
+          <div class="stat-card"><div class="stat-icon amber">🌿</div><div><div class="stat-label">Avg GSAS Score</div><div class="stat-value" id="inv-gsas">91</div></div></div>
+        </div>
+        <div style="margin-top:12px;display:flex;justify-content:space-between">
+          <button class="btn btn-secondary" onclick="wizBack(4)">← Back</button>
+          <button class="btn btn-primary" onclick="wizNext(4)">Proceed to Review →</button>
+        </div>
+      </div>
+
+      <!-- STEP 5: Review & Publish -->
+      <div id="wiz-step-5" class="hidden">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Project Summary</span></div>
+            <div class="card-body" id="review-summary"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">ESG Score Card</span></div>
+            <div class="card-body" id="review-esg"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><span class="card-title">Two-Phase Site Map Preview</span></div>
+          <div class="card-body" style="padding:0">
+            <div id="reg-map" style="height:320px;border-radius:0 0 var(--radius-md) var(--radius-md)"></div>
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+          <button class="btn btn-secondary" onclick="wizBack(5)">← Back</button>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-secondary" onclick="wizSaveDraft()">💾 Save as Draft</button>
+            <button class="btn btn-success" id="wiz-publish-btn" onclick="wizPublish()">📤 Register & Publish to Bank</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ANALYTICS PAGE ═══ -->
+    <div class="page" id="page-analytics">
+      <div class="section-header">
+        <div><div class="section-title">Loan Applications</div><div class="section-sub">Linked to your projects</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-icon seaglass">📋</div><div><div class="stat-label">Total Applications</div><div class="stat-value">23</div></div></div>
+        <div class="stat-card"><div class="stat-icon teal">✅</div><div><div class="stat-label">Approved</div><div class="stat-value">18</div></div></div>
+        <div class="stat-card"><div class="stat-icon amber">⏳</div><div><div class="stat-label">In Review</div><div class="stat-value">4</div></div></div>
+        <div class="stat-card"><div class="stat-icon navy">💰</div><div><div class="stat-label">Total Funded</div><div class="stat-value">OMR 4.6M</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Loan Applications by Unit</span></div>
+        <div class="card-body" style="padding:0">
+          <table class="inv-table">
+            <thead><tr><th>Application</th><th>Customer</th><th>Unit</th><th>Amount (OMR)</th><th>Rate</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong>GHL-250001</strong></td><td>Salim Al-Harthy</td><td>Villa B1 — EcoVillage</td><td>200,000</td><td><span style="color:var(--success);font-weight:700">4.75%</span></td><td><span class="chip green">Approved</span></td></tr>
+              <tr><td>GHL-250002</td><td>Maryam Al-Siyabi</td><td>Villa A3 — EcoVillage</td><td>185,000</td><td><span style="color:var(--success);font-weight:700">4.75%</span></td><td><span class="chip green">Approved</span></td></tr>
+              <tr><td>GHL-250003</td><td>Khalid Al-Rashdi</td><td>Villa C2 — EcoVillage</td><td>195,000</td><td>5.00%</td><td><span class="chip amber">In Review</span></td></tr>
+              <tr><td>GHL-240018</td><td>Fatima Al-Busaidi</td><td>Unit 12 — Green Palms</td><td>140,000</td><td>5.25%</td><td><span class="chip green">Approved</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SALES STRATEGY PAGE ═══ -->
+    <div class="page" id="page-sales-strategy">
+      <div class="section-header">
+        <div><div class="section-title">Sales Strategy</div><div class="section-sub">Price matrix · Campaigns · Pipeline KPIs · Absorption rate</div></div>
+        <button class="btn btn-primary btn-sm" onclick="openNewCampaignModal()">+ New Campaign</button>
+      </div>
+
+      <!-- KPIs row -->
+      <div class="kpi-grid" id="sales-kpi-grid">
+        <div class="kpi-card"><div class="kpi-value" id="kpi-total-units">—</div><div class="kpi-label">Total Units</div></div>
+        <div class="kpi-card"><div class="kpi-value" style="color:#2ECC71" id="kpi-available">—</div><div class="kpi-label">Available</div></div>
+        <div class="kpi-card"><div class="kpi-value" style="color:#F39C12" id="kpi-reserved">—</div><div class="kpi-label">Reserved</div></div>
+        <div class="kpi-card"><div class="kpi-value" style="color:#003B5C" id="kpi-sold">—</div><div class="kpi-label">Sold</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpi-absorption">—%</div><div class="kpi-label">Absorption Rate</div><div class="kpi-delta up" id="kpi-absorption-delta"></div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpi-portfolio">—</div><div class="kpi-label">Portfolio Value (OMR)</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- Price Matrix -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Price Matrix by Unit Type</span>
+            <button class="btn btn-secondary btn-sm" onclick="openBulkPriceModal()">📊 Bulk Adjust</button>
+          </div>
+          <div class="card-body" style="padding:0;overflow-x:auto">
+            <table class="inv-table price-matrix" id="price-matrix-table">
+              <thead><tr><th>Type</th><th>Count</th><th>Avg m²</th><th>Base Price</th><th>Current Avg</th><th>Discount</th><th>Action</th></tr></thead>
+              <tbody id="price-matrix-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--gray-500)">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Absorption Rate Chart -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">Absorption Rate by Type</span></div>
+          <div class="card-body" id="absorption-chart">
+            <div style="text-align:center;color:var(--gray-500);padding:20px">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Campaigns -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><span class="card-title">Campaigns</span><span class="chip gray" id="campaign-count">0 active</span></div>
+        <div class="card-body" id="campaigns-list">
+          <div style="text-align:center;color:var(--gray-500);padding:20px">No campaigns yet. Create one to track discounts and promotions.</div>
+        </div>
+      </div>
+
+      <!-- Pipeline Applications -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Loan Application Pipeline</span></div>
+        <div class="card-body" style="padding:0">
+          <table class="inv-table" id="pipeline-table">
+            <thead><tr><th>App #</th><th>Customer</th><th>Unit</th><th>Project</th><th>Amount (OMR)</th><th>Rate</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody id="pipeline-tbody"><tr><td colspan="8" style="text-align:center;padding:20px;color:var(--gray-500)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .content -->
+</div><!-- end .main -->
+
+<!-- ═══ PROJECT PANEL OVERLAY ═══ -->
+<div class="panel-overlay" id="project-panel-overlay" onclick="closePanelIfOutside(event)">
+  <div class="slide-panel">
+    <div class="panel-header">
+      <div class="panel-header-info">
+        <div class="panel-title" id="panel-proj-title">EcoVillage Muscat</div>
+        <div class="panel-subtitle" id="panel-proj-sub">Al Mouj, Muscat · 24 units</div>
+      </div>
+      <button class="panel-close" onclick="closePanel('project-panel-overlay')">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="tabs"><button class="tab active" onclick="switchTab(this,'ptab-overview')">Overview</button><button class="tab" onclick="switchTab(this,'ptab-units')">Units</button><button class="tab" onclick="switchTab(this,'ptab-certs')">Certificates</button></div>
+      <div id="ptab-overview">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div class="card" style="margin:0"><div class="card-body" style="text-align:center"><div style="font-size:36px;font-weight:900;color:var(--teal)">89</div><div style="font-size:11px;color:var(--gray-500)">GSAS Score</div></div></div>
+          <div class="card" style="margin:0"><div class="card-body" style="text-align:center"><div style="font-size:36px;font-weight:900;color:var(--navy)">24</div><div style="font-size:11px;color:var(--gray-500)">Total Units</div></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Developer</span><span style="font-weight:600">Ahmed Al-Hinai Development Co.</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Location</span><span style="font-weight:600">Al Mouj, Muscat</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Min Green Rate</span><span style="font-weight:600;color:var(--success)">4.75%</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Completion</span><span style="font-weight:600">Q2 2025</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0"><span style="color:var(--gray-500)">Partner Since</span><span style="font-weight:600">January 2024</span></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="closePanel('project-panel-overlay');showPage('map')">🗺️ View on Map</button>
+      </div>
+      <div id="ptab-units" style="display:none">
+        <table class="inv-table"><thead><tr><th>Unit</th><th>Area</th><th>Price</th><th>Status</th></tr></thead><tbody>
+          <tr><td><strong>Villa B1</strong> ⭐</td><td>320m²</td><td>200,000</td><td><span class="unit-status reserved">Reserved</span></td></tr>
+          <tr><td>Villa A1</td><td>280m²</td><td>175,000</td><td><span class="unit-status available">Available</span></td></tr>
+          <tr><td>Villa A2</td><td>295m²</td><td>182,000</td><td><span class="unit-status sold">Sold</span></td></tr>
+          <tr><td>Villa A3</td><td>310m²</td><td>192,000</td><td><span class="unit-status sold">Sold</span></td></tr>
+          <tr><td>Villa C1</td><td>340m²</td><td>215,000</td><td><span class="unit-status available">Available</span></td></tr>
+          <tr><td>Villa C2</td><td>325m²</td><td>205,000</td><td><span class="unit-status reserved">Reserved</span></td></tr>
+        </tbody></table>
+      </div>
+      <div id="ptab-certs" style="display:none">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm)">
+            <div><div style="font-weight:600;font-size:13px">GSAS Certificate</div><div style="font-size:11px;color:var(--gray-500)">Score: 89 · Valid until Dec 2027</div></div>
+            <span class="chip green">✅ Verified</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm)">
+            <div><div style="font-weight:600;font-size:13px">EPC Report</div><div style="font-size:11px;color:var(--gray-500)">Rating: B+ · 88% efficiency</div></div>
+            <span class="chip amber">⚠ Review</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm)">
+            <div><div style="font-weight:600;font-size:13px">EIA Approval</div><div style="font-size:11px;color:var(--gray-500)">Ref: EIA-2024-0892</div></div>
+            <span class="chip green">✅ Verified</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <button class="btn btn-secondary" onclick="closePanel('project-panel-overlay')">Close</button>
+      <button class="btn btn-primary" onclick="closePanel('project-panel-overlay');showPage('inventory')">📦 View Inventory</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST CONTAINER ═══ -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ═══ PUBLISH MODAL ═══ -->
+<div class="modal-overlay" id="publish-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📤 Publish Inventory to Bank</div>
+      <button class="modal-close" onclick="closeModal('publish-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--gray-50);border-radius:var(--radius-md);padding:16px;margin-bottom:16px">
+        <div style="font-weight:700;color:var(--navy);margin-bottom:8px">EcoVillage Muscat</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+          <div><span style="color:var(--gray-500)">Available units:</span> <strong>12</strong></div>
+          <div><span style="color:var(--gray-500)">Total value:</span> <strong>OMR 2.1M</strong></div>
+          <div><span style="color:var(--gray-500)">GSAS Score:</span> <strong style="color:var(--success)">89</strong></div>
+          <div><span style="color:var(--gray-500)">Min Rate:</span> <strong style="color:var(--success)">4.75%</strong></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Publish unit specifications</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Share GSAS certificate</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Enable financing eligibility</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" checked/> Allow bank customer browsing</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('publish-modal')">Cancel</button>
+      <button class="btn btn-success" onclick="confirmPublish()">✅ Confirm & Publish</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// STATE & DATA
+// ═══════════════════════════════════════════════════
+let isAr = false;
+let leafletMap = null;
+let mapMarkers = [];
+
+const UNITS = [
+  {id:'B1',type:'Villa',area:320,price:200000,gsas:89,status:'reserved',lat:23.6102,lng:58.5922,loan:'GHL-250001'},
+  {id:'A1',type:'Villa',area:280,price:175000,gsas:87,status:'available',lat:23.6110,lng:58.5910},
+  {id:'A2',type:'Villa',area:295,price:182000,gsas:88,status:'sold',lat:23.6118,lng:58.5918},
+  {id:'A3',type:'Villa',area:310,price:192000,gsas:91,status:'sold',lat:23.6126,lng:58.5926},
+  {id:'C1',type:'Villa',area:340,price:215000,gsas:86,status:'available',lat:23.6094,lng:58.5930},
+  {id:'C2',type:'Villa',area:325,price:205000,gsas:85,status:'reserved',lat:23.6086,lng:58.5914},
+  {id:'D1',type:'Townhouse',area:240,price:155000,gsas:84,status:'available',lat:23.6130,lng:58.5900},
+  {id:'D2',type:'Townhouse',area:240,price:155000,gsas:84,status:'available',lat:23.6138,lng:58.5908},
+  {id:'D3',type:'Townhouse',area:245,price:158000,gsas:85,status:'sold',lat:23.6134,lng:58.5916},
+  {id:'D4',type:'Townhouse',area:242,price:156000,gsas:83,status:'available',lat:23.6142,lng:58.5924},
+  {id:'E1',type:'Apartment',area:180,price:115000,gsas:82,status:'available',lat:23.6078,lng:58.5920},
+  {id:'E2',type:'Apartment',area:175,price:112000,gsas:81,status:'available',lat:23.6070,lng:58.5912},
+  {id:'E3',type:'Apartment',area:185,price:118000,gsas:83,status:'sold',lat:23.6074,lng:58.5904},
+  {id:'E4',type:'Apartment',area:178,price:114000,gsas:82,status:'available',lat:23.6082,lng:58.5896},
+  {id:'F1',type:'Villa',area:360,price:225000,gsas:92,status:'sold',lat:23.6090,lng:58.5888},
+  {id:'F2',type:'Villa',area:355,price:222000,gsas:90,status:'available',lat:23.6098,lng:58.5880},
+  {id:'G1',type:'Townhouse',area:250,price:162000,gsas:86,status:'reserved',lat:23.6106,lng:58.5872},
+  {id:'G2',type:'Townhouse',area:252,price:163000,gsas:85,status:'available',lat:23.6114,lng:58.5864},
+  {id:'G3',type:'Townhouse',area:248,price:160000,gsas:84,status:'sold',lat:23.6122,lng:58.5856},
+  {id:'H1',type:'Apartment',area:190,price:122000,gsas:80,status:'available',lat:23.6068,lng:58.5944},
+  {id:'H2',type:'Apartment',area:188,price:120000,gsas:81,status:'sold',lat:23.6060,lng:58.5936},
+  {id:'H3',type:'Apartment',area:192,price:123000,gsas:82,status:'available',lat:23.6064,lng:58.5952},
+  {id:'I1',type:'Villa',area:330,price:208000,gsas:88,status:'reserved',lat:23.6052,lng:58.5928},
+  {id:'I2',type:'Villa',area:335,price:210000,gsas:89,status:'available',lat:23.6044,lng:58.5936},
+];
+
+const CERT_CONFIG = [
+  {id:'gsas',icon:'🏆',name:'GSAS Certificate',desc:'Green Suburb Assessment System — Score 89',status:'verified',confidence:96,findings:['Score 89/100 confirmed','4-Star Equivalent','Solar PV verified','Water efficiency ✓']},
+  {id:'epc',icon:'⚡',name:'EPC Report',desc:'Energy Performance Certificate — Rating B+',status:'flagged',confidence:88,findings:['Rating: B+','88% efficiency','HVAC: SEER 18.2 ✓','Thermal bridge: minor flag']},
+  {id:'eia',icon:'🌿',name:'EIA Approval',desc:'Environmental Impact Assessment — Ref: EIA-2024-0892',status:'verified',confidence:95,findings:['No adverse impact','Biodiversity protected','Dust control plan ✓','Ref validated']},
+];
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  if(page) { page.classList.add('active'); page.classList.add('fade-in'); }
+
+  // mark nav active
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) n.classList.add('active');
+  });
+
+  if(id === 'map') { setTimeout(() => initSiteMap(), 150); }
+  if(id === 'inventory') { renderInventoryGroups(); }
+  if(id === 'sales-strategy') { renderSalesStrategy(); }
+}
+
+// ═══════════════════════════════════════════════════
+// LANGUAGE TOGGLE
+// ═══════════════════════════════════════════════════
+function toggleLang() {
+  isAr = !isAr;
+  document.body.classList.toggle('ar', isAr);
+  document.documentElement.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+  document.getElementById('lang-label').textContent = isAr ? 'English' : 'عربي';
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = isAr ? el.getAttribute('data-ar') : el.getAttribute('data-en');
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// SITE MAP — loads all units from DB
+// ═══════════════════════════════════════════════════
+let siteMap = null;
+let siteMapMarkers = [];
+let siteMapAllUnits = [];  // [{unit, projectName, projectBoundary}]
+
+async function initSiteMap() {
+  const el = document.getElementById('site-map');
+  if (!el) return;
+  if (siteMap) { siteMap.invalidateSize(); return; }
+
+  siteMap = L.map('site-map').setView([23.58, 58.52], 11);  // initial fallback; fitBounds overrides after load
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 19
+  }).addTo(siteMap);
+
+  // Load all projects and their units
+  try {
+    const r = await fetch('/api/v1/portal/developer/projects');
+    const d = await r.json();
+    const projects = d.projects || [];
+
+    // Colour palette per project (cycles)
+    const projColors = ['#007F86','#C8891A','#6C3483','#1A5276','#117A65'];
+    let totalUnits = 0;
+
+    for (const [pi, proj] of projects.entries()) {
+      const pcol = projColors[pi % projColors.length];
+      // Project boundary label
+      const ur = await fetch(`/api/v1/portal/developer/projects/${proj.id}/units`);
+      const ud = await ur.json();
+      const units = ud.units || [];
+      if (!units.length) continue;
+
+      // Auto-compute bounding box from unit lat/lngs that have coordinates
+      const geoUnits = units.filter(u => u.lat && u.lng);
+      if (geoUnits.length) {
+        const lats = geoUnits.map(u => parseFloat(u.lat));
+        const lngs = geoUnits.map(u => parseFloat(u.lng));
+        const pad = 0.0008;
+        const bounds = [[Math.min(...lats)-pad, Math.min(...lngs)-pad],[Math.max(...lats)+pad, Math.max(...lngs)+pad]];
+        L.rectangle(bounds, {color:pcol, weight:2, fillColor:pcol, fillOpacity:0.06, dashArray:'5,4'}).addTo(siteMap)
+         .bindTooltip(`<b>${proj.name}</b>`, {permanent:true, direction:'center', className:'', opacity:0.85});
+      }
+
+      // Plot each unit
+      units.forEach(u => {
+        if (!u.lat || !u.lng) return;
+        totalUnits++;
+        const colMap = {available:'#2ECC71', reserved:'#F39C12', sold:'#003B5C'};
+        const col = colMap[u.status] || '#ADB5BD';
+        const icon = L.divIcon({className:'',
+          html:`<div style="width:13px;height:13px;background:${col};border-radius:50%;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35)"></div>`,
+          iconAnchor:[6,6]});
+        const popup = `<div style="font-size:12px;min-width:180px;line-height:1.7">
+          <strong style="color:#003B5C;font-size:13px">${u.unit_number||u.id}</strong><br/>
+          <span style="color:#666">${proj.name}</span><br/>
+          Type: <b>${u.type||'—'}</b> · ${u.area_sqm||'—'} m²<br/>
+          Beds: <b>${u.bedrooms||'—'}</b> · Bath: <b>${u.bathrooms||'—'}</b><br/>
+          Price: <b>OMR ${u.price ? Number(u.price).toLocaleString() : '—'}</b><br/>
+          GSAS: <b style="color:#2ECC71">${u.gsas_score||'—'}</b><br/>
+          Status: <b style="color:${col}">${(u.status||'').toUpperCase()}</b>
+        </div>`;
+        const mk = L.marker([parseFloat(u.lat), parseFloat(u.lng)], {icon}).addTo(siteMap);
+        mk.bindPopup(popup);
+        siteMapMarkers.push({mk, status: u.status||'available'});
+        siteMapAllUnits.push({mk, status: u.status||'available'});
+      });
+    }
+
+    // Update subtitle + legend counts
+    const av = siteMapAllUnits.filter(x=>x.status==='available').length;
+    const re = siteMapAllUnits.filter(x=>x.status==='reserved').length;
+    const so = siteMapAllUnits.filter(x=>x.status==='sold').length;
+    const sub = document.getElementById('map-subtitle');
+    if (sub) sub.textContent = `${totalUnits} units across ${projects.length} projects · click any pin for details`;
+    const la = document.getElementById('leg-available'); if(la) la.textContent = `Available (${av})`;
+    const lr = document.getElementById('leg-reserved');  if(lr) lr.textContent = `Reserved (${re})`;
+    const ls = document.getElementById('leg-sold');       if(ls) ls.textContent = `Sold (${so})`;
+
+    // Auto-fit map to all plotted units
+    if (siteMapAllUnits.length > 0) {
+      const allMarkers = siteMapAllUnits.map(x => x.mk);
+      const group = L.featureGroup(allMarkers);
+      siteMap.fitBounds(group.getBounds().pad(0.15));
+    }
+
+  } catch(e) {
+    console.error('initSiteMap', e);
+    toast('Could not load units for map', 'error');
+  }
+}
+
+function siteMapFilter(status) {
+  siteMapAllUnits.forEach(({mk, status: s}) => {
+    if (status === 'all' || s === status) {
+      if (!siteMap.hasLayer(mk)) siteMap.addLayer(mk);
+    } else {
+      if (siteMap.hasLayer(mk)) siteMap.removeLayer(mk);
+    }
+  });
+}
+
+// Legacy stub — called from Step 5 review map
+function initMap(containerId, showPhase2) {
+  const el = document.getElementById(containerId);
+  if (!el) return null;
+  const m = L.map(containerId).setView([23.60, 58.59], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap',maxZoom:19}).addTo(m);
+  if (showPhase2 && typeof UNITS_P2 !== 'undefined') {
+    UNITS_P2.forEach(u=>{
+      const col=u.status==='available'?'#2ECC71':'#F39C12';
+      L.circleMarker([u.lat,u.lng],{radius:8,color:'#fff',weight:2,fillColor:col,fillOpacity:0.95}).addTo(m)
+       .bindPopup(`<b>${u.label}</b><br/>OMR ${u.price.toLocaleString()} · GSAS ${u.gsas}`);
+    });
+  }
+  return m;
+}
+
+// ═══════════════════════════════════════════════════
+// ── Global unit cache: unitId → unit object (avoids JSON-in-onclick escaping) ──
+window._unitCache = {};
+
+// UNITS INVENTORY — collapsible per-project groups
+// ═══════════════════════════════════════════════════
+async function renderInventoryGroups() {
+  const container = document.getElementById('inventory-groups');
+  if(!container) return;
+  container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--gray-500)">Loading…</div>';
+
+  try {
+    const rp = await fetch('/api/v1/portal/developer/projects');
+    const dp = await rp.json();
+    const projects = dp.projects || [];
+
+    if(!projects.length) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-500)">No projects yet. Register your first project.</div>';
+      return;
+    }
+
+    let totalUnits = 0;
+    let html = '';
+
+    for (const proj of projects) {
+      const ru = await fetch(`/api/v1/portal/developer/projects/${proj.id}/units`);
+      const du = await ru.json();
+      const units = du.units || [];
+      totalUnits += units.length;
+      // Cache units for onclick lookup (avoids JSON-in-HTML-attribute escaping bugs)
+      units.forEach(u => { window._unitCache[u.id] = {...u, _projId: proj.id}; });
+
+      const av = units.filter(u=>u.status==='available').length;
+      const re = units.filter(u=>u.status==='reserved').length;
+      const so = units.filter(u=>u.status==='sold').length;
+      const isLive = proj.listing_visible===1 || proj.status==='active';
+      const groupId = 'inv-group-' + proj.id;
+
+      html += `
+        <div class="inv-group-header" onclick="toggleInvGroup('${groupId}')">
+          <span style="font-size:16px">🏗️</span>
+          <strong style="font-size:13px;color:var(--navy)">${proj.name}</strong>
+          <span style="font-size:11px;color:var(--gray-500)">${units.length} units</span>
+          <span class="chip ${isLive?'green':'gray'}" style="font-size:10px">${isLive?'Published':'Draft'}</span>
+          <span class="unit-status available" style="font-size:11px">${av} available</span>
+          <span class="unit-status reserved" style="font-size:11px">${re} reserved</span>
+          <span class="unit-status sold" style="font-size:11px">${so} sold</span>
+          <span class="inv-group-toggle open" id="${groupId}-toggle">▶</span>
+        </div>
+        <div class="inv-group-body" id="${groupId}">
+          <table class="inv-table">
+            <thead><tr>
+              <th>Unit #</th><th>Type</th><th>Area m²</th><th>Beds</th><th>Price (OMR)</th><th>GSAS</th><th>Status</th><th></th>
+            </tr></thead>
+            <tbody>
+              ${units.length ? units.map(u => `<tr class="inv-row" onclick="openUnitById('${u.id}')" style="cursor:pointer" title="Click to view unit details">
+                <td><strong>${u.unit_number||u.id}</strong></td>
+                <td>${u.type||'—'}</td>
+                <td>${u.area_sqm||'—'}</td>
+                <td>${u.bedrooms||'—'}</td>
+                <td>${u.price ? Number(u.price).toLocaleString() : '—'}</td>
+                <td><span class="gsas-score ${(u.gsas_score||0)>=85?'excellent':'good'}">${u.gsas_score||'—'}</span></td>
+                <td><span class="unit-status ${u.status||'available'}" id="ustatus-${u.id}">${u.status||'available'}</span></td>
+                <td style="white-space:nowrap" onclick="event.stopPropagation()">
+                  <button class="btn btn-primary btn-sm" onclick="openUnitById('${u.id}')">View Details →</button>
+                </td>
+              </tr>`).join('') : '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--gray-500)">No units for this project.</td></tr>'}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    container.innerHTML = html;
+    const sub = document.getElementById('inv-subtitle');
+    if(sub) sub.textContent = `${projects.length} projects · ${totalUnits} total units`;
+
+  } catch(e) {
+    console.error('renderInventoryGroups', e);
+    container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--danger)">Failed to load inventory. Check API.</div>';
+  }
+}
+
+function toggleInvGroup(groupId) {
+  const body = document.getElementById(groupId);
+  const toggle = document.getElementById(groupId+'-toggle');
+  if(!body) return;
+  const collapsed = body.classList.toggle('collapsed');
+  if(toggle) toggle.classList.toggle('open', !collapsed);
+}
+
+// ── Real unit status cycle with API call ──────────────────────────────────
+async function changeUnitStatus(projId, unitId, currentStatus, btn) {
+  const statuses = ['available','reserved','sold'];
+  const next = statuses[(statuses.indexOf(currentStatus)+1) % statuses.length];
+  if(btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const r = await fetch(`/api/v1/portal/developer/projects/${projId}/units/${unitId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status: next})
+    });
+    if(!r.ok) throw new Error('API error');
+    // Update badge in table
+    const badge = document.getElementById('ustatus-' + unitId);
+    if(badge) { badge.className = `unit-status ${next}`; badge.textContent = next; }
+    // Update button's onclick for next cycle
+    if(btn) { btn.setAttribute('onclick', `changeUnitStatus('${projId}','${unitId}','${next}',this)`); }
+    toast(`Unit status updated → ${next}`, 'success');
+    // Also update unit detail panel if open
+    const detailStatus = document.getElementById('ud-status-badge');
+    if(detailStatus && detailStatus.dataset.uid === unitId) {
+      detailStatus.className = `unit-status ${next}`; detailStatus.textContent = next;
+      detailStatus.dataset.status = next;
+    }
+  } catch(e) {
+    toast('Failed to update status', 'error');
+  } finally {
+    if(btn) { btn.disabled = false; btn.textContent = '⟳ Status'; }
+  }
+}
+
+// ── Real unit price update with API call ─────────────────────────────────
+async function editUnitPrice(projId, unitId, current, btn) {
+  const np = prompt(`New price for unit ${unitId} (OMR):`, current);
+  if(!np || isNaN(np)) return;
+  const price = Number(np);
+  if(btn) { btn.disabled = true; }
+  try {
+    const r = await fetch(`/api/v1/portal/developer/projects/${projId}/units/${unitId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({price})
+    });
+    if(!r.ok) throw new Error('API error');
+    toast(`Price updated → OMR ${price.toLocaleString()}`, 'success');
+    // Refresh inventory to show new price
+    renderInventoryGroups();
+  } catch(e) {
+    toast('Failed to update price', 'error');
+  } finally {
+    if(btn) { btn.disabled = false; }
+  }
+}
+
+// ── Unit Detail Panel ─────────────────────────────────────────────────────
+// Thin wrapper: look up unit from cache, then call openUnitDetail
+function openUnitById(unitId) {
+  const u = window._unitCache && window._unitCache[unitId];
+  if(!u) { toast('Unit data not found — try refreshing inventory', 'error'); return; }
+  openUnitDetail(u._projId, unitId, u);
+}
+
+// Accept either a pre-parsed object OR a JSON string (legacy)
+function openUnitDetail(projId, unitId, unitOrJson) {
+  const u = (typeof unitOrJson === 'string') ? JSON.parse(unitOrJson) : unitOrJson;
+  window._unitDetailProjId = projId;
+  window._unitDetailUnitId = unitId;
+  window._unitDetailUnit = u;
+
+  const panel = document.getElementById('unit-detail-panel');
+  if(!panel) return;
+
+  // Determine image: use unit image_url or fall back to project type default
+  const imgUrl = u.image_url || null;
+
+  // Status color
+  const statusColors = {available:'#27AE60', reserved:'#C8891A', sold:'#003B5C'};
+  const st = u.status || 'available';
+
+  panel.innerHTML = `
+    <div class="ud-header">
+      <button class="ud-close" onclick="closeUnitDetail()">✕</button>
+      <div class="ud-img-wrap">
+        ${imgUrl
+          ? `<img src="${imgUrl}" class="ud-img" onerror="this.src='';this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+             <div class="ud-img-placeholder" style="display:none">🏠</div>`
+          : `<div class="ud-img-placeholder">🏠</div>`}
+      </div>
+      <div class="ud-title-row">
+        <div>
+          <div class="ud-unit-num">${u.unit_number || unitId}</div>
+          <div class="ud-unit-type">${u.type || '—'} · ${u.area_sqm || '—'} m²</div>
+        </div>
+        <span class="unit-status ${st}" id="ud-status-badge" data-uid="${unitId}" data-status="${st}">${st}</span>
+      </div>
+    </div>
+
+    <div class="ud-body">
+      <!-- Key metrics -->
+      <div class="ud-metrics">
+        <div class="ud-metric"><div class="ud-metric-val">${u.bedrooms || '—'}</div><div class="ud-metric-lbl">Bedrooms</div></div>
+        <div class="ud-metric"><div class="ud-metric-val">${u.bathrooms || '—'}</div><div class="ud-metric-lbl">Bathrooms</div></div>
+        <div class="ud-metric"><div class="ud-metric-val">${u.area_sqm || '—'}</div><div class="ud-metric-lbl">m²</div></div>
+        <div class="ud-metric"><div class="ud-metric-val" style="color:var(--teal)">${u.gsas_score || '—'}</div><div class="ud-metric-lbl">GSAS</div></div>
+      </div>
+
+      <!-- Pricing -->
+      <div class="ud-section">
+        <div class="ud-section-title">Pricing</div>
+        <div class="ud-row"><span>List Price</span><strong>${u.price ? 'OMR ' + Number(u.price).toLocaleString() : '—'}</strong></div>
+        <div class="ud-row"><span>Floor</span><strong>${u.floor_number ? 'Level ' + u.floor_number : '—'}</strong></div>
+      </div>
+
+      <!-- Status management -->
+      <div class="ud-section">
+        <div class="ud-section-title">Status Management</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          ${['available','reserved','sold'].map(s => `
+            <button class="btn btn-sm ${st===s?'btn-primary':'btn-secondary'}" id="ud-st-${s}"
+              onclick="setUnitStatusFromPanel('${projId}','${unitId}','${s}')">
+              ${s==='available'?'✅':s==='reserved'?'⏳':'🔒'} ${s.charAt(0).toUpperCase()+s.slice(1)}
+            </button>`).join('')}
+        </div>
+      </div>
+
+      <!-- Quick price edit -->
+      <div class="ud-section">
+        <div class="ud-section-title">Update Price</div>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <input type="number" id="ud-price-input" value="${u.price||''}" placeholder="Price in OMR"
+            style="flex:1;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px"/>
+          <button class="btn btn-primary btn-sm" onclick="saveUnitPriceFromPanel('${projId}','${unitId}')">Save</button>
+        </div>
+      </div>
+
+      <!-- Features -->
+      ${u.features && JSON.parse(u.features||'[]').length ? `
+      <div class="ud-section">
+        <div class="ud-section-title">Features</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+          ${JSON.parse(u.features||'[]').map(f=>`<span class="chip green">${f}</span>`).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- Location -->
+      ${u.lat && u.lng ? `
+      <div class="ud-section">
+        <div class="ud-section-title">Location</div>
+        <div class="ud-row"><span>Coordinates</span><strong>${Number(u.lat).toFixed(4)}, ${Number(u.lng).toFixed(4)}</strong></div>
+      </div>` : ''}
+
+      <!-- Floor plan placeholder -->
+      <div class="ud-section">
+        <div class="ud-section-title">Floor Plan</div>
+        <div style="background:var(--gray-100);border-radius:8px;height:160px;display:flex;align-items:center;justify-content:center;margin-top:8px;flex-direction:column;gap:8px">
+          <div style="font-size:32px">📐</div>
+          <div style="font-size:12px;color:var(--gray-500)">Upload floor plan in Documents tab</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  panel.classList.add('open');
+}
+
+function closeUnitDetail() {
+  const panel = document.getElementById('unit-detail-panel');
+  if(panel) panel.classList.remove('open');
+}
+
+async function setUnitStatusFromPanel(projId, unitId, newStatus) {
+  const btns = ['available','reserved','sold'].map(s=>document.getElementById('ud-st-'+s)).filter(Boolean);
+  btns.forEach(b=>b.disabled=true);
+  try {
+    const r = await fetch(`/api/v1/portal/developer/projects/${projId}/units/${unitId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status: newStatus})
+    });
+    if(!r.ok) throw new Error();
+    // Update panel badge
+    const badge = document.getElementById('ud-status-badge');
+    if(badge) { badge.className = `unit-status ${newStatus}`; badge.textContent = newStatus; badge.dataset.status = newStatus; }
+    // Update table badge
+    const tblBadge = document.getElementById('ustatus-' + unitId);
+    if(tblBadge) { tblBadge.className = `unit-status ${newStatus}`; tblBadge.textContent = newStatus; }
+    // Restyle buttons
+    ['available','reserved','sold'].forEach(s => {
+      const b = document.getElementById('ud-st-'+s);
+      if(b) b.className = `btn btn-sm ${s===newStatus?'btn-primary':'btn-secondary'}`;
+    });
+    toast(`Status updated → ${newStatus}`, 'success');
+  } catch(e) {
+    toast('Failed to update status', 'error');
+  } finally {
+    btns.forEach(b=>b.disabled=false);
+  }
+}
+
+async function saveUnitPriceFromPanel(projId, unitId) {
+  const inp = document.getElementById('ud-price-input');
+  if(!inp) return;
+  const price = Number(inp.value);
+  if(!price || isNaN(price)) { toast('Enter a valid price', 'error'); return; }
+  try {
+    const r = await fetch(`/api/v1/portal/developer/projects/${projId}/units/${unitId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({price})
+    });
+    if(!r.ok) throw new Error();
+    toast(`Price saved → OMR ${price.toLocaleString()}`, 'success');
+    renderInventoryGroups();
+  } catch(e) {
+    toast('Failed to save price', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// CERTIFICATES
+// ═══════════════════════════════════════════════════
+function renderCerts() {
+  const grid = document.getElementById('cert-grid');
+  if(!grid) return;
+  grid.innerHTML = CERT_CONFIG.map(c => `
+    <div class="cert-card ${c.status}" id="cert-${c.id}" onclick="triggerCertUpload('${c.id}')">
+      <div class="cert-icon">${c.icon}</div>
+      <div class="cert-name">${c.name}</div>
+      <div class="cert-desc">${c.desc}</div>
+      <div class="cert-status ${c.status}">
+        ${c.status === 'verified' ? '✅ AI Verified' : c.status === 'flagged' ? '⚠️ Needs Review' : '📤 Click to Upload'}
+      </div>
+      ${c.status !== 'pending' ? `<div style="margin-top:8px;font-size:11px;color:var(--gray-500)">${c.confidence}% confidence</div>` : ''}
+    </div>
+  `).join('');
+
+  // Auto-show AI panel for the first certificate to illustrate AI validation
+  setTimeout(() => showAIPanel(CERT_CONFIG[0]), 600);
+}
+
+function triggerCertUpload(id) {
+  const cert = CERT_CONFIG.find(c => c.id === id);
+  if(!cert) return;
+  const card = document.getElementById('cert-' + id);
+
+  // Simulate upload + AI analysis
+  card.className = 'cert-card uploading';
+  card.innerHTML = `<div class="cert-icon">${cert.icon}</div><div class="cert-name">${cert.name}</div>
+    <div style="position:relative;min-height:60px">
+      <div style="text-align:center;padding:10px"><div class="analyzing-pulse" style="margin:0 auto 8px"></div><div style="font-size:12px;color:var(--teal)">AI Analyzing…</div></div>
+    </div>`;
+
+  setTimeout(() => {
+    card.className = 'cert-card ' + cert.status;
+    renderCerts();
+    showAIPanel(cert);
+    toast(`${cert.name} validated — ${cert.confidence}% confidence`, cert.status === 'verified' ? 'success' : 'warning');
+  }, 2200);
+}
+
+function showAIPanel(cert) {
+  const panel = document.getElementById('ai-analysis-panel');
+  panel.classList.remove('hidden');
+  panel.innerHTML = `
+    <div class="ai-panel fade-in">
+      <div class="ai-panel-header">
+        <span style="font-size:20px">🤖</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--navy)">AI Document Analysis — ${cert.name}</div>
+          <div style="font-size:11px;color:var(--gray-500)">GPT-4o Vision · Google Vision OCR · ${new Date().toLocaleTimeString()}</div>
+        </div>
+        <span class="ai-badge">GPT-4o</span>
+        <span class="chip ${cert.status === 'verified' ? 'green' : 'amber'}" style="margin-left:auto">${cert.status === 'verified' ? '✅ Auto-Verified' : '⚠️ Manual Review'}</span>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--gray-700);margin-bottom:8px">Confidence Scores</div>
+        ${buildConfidenceBar('Document Authenticity', 97, 'high')}
+        ${buildConfidenceBar('Score Validation', cert.confidence, cert.confidence >= 90 ? 'high' : cert.confidence >= 75 ? 'medium' : 'low')}
+        ${buildConfidenceBar('Issuer Verification', 94, 'high')}
+        ${buildConfidenceBar('Expiry Check', 99, 'high')}
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--gray-700);margin-bottom:8px">AI Findings</div>
+        <div>${cert.findings.map(f => `<span class="finding-tag ${f.includes('⚠') || f.includes('flag') || f.includes('minor') ? 'warn' : 'pass'}">${f}</span>`).join('')}</div>
+      </div>
+      <div style="background:rgba(0,59,92,.04);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--gray-700);line-height:1.6">
+        <strong>AI Recommendation:</strong> ${cert.status === 'verified'
+          ? `Certificate validated with ${cert.confidence}% confidence. All key parameters confirmed. Unit qualifies for Sohar International ESG preferential financing rate. No manual review required.`
+          : `Certificate accepted but flagged for manual review (${cert.confidence}% confidence). Thermal bridging note requires physical inspection. Recommend Compliance Officer override if physical inspection satisfactory. Does not block loan approval.`
+        }
+      </div>
+      ${cert.status === 'flagged' ? `
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-secondary btn-sm" onclick="this.parentElement.remove();toast('Override requested','info')">Request Override</button>
+        <button class="btn btn-amber btn-sm" onclick="uploadCorrectedDoc('${cert.id}')">Re-upload Corrected Doc</button>
+      </div>` : ''}
+    </div>
+  `;
+
+  // Animate bars after render
+  setTimeout(() => {
+    panel.querySelectorAll('.confidence-bar').forEach(bar => {
+      const w = bar.getAttribute('data-w');
+      bar.style.width = w + '%';
+    });
+  }, 100);
+}
+
+function buildConfidenceBar(label, pct, cls) {
+  return `<div class="confidence-row">
+    <div class="confidence-label">${label}</div>
+    <div class="confidence-bar-wrap"><div class="confidence-bar ${cls}" style="width:0%" data-w="${pct}"></div></div>
+    <div class="confidence-pct">${pct}%</div>
+  </div>`;
+}
+
+function uploadCorrectedDoc(id) { toast('Document upload dialog opening…', 'info'); triggerCertUpload(id); }
+
+// ═══════════════════════════════════════════════════
+// PANELS & MODALS
+// ═══════════════════════════════════════════════════
+function openProjectPanel(proj) {
+  const titles = {ecovillage:'EcoVillage Muscat',greenpalms:'Green Palms Seeb',solarrise:'Solar Rise Barka'};
+  const subs = {ecovillage:'Al Mouj, Muscat · 24 units',greenpalms:'Seeb, Muscat · 36 units',solarrise:'Barka, Al Batinah · 36 units'};
+  document.getElementById('panel-proj-title').textContent = titles[proj] || proj;
+  document.getElementById('panel-proj-sub').textContent = subs[proj] || '';
+  document.getElementById('project-panel-overlay').classList.add('open');
+}
+
+function closePanel(id) { document.getElementById(id).classList.remove('open'); }
+function closePanelIfOutside(e) { if(e.target === e.currentTarget) e.currentTarget.classList.remove('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function switchTab(btn, targetId) {
+  const panel = btn.closest('.slide-panel') || btn.closest('.card') || document.body;
+  btn.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  // hide all sibling tab panes
+  const allPanes = ['ptab-overview','ptab-units','ptab-certs'];
+  allPanes.forEach(id => { const el = document.getElementById(id); if(el) el.style.display='none'; });
+  const target = document.getElementById(targetId);
+  if(target) target.style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════
+function publishInventory() { document.getElementById('publish-modal').classList.add('open'); }
+async function confirmPublish() {
+  closeModal('publish-modal');
+  const pid = window._activeProjectId;
+  if (!pid) { toast('Select a project first', 'error'); return; }
+  try {
+    const r = await fetch('/api/v1/portal/developer/projects/' + pid + '/publish', { method:'POST' });
+    const d = await r.json();
+    if (d.success || d.listing_visible) {
+      toast('✅ Project published — now visible to customers!', 'success');
+      loadProjects();
+    } else {
+      toast('⚠️ ' + (d.error || 'Publish failed'), 'error');
+    }
+  } catch(e) {
+    toast('⚠️ API error: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// PHASE 2 UNIT DATA (parsed from VillaSpecs.xlsx)
+// ═══════════════════════════════════════════════════
+// ── Canonical unit-type image URLs (blob-hosted, permanent) ──────────────
+const EV2_IMAGES = {
+  hero:   '/static/img/ev2_hero.jpg', // EV2 aerial render
+  typeA:  '/static/img/ev2_type_a.jpg', // Grand Family Villa
+  typeB:  '/static/img/ev2_type_b.jpg', // Compact Villa
+  typeC:  '/static/img/ev2_type_c.jpg', // Premium Signature Villa
+};
+
+const UNITS_P2 = [
+  {label:'EV-P2-A01',type:'Type A',area:340,bedrooms:4,price:195000,gsas:91,lat:23.6135,lng:58.5920,status:'available',image_url:EV2_IMAGES.typeA},
+  {label:'EV-P2-A02',type:'Type A',area:340,bedrooms:4,price:198000,gsas:91,lat:23.6140,lng:58.5928,status:'available',image_url:EV2_IMAGES.typeA},
+  {label:'EV-P2-A03',type:'Type A',area:342,bedrooms:4,price:200000,gsas:92,lat:23.6145,lng:58.5936,status:'available',image_url:EV2_IMAGES.typeA},
+  {label:'EV-P2-A04',type:'Type A',area:338,bedrooms:4,price:202000,gsas:91,lat:23.6150,lng:58.5944,status:'available',image_url:EV2_IMAGES.typeA},
+  {label:'EV-P2-A05',type:'Type A',area:340,bedrooms:4,price:205000,gsas:90,lat:23.6155,lng:58.5932,status:'available',image_url:EV2_IMAGES.typeA},
+  {label:'EV-P2-A06',type:'Type A',area:345,bedrooms:4,price:208000,gsas:92,lat:23.6160,lng:58.5940,status:'available',image_url:EV2_IMAGES.typeA},
+  {label:'EV-P2-A07',type:'Type A',area:340,bedrooms:4,price:210000,gsas:91,lat:23.6165,lng:58.5948,status:'available',image_url:EV2_IMAGES.typeA},
+  {label:'EV-P2-A08',type:'Type A',area:342,bedrooms:4,price:215000,gsas:91,lat:23.6170,lng:58.5956,status:'available',image_url:EV2_IMAGES.typeA},
+  {label:'EV-P2-B01',type:'Type B',area:280,bedrooms:3,price:165000,gsas:90,lat:23.6125,lng:58.5950,status:'available',image_url:EV2_IMAGES.typeB},
+  {label:'EV-P2-B02',type:'Type B',area:282,bedrooms:3,price:168000,gsas:91,lat:23.6130,lng:58.5958,status:'available',image_url:EV2_IMAGES.typeB},
+  {label:'EV-P2-B03',type:'Type B',area:280,bedrooms:3,price:170000,gsas:90,lat:23.6135,lng:58.5966,status:'available',image_url:EV2_IMAGES.typeB},
+  {label:'EV-P2-B04',type:'Type B',area:285,bedrooms:3,price:172000,gsas:91,lat:23.6140,lng:58.5974,status:'available',image_url:EV2_IMAGES.typeB},
+  {label:'EV-P2-B05',type:'Type B',area:280,bedrooms:3,price:175000,gsas:90,lat:23.6145,lng:58.5962,status:'available',image_url:EV2_IMAGES.typeB},
+  {label:'EV-P2-B06',type:'Type B',area:282,bedrooms:3,price:178000,gsas:91,lat:23.6150,lng:58.5970,status:'available',image_url:EV2_IMAGES.typeB},
+  {label:'EV-P2-C01',type:'Type C',area:420,bedrooms:5,price:310000,gsas:92,lat:23.6120,lng:58.5938,status:'available',image_url:EV2_IMAGES.typeC},
+  {label:'EV-P2-C02',type:'Type C',area:425,bedrooms:5,price:325000,gsas:93,lat:23.6125,lng:58.5946,status:'available',image_url:EV2_IMAGES.typeC},
+  {label:'EV-P2-C03',type:'Type C',area:418,bedrooms:5,price:338000,gsas:92,lat:23.6130,lng:58.5982,status:'available',image_url:EV2_IMAGES.typeC},
+  {label:'EV-P2-C04',type:'Type C',area:422,bedrooms:5,price:345000,gsas:93,lat:23.6135,lng:58.5990,status:'available',image_url:EV2_IMAGES.typeC},
+];
+
+// Wizard state
+let wizCurrentStep = 1;
+let wizProjectId = null;
+let wizDocsUploaded = {};
+let wizParsedData = null;
+let regMap = null;
+
+function wizSetStep(n) {
+  for(let i=1;i<=5;i++) {
+    document.getElementById('wiz-step-'+i).classList.toggle('hidden', i!==n);
+    const s = document.getElementById('reg-step-'+i);
+    s.className = 'publish-step' + (i<n?' done':i===n?' active':'');
+    s.querySelector('.publish-step-num').textContent = i<n ? '✓' : i;
+  }
+  wizCurrentStep = n;
+  if(n===5) { setTimeout(()=>initRegMap(), 200); }
+}
+
+function wizNext(from) {
+  if(from===1) {
+    const name = document.getElementById('reg-name').value.trim();
+    if(!name){ toast('Project name is required','error'); return; }
+    const dev = document.getElementById('reg-dev').value.trim();
+    if(!dev){ toast('Developer company name is required','error'); return; }
+    if(!document.getElementById('reg-gov').value){ toast('Please select a governorate','warning'); return; }
+    wizSetStep(2);
+  } else if(from===2) {
+    const uploaded = Object.keys(wizDocsUploaded).length;
+    if(uploaded < 3){ toast('Upload at least GSAS, EPC and EIA documents','warning'); return; }
+    wizSetStep(3);
+    runAiParse();
+  } else if(from===3) {
+    wizSetStep(4);
+    renderRegUnitsTable();
+  } else if(from===4) {
+    wizSetStep(5);
+    renderReviewSummary();
+  }
+}
+
+function wizBack(from) { wizSetStep(from-1); }
+
+// ── Hero image upload helpers ────────────────────────────────────────────
+window._heroImageBlobUrl = '';
+
+function switchImgTab(tab) {
+  const isUpload = tab==='upload';
+  document.getElementById('img-panel-upload').style.display = isUpload?'':'none';
+  document.getElementById('img-panel-url').style.display   = isUpload?'none':'';
+  document.getElementById('img-tab-upload').style.background = isUpload?'var(--navy)':'var(--gray-100)';
+  document.getElementById('img-tab-upload').style.color     = isUpload?'#fff':'var(--gray-600)';
+  document.getElementById('img-tab-url').style.background   = isUpload?'var(--gray-100)':'var(--navy)';
+  document.getElementById('img-tab-url').style.color        = isUpload?'var(--gray-600)':'#fff';
+}
+
+function previewHeroFromUrl(url) {
+  window._heroImageBlobUrl = '';
+  const img = document.getElementById('reg-img-preview');
+  if(url) { img.src = url; } else { img.src=''; img.style.display='none'; document.getElementById('reg-img-placeholder').style.display=''; }
+  document.getElementById('reg-img-clear').style.display = url?'':'none';
+  document.getElementById('reg-img-name').textContent = '';
+}
+
+function handleHeroFile(file) {
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    window._heroImageBlobUrl = e.target.result; // base64 data URL used as hero_image_url
+    const img = document.getElementById('reg-img-preview');
+    img.src = e.target.result;
+    document.getElementById('reg-img-clear').style.display = '';
+    document.getElementById('reg-img-name').textContent = '📎 ' + file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleHeroDrop(e) {
+  e.preventDefault();
+  document.getElementById('img-drop-zone').style.borderColor='var(--gray-300)';
+  const file = e.dataTransfer.files[0];
+  if(file && file.type.startsWith('image/')) handleHeroFile(file);
+}
+
+function clearHeroImage() {
+  window._heroImageBlobUrl = '';
+  const img = document.getElementById('reg-img-preview');
+  img.src=''; img.style.display='none';
+  document.getElementById('reg-img-placeholder').style.display='';
+  document.getElementById('reg-img-clear').style.display='none';
+  document.getElementById('reg-img-name').textContent='';
+  const urlInput = document.getElementById('reg-image-url');
+  if(urlInput) urlInput.value='';
+  const fileInput = document.getElementById('reg-image-file');
+  if(fileInput) fileInput.value='';
+}
+
+// Replace unit-type image (updates UNITS_P2 entries + preview)
+function replaceTypeImg(typeKey, file) {
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    const previewEl = document.getElementById('type-'+typeKey+'-preview');
+    if(previewEl) { previewEl.src = dataUrl; previewEl.style.display='block'; }
+    // Update all UNITS_P2 entries for this type
+    const key = 'Type '+typeKey.toUpperCase();
+    UNITS_P2.forEach(u => { if(u.type===key) u.image_url = dataUrl; });
+    toast('Type '+typeKey.toUpperCase()+' image updated ('+UNITS_P2.filter(u=>u.type===key).length+' units)','success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetWizard() {
+  wizCurrentStep = 1; wizProjectId = null; wizDocsUploaded = {}; wizParsedData = null; regMap = null;
+  ['reg-name','reg-location','reg-completion','reg-price-from','reg-price-to','reg-tagline','reg-dev','reg-cr'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  ['reg-gov','reg-type'].forEach(id=>{ const el=document.getElementById(id); if(el) el.selectedIndex=0; });
+  ['solar','grey','roof','hvac','glazing','ev'].forEach(k=>{ const el=document.getElementById('feat-'+k); if(el) el.checked=false; });
+  clearHeroImage();
+  // Restore canonical type images in UNITS_P2 and previews
+  UNITS_P2.forEach(u => {
+    if(u.type==='Type A') u.image_url = EV2_IMAGES.typeA;
+    else if(u.type==='Type B') u.image_url = EV2_IMAGES.typeB;
+    else if(u.type==='Type C') u.image_url = EV2_IMAGES.typeC;
+  });
+  ['a','b','c'].forEach(k => {
+    const el=document.getElementById('type-'+k+'-preview');
+    if(el){el.src=EV2_IMAGES['type'+k.toUpperCase()];el.style.display='block';}
+  });
+  wizSetStep(1);
+  toast('Form reset — ready for new project','info');
+}
+
+// ── Pre-Fill wizard step with EcoVillage Phase 2 demo data ───────────────
+function prefillWizardStep(step) {
+  if(step === 1) {
+    // Project Info
+    document.getElementById('reg-name').value = 'EcoVillage Phase 2 – Seeb';
+    document.getElementById('reg-gov').value = 'Muscat';
+    document.getElementById('reg-location').value = 'Al Muna, Seeb, Muscat Governorate';
+    document.getElementById('reg-units').value = '18';
+    document.getElementById('reg-completion').value = 'Q4 2027';
+    document.getElementById('reg-price-from').value = '165000';
+    document.getElementById('reg-price-to').value = '345000';
+    document.getElementById('reg-tagline').value = "Oman's first GSAS Platinum eco-villa community — net-zero energy, biophilic design";
+    document.getElementById('reg-dev').value = 'Al Madaen Real Estate Development Co.';
+    document.getElementById('reg-cr').value = 'CR/2019/00487';
+    document.getElementById('reg-type').value = 'villa';
+    // Green features
+    ['solar','grey','roof','hvac','glazing','ev'].forEach(k => {
+      const el = document.getElementById('feat-'+k); if(el) el.checked = true;
+    });
+    // Hero image — inform user which file to upload; do not simulate
+    toast('Step 1 pre-filled ✓', 'success');
+    setTimeout(() => toast('Hero image: upload an aerial photo or render of your project (JPG/PNG, 1200×800 px recommended). Use the "Upload File" tab on the left.', 'info', 9000), 400);
+
+  } else if(step === 2) {
+    // Documents — show which files are needed; do NOT simulate uploads
+    toast('Step 2 — upload these 5 files by clicking each card:', 'info', 9000);
+    setTimeout(() => toast('1 · GSAS Certificate PDF  |  2 · EPC Report PDF  |  3 · EIA Clearance PDF', 'info', 10000), 500);
+    setTimeout(() => toast('4 · Project Brochure PDF  |  5 · Villa Specifications XLSX', 'info', 10000), 1100);
+
+  } else if(step === 3) {
+    // AI Parsing — inject parsed results immediately
+    const body = document.getElementById('ai-parse-body');
+    if(!body) return;
+    wizParsedData = {
+      gsas_score: 91, gsas_rating: 'Gold', epc_rating: 'A+',
+      eia_reference: 'EA/EIA/2026/MSC/0887',
+      price_from: 165000, price_to: 345000
+    };
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--success);margin-bottom:10px">🏆 GSAS Certificate</div>
+          <div style="font-size:12px;display:flex;flex-direction:column;gap:5px">
+            <div><span style="color:var(--gray-500)">Rating:</span> <strong>Gold</strong></div>
+            <div><span style="color:var(--gray-500)">Score:</span> <strong>91 / 100</strong></div>
+            <div><span style="color:var(--gray-500)">Issued:</span> <strong>2026-06-14</strong></div>
+            <div><span style="color:var(--gray-500)">Authority:</span> <strong>Gulf Organisation for Research &amp; Development</strong></div>
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--success)">✅ Auto-verified · 97% confidence</div>
+        </div>
+        <div style="background:rgba(0,127,134,.06);border:1px solid rgba(0,127,134,.2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:10px">⚡ Energy Performance Certificate</div>
+          <div style="font-size:12px;display:flex;flex-direction:column;gap:5px">
+            <div><span style="color:var(--gray-500)">Rating:</span> <strong>A+</strong></div>
+            <div><span style="color:var(--gray-500)">Energy Use:</span> <strong>43 kWh/m²/yr</strong></div>
+            <div><span style="color:var(--gray-500)">CO₂:</span> <strong>12 kg/m²/yr</strong></div>
+            <div><span style="color:var(--gray-500)">Solar PV:</span> <strong>18 kWp per villa</strong></div>
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--success)">✅ Auto-verified · 95% confidence</div>
+        </div>
+        <div style="background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--success);margin-bottom:10px">🌿 EIA Clearance</div>
+          <div style="font-size:12px;display:flex;flex-direction:column;gap:5px">
+            <div><span style="color:var(--gray-500)">Reference:</span> <strong>EA/EIA/2026/MSC/0887</strong></div>
+            <div><span style="color:var(--gray-500)">Authority:</span> <strong>Ministry of Environment, Oman</strong></div>
+            <div><span style="color:var(--gray-500)">Valid Until:</span> <strong>2029-12-31</strong></div>
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--success)">✅ Auto-verified · 99% confidence</div>
+        </div>
+        <div style="background:rgba(243,156,18,.06);border:1px solid rgba(243,156,18,.2);border-radius:8px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:#C8891A;margin-bottom:10px">📊 Villa Specs (Excel)</div>
+          <div style="font-size:12px;display:flex;flex-direction:column;gap:5px">
+            <div><span style="color:var(--gray-500)">Units parsed:</span> <strong>18 villas</strong></div>
+            <div><span style="color:var(--gray-500)">Types:</span> <strong>A (8) · B (6) · C (4)</strong></div>
+            <div><span style="color:var(--gray-500)">Price range:</span> <strong>OMR 165K – 345K</strong></div>
+            <div><span style="color:var(--gray-500)">GPS coords:</span> <strong>All 18 units</strong></div>
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--success)">✅ All fields extracted · 94% confidence</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;background:rgba(0,59,92,.04);border-radius:8px;padding:12px;font-size:12px">
+        <strong>📋 AI Summary:</strong> All 5 documents verified. EcoVillage Phase 2 qualifies for <strong>Green Home Loan premium tier</strong>
+        (GSAS Gold, EPC A+, EIA cleared). Suggested green discount: <strong>−0.5% interest rate</strong>.
+        Unit inventory of 18 villas ready to import.
+      </div>`;
+    const nextBtn = document.getElementById('wiz-step3-next');
+    if(nextBtn) { nextBtn.style.display=''; nextBtn.classList.remove('hidden'); }
+    toast('Step 3 pre-filled — AI analysis results injected ✓', 'success');
+
+  } else if(step === 4) {
+    // Inventory — already populated from UNITS_P2, just confirm
+    toast('Step 4: Inventory is auto-populated from unit data. Review the 18 villas below ✓', 'info');
+
+  } else if(step === 5) {
+    // Review — already rendered, just confirm
+    toast('Step 5: Review summary populated from your project data. Click Register & Publish when ready ✓', 'info');
+  }
+}
+
+function handleDocFile(docType, input) {
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const card     = document.getElementById('doc-'+docType);
+  const statusEl = document.getElementById('doc-'+docType+'-status');
+  card.className    = 'cert-card uploading';
+  statusEl.className = 'cert-status analyzing';
+  statusEl.textContent = '⏳ Reading file…';
+
+  // Use FileReader to confirm the file is accessible (no server upload needed for demo)
+  const reader = new FileReader();
+  reader.onload = () => {
+    const sizeKB = (file.size / 1024).toFixed(0);
+    wizDocsUploaded[docType] = { filename: file.name, size: sizeKB + ' KB', file };
+    card.className    = 'cert-card verified';
+    statusEl.className = 'cert-status verified';
+    statusEl.textContent = '✅ ' + file.name + ' (' + sizeKB + ' KB)';
+    const count = Object.keys(wizDocsUploaded).length;
+    toast(`${file.name} ready (${count}/5)`, 'success');
+    // Reset input so the same file can be re-selected if needed
+    input.value = '';
+  };
+  reader.onerror = () => {
+    card.className    = 'cert-card flagged';
+    statusEl.className = 'cert-status pending';
+    statusEl.textContent = '❌ Could not read file — try again';
+    input.value = '';
+  };
+  // Read first 4 KB just to verify readability; we don't need the full content
+  reader.readAsArrayBuffer(file.slice(0, 4096));
+}
+
+function runAiParse() {
+  const body = document.getElementById('ai-parse-body');
+  const docs = Object.keys(wizDocsUploaded);
+  let step = 0;
+  const steps = [
+    {label:'OCR extraction — GSAS Certificate…', delay:900},
+    {label:'Parsing EPC energy data…', delay:800},
+    {label:'Validating EIA authority reference…', delay:700},
+    {label:'Reading villa specs Excel (18 rows)…', delay:900},
+    {label:'Cross-referencing GPS coordinates…', delay:600},
+    {label:'Computing ESG composite score…', delay:500},
+  ];
+  let html = `<div style="margin-bottom:12px"><div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:10px">Processing ${docs.length} documents…</div><div id="parse-log" style="font-size:12px;color:var(--gray-700);display:flex;flex-direction:column;gap:6px"></div></div>`;
+  body.innerHTML = html;
+  const log = document.getElementById('parse-log');
+  function nextStep() {
+    if(step >= steps.length) { showParseResults(body, log); return; }
+    const s = steps[step++];
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(0,127,134,.05);border-radius:4px';
+    row.innerHTML = `<div class="analyzing-pulse" style="width:14px;height:14px;border-width:2px;flex-shrink:0"></div><span>${s.label}</span>`;
+    log.appendChild(row);
+    setTimeout(() => { row.innerHTML = `<span style="color:#27AE60;font-size:14px">✓</span><span>${s.label}</span>`; nextStep(); }, s.delay);
+  }
+  nextStep();
+}
+
+function showParseResults(body, log) {
+  wizParsedData = {gsas_score:91, epc_rating:'A+', eia_ref:'EA/EIA/2026/MSC/0887', gsas_ref:'GSAS-2026-112', primary_energy:43, units:18};
+  const resultsHtml = `
+    <div class="ai-panel fade-in" style="margin-top:12px">
+      <div class="ai-panel-header"><span style="font-size:20px">🤖</span>
+        <div><div style="font-size:14px;font-weight:700;color:var(--navy)">AI Extraction Complete</div>
+        <div style="font-size:11px;color:var(--gray-500)">5 documents · 18 units · GPT-4o Vision</div></div>
+        <span class="chip green" style="margin-left:auto">✅ All Verified</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+        <div style="background:#fff;border:1px solid var(--gray-200);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:var(--success)">91</div>
+          <div style="font-size:11px;color:var(--gray-500)">GSAS Score</div>
+          <span class="chip green" style="margin-top:4px;font-size:10px">GOLD Tier</span>
+        </div>
+        <div style="background:#fff;border:1px solid var(--gray-200);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:var(--teal)">A+</div>
+          <div style="font-size:11px;color:var(--gray-500)">EPC Rating</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:2px">43 kWh/m²/yr</div>
+        </div>
+        <div style="background:#fff;border:1px solid var(--gray-200);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:var(--navy)">18</div>
+          <div style="font-size:11px;color:var(--gray-500)">Units parsed</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:2px">3 types (A/B/C)</div>
+        </div>
+      </div>
+      ${buildConfidenceBar('GSAS Authenticity',98,'high')}
+      ${buildConfidenceBar('EPC Data Extraction',97,'high')}
+      ${buildConfidenceBar('EIA Reference Match',99,'high')}
+      ${buildConfidenceBar('Unit Inventory Parse',96,'high')}
+      <div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.3);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--gray-700);margin-top:12px;line-height:1.6">
+        <strong>AI Recommendation:</strong> All 5 documents verified. GSAS score 91 qualifies for <strong>0.75% premium green discount</strong> (rate: 4.75%). EIA reference EA/EIA/2026/MSC/0887 confirmed with Environment Authority. 18 units auto-populated. Ready for inventory review.
+      </div>
+    </div>`;
+  body.innerHTML += resultsHtml;
+  setTimeout(() => {
+    body.querySelectorAll('.confidence-bar').forEach(bar => { bar.style.width = bar.getAttribute('data-w')+'%'; });
+  }, 100);
+  document.getElementById('wiz-step3-next').classList.remove('hidden');
+  setTimeout(() => {
+    body.querySelectorAll('.confidence-bar').forEach(bar => { bar.style.width = bar.getAttribute('data-w')+'%'; });
+  }, 100);
+}
+
+function renderRegUnitsTable() {
+  const tbody = document.getElementById('reg-units-tbody');
+  if(!tbody) return;
+  tbody.innerHTML = UNITS_P2.map((u,i) => `<tr>
+    <td style="color:var(--gray-500)">${i+1}</td>
+    <td><strong>${u.label}</strong></td>
+    <td>${u.type}</td>
+    <td>${u.area}</td>
+    <td>${u.bedrooms}</td>
+    <td>${u.price.toLocaleString()}</td>
+    <td><span class="gsas-score excellent">${u.gsas}</span></td>
+    <td style="font-size:10px;color:var(--gray-500)">${u.lat.toFixed(4)}, ${u.lng.toFixed(4)}</td>
+    <td><span class="unit-status available">Available</span></td>
+  </tr>`).join('');
+  const total = UNITS_P2.reduce((s,u)=>s+u.price,0);
+  document.getElementById('inv-total').textContent = UNITS_P2.length;
+  document.getElementById('inv-value').textContent = 'OMR ' + (total/1000000).toFixed(1)+'M';
+  const avgGsas = Math.round(UNITS_P2.reduce((s,u)=>s+u.gsas,0)/UNITS_P2.length);
+  document.getElementById('inv-gsas').textContent = avgGsas;
+}
+
+function renderReviewSummary() {
+  const name = document.getElementById('reg-name').value;
+  const loc  = document.getElementById('reg-location').value;
+  document.getElementById('review-summary').innerHTML = `
+    <img src="/static/img/wizard_preview.jpg" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:12px" onerror="this.style.display='none'"/>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Project</span><span style="font-weight:600">${name}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Location</span><span style="font-weight:600">${loc}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Units</span><span style="font-weight:600">18 villas (A/B/C)</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Price range</span><span style="font-weight:600">OMR 165K – 345K</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Documents</span><span style="font-weight:600">${Object.keys(wizDocsUploaded).length}/5 uploaded</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0"><span style="color:var(--gray-500)">Green Rate</span><span style="font-weight:700;color:var(--success)">4.75% (0.75% discount)</span></div>
+    </div>`;
+  document.getElementById('review-esg').innerHTML = `
+    <div style="text-align:center;padding:8px 0 16px">
+      <div style="font-size:56px;font-weight:900;color:var(--success);line-height:1">91</div>
+      <div style="font-size:13px;color:var(--gray-500);margin-bottom:4px">GSAS Score · GOLD Tier</div>
+      <span class="chip green">🏆 Premium Eligible</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">GSAS Ref</span><span style="font-weight:600">GSAS-2026-112</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">EPC Rating</span><span style="font-weight:600;color:var(--teal)">A+</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Primary Energy</span><span style="font-weight:600">43 kWh/m²/yr</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">EIA Reference</span><span style="font-weight:600">EA/EIA/2026/MSC/0887</span></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0"><span style="color:var(--gray-500)">GSAS Valid Until</span><span style="font-weight:600">2029-03-10</span></div>
+    </div>`;
+}
+
+function initRegMap() {
+  if(regMap) return;
+  regMap = initMap('reg-map', true);
+}
+
+async function wizSaveDraft() {
+  await doRegisterProject(false);
+}
+
+async function wizPublish() {
+  const ok = await doRegisterProject(true);
+  if(ok) {
+    document.getElementById('wiz-publish-btn').textContent = '✅ Published!';
+    document.getElementById('wiz-publish-btn').disabled = true;
+  }
+}
+
+async function doRegisterProject(publish) {
+  const name = document.getElementById('reg-name').value.trim();
+  const loc  = document.getElementById('reg-location').value.trim();
+  const gov  = document.getElementById('reg-gov').value;
+  const type = document.getElementById('reg-type').value;
+  const pf   = document.getElementById('reg-price-from').value;
+  const pt   = document.getElementById('reg-price-to').value;
+  const tag  = document.getElementById('reg-tagline').value;
+  // Hero image: prefer file-uploaded blob URL, then URL tab input
+  const imgUrl = window._heroImageBlobUrl
+    || document.getElementById('reg-image-url').value.trim()
+    || '';
+  // collect green features from checkboxes
+  const featMap = {solar:'Solar PV',grey:'Greywater Recycling',roof:'Green Roof Gardens',hvac:'HVAC SEER ≥18',glazing:'Triple Glazing',ev:'EV Charging'};
+  const amenities = Object.entries(featMap).filter(([k])=>document.getElementById('feat-'+k)?.checked).map(([,v])=>v);
+  const btn = document.getElementById('wiz-publish-btn');
+  if(btn) { btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Processing…'; }
+  try {
+    const r = await fetch('/api/v1/portal/developer/projects', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name, location:loc, governorate:gov, type, total_units:18,
+        available_units:18, price_from:parseFloat(pf), price_to:parseFloat(pt),
+        marketing_tagline:tag, hero_image_url:imgUrl,
+        gsas_score: wizParsedData?.gsas_score||91,
+        gsas_rating:'Gold', epc_rating: wizParsedData?.epc_rating||'A+',
+        eia_reference: wizParsedData?.eia_ref||'EA/EIA/2026/MSC/0887',
+        green_eligible:1, premium_tier:1,
+        amenities: JSON.stringify(amenities),
+        completion_date:'Q4 2027'
+      })
+    });
+    const d = await r.json();
+    if(!(d.id||d.success)) { toast('Registration failed: '+(d.error||'unknown'),'error'); if(btn){btn.disabled=false;btn.innerHTML='📤 Register & Publish to Bank';} return false; }
+    const pid = d.id;
+    wizProjectId = pid;
+    window._activeProjectId = pid;
+    // Create units (with per-type image_url)
+    for(const u of UNITS_P2) {
+      await fetch('/api/v1/portal/developer/projects/'+pid+'/units', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({unit_number:u.label, type:u.type, area_sqm:u.area, bedrooms:u.bedrooms, price:u.price, lat:u.lat, lng:u.lng, gsas_score:u.gsas, status:'available', image_url:u.image_url||'', features:JSON.stringify(['Solar PV','Green Roof','High-Eff HVAC'])})
+      });
+    }
+    // Set EV2 hero image if none was explicitly uploaded
+    if (!imgUrl) {
+      await fetch('/api/v1/portal/developer/projects/'+pid, {
+        method:'PATCH', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({hero_image_url: EV2_IMAGES.hero})
+      }).catch(()=>{}); // best-effort; fallback also in 0004 migration
+    }
+    if(publish) {
+      await fetch('/api/v1/portal/developer/projects/'+pid+'/publish', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+      toast('🎉 Project registered and published to bank portal!','success');
+    } else {
+      toast('💾 Project saved as draft','success');
+    }
+    loadProjects();
+    return true;
+  } catch(e) { toast('API error: '+e.message,'error'); if(btn){btn.disabled=false;btn.innerHTML='📤 Register & Publish to Bank';} return false; }
+}
+
+// ═══════════════════════════════════════════════════
+// SALES STRATEGY
+// ═══════════════════════════════════════════════════
+let salesUnits = [];   // flat array of all units across all projects
+let salesProjects = [];
+let campaigns = [
+  {id:1, name:'EV2 Launch Promo', discount:3, units:'All Type A', start:'2026-09-01', end:'2026-11-30', status:'active'},
+  {id:2, name:'Q4 Type C Premium', discount:2, units:'Type C only', start:'2026-10-01', end:'2026-12-31', status:'scheduled'},
+];
+
+async function renderSalesStrategy() {
+  // Load projects + units once
+  try {
+    const rp = await fetch('/api/v1/portal/developer/projects');
+    const dp = await rp.json();
+    salesProjects = dp.projects || [];
+    salesUnits = [];
+    for (const proj of salesProjects) {
+      const ru = await fetch(`/api/v1/portal/developer/projects/${proj.id}/units`);
+      const du = await ru.json();
+      (du.units||[]).forEach(u => salesUnits.push({...u, projectName: proj.name}));
+    }
+  } catch(e) { console.error('renderSalesStrategy fetch', e); }
+
+  // KPIs
+  const total = salesUnits.length;
+  const av = salesUnits.filter(u=>u.status==='available').length;
+  const re = salesUnits.filter(u=>u.status==='reserved').length;
+  const so = salesUnits.filter(u=>u.status==='sold').length;
+  const absorption = total ? Math.round(((re+so)/total)*100) : 0;
+  const portfolio = salesUnits.reduce((s,u)=>s+(u.price||0),0);
+  const set = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('kpi-total-units', total);
+  set('kpi-available', av);
+  set('kpi-reserved', re);
+  set('kpi-sold', so);
+  set('kpi-absorption', absorption+'%');
+  set('kpi-absorption-delta', absorption>50?'↑ Strong velocity':'↗ Building momentum');
+  set('kpi-portfolio', total ? 'OMR '+(portfolio/1000000).toFixed(1)+'M' : '—');
+
+  // Price matrix: group by type
+  const byType = {};
+  salesUnits.forEach(u => {
+    const t = u.type||'Other';
+    if(!byType[t]) byType[t]={type:t,units:[],prices:[]};
+    byType[t].units.push(u);
+    if(u.price) byType[t].prices.push(Number(u.price));
+  });
+  const tbody = document.getElementById('price-matrix-tbody');
+  if(tbody) {
+    tbody.innerHTML = Object.values(byType).map(g => {
+      const avg = g.prices.length ? Math.round(g.prices.reduce((a,b)=>a+b,0)/g.prices.length) : 0;
+      const base = g.prices.length ? Math.min(...g.prices) : 0;
+      const avgArea = g.units.length ? Math.round(g.units.reduce((s,u)=>s+(u.area_sqm||0),0)/g.units.length) : 0;
+      return `<tr>
+        <td><strong>${g.type}</strong></td>
+        <td>${g.units.length}</td>
+        <td>${avgArea} m²</td>
+        <td class="price-cell" onclick="editBasePrice('${g.type}',${base})">OMR ${base.toLocaleString()}</td>
+        <td>OMR ${avg.toLocaleString()}</td>
+        <td><span class="chip gray">0%</span></td>
+        <td><button class="btn btn-secondary btn-sm" onclick="applyTypeDiscount('${g.type}')">Set Discount</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--gray-500)">No units found</td></tr>';
+  }
+
+  // Absorption bars
+  const absDiv = document.getElementById('absorption-chart');
+  if(absDiv) {
+    const bars = Object.values(byType).map(g => {
+      const pct = g.units.length ? Math.round(((g.units.filter(u=>u.status!=='available').length)/g.units.length)*100) : 0;
+      const col = pct>=70?'#2ECC71':pct>=40?'#F39C12':'#007F86';
+      return `<div class="abs-bar-wrap">
+        <div class="abs-bar-label">${g.type}</div>
+        <div class="abs-bar-track">
+          <div class="abs-bar-fill" style="width:${pct}%;background:${col}">
+            <span class="abs-bar-pct">${pct}%</span>
+          </div>
+        </div>
+        <span style="font-size:11px;color:var(--gray-500);width:50px;flex-shrink:0">${g.units.filter(u=>u.status!=='available').length}/${g.units.length}</span>
+      </div>`;
+    });
+    absDiv.innerHTML = bars.length ? bars.join('') : '<div style="color:var(--gray-500);text-align:center;padding:20px">No data</div>';
+  }
+
+  // Campaigns
+  renderCampaigns();
+
+  // Pipeline (load applications)
+  try {
+    const ra = await fetch('/api/v1/portal/applications');
+    const da = await ra.json();
+    renderPipeline(da.applications || []);
+  } catch { renderPipeline([]); }
+}
+
+function renderCampaigns() {
+  const list = document.getElementById('campaigns-list');
+  const count = document.getElementById('campaign-count');
+  const active = campaigns.filter(c=>c.status==='active').length;
+  if(count) count.textContent = active + ' active';
+  if(!list) return;
+  if(!campaigns.length) { list.innerHTML='<div style="text-align:center;color:var(--gray-500);padding:16px">No campaigns yet.</div>'; return; }
+  list.innerHTML = campaigns.map(c => `
+    <div class="campaign-card">
+      <div style="font-size:22px">${c.status==='active'?'🚀':c.status==='scheduled'?'📅':'📦'}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:13px;color:var(--navy)">${c.name}</div>
+        <div style="font-size:11px;color:var(--gray-500)">${c.start} → ${c.end} · ${c.units}</div>
+      </div>
+      <span class="chip ${c.discount>=5?'green':'blue'}" style="font-size:13px;font-weight:800">${c.discount}% off</span>
+      <span class="campaign-badge ${c.status}">${c.status}</span>
+      <button class="btn btn-secondary btn-sm" onclick="deleteCampaign(${c.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+function renderPipeline(apps) {
+  const tbody = document.getElementById('pipeline-tbody');
+  if(!tbody) return;
+  if(!apps.length) {
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gray-500)">No loan applications linked yet.</td></tr>';
+    return;
+  }
+  const statusColor = {approved:'green',pending:'amber',rejected:'gray'};
+  tbody.innerHTML = apps.map(a => `<tr>
+    <td><strong>${a.id}</strong></td>
+    <td>${a.applicant_name||'—'}</td>
+    <td>${a.unit_id||'—'}</td>
+    <td>${a.project_id||'—'}</td>
+    <td>${a.loan_amount ? Number(a.loan_amount).toLocaleString() : '—'}</td>
+    <td>${a.interest_rate ? Number(a.interest_rate).toFixed(2)+'%' : '—'}</td>
+    <td><span class="chip ${statusColor[a.status]||'gray'}">${a.status||'—'}</span></td>
+    <td style="font-size:11px;color:var(--gray-500)">${a.created_at?a.created_at.slice(0,10):'—'}</td>
+  </tr>`).join('');
+}
+
+function editBasePrice(type, current) {
+  const np = prompt(`New base price for ${type} (OMR):`, current);
+  if(np && !isNaN(np)) toast(`Base price for ${type} updated to OMR ${Number(np).toLocaleString()}`, 'success');
+}
+
+function applyTypeDiscount(type) {
+  const pct = prompt(`Discount % for ${type} units (e.g. 5):`, '0');
+  if(pct && !isNaN(pct)) toast(`${pct}% discount applied to ${type} units`, 'success');
+}
+
+function openBulkPriceModal() {
+  const pct = prompt('Adjust all unit prices by % (e.g. +5 or -3):', '0');
+  if(pct && !isNaN(pct)) toast(`Bulk price adjustment of ${pct}% applied to all units`, 'success');
+}
+
+function openNewCampaignModal() {
+  const name = prompt('Campaign name:');
+  if(!name) return;
+  const disc = prompt('Discount % (e.g. 5):','5');
+  const start = prompt('Start date (YYYY-MM-DD):','2026-10-01');
+  const end = prompt('End date (YYYY-MM-DD):','2026-12-31');
+  const units = prompt('Target units (e.g. All Type A, or All):','All');
+  campaigns.push({id: Date.now(), name, discount:Number(disc)||5, units, start, end, status:'scheduled'});
+  renderCampaigns();
+  toast(`Campaign "${name}" created`, 'success');
+}
+
+function deleteCampaign(id) {
+  campaigns = campaigns.filter(c=>c.id!==id);
+  renderCampaigns();
+  toast('Campaign removed','info');
+}
+
+// ═══════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════
+function toast(msg, type='info', duration=4000) {
+  const icons = {success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+async function loadProjects() {
+  try {
+    const r = await fetch('/api/v1/portal/developer/projects');
+    const d = await r.json();
+    const projects = d.projects || [];
+    const total = projects.length;
+    const published = projects.filter(p => p.listing_visible === 1 || p.status === 'active').length;
+    const draft    = projects.filter(p => p.status === 'draft').length;
+    const units    = projects.reduce((s,p) => s + (p.total_units||0), 0);
+    const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+    set('stat-projects', total);
+    set('stat-units', units);
+    set('stat-published', published);
+    set('stat-status', draft > 0 ? draft + ' draft' : 'All live');
+    set('anal-total', total);
+    set('anal-published', published);
+    set('anal-draft', draft);
+    set('anal-units', units);
+    const nb = document.getElementById('nav-badge-projects');
+    if (nb) nb.textContent = total || 0;
+    const grid = document.getElementById('project-grid');
+    if (grid) {
+      if (!total) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--gray-500)">No projects yet. Register your first project.</div>';
+      } else {
+        grid.innerHTML = projects.map(p => {
+          const isLive = p.listing_visible === 1 || p.status === 'active';
+          return `<div class="project-card${isLive?' active-project':''}" onclick="selectProject('${p.id}')">
+            <div class="project-img" style="${p.hero_image_url?'background:none':'background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%)'};position:relative;overflow:hidden">
+              ${p.hero_image_url?`<img src="${p.hero_image_url}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>`:'<div class="project-img-icon">🏗️</div>'}
+              <div class="project-img-overlay" style="position:absolute;inset:0"></div>
+              <span class="project-status-badge badge-${isLive?'active':p.status||'draft'}" style="position:absolute;top:10px;right:10px;z-index:2">${(p.status||'draft').toUpperCase()}</span>
+            </div>
+            <div class="project-body">
+              <div class="project-name">${p.name}</div>
+              <div class="project-location">📍 ${p.location||p.city||'Muscat'}</div>
+              <div class="project-meta">
+                <div class="project-meta-item"><div class="project-meta-label">Units</div><div class="project-meta-value">${p.total_units||0}</div></div>
+                <div class="project-meta-item"><div class="project-meta-label">GSAS</div><div class="project-meta-value">${p.gsas_score||'—'}</div></div>
+              </div>
+              <div class="project-progress"><div style="font-size:11px;color:var(--gray-500);margin-bottom:3px">${isLive?'Published':'Setup progress'}</div>
+                <div class="progress-bar-wrap"><div class="progress-bar" style="width:${isLive?100:40}%"></div></div>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+  } catch(e) { console.error('loadProjects', e); }
+}
+
+async function selectProject(id) {
+  window._activeProjectId = id;
+  // Load project + units from API
+  try {
+    const [rp, ru] = await Promise.all([
+      fetch('/api/v1/portal/developer/projects').then(r=>r.json()),
+      fetch('/api/v1/portal/developer/projects/'+id+'/units').then(r=>r.json())
+    ]);
+    const proj = (rp.projects||[]).find(p=>p.id===id) || {};
+    const units = ru.units || [];
+
+    // Fill panel header
+    document.getElementById('panel-proj-title').textContent = proj.name || id;
+    document.getElementById('panel-proj-sub').textContent =
+      (proj.location||'Muscat') + ' · ' + (proj.total_units||units.length||0) + ' units';
+
+    // Overview tab — dynamic
+    const av = units.filter(u=>u.status==='available').length;
+    const re = units.filter(u=>u.status==='reserved').length;
+    const so = units.filter(u=>u.status==='sold').length;
+    const isLive = proj.listing_visible===1||proj.status==='active';
+    document.getElementById('ptab-overview').innerHTML = `
+      <div style="margin-bottom:12px;border-radius:8px;overflow:hidden;height:130px;background:var(--gray-100)">
+        ${proj.hero_image_url
+          ? `<img src="${proj.hero_image_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`
+          : `<div style="width:100%;height:100%;background:linear-gradient(135deg,var(--navy),var(--teal));display:flex;align-items:center;justify-content:center;font-size:40px">🏗️</div>`}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+        <div style="text-align:center;background:rgba(46,204,113,.08);border-radius:6px;padding:8px"><div style="font-size:20px;font-weight:800;color:#27AE60">${av}</div><div style="font-size:10px;color:var(--gray-500)">Available</div></div>
+        <div style="text-align:center;background:rgba(243,156,18,.08);border-radius:6px;padding:8px"><div style="font-size:20px;font-weight:800;color:#C8891A">${re}</div><div style="font-size:10px;color:var(--gray-500)">Reserved</div></div>
+        <div style="text-align:center;background:rgba(0,59,92,.08);border-radius:6px;padding:8px"><div style="font-size:20px;font-weight:800;color:var(--navy)">${so}</div><div style="font-size:10px;color:var(--gray-500)">Sold</div></div>
+        <div style="text-align:center;background:rgba(0,127,134,.08);border-radius:6px;padding:8px"><div style="font-size:20px;font-weight:800;color:var(--teal)">${proj.gsas_score||'—'}</div><div style="font-size:10px;color:var(--gray-500)">GSAS</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;font-size:12px">
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Developer</span><span style="font-weight:600">${proj.developer_name||'Al Madaen Real Estate'}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Type</span><span style="font-weight:600;text-transform:capitalize">${proj.type||'—'}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Price Range</span><span style="font-weight:600">${proj.price_from?'OMR '+Number(proj.price_from).toLocaleString()+' – '+Number(proj.price_to).toLocaleString():'—'}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100)"><span style="color:var(--gray-500)">Status</span><span class="chip ${isLive?'green':'gray'}" style="font-size:10px">${isLive?'Published':'Draft'}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0"><span style="color:var(--gray-500)">Tagline</span><span style="font-weight:500;font-style:italic;color:var(--gray-600);max-width:60%;text-align:right">${proj.marketing_tagline||'—'}</span></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="closePanel('project-panel-overlay');showPage('map')">🗺️ View on Map</button>`;
+
+    // Units tab — live data
+    document.getElementById('ptab-units').innerHTML = units.length
+      ? `<table class="inv-table"><thead><tr><th>Unit #</th><th>Type</th><th>Area m²</th><th>Beds</th><th>Price (OMR)</th><th>GSAS</th><th>Status</th></tr></thead><tbody>
+          ${units.map(u=>`<tr>
+            <td><strong>${u.unit_number||u.id}</strong></td>
+            <td>${u.type||'—'}</td>
+            <td>${u.area_sqm||'—'}</td>
+            <td>${u.bedrooms||'—'}</td>
+            <td>${u.price?Number(u.price).toLocaleString():'—'}</td>
+            <td><span class="gsas-score ${(u.gsas_score||0)>=85?'excellent':'good'}">${u.gsas_score||'—'}</span></td>
+            <td><span class="unit-status ${u.status||'available'}">${u.status||'available'}</span></td>
+          </tr>`).join('')}
+        </tbody></table>`
+      : `<div style="text-align:center;padding:32px;color:var(--gray-500)">No units registered for this project yet.</div>`;
+
+    // Certs tab — from project ESG fields
+    document.getElementById('ptab-certs').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm)">
+          <div><div style="font-weight:600;font-size:13px">GSAS Certificate</div><div style="font-size:11px;color:var(--gray-500)">Score: ${proj.gsas_score||'—'} · Rating: ${proj.gsas_rating||'—'}</div></div>
+          <span class="chip ${proj.gsas_score?'green':'gray'}">${proj.gsas_score?'✅ On file':'— Not uploaded'}</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm)">
+          <div><div style="font-weight:600;font-size:13px">EPC Report</div><div style="font-size:11px;color:var(--gray-500)">Rating: ${proj.epc_rating||'—'}</div></div>
+          <span class="chip ${proj.epc_rating?'green':'gray'}">${proj.epc_rating?'✅ On file':'— Not uploaded'}</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm)">
+          <div><div style="font-weight:600;font-size:13px">EIA Clearance</div><div style="font-size:11px;color:var(--gray-500)">Ref: ${proj.eia_reference||'—'}</div></div>
+          <span class="chip ${proj.eia_reference?'green':'gray'}">${proj.eia_reference?'✅ On file':'— Not uploaded'}</span>
+        </div>
+        ${!proj.gsas_score&&!proj.epc_rating?`<div style="margin-top:8px;padding:12px;background:var(--gray-50);border-radius:6px;font-size:12px;color:var(--gray-500)">Register this project through the wizard to upload ESG certificates and unlock green financing rates.</div>`:''}
+      </div>`;
+
+    // Show panel — reset tabs safely without using switchTab (avoids null-ref crash)
+    document.querySelectorAll('#project-panel-overlay .tab').forEach((t,i) => {
+      t.classList.toggle('active', i===0);
+    });
+    ['ptab-overview','ptab-units','ptab-certs'].forEach((id,i) => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = i===0 ? 'block' : 'none';
+    });
+    document.getElementById('project-panel-overlay').classList.add('open');
+  } catch(e) {
+    console.error('selectProject', e);
+    toast('Could not load project details', 'error');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadProjects();
+  showPage('dashboard');
+  // Close unit detail panel on Escape
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeUnitDetail(); });
+});
+</script>
+
+<!-- Unit Detail Side Panel -->
+<div id="unit-detail-panel" style="
+  position:fixed;right:0;top:0;bottom:0;width:360px;max-width:100vw;
+  background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.18);z-index:1100;
+  display:flex;flex-direction:column;overflow:hidden;
+">
+</div>
+
+<style>
+/* Hidden by default: translate off-screen to the right */
+#unit-detail-panel { transform:translateX(100%); transition:transform .3s ease; }
+/* Open: slide in */
+#unit-detail-panel.open { transform:translateX(0) !important; }
+.ud-header { background:var(--navy); color:#fff; padding:0 0 16px; flex-shrink:0; }
+.ud-close { position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center; }
+.ud-close:hover { background:rgba(255,255,255,.3); }
+.ud-img-wrap { width:100%;height:180px;overflow:hidden;background:var(--teal);position:relative; }
+.ud-img { width:100%;height:100%;object-fit:cover; }
+.ud-img-placeholder { width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px;background:linear-gradient(135deg,var(--navy),var(--teal)); }
+.ud-title-row { display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0; }
+.ud-unit-num { font-size:20px;font-weight:800;color:#fff; }
+.ud-unit-type { font-size:12px;color:rgba(255,255,255,.7);margin-top:2px; }
+.ud-body { flex:1;overflow-y:auto;padding:16px; }
+.ud-metrics { display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px; }
+.ud-metric { text-align:center;background:var(--gray-100);border-radius:8px;padding:10px 4px; }
+.ud-metric-val { font-size:18px;font-weight:800;color:var(--navy); }
+.ud-metric-lbl { font-size:10px;color:var(--gray-500);margin-top:2px; }
+.ud-section { margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--gray-100); }
+.ud-section:last-child { border-bottom:none; }
+.ud-section-title { font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px; }
+.ud-row { display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:13px; }
+.ud-row span { color:var(--gray-500); }
+.inv-row:hover { background:rgba(0,127,134,.05); }
+</style>
+</body>
+</html>

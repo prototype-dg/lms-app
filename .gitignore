@@ -1,6 +1,3 @@
-# prod
-dist/
-
 # dev
 .yarn/
 !.yarn/releases
@@ -40,3 +37,6 @@ data/
 
 # Deployment archives
 deploy.zip
+
+# Unrelated services
+vps-ocr-service/

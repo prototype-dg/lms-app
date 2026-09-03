@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Contractor Portal — Sohar International Green Home</title>
+<style>
+:root{
+  --navy:#003B5C;--teal:#007F86;--seaglass:#35C6C4;--sand:#F4F0E7;--amber:#F4B35B;
+  --success:#2ECC71;--warning:#F39C12;--danger:#E74C3C;
+  --font-ui:'Inter',system-ui,sans-serif;--font-ar:'Noto Sans Arabic',sans-serif;
+  --radius-sm:8px;--radius-md:12px;--radius-lg:18px;
+  --shadow-sm:0 2px 8px rgba(0,59,92,.08);--shadow-md:0 6px 24px rgba(0,59,92,.14);
+  --shadow-lg:0 16px 48px rgba(0,59,92,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-ui);background:#F0F2F5;min-height:100vh}
+body.ar{font-family:var(--font-ar);direction:rtl}
+
+/* MOBILE HEADER */
+.mobile-header{background:var(--navy);padding:0 16px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.mh-logo{display:flex;align-items:center;gap:6px}
+.mh-logo-text{color:#fff;font-size:13px;font-weight:700;line-height:1.2}
+.mh-logo-sub{color:var(--seaglass);font-size:9px;letter-spacing:1px;text-transform:uppercase}
+.mh-user{display:flex;align-items:center;gap:8px}
+.mh-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--seaglass),var(--teal));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.mh-name{color:#fff;font-size:12px;font-weight:600}
+.mh-role{color:var(--seaglass);font-size:10px}
+.lang-btn{background:none;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.8);border-radius:4px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:inherit}
+
+/* CONTENT */
+.content{max-width:720px;margin:0 auto;padding:16px}
+
+/* LOAN SUMMARY CARD */
+.loan-summary{background:linear-gradient(135deg,var(--navy) 0%,var(--teal) 100%);border-radius:var(--radius-lg);padding:22px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden}
+.loan-summary::before{content:'';position:absolute;right:-30px;top:-30px;width:160px;height:160px;border-radius:50%;background:rgba(53,198,196,.12)}
+.loan-ref{font-size:13px;opacity:.7;margin-bottom:4px}
+.loan-name{font-size:18px;font-weight:800;margin-bottom:2px;position:relative;z-index:1}
+.loan-unit{font-size:13px;opacity:.8;position:relative;z-index:1}
+.loan-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:16px;position:relative;z-index:1}
+.loan-metric{text-align:center;padding:0 4px;border-right:1px solid rgba(255,255,255,.15)}
+.loan-metric:last-child{border-right:none}
+.loan-metric-val{font-size:18px;font-weight:900;color:var(--seaglass)}
+.loan-metric-label{font-size:10px;opacity:.65;margin-top:2px}
+
+/* STAGE TIMELINE */
+.stage-timeline{position:relative;padding:8px 0}
+.stage-connector{position:absolute;left:23px;top:32px;bottom:0;width:2px;background:#E9ECEF;z-index:0}
+body.ar .stage-connector{left:auto;right:23px}
+.stage-item{display:flex;gap:14px;margin-bottom:16px;position:relative;z-index:1}
+.stage-dot-wrap{width:48px;height:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.stage-dot{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;border:3px solid #fff;box-shadow:var(--shadow-sm)}
+.stage-dot.done{background:var(--success)}
+.stage-dot.active{background:var(--amber);animation:pulseSt 2s ease infinite}
+.stage-dot.pending{background:#E9ECEF}
+@keyframes pulseSt{0%,100%{box-shadow:0 0 0 0 rgba(244,179,91,.4)}50%{box-shadow:0 0 0 8px rgba(244,179,91,0)}}
+.stage-body{flex:1;background:#fff;border-radius:var(--radius-md);padding:14px 16px;box-shadow:var(--shadow-sm);border:2px solid transparent}
+.stage-body.active{border-color:var(--amber)}
+.stage-body.done{border-color:rgba(46,204,113,.3)}
+.stage-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:3px}
+.stage-desc{font-size:12px;color:#888;margin-bottom:8px}
+.stage-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stage-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.stage-chip.green{background:rgba(46,204,113,.12);color:#27AE60}
+.stage-chip.amber{background:rgba(244,179,91,.15);color:#C8891A}
+.stage-chip.blue{background:rgba(0,127,134,.1);color:var(--teal)}
+.stage-chip.gray{background:#F1F3F5;color:#666}
+.stage-amount{font-size:15px;font-weight:800;color:var(--navy);margin-left:auto}
+body.ar .stage-amount{margin-left:0;margin-right:auto}
+.stage-action-btn{width:100%;padding:11px;background:var(--amber);color:var(--navy);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
+.stage-action-btn:hover{background:#e0a340}
+.stage-action-btn.primary{background:var(--teal);color:#fff}
+.stage-action-btn.primary:hover{background:#006b70}
+.stage-action-btn.success{background:var(--success);color:#fff}
+.stage-action-btn.disabled{background:#E9ECEF;color:#aaa;cursor:not-allowed}
+
+/* CARD */
+.card{background:#fff;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);margin-bottom:14px;overflow:hidden}
+.card-header{padding:14px 16px;border-bottom:1px solid #F1F3F5;display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:700;color:var(--navy)}
+.card-body{padding:16px}
+
+/* INVOICE UPLOAD */
+.invoice-upload-zone{border:2px dashed #DEE2E6;border-radius:var(--radius-md);padding:24px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.invoice-upload-zone:hover,.invoice-upload-zone.drag{border-color:var(--teal);background:rgba(0,127,134,.03)}
+.invoice-upload-zone.uploading{border-color:var(--amber);border-style:solid}
+.invoice-upload-zone.validated{border-color:var(--success);border-style:solid;background:rgba(46,204,113,.04)}
+.upload-icon{font-size:40px;margin-bottom:10px}
+.upload-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.upload-sub{font-size:12px;color:#888}
+
+/* PROCESSING PIPELINE */
+.pipeline{display:flex;gap:0;margin:14px 0;overflow:hidden;border-radius:var(--radius-sm);border:1px solid #E9ECEF}
+.pipeline-step{flex:1;padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:#888;background:#F8F9FA;position:relative;transition:all .4s}
+.pipeline-step:not(:last-child)::after{content:'›';position:absolute;right:-5px;top:50%;transform:translateY(-50%);font-size:14px;color:#DEE2E6;z-index:1}
+.pipeline-step.active{background:rgba(244,179,91,.15);color:#C8891A}
+.pipeline-step.done{background:rgba(46,204,113,.1);color:#27AE60}
+.pipeline-step-icon{font-size:16px;margin-bottom:2px}
+
+/* AI RESULT */
+.ai-result-card{background:linear-gradient(135deg,#f0fafa,#e8f5f0);border:1px solid rgba(53,198,196,.3);border-radius:var(--radius-md);padding:16px;margin-top:14px}
+.ai-result-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.ai-badge{background:var(--teal);color:#fff;border-radius:12px;padding:2px 8px;font-size:9px;font-weight:700;letter-spacing:.5px}
+.conf-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.conf-label{font-size:11px;color:#555;width:130px;flex-shrink:0}
+.conf-bar-wrap{flex:1;height:7px;background:#E9ECEF;border-radius:4px;overflow:hidden}
+.conf-bar{height:100%;border-radius:4px;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+.conf-bar.high{background:linear-gradient(90deg,#2ECC71,#27AE60)}
+.conf-bar.med{background:linear-gradient(90deg,#F39C12,#E67E22)}
+.conf-pct{font-size:11px;font-weight:700;width:32px;text-align:right;color:#555}
+.finding-list{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.finding-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600}
+.finding-tag.pass{background:rgba(46,204,113,.12);color:#27AE60}
+.finding-tag.warn{background:rgba(243,156,18,.12);color:#E67E22}
+.finding-tag.fail{background:rgba(231,76,60,.1);color:#C0392B}
+
+/* PAYMENT BREAKDOWN */
+.payment-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #F1F3F5;font-size:13px}
+.payment-row:last-child{border-bottom:none}
+.payment-label{color:#888}
+.payment-val{font-weight:700;color:var(--navy)}
+.payment-total{font-size:16px;font-weight:900;color:var(--teal)}
+
+/* TRANCHE CONFIRM */
+.tranche-box{background:linear-gradient(135deg,var(--navy),var(--teal));border-radius:var(--radius-md);padding:20px;color:#fff;text-align:center;margin-top:14px}
+.tranche-amount{font-size:36px;font-weight:900;color:var(--seaglass)}
+.tranche-label{font-size:12px;opacity:.7;margin-bottom:8px}
+.tranche-btn{width:100%;padding:14px;background:var(--success);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:16px;transition:all .2s}
+.tranche-btn:hover{background:#27AE60;transform:translateY(-1px)}
+.tranche-btn:disabled{background:#aaa;cursor:not-allowed;transform:none}
+
+/* NOTIFICATION BANNER */
+.notif-banner{border-radius:var(--radius-sm);padding:12px 14px;font-size:12px;display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+.notif-banner.info{background:rgba(0,127,134,.06);border:1px solid rgba(0,127,134,.2);color:var(--navy)}
+.notif-banner.success{background:rgba(46,204,113,.06);border:1px solid rgba(46,204,113,.2);color:#1a6b3c}
+.notif-banner.warning{background:rgba(244,179,91,.08);border:1px solid rgba(244,179,91,.3);color:#7a5200}
+
+/* TOAST */
+.toast-container{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;flex-direction:column;gap:8px;width:90%;max-width:400px}
+.toast{background:#fff;border-radius:10px;padding:12px 16px;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:10px;border-left:4px solid var(--teal);animation:toastIn .3s ease}
+.toast.success{border-left-color:var(--success)}
+.toast.error{border-left-color:var(--danger)}
+.toast.warning{border-left-color:var(--amber)}
+.toast-msg{font-size:13px;font-weight:500;flex:1}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-secondary{background:#F1F3F5;color:#495057;border:1px solid #DEE2E6}
+.btn-sm{padding:6px 12px;font-size:12px}
+.hidden{display:none!important}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fade-in{animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px}
+
+/* TABS */
+.tab-bar{display:flex;background:#fff;border-radius:var(--radius-md);padding:4px;gap:2px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
+.tab-btn{flex:1;padding:9px 4px;text-align:center;font-size:12px;font-weight:600;color:#888;border:none;background:none;border-radius:8px;cursor:pointer;font-family:inherit;transition:all .15s}
+.tab-btn.active{background:var(--navy);color:#fff;box-shadow:var(--shadow-sm)}
+
+.page{display:none}
+.page.active{display:block}
+</style>
+</head>
+<body>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+  <div class="mh-logo">
+    <svg viewBox="0 0 50 50" width="46" height="46">
+      <path d="M6 41c13-4 24-14 27-27 3-8 9-14 17-19-3 16-8 29-18 39-8 7-17 11-26 12z" fill="#35c6c4"/>
+      <path d="M4 43c16-5 29-15 38-30 5-8 11-13 17-17-5 14-12 26-22 35-9 8-20 11-33 14z" fill="#f4b35b" opacity=".9"/>
+    </svg>
+    <div>
+      <div class="mh-logo-text" data-en="Sohar International" data-ar="بنك صحار الدولي">Sohar International</div>
+      <div class="mh-logo-sub" data-en="Contractor Portal" data-ar="بوابة المقاولين">Contractor Portal</div>
+    </div>
+  </div>
+  <div class="mh-user">
+    <button class="lang-btn" onclick="toggleLang()">🌐 <span id="lang-label">عربي</span></button>
+    <div>
+      <div class="mh-name" data-en="Rashid Al-Hassani" data-ar="راشد الحساني">Rashid Al-Hassani</div>
+      <div class="mh-role" data-en="Green Builder Co." data-ar="شركة البناء الأخضر">Green Builder Co.</div>
+    </div>
+    <div class="mh-avatar">RH</div>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- LOAN SUMMARY -->
+  <div class="loan-summary">
+    <div class="loan-ref">Loan Reference</div>
+    <div class="loan-name" id="loan-ref-display">—</div>
+    <div class="loan-unit" id="loan-unit-display">—</div>
+    <div class="loan-metrics">
+      <div class="loan-metric">
+        <div class="loan-metric-val">OMR 200K</div>
+        <div class="loan-metric-label" data-en="Total Loan" data-ar="إجمالي القرض">Total Loan</div>
+      </div>
+      <div class="loan-metric">
+        <div class="loan-metric-val">OMR 50K</div>
+        <div class="loan-metric-label" data-en="Stage 1 Tranche" data-ar="شريحة المرحلة 1">Stage 1 Tranche</div>
+      </div>
+      <div class="loan-metric">
+        <div class="loan-metric-val">4.75%</div>
+        <div class="loan-metric-label" data-en="Green Rate" data-ar="السعر الأخضر">Green Rate</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="showPage('stages')" data-en="Stages" data-ar="المراحل">Stages</button>
+    <button class="tab-btn" onclick="showPage('invoice')" data-en="Invoice" data-ar="الفاتورة">Invoice</button>
+    <button class="tab-btn" onclick="showPage('payments')" data-en="Payments" data-ar="المدفوعات">Payments</button>
+    <button class="tab-btn" onclick="showPage('docs')" data-en="Documents" data-ar="المستندات">Documents</button>
+  </div>
+
+  <!-- ═══ STAGES PAGE ═══ -->
+  <div class="page active" id="page-stages">
+
+    <div class="notif-banner success">
+      <span>🎉</span>
+      <div>
+        <strong data-en="Stage 1 Approved!" data-ar="تمت الموافقة على المرحلة 1!">Stage 1 Approved!</strong>
+        <div data-en="Invoice validated by AI · Tranche release in progress" data-ar="تم التحقق من الفاتورة بالذكاء الاصطناعي · جارٍ إصدار الشريحة">Invoice validated by AI · Tranche release in progress</div>
+      </div>
+    </div>
+
+    <div class="stage-timeline" id="stage-timeline">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- ═══ INVOICE PAGE ═══ -->
+  <div class="page" id="page-invoice">
+    <div class="card">
+      <div class="card-header"><span class="card-title" data-en="Submit Stage Invoice" data-ar="تقديم فاتورة المرحلة">Submit Stage Invoice</span><span style="font-size:11px;color:var(--teal);font-weight:700">Stage 2 Ready</span></div>
+      <div class="card-body">
+        <div class="notif-banner info" style="margin-bottom:14px">
+          <span>💡</span>
+          <div data-en="Upload your invoice for Stage 2 (Superstructure). AI will validate green material compliance automatically." data-ar="ارفع فاتورة المرحلة 2 (الهيكل الإنشائي). سيتحقق الذكاء الاصطناعي من مطابقة المواد الخضراء تلقائياً.">Upload your invoice for Stage 2 (Superstructure). AI will validate green material compliance automatically.</div>
+        </div>
+
+        <!-- Upload Zone -->
+        <div class="invoice-upload-zone" id="upload-zone"
+             onclick="startInvoiceUpload()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="handleDrop(event)">
+          <div class="upload-icon" id="upload-icon">📄</div>
+          <div class="upload-title" id="upload-title" data-en="Drop invoice PDF here or click to browse" data-ar="اسحب فاتورة PDF هنا أو انقر للتصفح">Drop invoice PDF here or click to browse</div>
+          <div class="upload-sub" id="upload-sub" data-en="Supported: PDF, JPG, PNG · Max 10MB" data-ar="المدعوم: PDF, JPG, PNG · حد أقصى 10 ميغابايت">Supported: PDF, JPG, PNG · Max 10MB</div>
+        </div>
+
+        <!-- AI Processing Pipeline -->
+        <div class="pipeline" id="pipeline" style="display:none">
+          <div class="pipeline-step" id="ps1"><div class="pipeline-step-icon">📤</div>Upload</div>
+          <div class="pipeline-step" id="ps2"><div class="pipeline-step-icon">🔍</div>OCR</div>
+          <div class="pipeline-step" id="ps3"><div class="pipeline-step-icon">🤖</div>AI Parse</div>
+          <div class="pipeline-step" id="ps4"><div class="pipeline-step-icon">🌿</div>Green Check</div>
+          <div class="pipeline-step" id="ps5"><div class="pipeline-step-icon">✅</div>Result</div>
+        </div>
+
+        <!-- AI Result -->
+        <div class="ai-result-card hidden fade-in" id="ai-result">
+          <div class="ai-result-header">
+            <span style="font-size:20px">🤖</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy)">AI Invoice Validation — Stage 2</div>
+              <div style="font-size:11px;color:#888">GPT-4o · Google Vision OCR</div>
+            </div>
+            <span class="ai-badge" style="margin-left:auto">GPT-4o</span>
+          </div>
+          <div id="ai-conf-bars"></div>
+          <div class="finding-list" id="ai-findings"></div>
+          <div style="background:rgba(0,59,92,.04);border-radius:6px;padding:10px;font-size:12px;color:#444;line-height:1.6;margin-top:8px" id="ai-recommendation"></div>
+          <div style="display:flex;gap:8px;margin-top:12px" id="ai-actions"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Invoice Form -->
+    <div class="card" id="invoice-form-card" style="display:none">
+      <div class="card-header"><span class="card-title" data-en="Invoice Details" data-ar="تفاصيل الفاتورة">Invoice Details</span></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div><label style="font-size:11px;font-weight:700;color:var(--navy);display:block;margin-bottom:4px">Invoice Number</label><input style="width:100%;padding:8px 10px;border:1px solid #DEE2E6;border-radius:6px;font-size:13px;font-family:inherit" value="INV-2025-0089"/></div>
+          <div><label style="font-size:11px;font-weight:700;color:var(--navy);display:block;margin-bottom:4px">Invoice Date</label><input type="date" style="width:100%;padding:8px 10px;border:1px solid #DEE2E6;border-radius:6px;font-size:13px;font-family:inherit" value="2025-01-28"/></div>
+          <div><label style="font-size:11px;font-weight:700;color:var(--navy);display:block;margin-bottom:4px">Total Amount (OMR)</label><input style="width:100%;padding:8px 10px;border:1px solid #DEE2E6;border-radius:6px;font-size:13px;font-family:inherit;font-weight:700" value="48,750" id="inv-amount"/></div>
+          <div><label style="font-size:11px;font-weight:700;color:var(--navy);display:block;margin-bottom:4px">Stage</label><input style="width:100%;padding:8px 10px;border:1px solid #DEE2E6;border-radius:6px;font-size:13px;font-family:inherit;background:#f0fafa" value="Stage 2 — Superstructure" readonly/></div>
+        </div>
+        <button class="stage-action-btn primary" onclick="submitInvoiceToBank()">Submit Invoice to Bank →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAYMENTS PAGE ═══ -->
+  <div class="page" id="page-payments">
+    <div class="card">
+      <div class="card-header"><span class="card-title" data-en="Tranche Release History" data-ar="سجل إصدار الشرائح">Tranche Release History</span></div>
+      <div class="card-body" style="padding:0">
+        <div id="payment-history" style="padding:4px 0"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title" data-en="Next Release" data-ar="الإصدار التالي">Next Release</span></div>
+      <div class="card-body">
+        <div class="tranche-box">
+          <div class="tranche-label" data-en="Stage 2 Tranche Amount" data-ar="مبلغ شريحة المرحلة 2">Stage 2 Tranche Amount</div>
+          <div class="tranche-amount">OMR 60,000</div>
+          <div style="font-size:12px;opacity:.7;margin-top:6px" data-en="30% of total loan · Released upon stage completion + AI validation" data-ar="30٪ من إجمالي القرض · يصدر عند اكتمال المرحلة + التحقق بالذكاء الاصطناعي">30% of total loan · Released upon stage completion + AI validation</div>
+          <button class="tranche-btn" id="tranche-release-btn" onclick="releaseTranche()" disabled>
+            🔒 <span data-en="Submit Invoice First" data-ar="قدم الفاتورة أولاً">Submit Invoice First</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DOCUMENTS PAGE ═══ -->
+  <div class="page" id="page-docs">
+    <div class="card">
+      <div class="card-header"><span class="card-title" data-en="Required Documents" data-ar="المستندات المطلوبة">Required Documents</span></div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid #E9ECEF;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">📋</span><div><div style="font-weight:600;font-size:13px">Contractor License</div><div style="font-size:11px;color:#888">Ministry of Housing · Valid 2026</div></div></div>
+            <span style="background:rgba(46,204,113,.12);color:#27AE60;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700">✅ Verified</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid #E9ECEF;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">🌿</span><div><div style="font-weight:600;font-size:13px">Green Materials Certification</div><div style="font-size:11px;color:#888">GSAS-approved supplier list</div></div></div>
+            <span style="background:rgba(46,204,113,.12);color:#27AE60;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700">✅ Verified</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid #E9ECEF;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">🏗️</span><div><div style="font-weight:600;font-size:13px">Stage 1 Completion Certificate</div><div style="font-size:11px;color:#888">Signed by site engineer</div></div></div>
+            <span style="background:rgba(46,204,113,.12);color:#27AE60;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700">✅ Uploaded</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border:2px dashed #DEE2E6;border-radius:8px;cursor:pointer" onclick="toast('Please go to the Invoice tab to upload your Stage 2 invoice','info')">
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">📄</span><div><div style="font-weight:600;font-size:13px">Stage 2 Invoice</div><div style="font-size:11px;color:#888">Tap to upload</div></div></div>
+            <span style="background:#F1F3F5;color:#888;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700">⬆ Upload</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Green Materials Registry</span></div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F1F3F5"><span style="color:#888">Thermal insulation (Rockwool)</span><span style="color:var(--success);font-weight:600">✅ GSAS Approved</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F1F3F5"><span style="color:#888">Low-E glass (Saint-Gobain)</span><span style="color:var(--success);font-weight:600">✅ GSAS Approved</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F1F3F5"><span style="color:#888">Solar panels (Longi 400W)</span><span style="color:var(--success);font-weight:600">✅ GSAS Approved</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #F1F3F5"><span style="color:#888">HVAC (Daikin SEER 18.2)</span><span style="color:var(--success);font-weight:600">✅ GSAS Approved</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0"><span style="color:#888">Greywater system (Grundfos)</span><span style="color:var(--success);font-weight:600">✅ GSAS Approved</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .content -->
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+let isAr = false;
+
+const STAGES = [
+  {
+    num: 1,
+    icon: '🏗️',
+    title: 'Stage 1 — Foundation',
+    titleAr: 'المرحلة 1 — الأساسات',
+    desc: 'Foundation works, piling, and ground slab completed.',
+    descAr: 'أعمال الأساسات والركائز واللوح الأرضي.',
+    status: 'done',
+    pct: 25,
+    amount: 'OMR 50,000',
+    chips: [{label:'Completed',cls:'green'},{label:'AI Validated',cls:'blue'},{label:'Jan 15, 2025',cls:'gray'}],
+    action: null
+  },
+  {
+    num: 2,
+    icon: '🧱',
+    title: 'Stage 2 — Superstructure',
+    titleAr: 'المرحلة 2 — الهيكل الإنشائي',
+    desc: 'Structural frame, columns, beams, floor slabs. GSAS-approved materials required.',
+    descAr: 'الإطار الهيكلي والأعمدة والجسور والألواح. مواد معتمدة GSAS مطلوبة.',
+    status: 'active',
+    pct: 30,
+    amount: 'OMR 60,000',
+    chips: [{label:'In Progress',cls:'amber'},{label:'Invoice Ready',cls:'blue'}],
+    action: 'invoice'
+  },
+  {
+    num: 3,
+    icon: '⚡',
+    title: 'Stage 3 — MEP Works',
+    titleAr: 'المرحلة 3 — الأعمال الكهروميكانيكية',
+    desc: 'Mechanical, electrical, plumbing, solar PV installation, greywater system.',
+    descAr: 'الأعمال الميكانيكية والكهربائية والسباكة والطاقة الشمسية ونظام المياه الرمادية.',
+    status: 'pending',
+    pct: 30,
+    amount: 'OMR 60,000',
+    chips: [{label:'Pending',cls:'gray'}],
+    action: null
+  },
+  {
+    num: 4,
+    icon: '🏁',
+    title: 'Stage 4 — Handover',
+    titleAr: 'المرحلة 4 — التسليم',
+    desc: 'Final inspections, GSAS commissioning, handover certificate, snag list clearance.',
+    descAr: 'الفحوصات النهائية وتشغيل GSAS وشهادة التسليم وإزالة قائمة العيوب.',
+    status: 'pending',
+    pct: 15,
+    amount: 'OMR 30,000',
+    chips: [{label:'Pending',cls:'gray'}],
+    action: null
+  }
+];
+
+const PAYMENT_HISTORY = [
+  {stage:'Stage 1 — Foundation',date:'Jan 20, 2025',amount:'OMR 50,000',status:'Released',icon:'✅'},
+];
+
+// ═══════════════════════
+// NAVIGATION
+// ═══════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  if(page) page.classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// ═══════════════════════
+// LANGUAGE
+// ═══════════════════════
+function toggleLang() {
+  isAr = !isAr;
+  document.body.classList.toggle('ar', isAr);
+  document.documentElement.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+  document.getElementById('lang-label').textContent = isAr ? 'English' : 'عربي';
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = isAr ? el.getAttribute('data-ar') : el.getAttribute('data-en');
+  });
+  renderStages();
+}
+
+// ═══════════════════════
+// STAGES
+// ═══════════════════════
+function renderStages() {
+  const tl = document.getElementById('stage-timeline');
+  if(!tl) return;
+  tl.innerHTML = '<div class="stage-connector"></div>' + STAGES.map(s => `
+    <div class="stage-item fade-in">
+      <div class="stage-dot-wrap">
+        <div class="stage-dot ${s.status}">${s.status === 'done' ? '✓' : s.icon}</div>
+      </div>
+      <div class="stage-body ${s.status}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between">
+          <div>
+            <div class="stage-title">${isAr ? s.titleAr : s.title}</div>
+            <div class="stage-desc">${isAr ? s.descAr : s.desc}</div>
+          </div>
+          <div class="stage-amount">${s.amount}</div>
+        </div>
+        <div class="stage-meta">
+          ${s.chips.map(c => `<span class="stage-chip ${c.cls}">${c.label}</span>`).join('')}
+          <span class="stage-chip gray">${s.pct}% of loan</span>
+        </div>
+        ${s.status === 'done' ? `
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px;background:rgba(46,204,113,.06);border-radius:6px;font-size:12px;color:#27AE60">
+          <span>✅</span><span>Tranche released to Green Builder Co. · ${s.amount}</span>
+        </div>` : ''}
+        ${s.status === 'active' ? `<button class="stage-action-btn" onclick="goToInvoice()">📄 Submit Stage 2 Invoice →</button>` : ''}
+        ${s.status === 'pending' && s.num === 3 ? `<button class="stage-action-btn disabled" disabled>🔒 Locked — Stage 2 must complete first</button>` : ''}
+        ${s.status === 'pending' && s.num === 4 ? `<button class="stage-action-btn disabled" disabled>🔒 Locked — Stage 3 must complete first</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function goToInvoice() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-invoice').classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===1));
+}
+
+// ═══════════════════════
+// INVOICE UPLOAD
+// ═══════════════════════
+let invoiceValidated = false;
+
+function startInvoiceUpload() {
+  const zone = document.getElementById('upload-zone');
+  zone.classList.add('uploading');
+  document.getElementById('upload-icon').textContent = '⏳';
+  document.getElementById('upload-title').textContent = 'Uploading invoice…';
+  document.getElementById('upload-sub').textContent = 'AI validation starting in a moment…';
+
+  const pipeline = document.getElementById('pipeline');
+  pipeline.style.display = 'flex';
+
+  // Animate pipeline steps
+  const steps = ['ps1','ps2','ps3','ps4','ps5'];
+  let delay = 400;
+  steps.forEach((id, i) => {
+    setTimeout(() => {
+      if(i > 0) document.getElementById(steps[i-1]).className = 'pipeline-step done';
+      document.getElementById(id).className = 'pipeline-step active';
+      if(id === 'ps5') {
+        setTimeout(() => {
+          document.getElementById(id).className = 'pipeline-step done';
+          showAIResult();
+        }, 600);
+      }
+    }, delay);
+    delay += 700;
+  });
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  startInvoiceUpload();
+}
+
+function showAIResult() {
+  const zone = document.getElementById('upload-zone');
+  zone.classList.remove('uploading');
+  zone.classList.add('validated');
+  document.getElementById('upload-icon').textContent = '✅';
+  document.getElementById('upload-title').textContent = 'Invoice GC-2025-0089 validated';
+  document.getElementById('upload-sub').textContent = 'AI Confidence: 93% · Green materials verified';
+
+  const resultCard = document.getElementById('ai-result');
+  resultCard.classList.remove('hidden');
+  resultCard.classList.add('fade-in');
+
+  // Confidence bars
+  const bars = [
+    {label:'Invoice Authenticity', pct:97, cls:'high'},
+    {label:'Amount Match', pct:93, cls:'high'},
+    {label:'Green Materials', pct:91, cls:'high'},
+    {label:'GSAS Supplier List', pct:88, cls:'high'},
+  ];
+  document.getElementById('ai-conf-bars').innerHTML = bars.map(b =>
+    `<div class="conf-row">
+      <div class="conf-label">${b.label}</div>
+      <div class="conf-bar-wrap"><div class="conf-bar ${b.cls}" style="width:0%" data-w="${b.pct}"></div></div>
+      <div class="conf-pct">${b.pct}%</div>
+    </div>`
+  ).join('');
+
+  setTimeout(() => {
+    document.querySelectorAll('.conf-bar').forEach(bar => {
+      bar.style.width = bar.getAttribute('data-w') + '%';
+    });
+  }, 100);
+
+  document.getElementById('ai-findings').innerHTML = [
+    {t:'Invoice No. GC-2025-0089 ✓', cls:'pass'},
+    {t:'Total: OMR 48,750 (within tranche)', cls:'pass'},
+    {t:'Rockwool insulation — GSAS ✓', cls:'pass'},
+    {t:'Low-E Glass (Saint-Gobain) ✓', cls:'pass'},
+    {t:'Steel grade verified ✓', cls:'pass'},
+    {t:'1 item: price variance ±3%', cls:'warn'},
+  ].map(f => `<span class="finding-tag ${f.cls}">${f.t}</span>`).join('');
+
+  document.getElementById('ai-recommendation').innerHTML =
+    '<strong>AI Recommendation:</strong> Invoice passes green materials compliance check with 93% confidence. Minor price variance (±3%) noted on structural steel — within acceptable tolerance of ±5%. <strong style="color:var(--success)">Approved for tranche release.</strong>';
+
+  document.getElementById('ai-actions').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="toast('Escalated to Compliance Officer','info')">Escalate</button>
+    <button class="btn btn-primary" onclick="showInvoiceForm()" style="flex:1">✅ Confirm & Submit →</button>
+  `;
+
+  invoiceValidated = true;
+  document.getElementById('invoice-form-card').style.display = 'block';
+
+  // Unlock tranche button
+  const btn = document.getElementById('tranche-release-btn');
+  if(btn) {
+    btn.disabled = false;
+    btn.innerHTML = '🚀 Release Stage 2 Tranche';
+  }
+}
+
+function showInvoiceForm() {
+  document.getElementById('invoice-form-card').style.display = 'block';
+  document.getElementById('invoice-form-card').scrollIntoView({behavior:'smooth'});
+  toast('Invoice ready for bank submission', 'success');
+}
+
+function submitInvoiceToBank() {
+  toast('📨 Invoice submitted to Sohar International', 'success');
+  setTimeout(() => toast('🤖 AI pre-approval: Stage 2 tranche OMR 60,000 ready', 'success'), 1500);
+  setTimeout(() => toast('💬 Compliance officer notified', 'info'), 3000);
+
+  // Enable tranche
+  const btn = document.getElementById('tranche-release-btn');
+  if(btn) { btn.disabled = false; btn.innerHTML = '💰 Release Stage 2 Tranche — OMR 60,000'; }
+}
+
+// ═══════════════════════
+// TRANCHE RELEASE
+// ═══════════════════════
+function releaseTranche() {
+  if(!invoiceValidated) { toast('Submit invoice first', 'warning'); return; }
+  const btn = document.getElementById('tranche-release-btn');
+  btn.innerHTML = '<span class="spinner"></span> Processing…';
+  btn.disabled = true;
+
+  // call API
+  const _appId = localStorage.getItem('ghl_application_id') || localStorage.getItem('ghl_application_ref') || '';
+  fetch(`/api/v1/escrow/${_appId}/complete-stage`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({stage_number:2, invoice_amount:48750})})
+    .then(r => r.json())
+    .catch(() => ({success:true}))
+    .then(data => {
+      btn.innerHTML = '✅ OMR 60,000 Released!';
+      btn.style.background = '#27AE60';
+
+      toast('🎉 Stage 2 tranche OMR 60,000 released to your account!', 'success');
+      setTimeout(() => toast('📧 Payment confirmation sent to rashid@greenbuilder.om', 'success'), 1000);
+      setTimeout(() => toast('🔓 Stage 3 (MEP Works) now unlocked', 'info'), 2000);
+
+      // Update stage 2 → done, stage 3 → active
+      STAGES[1].status = 'done';
+      STAGES[1].chips = [{label:'Completed',cls:'green'},{label:'AI Validated',cls:'blue'},{label:'Jan 28, 2025',cls:'gray'}];
+      STAGES[1].action = null;
+      STAGES[2].status = 'active';
+      STAGES[2].chips = [{label:'Now Active',cls:'amber'}];
+      STAGES[2].action = 'invoice';
+
+      PAYMENT_HISTORY.push({stage:'Stage 2 — Superstructure',date:'Jan 28, 2025',amount:'OMR 60,000',status:'Released',icon:'✅'});
+      renderPayments();
+
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-stages').classList.add('active');
+      document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+      setTimeout(() => renderStages(), 200);
+    });
+}
+
+// ═══════════════════════
+// PAYMENTS
+// ═══════════════════════
+function renderPayments() {
+  const container = document.getElementById('payment-history');
+  if(!container) return;
+  const totalReleased = PAYMENT_HISTORY.reduce((s,p) => s + parseInt(p.amount.replace(/[^0-9]/g,'')), 0);
+  container.innerHTML = `
+    <div style="padding:12px 16px;background:var(--navy);color:#fff;display:flex;justify-content:space-between;font-size:12px">
+      <span>Total Released</span><span style="font-weight:800;color:var(--seaglass)">OMR ${totalReleased.toLocaleString()}</span>
+    </div>
+    ${PAYMENT_HISTORY.map(p => `
+    <div class="payment-row" style="padding:12px 16px">
+      <div>
+        <div style="font-weight:700;font-size:13px;color:var(--navy)">${p.stage}</div>
+        <div style="font-size:11px;color:#888">${p.date}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:800;color:var(--teal)">${p.amount}</div>
+        <div style="font-size:11px;color:var(--success)">${p.icon} ${p.status}</div>
+      </div>
+    </div>`).join('')}
+    <div style="padding:12px 16px;background:#F8F9FA;font-size:12px;color:#888;border-top:1px solid #F1F3F5">
+      Remaining: OMR ${(200000 - totalReleased).toLocaleString()} · ${4 - PAYMENT_HISTORY.length} stages remaining
+    </div>
+  `;
+}
+
+// ═══════════════════════
+// TOAST
+// ═══════════════════════
+function toast(msg, type='info') {
+  const icons = {success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+// ═══════════════════════
+// INIT
+// ═══════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Populate loan ref from localStorage
+  const storedRef = localStorage.getItem('ghl_application_ref') || '';
+  const refEl = document.getElementById('loan-ref-display');
+  const unitEl = document.getElementById('loan-unit-display');
+  if (refEl) refEl.textContent = storedRef || 'No active application';
+  if (unitEl) unitEl.textContent = storedRef ? 'Active financing application' : 'Submit an application via the Customer Portal';
+  renderStages();
+  renderPayments();
+});
+</script>
+</body>
+</html>
