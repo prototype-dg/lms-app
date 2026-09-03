@@ -13,19 +13,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install production dependencies
+        run: npm ci --omit=dev
+
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Create deployment zip (no node_modules)
+      - name: Create deployment zip
         run: |
           zip -r deploy.zip . \
             --exclude "*.git*" \
-            --exclude "node_modules/*" \
             --exclude "*.zip" \
             --exclude ".env*" \
-            --exclude "data/*"
+            --exclude "data/*" \
+            --exclude "src/*" \
+            --exclude "*.ts" \
+            --exclude "vite.config*" \
+            --exclude "tsconfig*" \
+            --exclude "wrangler*" \
+            --exclude "ecosystem*" \
+            --exclude ".wrangler/*"
+          echo "Zip size: $(du -sh deploy.zip)"
 
       - name: Deploy to Azure Web App
         run: |
@@ -35,16 +51,20 @@ jobs:
             --src-path deploy.zip \
             --type zip \
             --clean true \
-            --async false
+            --async true
+          echo "✅ Deployment submitted"
 
-      - name: Verify deployment
+      - name: Wait for app to start
         run: |
-          echo "Waiting for app to start..."
-          sleep 30
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://lms.andersenlab.com/)
-          echo "HTTP response: $HTTP_CODE"
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Deployment successful!"
-          else
-            echo "⚠️ App returned $HTTP_CODE — may still be starting"
-          fi
+          echo "Polling https://lms.andersenlab.com ..."
+          for i in $(seq 1 20); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://lms.andersenlab.com/)
+            echo "Attempt $i: HTTP $CODE"
+            if [ "$CODE" = "200" ]; then
+              echo "✅ App is live!"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "⚠️ App did not return 200 within 5 minutes"
+          exit 1
