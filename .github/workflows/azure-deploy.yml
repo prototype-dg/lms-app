@@ -26,8 +26,8 @@ jobs:
         run: |
           echo "--- Checking required files ---"
           ls -lh server.js dist/index.js
-          ls -lh node_modules/@hono/node-server/dist/index.js
-          ls -lh node_modules/better-sqlite3/build/Release/better_sqlite3.node
+          ls -lh node_modules/@hono/node-server/dist/index.mjs
+          ls -lh node_modules/better-sqlite3/prebuilds/linux-x64.node
           echo "--- node_modules size ---"
           du -sh node_modules/
 
