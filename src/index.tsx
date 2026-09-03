@@ -101,8 +101,9 @@ app.get('/api/v1/customers/:id', async (c) => {
 })
 
 // ── Static file serving — replaces Cloudflare ASSETS binding ──────────────────
-// Serves everything in /public: HTML portals, images, CSS, JS
-app.use('/*', serveStatic({ root: './public' }))
+// After vite build, static assets land in dist/ (portals/, static/, assets/, index.html)
+// server.js runs from wwwroot, so dist/ is the correct relative root.
+app.use('/*', serveStatic({ root: './dist' }))
 
 // Export the Hono app — server startup is handled by server.js (not bundled)
 // This keeps process.env.PORT readable at true runtime, not baked into the bundle
