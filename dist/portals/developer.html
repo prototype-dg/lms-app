@@ -1665,8 +1665,8 @@ function openUnitDetail(projId, unitId, unitOrJson) {
   const st = u.status || 'available';
 
   panel.innerHTML = `
-    <div class="ud-header">
-      <button class="ud-close" onclick="closeUnitDetail()">✕</button>
+    <div class="ud-header" style="position:relative">
+      <button class="ud-close-top" onclick="closeUnitDetail()" title="Close">✕</button>
       <div class="ud-img-wrap">
         ${imgUrl
           ? `<img src="${imgUrl}" class="ud-img" onerror="this.src='';this.style.display='none';this.nextElementSibling.style.display='flex'"/>
@@ -1743,6 +1743,13 @@ function openUnitDetail(projId, unitId, unitOrJson) {
           <div style="font-size:32px">📐</div>
           <div style="font-size:12px;color:var(--gray-500)">Upload floor plan in Documents tab</div>
         </div>
+      </div>
+
+      <!-- Close button at bottom -->
+      <div class="ud-section" style="border-bottom:none;padding-bottom:4px">
+        <button class="ud-close-bottom" onclick="closeUnitDetail()">
+          <span style="font-size:16px">✕</span> Close Panel
+        </button>
       </div>
     </div>
   `;
@@ -3311,8 +3318,10 @@ document.addEventListener('DOMContentLoaded', () => {
 /* Open: slide in */
 #unit-detail-panel.open { transform:translateX(0) !important; }
 .ud-header { background:var(--navy); color:#fff; padding:0 0 16px; flex-shrink:0; }
-.ud-close { position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center; }
-.ud-close:hover { background:rgba(255,255,255,.3); }
+.ud-close-top { position:absolute;top:10px;right:10px;z-index:10;background:rgba(220,38,38,.85);border:2px solid #fff;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.25);transition:background .15s,transform .1s; }
+.ud-close-top:hover { background:rgba(185,28,28,1);transform:scale(1.1); }
+.ud-close-bottom { display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px 16px;background:var(--gray-100);border:1.5px solid var(--gray-300);border-radius:8px;color:var(--gray-700);font-size:13px;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s;margin-top:4px; }
+.ud-close-bottom:hover { background:var(--gray-200);border-color:var(--gray-400); }
 .ud-img-wrap { width:100%;height:180px;overflow:hidden;background:var(--teal);position:relative; }
 .ud-img { width:100%;height:100%;object-fit:cover; }
 .ud-img-placeholder { width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px;background:linear-gradient(135deg,var(--navy),var(--teal)); }
