@@ -13,52 +13,78 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install production dependencies
+        run: npm ci --omit=dev
+
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Create deployment zip (source + dist, no node_modules)
-        # Azure will run 'npm ci --production' via Oryx build after extracting
+      - name: Create deployment zip (with node_modules)
         run: |
           zip -r deploy.zip . \
             --exclude "*.git*" \
             --exclude "*.zip" \
             --exclude ".env*" \
             --exclude "data/*" \
-            --exclude "node_modules/*" \
-            --exclude ".wrangler/*"
+            --exclude ".wrangler/*" \
+            --exclude "ecosystem.config.cjs" \
+            --exclude "vite.config*" \
+            --exclude "tsconfig*" \
+            --exclude "wrangler*" \
+            --exclude "src/*"
           echo "Zip size: $(du -sh deploy.zip)"
 
-      - name: Enable build during deployment (Oryx runs npm ci)
+      - name: Disable Oryx build (we ship node_modules ourselves)
         run: |
           az webapp config appsettings set \
             --name app-lms-portal \
             --resource-group Dima-Gibert-RG \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
 
-      - name: Deploy to Azure Web App
+      - name: Deploy via Kudu REST API (preserves node_modules)
         run: |
-          az webapp deploy \
-            --name app-lms-portal \
-            --resource-group Dima-Gibert-RG \
-            --src-path deploy.zip \
-            --type zip \
-            --clean true \
-            --async true
-          echo "✅ Deployment submitted — Azure Oryx will run npm ci"
+          # Get AAD token for management API
+          TOKEN=$(az account get-access-token \
+            --resource https://management.azure.com/ \
+            --query accessToken -o tsv)
+          
+          # Use the /api/zipdeploy endpoint which does NOT strip node_modules
+          HTTP_CODE=$(curl -s -o /tmp/deploy-response.txt -w "%{http_code}" \
+            -X POST \
+            "https://app-lms-portal.scm.azurewebsites.net/api/zipdeploy?isAsync=true&clean=true" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/zip" \
+            --data-binary @deploy.zip \
+            --max-time 300)
+          
+          echo "Kudu zipdeploy response: HTTP $HTTP_CODE"
+          cat /tmp/deploy-response.txt
+          
+          if [ "$HTTP_CODE" != "202" ] && [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Deploy failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Zip deployed successfully"
 
       - name: Wait for app to start
         run: |
           echo "Polling https://app-lms-portal.azurewebsites.net ..."
           for i in $(seq 1 24); do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://app-lms-portal.azurewebsites.net/)
-            echo "Attempt $i: HTTP $CODE"
+            echo "$(date -u '+%H:%M:%S') Attempt $i: HTTP $CODE"
             if [ "$CODE" = "200" ]; then
               echo "✅ App is live at https://lms.andersenlab.com"
               exit 0
             fi
             sleep 15
           done
-          echo "⚠️ App did not return 200 within 6 minutes"
+          echo "⚠️ Did not get 200 within 6 minutes"
           exit 1
