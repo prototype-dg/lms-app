@@ -3839,6 +3839,10 @@ $.use("/api/*", Ne()), $.use("*", async (e, t) => {
 }), $.get("/api/v1/customers/:id", async (e) => {
 	let t = e.req.param("id"), n = await R.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
+}), $.use("*", async (e, t) => {
+	await t();
+	let n = e.req.path;
+	(n.endsWith(".html") || n === "/" || n === "") && e.res.status === 200 && (e.res.headers.set("Cache-Control", "no-cache, must-revalidate"), e.res.headers.set("Pragma", "no-cache"));
 }), $.use("/*", e({ root: "./dist" }));
 //#endregion
 export { $ as default, Q as env };

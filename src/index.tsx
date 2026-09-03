@@ -100,6 +100,26 @@ app.get('/api/v1/customers/:id', async (c) => {
   return c.json({ customer })
 })
 
+// ── Cache-Control for HTML files — prevent stale browser cache after deploys ───
+// Without an explicit Cache-Control header, browsers apply heuristic caching
+// (typically 10% of (Now - Last-Modified)) and can serve stale HTML for hours
+// or even days without ever revalidating.
+//
+// "no-cache" does NOT mean "don't cache" — it means "always revalidate before
+// serving from cache". The browser sends If-Modified-Since / If-None-Match and
+// gets a fast 304 when nothing changed, but immediately picks up any new deploy.
+//
+// Applied to: *.html files and the root path (which resolves to index.html)
+app.use('*', async (c, next) => {
+  await next()
+  const path = c.req.path
+  const isHtml = path.endsWith('.html') || path === '/' || path === ''
+  if (isHtml && c.res.status === 200) {
+    c.res.headers.set('Cache-Control', 'no-cache, must-revalidate')
+    c.res.headers.set('Pragma', 'no-cache')
+  }
+})
+
 // ── Static file serving — replaces Cloudflare ASSETS binding ──────────────────
 // After vite build, static assets land in dist/ (portals/, static/, assets/, index.html)
 // server.js runs from wwwroot, so dist/ is the correct relative root.
