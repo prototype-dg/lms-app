@@ -1,14 +1,8 @@
+import type { NodeBindings } from '../lib/types'
 import { Hono } from 'hono'
 import { generateId, now, logAudit } from '../lib/db'
+const app = new Hono<{ Bindings: NodeBindings }>()
 
-type Bindings = { DB: D1Database }
-const app = new Hono<{ Bindings: Bindings }>()
-
-app.get('/:appId/stages', async (c) => {
-  const appId = c.req.param('appId')
-  const { results } = await c.env.DB.prepare('SELECT * FROM construction_stages WHERE application_id = ? ORDER BY stage_number').bind(appId).all()
-  return c.json({ stages: results })
-})
 
 app.post('/:appId/complete-stage', async (c) => {
   const appId = c.req.param('appId')

@@ -1,24 +1,8 @@
+import type { NodeBindings } from '../lib/types'
 import { Hono } from 'hono'
 import { generateId, now, logAudit } from '../lib/db'
+const app = new Hono<{ Bindings: NodeBindings }>()
 
-type Bindings = { DB: D1Database }
-const app = new Hono<{ Bindings: Bindings }>()
-
-// Get compliance queue
-app.get('/queue', async (c) => {
-  const { results } = await c.env.DB.prepare(`
-    SELECT a.*, c.name as customer_display_name, c.credit_score, c.salary_omr, c.employer,
-    p.name as product_name, p.ai_confidence_threshold, p.gsas_min_score, p.gsas_premium_score,
-    pr.name as project_name, pr.gsas_score as project_gsas, pr.location
-    FROM applications a
-    LEFT JOIN customers c ON a.customer_id = c.id
-    LEFT JOIN products p ON a.product_id = p.id
-    LEFT JOIN projects pr ON a.project_id = pr.id
-    WHERE a.status IN ('esg_review','credit_review','submitted','credit_scoring')
-    ORDER BY a.created_at DESC
-  `).all()
-  return c.json({ applications: results })
-})
 
 // ESG compliance assessment for application
 app.get('/esg/:appId', async (c) => {

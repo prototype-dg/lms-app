@@ -1,22 +1,8 @@
+import type { NodeBindings } from '../lib/types'
 import { Hono } from 'hono'
 import { generateId, now, logAudit } from '../lib/db'
+const app = new Hono<{ Bindings: NodeBindings }>()
 
-type Bindings = { DB: D1Database; VPS_URL: string }
-const app = new Hono<{ Bindings: Bindings }>()
-
-app.get('/', async (c) => {
-  const entityType = c.req.query('entity_type')
-  const entityId = c.req.query('entity_id')
-  let query = 'SELECT * FROM documents'
-  const params: any[] = []
-  if (entityType && entityId) {
-    query += ' WHERE entity_type = ? AND entity_id = ?'
-    params.push(entityType, entityId)
-  }
-  query += ' ORDER BY created_at DESC'
-  const { results } = await c.env.DB.prepare(query).bind(...params).all()
-  return c.json({ documents: results })
-})
 
 // Simulate document upload and AI analysis
 app.post('/analyze', async (c) => {

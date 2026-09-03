@@ -1,28 +1,8 @@
+import type { NodeBindings } from '../lib/types'
 import { Hono } from 'hono'
 import { generateId, now, logAudit } from '../lib/db'
+const app = new Hono<{ Bindings: NodeBindings }>()
 
-type Bindings = { DB: D1Database }
-const app = new Hono<{ Bindings: Bindings }>()
-
-app.get('/', async (c) => {
-  const status = c.req.query('status')
-  const customerId = c.req.query('customer_id')
-  let query = `SELECT a.*, c.name as customer_display_name, c.salary_omr, c.credit_score, 
-    p.name as product_name, u.unit_number as unit_name, pr.name as project_name
-    FROM applications a
-    LEFT JOIN customers c ON a.customer_id = c.id
-    LEFT JOIN products p ON a.product_id = p.id
-    LEFT JOIN units u ON a.unit_id = u.id
-    LEFT JOIN projects pr ON a.project_id = pr.id`
-  const conditions: string[] = []
-  const params: any[] = []
-  if (status) { conditions.push('a.status = ?'); params.push(status) }
-  if (customerId) { conditions.push('a.customer_id = ?'); params.push(customerId) }
-  if (conditions.length) query += ' WHERE ' + conditions.join(' AND ')
-  query += ' ORDER BY a.created_at DESC'
-  const { results } = await c.env.DB.prepare(query).bind(...params).all()
-  return c.json({ applications: results })
-})
 
 app.get('/:id', async (c) => {
   const id = c.req.param('id')

@@ -1,36 +1,7 @@
+import type { NodeBindings } from '../lib/types'
 import { Hono } from 'hono'
+const app = new Hono<{ Bindings: NodeBindings }>()
 
-type Bindings = { DB: D1Database; DEMO_MODE: string }
-const app = new Hono<{ Bindings: Bindings }>()
-
-// Run all migrations to seed DB
-app.post('/run', async (c) => {
-  const db = c.env.DB
-  try {
-    // Read SQL from built-in seed data
-    const migrations = getSeedSQL()
-    const statements = migrations
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 10 && !s.startsWith('--'))
-
-    let count = 0
-    for (const stmt of statements) {
-      try {
-        await db.prepare(stmt).run()
-        count++
-      } catch (e: any) {
-        // Ignore duplicate key errors
-        if (!e.message?.includes('UNIQUE') && !e.message?.includes('already exists')) {
-          console.error('Migration error:', e.message, stmt.substring(0, 100))
-        }
-      }
-    }
-    return c.json({ success: true, executed: count })
-  } catch (e: any) {
-    return c.json({ success: false, error: e.message }, 500)
-  }
-})
 
 function getSeedSQL(): string {
   // Embedded schema + portal migration columns + seed data

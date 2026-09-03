@@ -1,15 +1,8 @@
+import type { NodeBindings } from '../lib/types'
 import { Hono } from 'hono'
 import { generateId, now, logAudit } from '../lib/db'
+const app = new Hono<{ Bindings: NodeBindings }>()
 
-type Bindings = { DB: D1Database; OPENAI_API_KEY: string }
-const app = new Hono<{ Bindings: Bindings }>()
-
-app.get('/', async (c) => {
-  const { results } = await c.env.DB.prepare(
-    'SELECT * FROM products ORDER BY status, name'
-  ).all()
-  return c.json({ products: results })
-})
 
 app.get('/:id', async (c) => {
   const id = c.req.param('id')

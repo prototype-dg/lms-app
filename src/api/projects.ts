@@ -1,18 +1,8 @@
+import type { NodeBindings } from '../lib/types'
 import { Hono } from 'hono'
 import { generateId, now, logAudit } from '../lib/db'
+const app = new Hono<{ Bindings: NodeBindings }>()
 
-type Bindings = { DB: D1Database }
-const app = new Hono<{ Bindings: Bindings }>()
-
-app.get('/', async (c) => {
-  const developerId = c.req.query('developer_id')
-  let query = `SELECT p.*, d.company_name as developer_name FROM projects p LEFT JOIN developers d ON p.developer_id = d.id`
-  const params: any[] = []
-  if (developerId) { query += ' WHERE p.developer_id = ?'; params.push(developerId) }
-  query += ' ORDER BY p.created_at DESC'
-  const { results } = await c.env.DB.prepare(query).bind(...params).all()
-  return c.json({ projects: results })
-})
 
 app.get('/:id', async (c) => {
   const id = c.req.param('id')

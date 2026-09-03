@@ -10,7 +10,7 @@ export function now(): string {
   return new Date().toISOString().replace('T', ' ').split('.')[0]
 }
 
-export async function logAudit(db: D1Database, {
+export async function logAudit(db: any, {
   userId = 'system',
   userName = 'System',
   userRole = 'system',

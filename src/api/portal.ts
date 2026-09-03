@@ -1,23 +1,8 @@
+import type { NodeBindings } from '../lib/types'
 import { Hono } from 'hono'
 import { generateId, now, logAudit } from '../lib/db'
+const app = new Hono<{ Bindings: NodeBindings }>()
 
-type Bindings = { DB: D1Database; OPENAI_API_KEY: string }
-const app = new Hono<{ Bindings: Bindings }>()
-
-// ── Consumer Portal: List published products ──────────────────────────────
-app.get('/products', async (c) => {
-  const { results } = await c.env.DB.prepare(
-    `SELECT id, name, code, description, category, status, base_rate, max_ltv, max_dbr,
-     green_dbr, min_term, max_term, min_amount, max_amount,
-     gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,
-     allow_byop, allow_partner_inventory, required_docs, esg_required_docs,
-     portal_hero_title, portal_hero_subtitle, portal_card_badge, portal_highlights,
-     portal_calculator_enabled, published_at, applications_ytd
-     FROM products WHERE portal_visible = 1 AND status = 'active'
-     ORDER BY published_at ASC`
-  ).all()
-  return c.json({ products: results, total: results.length })
-})
 
 // ── Consumer Portal: Single product detail ────────────────────────────────
 app.get('/products/:id', async (c) => {

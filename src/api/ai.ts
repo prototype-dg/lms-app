@@ -1,30 +1,8 @@
+import type { NodeBindings } from '../lib/types'
 import { Hono } from 'hono'
 import { generateId, now, logAudit } from '../lib/db'
+const app = new Hono<{ Bindings: NodeBindings }>()
 
-type Bindings = { DB: D1Database; OPENAI_API_KEY: string }
-const app = new Hono<{ Bindings: Bindings }>()
-
-async function callOpenAI(prompt: string, systemPrompt: string, apiKey: string, model = 'gpt-4o-mini'): Promise<string> {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.3,
-      max_tokens: 2000,
-    })
-  })
-  const data = await response.json() as any
-  if (!response.ok) throw new Error(data.error?.message || 'OpenAI error')
-  return data.choices[0].message.content
-}
 
 // ── Multi-turn AI Product Studio ─────────────────────────────────────────
 // Handles the full product creation conversation: understand requirements,

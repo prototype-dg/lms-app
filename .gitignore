@@ -31,3 +31,12 @@ lerna-debug.log*
 
 # misc
 .DS_Store
+
+# Local SQLite database (Azure uses /home/data/app.db)
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Deployment archives
+deploy.zip

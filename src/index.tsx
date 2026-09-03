@@ -1,5 +1,9 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { serveStatic } from '@hono/node-server/serve-static'
+
+// DB adapter — replaces Cloudflare D1 binding
+import { DB } from './lib/db-adapter'
 
 // API route handlers
 import { productsApi } from './api/products'
@@ -14,18 +18,25 @@ import { usersApi } from './api/users'
 import { seedApi } from './api/seed'
 import { portalApi } from './api/portal'
 
-type Bindings = {
-  DB: D1Database
-  ASSETS: Fetcher
-  OPENAI_API_KEY: string
-  GOOGLE_VISION_API_KEY: string
-  VPS_URL: string
-  DEMO_MODE: string
+// Node.js env — replaces Cloudflare Bindings
+export const env = {
+  DB,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+  GOOGLE_VISION_API_KEY: process.env.GOOGLE_VISION_API_KEY || '',
+  DEMO_MODE: process.env.DEMO_MODE || 'true',
 }
 
-const app = new Hono<{ Bindings: Bindings }>()
+const app = new Hono()
 
 app.use('/api/*', cors())
+
+// Inject env into every request context so existing API handlers work unchanged
+app.use('*', async (c, next) => {
+  c.set('env', env)
+  // Attach as c.env for backward compat with handlers that use c.env.DB etc.
+  Object.assign(c, { env })
+  await next()
+})
 
 // Mount API routes
 app.route('/api/v1/products', productsApi)
@@ -40,7 +51,7 @@ app.route('/api/v1/users', usersApi)
 app.route('/api/v1/seed', seedApi)
 app.route('/api/v1/portal', portalApi)
 
-// ── Image proxy: fetches Genspark blob URLs server-side (avoids 403 in browser) ──
+// ── Image proxy ──────────────────────────────────────────────────────────────
 app.get('/api/v1/img-proxy', async (c) => {
   const url = c.req.query('url')
   if (!url || !url.startsWith('https://www.genspark.ai/')) {
@@ -58,12 +69,12 @@ app.get('/api/v1/img-proxy', async (c) => {
         'Access-Control-Allow-Origin': '*',
       }
     })
-  } catch(e) {
+  } catch {
     return c.text('Proxy error', 502)
   }
 })
 
-// Standalone rules endpoint (all rules, or filter by product)
+// ── Standalone rules endpoint ─────────────────────────────────────────────────
 app.get('/api/v1/rules', async (c) => {
   const productId = c.req.query('product_id')
   const category = c.req.query('category')
@@ -72,29 +83,27 @@ app.get('/api/v1/rules', async (c) => {
   if (productId) { sql += ' AND (product_id = ? OR product_id IS NULL)'; params.push(productId) }
   if (category) { sql += ' AND category = ?'; params.push(category) }
   sql += ' ORDER BY category, name'
-  const stmt = params.length ? c.env.DB.prepare(sql).bind(...params) : c.env.DB.prepare(sql)
+  const stmt = params.length ? DB.prepare(sql).bind(...params) : DB.prepare(sql)
   const { results } = await stmt.all()
   return c.json({ rules: results, total: results.length })
 })
 
-// Standalone customers endpoint
+// ── Standalone customers endpoint ─────────────────────────────────────────────
 app.get('/api/v1/customers', async (c) => {
-  const { results } = await c.env.DB.prepare('SELECT * FROM customers ORDER BY name').all()
+  const { results } = await DB.prepare('SELECT * FROM customers ORDER BY name').all()
   return c.json({ customers: results, total: results.length })
 })
 app.get('/api/v1/customers/:id', async (c) => {
   const id = c.req.param('id')
-  const customer = await c.env.DB.prepare('SELECT * FROM customers WHERE id = ?').bind(id).first()
+  const customer = await DB.prepare('SELECT * FROM customers WHERE id = ?').bind(id).first()
   if (!customer) return c.json({ error: 'Not found' }, 404)
   return c.json({ customer })
 })
 
-// All non-API routes: serve via Cloudflare ASSETS binding.
-// This handles /, /index.html, /portals/*, /static/*, etc.
-// The ASSETS binding serves index.html for / automatically (no redirect needed).
-app.all('*', async (c) => {
-  const response = await c.env.ASSETS.fetch(c.req.raw)
-  return response
-})
+// ── Static file serving — replaces Cloudflare ASSETS binding ──────────────────
+// Serves everything in /public: HTML portals, images, CSS, JS
+app.use('/*', serveStatic({ root: './public' }))
 
+// Export the Hono app — server startup is handled by server.js (not bundled)
+// This keeps process.env.PORT readable at true runtime, not baked into the bundle
 export default app
