@@ -111,52 +111,51 @@ app.get('/api/v1/customers/:id', async (c) => {
   return c.json({ customer })
 })
 
-// ── Build version token — injected into every HTML page to bust stale cache ───
-// DEPLOY_VERSION is replaced at build time by vite define; falls back to timestamp.
-// Every new deploy produces a new token → URL ?v=<token> changes → browser cannot
-// serve the old cached copy (different URL = cache miss).
+// ── Build version token — baked in at build time by vite define ──────────────
+// Every new deploy produces a new token. The server redirects bare HTML URLs
+// to ?v=<token> so the browser always fetches a URL it has never cached before.
 const DEPLOY_VERSION = (typeof __DEPLOY_VERSION__ !== 'undefined')
   ? __DEPLOY_VERSION__
   : Date.now().toString(36)
 
-// Cache-bust redirect script injected before </head> in every HTML response.
-// If the page URL doesn't already carry ?v=<token>, we redirect to the versioned
-// URL immediately — this forces a fresh fetch even on machines with deeply stale
-// disk cache from before no-store was deployed.
-const CACHE_BUST_SCRIPT = `
-<script>
-(function(){
-  var V='${DEPLOY_VERSION}';
-  var u=new URL(location.href);
-  if(u.searchParams.get('v')!==V){
-    u.searchParams.set('v',V);
-    location.replace(u.toString());
-  }
-})();
-</script>`
-
-// ── HTML file handler — serves HTML with no-store headers + cache-bust redirect ─
+// ── HTML file handler — server-side 302 redirect for cache busting ────────────
+// Strategy:
+//   1. Request arrives without ?v= or with a stale ?v= → server issues a 302
+//      to the same path with ?v=<DEPLOY_VERSION>. The browser follows the
+//      redirect to a URL it has never seen → guaranteed cache miss → fresh file.
+//   2. Request arrives with the correct ?v= → serve the file with no-store so
+//      it is never written to disk cache again.
+//
+// This is 100% server-side — no client script injection, no Vite interference.
 import fs from 'node:fs'
-import path from 'node:path'
+import nodePath from 'node:path'
 
 app.use('*', async (c, next) => {
   const reqPath = c.req.path
   const isHtml = reqPath.endsWith('.html') || reqPath === '/' || reqPath === ''
-
   if (!isHtml) { await next(); return }
 
-  // Map request path → dist file path
-  const filePath = reqPath === '/' || reqPath === ''
-    ? path.join(process.cwd(), 'dist', 'index.html')
-    : path.join(process.cwd(), 'dist', reqPath)
+  // Map request path → dist file on disk
+  const filePath = (reqPath === '/' || reqPath === '')
+    ? nodePath.join(process.cwd(), 'dist', 'index.html')
+    : nodePath.join(process.cwd(), 'dist', reqPath)
 
   if (!fs.existsSync(filePath)) { await next(); return }
 
-  let html = fs.readFileSync(filePath, 'utf-8')
+  const v = c.req.query('v')
 
-  // Inject cache-bust redirect before </head>
-  html = html.replace('</head>', CACHE_BUST_SCRIPT + '</head>')
+  // Wrong / missing version → redirect to versioned URL (cache miss guaranteed)
+  if (v !== DEPLOY_VERSION) {
+    // Build redirect URL safely — c.req.url may be a relative path on Node.js
+    const base = c.req.url.startsWith('http') ? c.req.url : `http://localhost${c.req.url}`
+    const url = new URL(base)
+    url.searchParams.set('v', DEPLOY_VERSION)
+    // Return just path+search (no host) so it works behind any domain / proxy
+    return c.redirect(url.pathname + url.search, 302)
+  }
 
+  // Correct version → serve with no-store (never cache again)
+  const html = fs.readFileSync(filePath, 'utf-8')
   return c.html(html, 200, {
     'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
     'Pragma': 'no-cache',

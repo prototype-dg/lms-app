@@ -58,7 +58,7 @@ var h = (e, t, n) => {
 	return t[0] === "" && t.shift(), t;
 }, y = (e) => {
 	let { groups: t, path: n } = b(e);
-	return ee(v(n), t);
+	return x(v(n), t);
 }, b = (e) => {
 	let t = [];
 	return e = e.replace(/\{[^}]+\}/g, (e, n) => {
@@ -68,7 +68,7 @@ var h = (e, t, n) => {
 		groups: t,
 		path: e
 	};
-}, ee = (e, t) => {
+}, x = (e, t) => {
 	for (let n = t.length - 1; n >= 0; n--) {
 		let [r] = t[n];
 		for (let i = e.length - 1; i >= 0; i--) if (e[i].includes(r)) {
@@ -77,12 +77,12 @@ var h = (e, t, n) => {
 		}
 	}
 	return e;
-}, x = {}, S = (e, t) => {
+}, S = {}, C = (e, t) => {
 	if (e === "*") return "*";
 	let n = e.match(/^\:([^\{\}]+)(?:\{(.+)\})?$/);
 	if (n) {
 		let r = `${e}#${t}`;
-		return x[r] || (x[r] = n[2] ? t && t[0] !== ":" && t[0] !== "*" ? [
+		return S[r] || (S[r] = n[2] ? t && t[0] !== ":" && t[0] !== "*" ? [
 			r,
 			n[1],
 			RegExp(`^${n[2]}(?=/${t})`)
@@ -94,10 +94,10 @@ var h = (e, t, n) => {
 			e,
 			n[1],
 			!0
-		]), x[r];
+		]), S[r];
 	}
 	return null;
-}, C = (e, t) => {
+}, w = (e, t) => {
 	try {
 		return t(e);
 	} catch {
@@ -109,21 +109,21 @@ var h = (e, t, n) => {
 			}
 		});
 	}
-}, w = (e) => C(e, decodeURI), T = (e) => {
+}, T = (e) => w(e, decodeURI), E = (e) => {
 	let t = e.url, n = t.indexOf("/", t.indexOf(":") + 4), r = n;
 	for (; r < t.length; r++) {
 		let e = t.charCodeAt(r);
 		if (e === 37) {
 			let e = t.indexOf("?", r), i = t.indexOf("#", r), a = e === -1 ? i === -1 ? void 0 : i : i === -1 ? e : Math.min(e, i), o = t.slice(n, a);
-			return w(o.includes("%25") ? o.replace(/%25/g, "%2525") : o);
+			return T(o.includes("%25") ? o.replace(/%25/g, "%2525") : o);
 		}
 		if (e === 63 || e === 35) break;
 	}
 	return t.slice(n, r);
-}, te = (e) => {
-	let t = T(e);
+}, ee = (e) => {
+	let t = E(e);
 	return t.length > 1 && t.at(-1) === "/" ? t.slice(0, -1) : t;
-}, E = (e, t, ...n) => (n.length && (t = E(t, ...n)), `${e?.[0] === "/" ? "" : "/"}${e}${t === "/" ? "" : `${e?.at(-1) === "/" ? "" : "/"}${t?.[0] === "/" ? t.slice(1) : t}`}`), ne = (e) => {
+}, D = (e, t, ...n) => (n.length && (t = D(t, ...n)), `${e?.[0] === "/" ? "" : "/"}${e}${t === "/" ? "" : `${e?.at(-1) === "/" ? "" : "/"}${t?.[0] === "/" ? t.slice(1) : t}`}`), te = (e) => {
 	if (e.charCodeAt(e.length - 1) !== 63 || !e.includes(":")) return null;
 	let t = e.split("/"), n = [], r = "";
 	return t.forEach((e) => {
@@ -136,7 +136,7 @@ var h = (e, t, n) => {
 			} else r += "/" + e;
 		}
 	}), n.filter((e, t, n) => n.indexOf(e) === t);
-}, D = (e) => e.indexOf("%") === -1 ? e : C(e, oe), O = (e) => (e.indexOf("+") !== -1 && (e = e.replace(/\+/g, " ")), D(e)), re = (e, t, n) => {
+}, O = (e) => e.indexOf("%") === -1 ? e : w(e, oe), ne = (e) => (e.indexOf("+") !== -1 && (e = e.replace(/\+/g, " ")), O(e)), re = (e, t, n) => {
 	let r = e.indexOf("#", 8);
 	r !== -1 && (e = e.slice(0, r));
 	let i;
@@ -147,7 +147,7 @@ var h = (e, t, n) => {
 			let r = e.charCodeAt(n + t.length + 1);
 			if (r === 61) {
 				let r = n + t.length + 2, i = e.indexOf("&", r);
-				return O(e.slice(r, i === -1 ? void 0 : i));
+				return ne(e.slice(r, i === -1 ? void 0 : i));
 			}
 			if (r == 38 || isNaN(r)) return "";
 			n = e.indexOf(`&${t}`, n + 1);
@@ -161,9 +161,9 @@ var h = (e, t, n) => {
 		let t = e.indexOf("&", o + 1), r = e.indexOf("=", o);
 		r > t && t !== -1 && (r = -1);
 		let s = e.slice(o + 1, r === -1 ? t === -1 ? void 0 : t : r);
-		if (i && (s = O(s)), o = t, s === "") continue;
+		if (i && (s = ne(s)), o = t, s === "") continue;
 		let c;
-		r === -1 ? c = "" : (c = e.slice(r + 1, t === -1 ? void 0 : t), i && (c = O(c))), n ? (a[s] && Array.isArray(a[s]) || (a[s] = []), a[s].push(c)) : a[s] ??= c;
+		r === -1 ? c = "" : (c = e.slice(r + 1, t === -1 ? void 0 : t), i && (c = ne(c))), n ? (a[s] && Array.isArray(a[s]) || (a[s] = []), a[s].push(c)) : a[s] ??= c;
 	}
 	return t ? a[t] : a;
 }, ie = re, ae = (e, t) => re(e, t, !0), oe = decodeURIComponent, se = class {
@@ -181,13 +181,13 @@ var h = (e, t, n) => {
 	}
 	#n(e) {
 		let t = this.#t[0][this.routeIndex]?.[1][e], n = this.#i(t);
-		return n && D(n);
+		return n && O(n);
 	}
 	#r() {
 		let e = {}, t = Object.keys(this.#t[0][this.routeIndex]?.[1] ?? {});
 		for (let n of t) {
 			let t = this.#i(this.#t[0][this.routeIndex][1][n]);
-			t !== void 0 && (e[n] = D(t));
+			t !== void 0 && (e[n] = O(t));
 		}
 		return e;
 	}
@@ -431,7 +431,7 @@ var h = (e, t, n) => {
 			this.#r("ALL", this.#e, e);
 		}), this);
 		let { strict: t, ...n } = e;
-		Object.assign(this, n), this.getPath = t ?? !0 ? e.getPath ?? T : te;
+		Object.assign(this, n), this.getPath = t ?? !0 ? e.getPath ?? E : ee;
 	}
 	#t() {
 		let t = new e({
@@ -451,7 +451,7 @@ var h = (e, t, n) => {
 	}
 	basePath(e) {
 		let t = this.#t();
-		return t._basePath = E(this._basePath, e), t;
+		return t._basePath = D(this._basePath, e), t;
 	}
 	onError = (e) => (this.errorHandler = e, this);
 	notFound = (e) => (this.#n = e, this);
@@ -469,21 +469,21 @@ var h = (e, t, n) => {
 			return [e.env, t];
 		};
 		return r ||= (() => {
-			let t = E(this._basePath, e), n = t === "/" ? 0 : t.length;
+			let t = D(this._basePath, e), n = t === "/" ? 0 : t.length;
 			return (e) => {
 				let t = new URL(e.url);
 				return t.pathname = this.getPath(e).slice(n) || "/", new Request(t, e);
 			};
-		})(), this.#r("ALL", E(e, "*"), async (e, n) => {
+		})(), this.#r("ALL", D(e, "*"), async (e, n) => {
 			let i = await t(r(e.req.raw), ...a(e));
 			if (i) return i;
 			await n();
 		}), this;
 	}
 	#r(e, t, n, r) {
-		e = e.toUpperCase(), t = E(this._basePath, t);
+		e = e.toUpperCase(), t = D(this._basePath, t);
 		let i = {
-			basePath: r === void 0 ? this._basePath : E(this._basePath, r),
+			basePath: r === void 0 ? this._basePath : D(this._basePath, r),
 			path: t,
 			method: e,
 			handler: n
@@ -526,7 +526,7 @@ var h = (e, t, n) => {
 		})();
 	}
 	fetch = (e, ...t) => this.#a(e, t[1], t[0], e.method);
-	request = (e, t, n, r) => e instanceof Request ? this.fetch(t ? new Request(e, t) : e, n, r) : (e = e.toString(), this.fetch(new Request(/^https?:\/\//.test(e) ? e : `http://localhost${E("/", e)}`, t), n, r));
+	request = (e, t, n, r) => e instanceof Request ? this.fetch(t ? new Request(e, t) : e, n, r) : (e = e.toString(), this.fetch(new Request(/^https?:\/\//.test(e) ? e : `http://localhost${D("/", e)}`, t), n, r));
 	fire = () => {
 		addEventListener("fetch", (e) => {
 			e.respondWith(this.#a(e.request, e, void 0, e.request.method));
@@ -678,7 +678,7 @@ var je = class {
 			for (let o of [r, i]) for (let r of a) for (let i in o[r]) e.test(i) && o[r][i].push([n, t]);
 			return;
 		}
-		let o = ne(t) || [t];
+		let o = te(t) || [t];
 		for (let e of o) for (let t of a) i[t][e] || (this.#r(t, e), i[t][e] = M(r[t], e) || M(r.ALL, e) || []), i[t][e].push([n, e]);
 	}
 	match = Se;
@@ -749,7 +749,7 @@ var je = class {
 	insert(t, n, r) {
 		let i = this, a = y(n), o = /* @__PURE__ */ new Set(), s = 0;
 		for (let t of a) {
-			let n = a[++s], r = S(t, n) || (n === void 0 && t && t.indexOf("*") === t.length - 1 ? t : null), c = Array.isArray(r), l = c ? r[0] : r || t, u = i.#t[l] ||= new e();
+			let n = a[++s], r = C(t, n) || (n === void 0 && t && t.indexOf("*") === t.length - 1 ? t : null), c = Array.isArray(r), l = c ? r[0] : r || t, u = i.#t[l] ||= new e();
 			r && !u.#r && (u.#r = r, i.#n.push(u)), i = u, c && o.add(r[1]);
 		}
 		i.#e.push({ [t]: {
@@ -818,7 +818,7 @@ var je = class {
 	name = "TrieRouter";
 	#e = new Pe();
 	add(e, t, n) {
-		for (let r of ne(t) || [t]) this.#e.insert(e, r, n);
+		for (let r of te(t) || [t]) this.#e.insert(e, r, n);
 	}
 	match(e, t) {
 		return this.#e.search(e, t);
@@ -3515,12 +3515,12 @@ q.get("/products/:id", async (e) => {
 	if (!p) return e.json({ error: "Product not found or not active" }, 404);
 	let m = 0;
 	l >= (p.gsas_premium_score || 85) ? m = p.green_discount_premium || 0 : l >= (p.gsas_min_score || 70) && (m = p.green_discount_standard || 0);
-	let h = parseFloat((p.base_rate - m).toFixed(3)), g = o * 12, _ = h / 100 / 12, v = _ > 0 ? a * (_ * (1 + _) ** +g) / ((1 + _) ** +g - 1) : a / g, y = p.base_rate / 100 / 12, b = y > 0 ? a * (y * (1 + y) ** +g) / ((1 + y) ** +g - 1) : a / g, ee = Math.max(0, Math.round((b - v) * g)), x = d ? parseFloat((v / d * 100).toFixed(1)) : null, S = R("app"), C = z(), w = "GHL-" + Date.now().toString().slice(-6), T = null;
+	let h = parseFloat((p.base_rate - m).toFixed(3)), g = o * 12, _ = h / 100 / 12, v = _ > 0 ? a * (_ * (1 + _) ** +g) / ((1 + _) ** +g - 1) : a / g, y = p.base_rate / 100 / 12, b = y > 0 ? a * (y * (1 + y) ** +g) / ((1 + y) ** +g - 1) : a / g, x = Math.max(0, Math.round((b - v) * g)), S = d ? parseFloat((v / d * 100).toFixed(1)) : null, C = R("app"), w = z(), T = "GHL-" + Date.now().toString().slice(-6), E = null;
 	if (f) {
 		let t = await e.env.DB.prepare("SELECT id FROM customers WHERE civil_id = ?").bind(f).first();
-		t && (T = t.id);
+		t && (E = t.id);
 	}
-	if (await e.env.DB.prepare("\n    INSERT INTO applications (id,reference,product_id,customer_id,customer_name,unit_id,project_id,\n    loan_amount,loan_term,property_address,property_source,gsas_score,epc_rating,\n    applied_rate,standard_rate,monthly_payment,standard_monthly_payment,lifetime_saving,dbr,\n    escrow_amount,status,esg_verification_status,created_at,updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(S, w, t, T || null, n, r || null, i || null, a, o, s || null, c || "partner", l || null, u || null, h, p.base_rate, Math.round(v * 100) / 100, Math.round(b * 100) / 100, ee, x, a, "submitted", l ? "pending" : "not_applicable", C, C).run(), p.esg_required_docs && JSON.parse(p.esg_required_docs || "[]").length > 0) for (let t of [
+	if (await e.env.DB.prepare("\n    INSERT INTO applications (id,reference,product_id,customer_id,customer_name,unit_id,project_id,\n    loan_amount,loan_term,property_address,property_source,gsas_score,epc_rating,\n    applied_rate,standard_rate,monthly_payment,standard_monthly_payment,lifetime_saving,dbr,\n    escrow_amount,status,esg_verification_status,created_at,updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(C, T, t, E || null, n, r || null, i || null, a, o, s || null, c || "partner", l || null, u || null, h, p.base_rate, Math.round(v * 100) / 100, Math.round(b * 100) / 100, x, S, a, "submitted", l ? "pending" : "not_applicable", w, w).run(), p.esg_required_docs && JSON.parse(p.esg_required_docs || "[]").length > 0) for (let t of [
 		{
 			num: 1,
 			name: "Foundation & Groundwork",
@@ -3555,28 +3555,28 @@ q.get("/products/:id", async (e) => {
 		}
 	]) {
 		let n = Math.round(a * t.pct / 100);
-		await e.env.DB.prepare("\n        INSERT INTO construction_stages (id,application_id,stage_number,stage_name,description,tranche_amount,tranche_percentage,required_material,status,created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?)\n      ").bind(R("st"), S, t.num, t.name, t.desc, n, t.pct, t.mat, t.status, C).run();
+		await e.env.DB.prepare("\n        INSERT INTO construction_stages (id,application_id,stage_number,stage_name,description,tranche_amount,tranche_percentage,required_material,status,created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?)\n      ").bind(R("st"), C, t.num, t.name, t.desc, n, t.pct, t.mat, t.status, w).run();
 	}
 	return await B(e.env.DB, {
-		userId: T || "portal",
+		userId: E || "portal",
 		userName: n,
 		userRole: "customer",
 		action: "APPLICATION_SUBMITTED",
 		entityType: "application",
-		entityId: S,
+		entityId: C,
 		details: {
-			reference: w,
+			reference: T,
 			product_id: t,
 			loan_amount: a,
 			applied_rate: h
 		}
 	}), e.json({
 		success: !0,
-		application_id: S,
-		reference: w,
+		application_id: C,
+		reference: T,
 		applied_rate: h,
 		monthly_payment: Math.round(v * 100) / 100,
-		lifetime_saving: ee,
+		lifetime_saving: x,
 		status: "submitted"
 	});
 }), q.get("/applications/:ref/status", async (e) => {
@@ -4450,7 +4450,7 @@ $.use("/api/*", Ie()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await L.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "\n<script>\n(function(){\n  var V='8abd255';\n  var u=new URL(location.href);\n  if(u.searchParams.get('v')!==V){\n    u.searchParams.set('v',V);\n    location.replace(u.toString());\n  }\n})();\n<\/script>";
+var at = "05e7fdf";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") || n === "/" || n === "")) {
@@ -4462,8 +4462,12 @@ $.use("*", async (e, t) => {
 		await t();
 		return;
 	}
+	if (e.req.query("v") !== at) {
+		let t = e.req.url.startsWith("http") ? e.req.url : `http://localhost${e.req.url}`, n = new URL(t);
+		return n.searchParams.set("v", at), e.redirect(n.pathname + n.search, 302);
+	}
 	let o = i.readFileSync(r, "utf-8");
-	return o = o.replace("</head>", at + "</head>"), e.html(o, 200, {
+	return e.html(o, 200, {
 		"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
 		Pragma: "no-cache",
 		Expires: "0"
