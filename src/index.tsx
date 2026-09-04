@@ -151,7 +151,13 @@ app.use('*', async (c, next) => {
     const url = new URL(base)
     url.searchParams.set('v', DEPLOY_VERSION)
     // Return just path+search (no host) so it works behind any domain / proxy
-    return c.redirect(url.pathname + url.search, 302)
+    // Clear-Site-Data wipes the entire browser cache for this origin on the
+    // redirect response itself — covers Chrome, Safari, Edge, Firefox.
+    return c.newResponse(null, 302, {
+      'Location': url.pathname + url.search,
+      'Clear-Site-Data': '"cache", "cookies", "storage"',
+      'Cache-Control': 'no-store',
+    })
   }
 
   // Correct version → serve with no-store (never cache again)
@@ -160,6 +166,7 @@ app.use('*', async (c, next) => {
     'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
     'Pragma': 'no-cache',
     'Expires': '0',
+    'Clear-Site-Data': '"cache"',
   })
 })
 

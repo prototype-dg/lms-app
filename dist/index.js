@@ -4450,7 +4450,7 @@ $.use("/api/*", Ie()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await L.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "05e7fdf";
+var at = "475261b";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") || n === "/" || n === "")) {
@@ -4464,13 +4464,18 @@ $.use("*", async (e, t) => {
 	}
 	if (e.req.query("v") !== at) {
 		let t = e.req.url.startsWith("http") ? e.req.url : `http://localhost${e.req.url}`, n = new URL(t);
-		return n.searchParams.set("v", at), e.redirect(n.pathname + n.search, 302);
+		return n.searchParams.set("v", at), e.newResponse(null, 302, {
+			Location: n.pathname + n.search,
+			"Clear-Site-Data": "\"cache\", \"cookies\", \"storage\"",
+			"Cache-Control": "no-store"
+		});
 	}
 	let o = i.readFileSync(r, "utf-8");
 	return e.html(o, 200, {
 		"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
 		Pragma: "no-cache",
-		Expires: "0"
+		Expires: "0",
+		"Clear-Site-Data": "\"cache\""
 	});
 }), $.use("/*", e({ root: "./dist" }));
 //#endregion
