@@ -37,6 +37,8 @@
       <span class="topbar-subtitle" id="pageSubtitle"></span>
       <div class="topbar-spacer"></div>
       <div class="topbar-actions">
+        <!-- Market badge -->
+        <div id="marketBadge" style="display:flex;align-items:center;gap:.25rem;font-size:.78rem;color:var(--grey-600);background:var(--grey-100);border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:.3rem .75rem;margin-right:.5rem;"></div>
         <!-- Role switcher -->
         <div class="portal-switch">
           <button class="portal-switch-btn active" onclick="switchRole('product_manager')" id="role-pm">Product Manager</button>
@@ -109,16 +111,27 @@ let rules = [];
 let auditLogs = [];
 let applications = [];
 
+// User registry — loaded from API on init
+let USERS = {};
+// Market context — loaded from API on init
+let activeMarket = null;
+
+// ROLES: static nav config only — user identity now loaded from DB
 const ROLES = {
-  product_manager: { name:'Fatima Al-Rashdi', nameAr:'فاطمة الراشدي', dept:'Product Management', avatar:'FA',
-    nav:['products','rules','workflows','compliance_config','audit_logs'] },
-  compliance_officer: { name:'Aisha Al-Balushi', nameAr:'عائشة البلوشي', dept:'Compliance & ESG', avatar:'AB',
-    nav:['tasks','esg_review','regulatory_reports','audit_logs','aml_alerts'] },
-  risk_officer: { name:'Omar Al-Mantheri', nameAr:'عمر المنذري', dept:'Credit Risk', avatar:'OM',
-    nav:['tasks','credit_review','stress_tests','regulatory_reports','audit_logs'] },
-  operations: { name:'Khalid Al-Rawahi', nameAr:'خالد الرواحي', dept:'Operations', avatar:'KR',
-    nav:['escrow','disbursements','audit_logs'] }
+  product_manager:    { userId:'u001', nav:['products','rules','workflows','compliance_config','audit_logs'] },
+  compliance_officer: { userId:'u002', nav:['tasks','esg_review','regulatory_reports','audit_logs','aml_alerts'] },
+  risk_officer:       { userId:'u003', nav:['tasks','credit_review','stress_tests','regulatory_reports','audit_logs'] },
+  operations:         { userId:'u004', nav:['escrow','disbursements','audit_logs'] }
 };
+
+// Derive current user identity from the loaded USERS map
+function currentUser() {
+  const userId = ROLES[currentRole]?.userId || 'u001';
+  return USERS[userId] || { id: userId, name: 'System', name_ar: 'النظام', department: '', avatar_initials: 'SY' };
+}
+function currentUserId()   { return currentUser().id; }
+function currentUserName() { return currentLang === 'ar' ? (currentUser().name_ar || currentUser().name) : currentUser().name; }
+function currentUserRole() { return currentRole; }
 
 const NAV_ITEMS = {
   products:           { icon:'fa-box', label:'Products', labelAr:'المنتجات' },
@@ -138,10 +151,71 @@ const NAV_ITEMS = {
 
 /* ======================== INIT ======================== */
 window.onload = async () => {
+  await Promise.all([ loadUsers(), loadMarket() ]);
   renderSidebar();
+  renderMarketBadge();
+  updateUserBadge();
   await loadProducts();
   renderPage('products');
 };
+
+async function loadUsers() {
+  try {
+    const r = await fetch('/api/v1/users');
+    const d = await r.json();
+    USERS = {};
+    (d.users || []).forEach(u => { USERS[u.id] = u; });
+  } catch(e) {
+    // Fallback defaults if API fails
+    USERS = {
+      u001: { id:'u001', name:'Fatima Al-Rashdi',  name_ar:'فاطمة الراشدي',  department:'Product Management', avatar_initials:'FA', role:'product_manager' },
+      u002: { id:'u002', name:'Aisha Al-Balushi',  name_ar:'عائشة البلوشي',  department:'Compliance & ESG',   avatar_initials:'AB', role:'compliance_officer' },
+      u003: { id:'u003', name:'Omar Al-Mantheri',  name_ar:'عمر المنذري',    department:'Credit Risk',         avatar_initials:'OM', role:'risk_officer' },
+      u004: { id:'u004', name:'Khalid Al-Rawahi',  name_ar:'خالد الرواحي',   department:'Operations',          avatar_initials:'KR', role:'operations' },
+    };
+  }
+}
+
+async function loadMarket() {
+  try {
+    const r = await fetch('/api/v1/markets/default/current');
+    const d = await r.json();
+    activeMarket = d.market || null;
+  } catch(e) {
+    activeMarket = { id:'mkt001', name:'Oman', name_ar:'عُمان', currency_code:'OMR',
+      currency_symbol:'ر.ع.', regulator_name:'CBO', country_code:'OM' };
+  }
+}
+
+function renderMarketBadge() {
+  const badge = document.getElementById('marketBadge');
+  if (!badge || !activeMarket) return;
+  const isAr = currentLang === 'ar';
+  const name = isAr ? (activeMarket.name_ar || activeMarket.name) : activeMarket.name;
+  badge.innerHTML = `<span style="font-size:1rem;margin-right:.25rem">${getFlagEmoji(activeMarket.country_code)}</span>
+    <span style="font-weight:600">${name}</span>
+    <span style="color:var(--grey-400);margin:0 .25rem">·</span>
+    <span>${activeMarket.currency_code}</span>
+    <span style="color:var(--grey-400);margin:0 .25rem">·</span>
+    <span>${activeMarket.regulator_name}</span>`;
+}
+
+function getFlagEmoji(countryCode) {
+  if (!countryCode || countryCode.length !== 2) return '🏳';
+  return countryCode.toUpperCase().split('').map(c =>
+    String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
+  ).join('');
+}
+
+function updateUserBadge() {
+  const u = currentUser();
+  const el = document.getElementById('userAvatar');
+  const nameEl = document.getElementById('userName');
+  const roleEl = document.getElementById('userRole');
+  if (el) el.textContent = u.avatar_initials || u.name?.charAt(0) || '?';
+  if (nameEl) nameEl.textContent = currentLang === 'ar' ? (u.name_ar || u.name) : u.name;
+  if (roleEl) roleEl.textContent = u.department || currentRole.replace(/_/g,' ');
+}
 
 const ROLE_BTN_ID = {
   product_manager: 'role-pm',
@@ -155,10 +229,7 @@ function switchRole(role) {
   document.querySelectorAll('.portal-switch-btn').forEach(b => b.classList.remove('active'));
   const btnId = ROLE_BTN_ID[role];
   if (btnId) document.getElementById(btnId)?.classList.add('active');
-  const r = ROLES[role];
-  document.getElementById('userAvatar').textContent = r.avatar;
-  document.getElementById('userName').textContent = currentLang==='ar' ? r.nameAr : r.name;
-  document.getElementById('userRole').textContent = r.dept;
+  updateUserBadge();
   renderSidebar();
   const firstNav = ROLES[role].nav[0];
   renderPage(firstNav);
@@ -176,8 +247,8 @@ function setLang(lang) {
     el.textContent = isAr ? (el.getAttribute('data-ar') || el.getAttribute('data-en')) : el.getAttribute('data-en');
   });
   renderSidebar();
-  const r = ROLES[currentRole];
-  document.getElementById('userName').textContent = isAr ? r.nameAr : r.name;
+  renderMarketBadge();
+  updateUserBadge();
 }
 
 function renderSidebar() {
@@ -309,23 +380,44 @@ async function renderProducts() {
     groups[p.category].push(p);
   }
 
+  const STAGE_LABELS = ['','Model','Config','Rules','Workflow','Comply','Sim'];
   const productCard = p => {
     const meta = catMeta[p.category] || {icon:'fa-file', label:p.category, color:'#aaa'};
     const isEsg = p.esg_required_docs && p.esg_required_docs !== '[]';
-    return `<div class="product-card ${isEsg?'green':''}" onclick="openProductDetail('${p.id}')" style="cursor:pointer">
-        <div class="product-card-header">
+    const isAr = currentLang === 'ar';
+    const stage = p.pge_stage || 0;
+    const stagePct = Math.round((stage / 6) * 100);
+    const stageLabel = stage > 0 ? (isAr ? `المرحلة ${stage}/6` : `Stage ${stage}/6`) : (isAr ? 'لم تبدأ' : 'Not started');
+    const statusLabel = isAr ? (p.status==='active'?'نشط':p.status==='draft'?'مسودة':'مؤرشف') : p.status;
+    return `<div class="product-card ${isEsg?'green':''} ${p.status==='draft'?'draft-card':''}" style="cursor:pointer;position:relative">
+        <div class="product-card-header" onclick="openProductDetail('${p.id}')">
           <div>
             <div class="product-card-title"><i class="fas ${meta.icon}" style="color:${meta.color};margin-right:.4rem;font-size:.8rem"></i>${p.name}</div>
             <div class="product-card-meta">${meta.label}</div>
           </div>
-          <span class="badge ${statusColor[p.status]||'badge-draft'}">${p.status}</span>
+          <span class="badge ${statusColor[p.status]||'badge-draft'}">${statusLabel}</span>
         </div>
-        ${isEsg ? '<span class="badge badge-esg" style="margin-bottom:.5rem"><i class="fas fa-leaf"></i> ESG Product</span>' : ''}
+        ${isEsg ? `<span class="badge badge-esg" style="margin-bottom:.5rem"><i class="fas fa-leaf"></i> ${isAr?'منتج ESG':'ESG Product'}</span>` : ''}
         <p style="font-size:.78rem;color:var(--grey-500);margin:.5rem 0;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.description||''}</p>
-        <div class="product-card-stats">
-          <div class="product-stat"><strong>${p.base_rate||5.5}%</strong>Base Rate</div>
-          <div class="product-stat"><strong>${(p.applications_ytd||0).toLocaleString()}</strong>Apps YTD</div>
-          <div class="product-stat"><strong>${p.max_ltv||90}%</strong>Max LTV</div>
+        <div class="product-card-stats" onclick="openProductDetail('${p.id}')">
+          <div class="product-stat"><strong>${p.base_rate||5.5}%</strong>${isAr?'السعر الأساسي':'Base Rate'}</div>
+          <div class="product-stat"><strong>${(p.applications_ytd||0).toLocaleString()}</strong>${isAr?'طلبات':'Apps YTD'}</div>
+          <div class="product-stat"><strong>${p.max_ltv||90}%</strong>${isAr?'الحد الأقصى LTV':'Max LTV'}</div>
+        </div>
+        <div style="margin-top:.75rem;padding-top:.625rem;border-top:1px solid var(--grey-100)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
+            <span style="font-size:.7rem;color:var(--grey-500);font-weight:500">${isAr?'تقدم إعداد المنتج':'PGE Configuration'}</span>
+            <span style="font-size:.7rem;color:${stage===6?'var(--success)':'var(--grey-500)'};font-weight:600">${stageLabel}</span>
+          </div>
+          <div style="height:4px;background:var(--grey-150);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${stagePct}%;background:${stage===6?'var(--success)':stage>0?'var(--teal)':'var(--grey-300)'};border-radius:4px;transition:width .3s"></div>
+          </div>
+          <div style="margin-top:.625rem">
+            <a href="/portals/product-config.html?id=${p.id}" style="display:inline-flex;align-items:center;gap:.375rem;font-size:.75rem;font-weight:600;color:var(--teal);text-decoration:none;padding:.3rem .6rem;border:1px solid var(--teal);border-radius:var(--radius-sm);transition:all .2s" onmouseover="this.style.background='var(--teal)';this.style.color='white'" onmouseout="this.style.background='';this.style.color='var(--teal)'">
+              <i class="fas fa-wand-magic-sparkles" style="font-size:.7rem"></i>
+              ${isAr?'فتح في PGE':'Open in PGE'}
+            </a>
+          </div>
         </div>
       </div>`;
   };
@@ -914,7 +1006,8 @@ async function sendAiChat(productId) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
   appendChatBubble('assistant', 'Thinking...');
   try {
-    const chatBody = { message: msg, thread_id: aiThreadId, user_id:'u001', user_name:'Product Manager' };
+    const u = currentUser();
+    const chatBody = { message: msg, thread_id: aiThreadId, user_id: u.id, user_name: u.name };
     if (productId) chatBody.product_id = productId;
     else chatBody.context = { purpose: 'product_creation' };
     const r = await fetch('/api/v1/ai/products/chat', {
@@ -959,7 +1052,7 @@ async function confirmAiProduct(productId) {
     // Send both thread_id AND any locally-held draft as a safety fallback.
     // The backend prefers the thread's saved result, but will use the body draft
     // if the thread result is missing (e.g. if a prior turn wiped it).
-    const body = { thread_id: aiThreadId, user_id:'u001' };
+    const body = { thread_id: aiThreadId, user_id: currentUserId() };
     if (productId) body.product_id = productId;
     if (aiProductDraft) body.product_draft = aiProductDraft;
     const r = await fetch('/api/v1/ai/products/confirm', {
@@ -1446,7 +1539,8 @@ function showCloneModal() {
     const sourceId = document.getElementById('cloneSource').value;
     const name = document.getElementById('cloneName').value;
     if (!name) return toast('Enter a product name','error');
-    const r = await fetch(`/api/v1/products/clone/${sourceId}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, user_id:'u001' }) });
+    const cu = currentUser();
+    const r = await fetch(`/api/v1/products/clone/${sourceId}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, user_id: cu.id }) });
     const d = await r.json();
     if (d.success) { toast(`Product "${name}" cloned successfully`,'success'); await loadProducts(); await renderProducts(); closeModal(); }
   });
@@ -1485,7 +1579,7 @@ function showNewProductModal() {
     const name = document.getElementById('newName').value.trim();
     if (!name) return toast('Enter a product name','error');
     const body = {
-      name, status:'draft', created_by:'u001', user_id:'u001', user_name:'Fatima Al-Rashdi',
+      name, status:'draft', created_by: currentUserId(), user_id: currentUserId(), user_name: currentUserName(),
       category: document.getElementById('newCat').value,
       description: document.getElementById('newDesc').value,
       base_rate: parseFloat(document.getElementById('newRate').value)||5.5,
@@ -1555,7 +1649,8 @@ async function cloneProduct(id, name) {
 
 async function saveAiConfig(productId) {
   const threshold = document.getElementById('confidenceSlider')?.value || 90;
-  await fetch(`/api/v1/products/${productId}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ai_confidence_threshold: parseInt(threshold), user_id:'u001', user_name:'Fatima Al-Rashdi' }) });
+  const u = currentUser();
+  await fetch(`/api/v1/products/${productId}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ai_confidence_threshold: parseInt(threshold), user_id: u.id, user_name: u.name }) });
   toast('AI configuration saved','success');
 }
 
@@ -1598,6 +1693,8 @@ function logAuditEntry(action, entityType, entityId, detail) {
 </script>
 
 <style>
+/* Draft card subtle styling */
+.draft-card { background: repeating-linear-gradient(135deg, var(--grey-50) 0px, var(--grey-50) 10px, white 10px, white 20px) !important; }
 .toggle { position:relative; display:inline-block; width:40px; height:22px; }
 .toggle input { opacity:0; width:0; height:0; }
 .toggle-slider { position:absolute; cursor:pointer; inset:0; background:var(--grey-300); border-radius:22px; transition:.3s; }

@@ -17,6 +17,11 @@ import { auditApi } from './api/audit'
 import { usersApi } from './api/users'
 import { seedApi } from './api/seed'
 import { portalApi } from './api/portal'
+import { marketsApi } from './api/markets'
+import { ruleMatricesApi } from './api/rule-matrices'
+import { productVersionsApi } from './api/product-versions'
+import { complianceTagsApi } from './api/compliance-tags'
+import { workflowTemplatesApi } from './api/workflow-templates'
 
 // Node.js env — replaces Cloudflare Bindings
 export const env = {
@@ -50,6 +55,12 @@ app.route('/api/v1/audit', auditApi)
 app.route('/api/v1/users', usersApi)
 app.route('/api/v1/seed', seedApi)
 app.route('/api/v1/portal', portalApi)
+app.route('/api/v1/markets', marketsApi)
+app.route('/api/v1/rule-matrices', ruleMatricesApi)
+app.route('/api/v1/compliance-tags', complianceTagsApi)
+app.route('/api/v1/workflow-templates', workflowTemplatesApi)
+// Product versions are nested under products path
+app.route('/api/v1', productVersionsApi)
 
 // ── Image proxy ──────────────────────────────────────────────────────────────
 app.get('/api/v1/img-proxy', async (c) => {
