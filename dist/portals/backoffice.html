@@ -521,33 +521,52 @@ function filterProducts(q) {
 function openAiStudio() {
   // Reset state
   aiThreadId = null; aiProductDraft = null;
+  aiCurrentStage = 0; aiProductIdContext = null;
   openPanel('AI Product Studio');
   document.getElementById('panelBody').innerHTML = `
-    <div class="ai-assistant" style="border-radius:var(--radius-md);overflow:hidden">
-      <div class="ai-header" style="padding:1rem 1.25rem">
+    <div class="ai-assistant" style="border-radius:var(--radius-md);overflow:hidden;display:flex;flex-direction:column;max-height:82vh">
+      <div class="ai-header" style="padding:1rem 1.25rem;flex-shrink:0">
         <div class="ai-icon"><i class="fas fa-robot" style="color:var(--sea-glass)"></i></div>
         <div style="flex:1">
           <div style="font-weight:700;font-size:.95rem">AI Product Studio</div>
-          <div style="font-size:.75rem;color:rgba(255,255,255,.5)">Iterative conversation · Reads CBO regulations · Generates rules & portal content</div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.5)">6-stage guided creation &middot; Reads CBO regulations &middot; Live UI updates</div>
         </div>
         <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none" onclick="resetAiChat(null)"><i class="fas fa-redo"></i> Reset</button>
       </div>
-      <div style="padding:1rem 1.25rem">
-        <div id="ai-chat-log" style="min-height:200px;max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;padding:4px 0"></div>
+
+      <!-- Stage progress pills (standalone mode — no separate product panel to dispatch to) -->
+      <div style="display:flex;gap:.3rem;padding:.4rem .75rem;background:rgba(0,0,0,.2);flex-shrink:0;overflow-x:auto" id="aiStagePills">
+        ${['Product Model','Configuration','Rules','Workflow','Compliance','Simulation'].map((s,i)=>
+          `<span class="ai-stage-pill" id="pill-${i}" style="font-size:.63rem;font-weight:600;padding:.2rem .55rem;border-radius:20px;white-space:nowrap;background:rgba(255,255,255,.08);color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.1);cursor:default">${i+1}. ${s}</span>`
+        ).join('')}
+      </div>
+
+      <div style="flex:1;overflow-y:auto;padding:1rem 1.25rem;display:flex;flex-direction:column;gap:12px" id="ai-chat-log"></div>
+
+      <div style="padding:.75rem 1.25rem;flex-shrink:0;border-top:1px solid rgba(255,255,255,.08)">
         <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;display:flex;gap:.5rem;align-items:flex-end">
-          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="Type here to describe the new product highlights…" style="flex:1;min-height:0;resize:none;background:transparent;border:none;color:rgba(255,255,255,.9);outline:none;font-size:.84rem"></textarea>
+          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="Describe the product — e.g. «Green home loan with GSAS certification»" style="flex:1;min-height:0;resize:none;background:transparent;border:none;color:rgba(255,255,255,.9);outline:none;font-size:.84rem"></textarea>
           <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat(null)" style="height:44px;padding:0 16px;flex-shrink:0"><i class="fas fa-paper-plane"></i></button>
         </div>
         <div id="ai-confirm-bar" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:8px;align-items:center;gap:10px">
-          <span style="font-size:.82rem;color:rgba(255,255,255,.85);flex:1">Product ready. Review the draft above, then confirm to save and publish to portals.</span>
+          <i class="fas fa-check-circle" style="color:#22c55e;flex-shrink:0"></i>
+          <span style="font-size:.82rem;color:rgba(255,255,255,.85);flex:1">All 6 stages complete. Review the draft above, then confirm to publish.</span>
           <button class="btn btn-success btn-sm" onclick="confirmAiProduct(null)"><i class="fas fa-rocket"></i> Confirm &amp; Publish</button>
         </div>
       </div>
     </div>
     `;
-  // Auto-send welcome context if first time
+  // Welcome message — sets expectation for the 6-stage journey
   setTimeout(() => {
-    appendChatBubble('assistant', 'Hello, I\'m your AI Product Manager. I can help you create a new regulated banking product from scratch.<br><br>I\'ll ask you a series of questions, read the relevant CBO regulations from the knowledge base, generate the product configuration, eligibility rules, and portal marketing content — then present everything for your review before publishing.<br><br><strong>What type of product would you like to create?</strong>');
+    appendChatBubble('assistant',
+      'Hello! I\'m your <strong>AI Product Manager</strong>. I\'ll guide you through a <strong>6-stage</strong> product creation process — from defining the product model all the way to simulation and approval.<br><br>'
+      + '<div style="margin:6px 0;padding:7px 10px;background:rgba(53,198,196,.1);border-left:3px solid var(--sea-glass);border-radius:0 6px 6px 0;font-size:.78rem;color:rgba(255,255,255,.7)">'
+      + '<i class="fas fa-info-circle" style="margin-right:5px;color:var(--sea-glass)"></i>'
+      + 'As we talk, I\'ll automatically fill in the product configuration on screen — tabs, fields, rules, and workflow — so you see everything update in real time.'
+      + '</div>'
+      + '<br><strong>What product would you like to create?</strong><br>'
+      + '<small style="color:rgba(255,255,255,.45)">Examples: "Green home loan with GSAS certification" · "Auto finance for expats" · "SME working capital facility"</small>'
+    );
   }, 200);
 }
 
@@ -828,6 +847,8 @@ function renderProductPanel(p, productRules) {
         <h4>Eligibility Rules</h4>
         <button class="btn btn-ghost btn-sm" onclick="renderPage('rules');renderRules('${p.id}');closePanel()"><i class="fas fa-external-link-alt"></i> View in Rules Engine</button>
       </div>
+      <!-- AI-injected rules appear here (prepended by dispatchUiEvents add_rule) -->
+      <div id="rulesList" style="margin-bottom:.75rem"></div>
       ${(() => {
         // Separate product-specific from global (product_id null)
         const specificRules = productRules.filter(r => r.is_active && r.product_id === p.id);
@@ -927,6 +948,8 @@ function renderProductPanel(p, productRules) {
 
     workflow: `
       <h4 style="margin-bottom:1rem">Workflow Configuration</h4>
+      <!-- AI-injected workflow nodes appear here (set_workflow ui_event) -->
+      <div id="workflowCanvas" style="margin-bottom:1rem;display:flex;flex-direction:column;gap:0;max-width:360px"></div>
       <div id="workflowTemplateSection">
         <div style="display:flex;align-items:center;justify-content:center;padding:1rem;color:var(--grey-400)">
           <i class="fas fa-spinner fa-spin"></i><span style="margin-left:.5rem;font-size:.83rem">Loading workflow template…</span>
@@ -1077,6 +1100,27 @@ function renderProductPanel(p, productRules) {
   if (selectedTab === 'workflow') {
     loadProductWorkflowTemplate(p);
   }
+  // AI Studio tab: show welcome + reset pills if no thread active
+  if (selectedTab === 'ai_assistant') {
+    aiProductIdContext = p.id;
+    setTimeout(() => {
+      // Reset pills to current stage (if thread already running, keep stage)
+      if (aiCurrentStage > 0) renderRoadmap(aiCurrentStage);
+      // If no thread exists, show welcome
+      const log = document.getElementById('ai-chat-log');
+      if (log && !log.children.length && !aiThreadId) {
+        appendChatBubble('assistant',
+          'I\'m your <strong>AI Product Specialist</strong> for <em>' + p.name + '</em>. I can help you refine this product through a structured <strong>6-stage</strong> process, or answer specific configuration questions.<br><br>'
+          + '<div style="margin:5px 0;padding:6px 9px;background:rgba(53,198,196,.1);border-left:3px solid var(--sea-glass);border-radius:0 6px 6px 0;font-size:.76rem;color:rgba(255,255,255,.65)">'
+          + '<i class="fas fa-bolt" style="margin-right:4px;color:var(--sea-glass)"></i>'
+          + 'As I configure each stage, the tabs on the left will update automatically in real time.'
+          + '</div><br>'
+          + '<strong>What would you like to do?</strong><br>'
+          + '<small style="color:rgba(255,255,255,.4)">Example: "Walk me through all 6 stages" · "Add a green discount rule" · "Set the approval workflow"</small>'
+        );
+      }
+    }, 150);
+  }
 }
 
 async function loadProductWorkflowTemplate(p) {
@@ -1165,26 +1209,268 @@ function switchProductTab(tab, productId) {
 /* ======================== AI PRODUCT STUDIO (multi-turn) ======================== */
 let aiThreadId = null;
 let aiProductDraft = null;
+let aiCurrentStage = 0;       // tracks which stage we're on (0 = not started)
+let aiProductIdContext = null; // productId this session is operating on
 
+/* ── Stage names ─────────────────────────────────────────────────────────── */
+const AI_STAGE_LABELS = ['Product Model','Core Config','Rules','Workflow','Compliance','Simulation'];
+const AI_STAGE_ICONS  = ['fa-layer-group','fa-sliders','fa-list-check','fa-sitemap','fa-shield-halved','fa-chart-line'];
+
+/* ── resetAiChat ─────────────────────────────────────────────────────────── */
 function resetAiChat(productId) {
   aiThreadId = null; aiProductDraft = null;
+  aiCurrentStage = 0; aiProductIdContext = productId || null;
   const log = document.getElementById('ai-chat-log');
   if (log) log.innerHTML = '';
   const bar = document.getElementById('ai-confirm-bar');
   if (bar) bar.style.display = 'none';
+  // Reset all stage pills to inactive
+  for (let i = 0; i < 6; i++) {
+    const pill = document.getElementById('pill-' + i);
+    if (pill) {
+      pill.style.background = 'rgba(255,255,255,.08)';
+      pill.style.color = 'rgba(255,255,255,.4)';
+      pill.style.borderColor = 'rgba(255,255,255,.1)';
+    }
+  }
 }
 
+/* ── appendChatBubble ────────────────────────────────────────────────────── */
 function appendChatBubble(role, html) {
   const log = document.getElementById('ai-chat-log');
   if (!log) return;
   const isUser = role === 'user';
   const el = document.createElement('div');
-  el.style.cssText = 'display:flex;justify-content:' + (isUser?'flex-end':'flex-start');
-  el.innerHTML = '<div style="max-width:85%;padding:9px 13px;border-radius:12px;font-size:.82rem;line-height:1.5;background:' + (isUser?'rgba(53,198,196,.2)':' rgba(255,255,255,.07)') + ';color:rgba(255,255,255,.9)">' + html + '</div>';
+  el.style.cssText = 'display:flex;justify-content:' + (isUser ? 'flex-end' : 'flex-start');
+  el.innerHTML = '<div style="max-width:88%;padding:9px 13px;border-radius:12px;font-size:.82rem;line-height:1.6;background:'
+    + (isUser ? 'rgba(53,198,196,.2)' : 'rgba(255,255,255,.07)')
+    + ';color:rgba(255,255,255,.9)">' + html + '</div>';
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el;
+}
+
+/* ── renderRoadmap ───────────────────────────────────────────────────────── *
+ * Inserts (or replaces) the visual 6-stage stepper inside the chat log AND
+ * advances the stage pills in the header strip.
+ * Call whenever show_roadmap=true OR current_stage changes.
+ * ─────────────────────────────────────────────────────────────────────────*/
+function renderRoadmap(activeStage) {
+  // activeStage is 1-based (1..6); 0 means not started
+  aiCurrentStage = activeStage;
+
+  // 1. Update header stage pills
+  for (let i = 0; i < 6; i++) {
+    const pill = document.getElementById('pill-' + i);
+    if (!pill) continue;
+    const stageNum = i + 1;
+    if (stageNum < activeStage) {
+      // completed
+      pill.style.background = 'rgba(22,132,91,.25)';
+      pill.style.color = '#4ade80';
+      pill.style.borderColor = 'rgba(74,222,128,.35)';
+    } else if (stageNum === activeStage) {
+      // active
+      pill.style.background = 'rgba(53,198,196,.25)';
+      pill.style.color = 'var(--sea-glass)';
+      pill.style.borderColor = 'rgba(53,198,196,.5)';
+      pill.style.boxShadow = '0 0 8px rgba(53,198,196,.3)';
+    } else {
+      // future
+      pill.style.background = 'rgba(255,255,255,.08)';
+      pill.style.color = 'rgba(255,255,255,.4)';
+      pill.style.borderColor = 'rgba(255,255,255,.1)';
+      pill.style.boxShadow = '';
+    }
+  }
+
+  // 2. Build roadmap HTML block
+  const stepsHtml = AI_STAGE_LABELS.map((label, i) => {
+    const stageNum = i + 1;
+    let stateClass, checkHtml;
+    if (stageNum < activeStage) {
+      stateClass = 'done';
+      checkHtml = '<i class="fas fa-check" style="font-size:.65rem"></i>';
+    } else if (stageNum === activeStage) {
+      stateClass = 'active';
+      checkHtml = '<i class="fas fa-' + AI_STAGE_ICONS[i] + '" style="font-size:.65rem"></i>';
+    } else {
+      stateClass = 'future';
+      checkHtml = stageNum;
+    }
+
+    const dotBg   = stageNum < activeStage  ? '#4ade80'
+                  : stageNum === activeStage ? 'var(--sea-glass)'
+                  : 'rgba(255,255,255,.18)';
+    const dotBorder = stageNum === activeStage ? '2px solid var(--sea-glass)' : '2px solid transparent';
+    const labelColor = stageNum < activeStage  ? '#4ade80'
+                     : stageNum === activeStage ? 'var(--sea-glass)'
+                     : 'rgba(255,255,255,.35)';
+    const labelWeight = stageNum === activeStage ? '700' : '400';
+
+    const connector = i < 5
+      ? '<div style="width:2px;height:12px;background:' + (stageNum < activeStage ? '#4ade80' : 'rgba(255,255,255,.15)') + ';margin:2px auto"></div>'
+      : '';
+
+    return '<div style="display:flex;align-items:center;gap:8px">'
+      + '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">'
+        + '<div style="width:22px;height:22px;border-radius:50%;background:' + dotBg + ';border:' + dotBorder + ';display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:' + (stageNum <= activeStage ? '#0d2233' : 'rgba(255,255,255,.4)') + '">' + checkHtml + '</div>'
+        + connector
+      + '</div>'
+      + '<div style="padding:2px 0 ' + (i < 5 ? '12px' : '0') + ' 0;line-height:1.3">'
+        + '<div style="font-size:.76rem;font-weight:' + labelWeight + ';color:' + labelColor + '">Stage ' + stageNum + ' — ' + label + '</div>'
+        + (stageNum === activeStage ? '<div style="font-size:.68rem;color:rgba(255,255,255,.45);margin-top:1px">In progress…</div>' : '')
+        + (stageNum < activeStage  ? '<div style="font-size:.68rem;color:rgba(74,222,128,.6);margin-top:1px">✓ Complete</div>' : '')
+      + '</div>'
+    + '</div>';
+  }).join('');
+
+  const roadmapHtml = '<div style="margin:4px 0;padding:10px 14px;background:rgba(0,0,0,.3);border:1px solid rgba(53,198,196,.2);border-radius:10px;font-size:.8rem">'
+    + '<div style="font-weight:700;font-size:.78rem;color:var(--sea-glass);margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="fas fa-map-signs"></i> Product Creation Roadmap</div>'
+    + stepsHtml
+    + '</div>';
+
+  // Remove previous roadmap bubble if it exists
+  const log = document.getElementById('ai-chat-log');
+  if (!log) return;
+  const prev = log.querySelector('.ai-roadmap-bubble');
+  if (prev) prev.remove();
+
+  // Insert as a special assistant bubble with a marker class
+  const el = document.createElement('div');
+  el.className = 'ai-roadmap-bubble';
+  el.style.cssText = 'display:flex;justify-content:flex-start';
+  el.innerHTML = '<div style="max-width:95%;padding:9px 13px;border-radius:12px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.9)">' + roadmapHtml + '</div>';
   log.appendChild(el);
   log.scrollTop = log.scrollHeight;
 }
 
+/* ── dispatchUiEvents ────────────────────────────────────────────────────── *
+ * Processes the ui_events array from the AI response.
+ * Each event type:
+ *   set_tab      → switch product panel to that tab (re-renders HTML)
+ *   set_field    → sets a form field by id in the current tab
+ *   highlight_field → briefly flashes the field yellow
+ *   add_rule     → appends a rule row visually to the eligibility tab
+ *   set_workflow → renders workflow nodes in the workflow tab
+ * ─────────────────────────────────────────────────────────────────────────*/
+async function dispatchUiEvents(events, productId) {
+  if (!events || !events.length) return;
+
+  // Map field name → DOM id in product panel
+  const FIELD_MAP = {
+    name:            'pName',
+    description:     'pDesc',
+    base_rate:       'pRate',
+    max_ltv:         'pMaxLtv',
+    max_dbr:         'pMaxDbr',
+    green_dbr:       'pGreenDbr',
+    max_term:        'pMaxTerm',
+    min_term:        'pMinTerm',
+    min_amount:      'pMinAmount',
+    max_amount:      'pMaxAmount',
+    gsas_min_score:  'pGsasMin',
+    gsas_premium_score: 'pGsasPremium',
+    green_discount_standard: 'pGreenDiscStd',
+    green_discount_premium:  'pGreenDiscPrem',
+  };
+
+  // Helper — flash an element yellow for 1.8s
+  function flashField(el) {
+    if (!el) return;
+    const orig = el.style.background || '';
+    const origTransition = el.style.transition || '';
+    el.style.transition = 'background .25s';
+    el.style.background = 'rgba(253,224,71,.35)';
+    setTimeout(() => { el.style.background = orig; el.style.transition = origTransition; }, 1800);
+  }
+
+  for (const ev of events) {
+
+    /* ── set_tab ─────────────────────────────────────────────────────────── */
+    if (ev.type === 'set_tab' && productId && ev.tab) {
+      // Switch the product panel tab — re-renders tab content
+      switchProductTab(ev.tab, productId);
+      // Allow DOM to paint before subsequent set_field / add_rule events
+      await new Promise(r => setTimeout(r, 200));
+      continue;
+    }
+
+    /* ── set_field ───────────────────────────────────────────────────────── */
+    if (ev.type === 'set_field' && ev.field != null && ev.value != null) {
+      const domId = FIELD_MAP[ev.field];
+      if (domId) {
+        const el = document.getElementById(domId);
+        if (el) {
+          el.value = ev.value;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          flashField(el);
+        }
+      }
+      continue;
+    }
+
+    /* ── highlight_field ─────────────────────────────────────────────────── */
+    if (ev.type === 'highlight_field' && ev.field) {
+      const domId = FIELD_MAP[ev.field];
+      if (domId) flashField(document.getElementById(domId));
+      continue;
+    }
+
+    /* ── add_rule ────────────────────────────────────────────────────────── */
+    if (ev.type === 'add_rule' && ev.rule) {
+      const rule = ev.rule;
+      // Find the rules list container (eligibility tab)
+      const container = document.getElementById('rulesList');
+      if (container) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;background:rgba(53,198,196,.07);border:1px solid rgba(53,198,196,.2);border-radius:6px;margin-bottom:.4rem;animation:fadeIn .4s ease';
+        const severityColor = rule.severity === 'hard' ? '#f87171' : rule.severity === 'soft' ? '#fbbf24' : '#60a5fa';
+        row.innerHTML =
+          '<span style="width:7px;height:7px;border-radius:50%;background:' + severityColor + ';flex-shrink:0"></span>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:.78rem;font-weight:600;color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (rule.name || rule.metric || 'Rule') + '</div>' +
+            '<div style="font-size:.68rem;color:rgba(255,255,255,.4)">' + (rule.regulatory_reference || rule.category || '') + '</div>' +
+          '</div>' +
+          '<span style="font-size:.68rem;background:rgba(53,198,196,.15);color:var(--sea-glass);padding:.15rem .45rem;border-radius:10px;white-space:nowrap">' +
+            (rule.metric || '') + ' ' + (rule.operator || '') + ' ' + (rule.threshold_value ?? '') +
+          '</span>' +
+          (rule.ai_confidence ? '<span style="font-size:.65rem;color:rgba(255,255,255,.35)">AI ' + rule.ai_confidence + '%</span>' : '');
+        // Flash the new row
+        row.style.background = 'rgba(53,198,196,.22)';
+        setTimeout(() => { row.style.background = 'rgba(53,198,196,.07)'; }, 1600);
+        container.prepend(row);
+      }
+      continue;
+    }
+
+    /* ── set_workflow ────────────────────────────────────────────────────── */
+    if (ev.type === 'set_workflow' && Array.isArray(ev.nodes)) {
+      const wfContainer = document.getElementById('workflowCanvas');
+      if (wfContainer) {
+        wfContainer.innerHTML = ev.nodes.map((n, idx) => {
+          const isEnd = n.type === 'end', isStart = n.type === 'start';
+          const iconMap = { start:'fa-play-circle', end:'fa-flag-checkered', approval:'fa-user-check', task:'fa-cog', decision:'fa-code-branch' };
+          const bg = isStart ? 'rgba(53,198,196,.15)' : isEnd ? 'rgba(22,132,91,.15)' : 'rgba(255,255,255,.06)';
+          const borderColor = isStart ? 'rgba(53,198,196,.4)' : isEnd ? 'rgba(22,132,91,.4)' : 'rgba(255,255,255,.12)';
+          return '<div style="display:flex;align-items:center;gap:0;flex-direction:column">' +
+            (idx > 0 ? '<div style="width:2px;height:14px;background:rgba(255,255,255,.15);margin:0 auto"></div>' : '') +
+            '<div style="padding:.45rem .8rem;border-radius:8px;background:' + bg + ';border:1px solid ' + borderColor + ';font-size:.76rem;width:100%;display:flex;align-items:center;gap:.5rem">' +
+              '<i class="fas ' + (iconMap[n.type] || 'fa-circle') + '" style="font-size:.75rem;color:rgba(255,255,255,.5)"></i>' +
+              '<div style="flex:1">' +
+                '<div style="font-weight:600;color:rgba(255,255,255,.88)">' + (n.label || n.id) + '</div>' +
+                (n.role ? '<div style="font-size:.67rem;color:rgba(255,255,255,.38)">' + n.role.replace(/_/g,' ') + (n.sla_hours ? ' · SLA ' + n.sla_hours + 'h' : '') + (n.auto ? ' · auto' : '') + '</div>' : '') +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      }
+      continue;
+    }
+  }
+}
+
+/* ── sendAiChat ──────────────────────────────────────────────────────────── */
 async function sendAiChat(productId) {
   const input = document.getElementById('aiChatInput');
   const msg = input ? input.value.trim() : '';
@@ -1193,7 +1479,11 @@ async function sendAiChat(productId) {
   if (input) input.value = '';
   const btn = document.getElementById('aiChatSendBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
-  appendChatBubble('assistant', 'Thinking...');
+
+  // Add a "thinking" placeholder we will remove on response
+  const thinkEl = appendChatBubble('assistant',
+    '<span style="opacity:.5"><i class="fas fa-circle-notch fa-spin" style="margin-right:6px;font-size:.75rem"></i>Thinking…</span>');
+
   try {
     const u = currentUser();
     const chatBody = { message: msg, thread_id: aiThreadId, user_id: u.id, user_name: u.name };
@@ -1204,31 +1494,62 @@ async function sendAiChat(productId) {
       body: JSON.stringify(chatBody)
     });
     const d = await r.json();
-    const log2 = document.getElementById('ai-chat-log');
-    if (log2 && log2.lastChild) log2.removeChild(log2.lastChild);
+
+    // Remove thinking bubble
+    if (thinkEl && thinkEl.parentNode) thinkEl.parentNode.removeChild(thinkEl);
+
     if (d.thread_id) aiThreadId = d.thread_id;
+    const newStage = d.current_stage || 0;
+
+    // ── Roadmap: render when show_roadmap=true OR when stage advances ──────
+    if (d.show_roadmap || (newStage > 0 && newStage !== aiCurrentStage)) {
+      renderRoadmap(newStage);
+    }
+
+    // ── Build reply HTML ──────────────────────────────────────────────────
     let replyHtml = markdownToHtml(d.reply || d.message || 'Done.');
+
     if (d.product_draft) {
       aiProductDraft = d.product_draft;
-      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:6px;font-size:.78rem"><strong>Product Draft</strong><br><b>' + (d.product_draft.name||'') + '</b> &middot; ' + (d.product_draft.base_rate||'') + '% &middot; up to OMR ' + Number(d.product_draft.max_amount||0).toLocaleString() + '</div>';
+      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:6px;font-size:.78rem">'
+        + '<strong><i class="fas fa-file-alt" style="margin-right:5px"></i>Product Draft</strong><br>'
+        + '<b>' + (d.product_draft.name || '') + '</b> &middot; '
+        + (d.product_draft.base_rate || '') + '% &middot; up to OMR '
+        + Number(d.product_draft.max_amount || 0).toLocaleString()
+        + '</div>';
     }
     if (d.rules_draft && d.rules_draft.length) {
-      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(0,127,134,.12);border:1px solid rgba(0,127,134,.3);border-radius:6px;font-size:.78rem"><strong>Rules Draft (' + d.rules_draft.length + ')</strong><br>' + d.rules_draft.map(function(x){return '&bull; '+(x.name||x.metric||'rule');}).join('<br>') + '</div>';
+      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(0,127,134,.12);border:1px solid rgba(0,127,134,.3);border-radius:6px;font-size:.78rem">'
+        + '<strong><i class="fas fa-list-check" style="margin-right:5px"></i>Rules (' + d.rules_draft.length + ')</strong><br>'
+        + d.rules_draft.map(x => '&bull; ' + (x.name || x.metric || 'rule')).join('<br>')
+        + '</div>';
     }
     if (d.schema_draft) {
-      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(244,179,91,.1);border:1px solid rgba(244,179,91,.3);border-radius:6px;font-size:.78rem"><strong>GSAS Schema</strong> &mdash; ' + Object.keys(d.schema_draft).length + ' fields defined</div>';
+      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(244,179,91,.1);border:1px solid rgba(244,179,91,.3);border-radius:6px;font-size:.78rem">'
+        + '<strong><i class="fas fa-code" style="margin-right:5px"></i>GSAS Schema</strong> &mdash; '
+        + (d.schema_draft.fields ? d.schema_draft.fields.length : Object.keys(d.schema_draft).length)
+        + ' fields defined</div>';
     }
+
     appendChatBubble('assistant', replyHtml);
-    // Show confirm bar when AI signals readiness — action field OR product_draft present after turn 3+
+
+    // ── Dispatch UI events to main product panel ───────────────────────────
+    // Only applies when there's a product panel open (productId is set)
+    if (d.ui_events && d.ui_events.length && productId) {
+      // Slight delay so the chat bubble renders first
+      setTimeout(() => dispatchUiEvents(d.ui_events, productId), 350);
+    }
+
+    // ── Show confirm bar ──────────────────────────────────────────────────
     if (d.action === 'ready_to_confirm' || d.action === 'show_draft' ||
         (aiProductDraft && d.action !== 'none')) {
       const bar = document.getElementById('ai-confirm-bar');
       if (bar) bar.style.display = 'flex';
     }
+
   } catch(e) {
-    const log3 = document.getElementById('ai-chat-log');
-    if (log3 && log3.lastChild) log3.removeChild(log3.lastChild);
-    appendChatBubble('assistant', 'Error: ' + e.message);
+    if (thinkEl && thinkEl.parentNode) thinkEl.parentNode.removeChild(thinkEl);
+    appendChatBubble('assistant', '<span style="color:#f87171"><i class="fas fa-exclamation-circle" style="margin-right:5px"></i>Error: ' + e.message + '</span>');
   }
   if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>'; }
 }
@@ -2304,6 +2625,7 @@ function logAuditEntry(action, entityType, entityId, detail) {
 .ai-row { background: rgba(53,198,196,.03); }
 .spinner-lg { width:32px; height:32px; border:3px solid var(--grey-200); border-top-color:var(--teal); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 1rem; }
 @keyframes spin { to{transform:rotate(360deg);} }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </body>
 </html>
