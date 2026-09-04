@@ -1419,9 +1419,18 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 		if (t.ok) {
 			let e = n.choices[0].message.content, t = e.match(/\{[\s\S]*\}/);
 			if (t) {
-				h = JSON.parse(t[0]), h.current_stage < 6 && (h.product_draft = null), h.current_stage < 3 && (h.rules_draft = null), h.current_stage > 1 && (h.show_roadmap = !1);
-				let e = h.message || "";
-				!e.includes("?") && h.action !== "ready_to_confirm" && (h.message = e + "<br><br>How would you like to proceed?");
+				h = JSON.parse(t[0]), h.current_stage < 6 && (h.product_draft = null), h.current_stage < 3 && (h.rules_draft = null), h.current_stage >= 6 && (h.rules_draft = null), h.current_stage > 1 && (h.show_roadmap = !1);
+				let e = h.message || "", n = /how would you like to proceed\?/i.test(e), r = h.current_stage || 1, i = {
+					1: "Type <strong>yes</strong> to confirm this product model, or let me know what to adjust.",
+					2: "Type <strong>yes</strong> to confirm these parameters, or tell me which values to change.",
+					3: "Type <strong>yes</strong> to generate the eligibility rules, or adjust the GSAS threshold.",
+					4: "Type <strong>yes</strong> to confirm the workflow, or tell me if you want more human touchpoints.",
+					5: "Type <strong>yes</strong> to apply these compliance parameters, or request adjustments.",
+					6: "Click <strong>Confirm &amp; Publish</strong> above to save and publish the product."
+				};
+				n && (h.message = e.replace(/how would you like to proceed\?/i, "").replace(/\s+$/, "") + (e.replace(/how would you like to proceed\?/i, "").trim() ? "<br><br>" : "") + "<em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">" + (i[r] || "Reply to continue.") + "</em>");
+				let a = h.message || "";
+				!a.includes("?") && h.action !== "ready_to_confirm" && (h.message = a + "<br><br><em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">" + (i[r] || "Reply to continue.") + "</em>");
 			} else h.message = e;
 		}
 	} catch {
@@ -1454,11 +1463,11 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 	});
 }), U.post("/products/confirm", async (e) => {
 	let { thread_id: t, product_draft: n, rules_draft: r, schema_draft: i, user_id: a = "u001", user_name: o = "Fatima Al-Rashdi" } = await e.req.json();
-	if (t && !n) {
+	if (t) {
 		let a = await e.env.DB.prepare("SELECT result FROM ai_threads WHERE id = ?").bind(t).first();
 		if (a?.result) try {
 			let e = JSON.parse(a.result);
-			e.product_draft && (n = e.product_draft), e.rules_draft && !r && (r = e.rules_draft), e.schema_draft && !i && (i = e.schema_draft);
+			!n && e.product_draft && (n = e.product_draft), !r && e.rules_draft && (r = e.rules_draft), !i && e.schema_draft && (i = e.schema_draft);
 		} catch {}
 	}
 	if (!n) return e.json({
@@ -1535,7 +1544,7 @@ Product: ${d}. Description: ${n.description || ""}. Base rate: ${n.base_rate || 
 		`Terms up to ${n.max_term || 25} years`,
 		`Up to OMR ${Math.round((n.max_amount || 5e5) / 1e3)}K financing`
 	]);
-	let y = p.length > 0 ? 3 : 1;
+	let y = p.length > 0 ? 6 : 1;
 	return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, pge_stage=?, updated_at=? WHERE id=?").bind(+!!v, h, JSON.stringify(g), _, c, y, c, s).run(), t && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(s, JSON.stringify({
 		product_id: s,
 		rule_ids: p
@@ -2579,9 +2588,9 @@ function Ge(e, t, n) {
 		})(), u = (() => {
 			let e = t.match(/base rate[^0-9]*([0-9]+\.[0-9]+)%/);
 			return e ? parseFloat(e[1]) : (t.includes("5.25"), 5.25);
-		})(), d = t.includes("murabaha") || t.includes("musharaka") || t.includes("islamic") ? "Islamic (Diminishing Musharaka)" : "Conventional", f = {
+		})(), d = e.join(" "), f = d.includes("islamic") || d.includes("murabaha") || d.includes("musharaka") ? "Islamic (Diminishing Musharaka)" : "Conventional", p = {
 			name: n,
-			description: `${d} home financing for GSAS-certified green properties in Oman. Earn up to 0.75% rate discount based on sustainability score (GSAS ≥85: Gold tier, 0.5% for GSAS 70–84: Silver). Targets affluent and HNW customers. Supports Oman Vision 2040, CBO green finance objectives, and OS GSO 3000:2025.`,
+			description: `${f} home financing for GSAS-certified green properties in Oman. Earn up to 0.75% rate discount based on sustainability score (GSAS ≥85: Gold tier, 0.5% for GSAS 70–84: Silver). Targets affluent and HNW customers. Supports Oman Vision 2040, CBO green finance objectives, and OS GSO 3000:2025.`,
 			category: "home_loan",
 			base_rate: u,
 			max_ltv: 90,
@@ -2620,164 +2629,9 @@ function Ge(e, t, n) {
 				"Voltec Solar Oman"
 			],
 			clone_from_id: "p001"
-		}, p = [
-			{
-				name: "DBR ≤ 55% (Loans > OMR 100K)",
-				category: "creditworthiness",
-				metric: "DBR",
-				operator: "<=",
-				threshold_value: 55,
-				threshold_condition: "loan_amount > 100000",
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "CBO Circular 2026-12, §3.2",
-				ai_confidence: 96,
-				description: "Max DBR 55% for green loans >OMR 100K."
-			},
-			{
-				name: "DBR ≤ 60% (Loans ≤ OMR 100K)",
-				category: "creditworthiness",
-				metric: "DBR",
-				operator: "<=",
-				threshold_value: 60,
-				threshold_condition: "loan_amount <= 100000",
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "CBO Circular BM/REG/2019/74, §4",
-				ai_confidence: 95,
-				description: "Standard DBR cap for smaller amounts."
-			},
-			{
-				name: "Credit Score ≥ 620",
-				category: "creditworthiness",
-				metric: "credit_score",
-				operator: ">=",
-				threshold_value: 620,
-				threshold_condition: null,
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "CBO Credit Bureau Framework, §6.1",
-				ai_confidence: 94,
-				description: "Minimum Oman Credit Bureau score."
-			},
-			{
-				name: "No Defaults (24 Months)",
-				category: "creditworthiness",
-				metric: "default_history_months",
-				operator: ">=",
-				threshold_value: 24,
-				threshold_condition: "default_count = 0",
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "CBO Loan Classification Circular, §3",
-				ai_confidence: 97,
-				description: "No defaults or restructured loans in 24 months."
-			},
-			{
-				name: "LTV ≤ 90% (First Home)",
-				category: "collateral",
-				metric: "LTV",
-				operator: "<=",
-				threshold_value: 90,
-				threshold_condition: "is_first_home = true",
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "CBO Circular BM/REG/2019/74, §7.1",
-				ai_confidence: 98,
-				description: "First home LTV cap."
-			},
-			{
-				name: "LTV ≤ 80% (Subsequent/Expat)",
-				category: "collateral",
-				metric: "LTV",
-				operator: "<=",
-				threshold_value: 80,
-				threshold_condition: "is_first_home = false OR nationality = expat",
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "CBO Circular BM/REG/2019/74, §7.2",
-				ai_confidence: 97,
-				description: "Non-first home and expat LTV cap."
-			},
-			{
-				name: `GSAS Score ≥ ${l}`,
-				category: "esg",
-				metric: "gsas_score",
-				operator: ">=",
-				threshold_value: l,
-				threshold_condition: null,
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "OS GSO 3000:2025, §4.2",
-				ai_confidence: 98,
-				description: `GSAS minimum ${l}.`
-			},
-			{
-				name: "EPC Rating ≥ C",
-				category: "esg",
-				metric: "epc_rating",
-				operator: ">=",
-				threshold_value: 3,
-				threshold_condition: null,
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "OEESC, §5.1",
-				ai_confidence: 94,
-				description: "Minimum EPC rating C."
-			},
-			{
-				name: "GSAS Certificate Valid ≥ 90 Days",
-				category: "esg",
-				metric: "gsas_cert_days_remaining",
-				operator: ">=",
-				threshold_value: 90,
-				threshold_condition: null,
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "OS GSO 3000:2025, §6.3",
-				ai_confidence: 96,
-				description: "GSAS cert must not expire within 90 days."
-			},
-			{
-				name: "ESG Document Set Complete",
-				category: "esg",
-				metric: "esg_docs_complete",
-				operator: "=",
-				threshold_value: 1,
-				threshold_condition: null,
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "CBO Circular 2026-12, §5.1",
-				ai_confidence: 97,
-				description: "GSAS cert + EPC report + EIA approval (where applicable)."
-			},
-			{
-				name: "Net Income ≥ OMR 800/Month",
-				category: "eligibility",
-				metric: "net_monthly_income",
-				operator: ">=",
-				threshold_value: 800,
-				threshold_condition: null,
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "Sohar Internal Credit Policy §12.1",
-				ai_confidence: 92,
-				description: "Minimum net monthly income."
-			},
-			{
-				name: "Expat Residency ≥ 12 Months",
-				category: "eligibility",
-				metric: "residency_days_remaining",
-				operator: ">=",
-				threshold_value: 365,
-				threshold_condition: "nationality = expat",
-				action_on_breach: "reject",
-				severity: "hard",
-				regulatory_reference: "CBO Circular on Expat Credit, §3",
-				ai_confidence: 95,
-				description: "≥12 months remaining on residency permit."
-			}
-		], m = {
+		};
+		`${l}`, `${l}`;
+		let m = {
 			schema_type: "gsas_certificate_validation",
 			fields: [
 				{
@@ -2833,7 +2687,7 @@ function Ge(e, t, n) {
 			regulatory_reference: "OS GSO 3000:2025, §4.2 · OEESC §5.1"
 		};
 		return {
-			message: `✅ <strong>Stage 5 complete.</strong> Compliance classification applied — Basel III 75% risk weight, IFRS9 1.5% Stage 1 ECL, CBO Green Finance designation.<br><br><strong>Stage 6 — Portfolio Simulation</strong><br><br>📊 <strong>12-month portfolio projections</strong> (based on current Standard Home Loan pipeline data):<br>&bull; Target: <strong>180 accounts, OMR 52M</strong> in Year 1 (conservative: 15% of current mortgage pipeline targeting green properties)<br>&bull; NIM: <strong>1.45%</strong> on green rate (vs 1.75% standard) — offset by 0.4% lower provisioning (green ECL) + CBO capital relief of ~8 bps<br>&bull; <strong>Stress test</strong>: at +200 bps rate shock, 98% of modelled portfolio still passes DBR ≤55% — built-in buffer works<br>&bull; <strong>Break-even</strong>: month 11 post-launch (setup costs: OMR 85K for GORD API integration + Green Finance Officer role)<br>&bull; ESG reporting: monthly CBO Green Finance Return under Circular 2026-12 §7, plus annual TCFD disclosure<br><br>📋 <strong>Full product configuration summary:</strong><br>• <strong>${n}</strong> · ${d} · Cloned from Standard Home Loan<br>• Rate: <strong>${u}%</strong> · Tiers: ${(u - .75).toFixed(2)}% (GSAS ≥85) · ${(u - .5).toFixed(2)}% (GSAS 70–84)<br>• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>• Terms: <strong>3–25 years</strong> · Amount: <strong>OMR 25,000–${c.toLocaleString()}</strong><br>• Eligibility: <strong>${p.length} rules</strong> across credit, collateral, ESG, income<br>• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>🚀 Everything is configured. Click <strong>Confirm &amp; Publish</strong> to save the full product and make it live on the customer portal.`,
+			message: `✅ <strong>Stage 5 complete.</strong> Compliance classification applied — Basel III 75% risk weight, IFRS9 1.5% Stage 1 ECL, CBO Green Finance designation.<br><br><strong>Stage 6 — Portfolio Simulation</strong><br><br>📊 <strong>12-month portfolio projections</strong> (based on current Standard Home Loan pipeline data):<br>&bull; Target: <strong>180 accounts, OMR 52M</strong> in Year 1 (conservative: 15% of current mortgage pipeline targeting green properties)<br>&bull; NIM: <strong>1.45%</strong> on green rate (vs 1.75% standard) — offset by 0.4% lower provisioning (green ECL) + CBO capital relief of ~8 bps<br>&bull; <strong>Stress test</strong>: at +200 bps rate shock, 98% of modelled portfolio still passes DBR ≤55% — built-in buffer works<br>&bull; <strong>Break-even</strong>: month 11 post-launch (setup costs: OMR 85K for GORD API integration + Green Finance Officer role)<br>&bull; ESG reporting: monthly CBO Green Finance Return under Circular 2026-12 §7, plus annual TCFD disclosure<br><br>📋 <strong>Full product configuration summary:</strong><br>• <strong>${n}</strong> · ${f} · Cloned from Standard Home Loan<br>• Rate: <strong>${u}%</strong> · Tiers: ${(u - .75).toFixed(2)}% (GSAS ≥85) · ${(u - .5).toFixed(2)}% (GSAS 70–84)<br>• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>• Terms: <strong>3–25 years</strong> · Amount: <strong>OMR 25,000–${c.toLocaleString()}</strong><br>• Eligibility: <strong>17 rules</strong> across credit, collateral, ESG, income<br>• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>🚀 Everything is configured. Click <strong>Confirm &amp; Publish</strong> to save the full product and make it live on the customer portal.`,
 			current_stage: 6,
 			show_roadmap: !1,
 			action: "ready_to_confirm",
@@ -2841,8 +2695,8 @@ function Ge(e, t, n) {
 				type: "set_tab",
 				tab: "ai_config"
 			}],
-			product_draft: f,
-			rules_draft: p,
+			product_draft: p,
+			rules_draft: null,
 			schema_draft: m
 		};
 	}
@@ -5269,7 +5123,7 @@ $.use("/api/*", Ie()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await L.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "b279cdf";
+var at = "53ebb20";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

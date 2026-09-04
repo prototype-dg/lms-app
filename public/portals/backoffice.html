@@ -394,10 +394,10 @@ async function renderProducts() {
     return `<div class="product-card ${isEsg?'green':''} ${p.status==='draft'?'draft-card':''}" style="cursor:pointer;position:relative">
         <div class="product-card-header" onclick="openProductDetail('${p.id}')">
           <div style="min-width:0;flex:1">
-            <div class="product-card-title" style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap">
+            <div class="product-card-title" style="display:flex;align-items:center;gap:.35rem;flex-wrap:nowrap;overflow:hidden">
               <i class="fas ${meta.icon}" style="color:${meta.color};font-size:.8rem;flex-shrink:0"></i>
-              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
-              ${isEsg ? `<span class="badge badge-esg" style="font-size:.58rem;padding:.1rem .35rem;margin:0"><i class="fas fa-leaf" style="margin-right:.2rem"></i>${isAr?'ESG':'ESG'}</span>` : ''}
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1">${p.name}</span>
+              ${isEsg ? `<span class="badge badge-esg" style="font-size:.58rem;padding:.1rem .35rem;margin:0;flex-shrink:0;white-space:nowrap"><i class="fas fa-leaf" style="margin-right:.2rem"></i>ESG</span>` : ''}
             </div>
             <div class="product-card-meta">${meta.label}</div>
           </div>
@@ -1325,7 +1325,7 @@ function updateAiDraftCard() {
     if (!inputWrapper) return;
     card = document.createElement('div');
     card.id = 'ai-draft-card';
-    card.style.cssText = 'margin:.35rem 1rem;background:rgba(0,59,92,.6);border:1px solid rgba(53,198,196,.32);border-radius:9px;font-size:.77rem;animation:fadeIn .4s ease;overflow:hidden;max-height:420px;display:flex;flex-direction:column';
+    card.style.cssText = 'margin:.35rem 1rem;background:rgba(0,59,92,.6);border:1px solid rgba(53,198,196,.32);border-radius:9px;font-size:.77rem;animation:fadeIn .4s ease;overflow:hidden;max-height:460px;display:flex;flex-direction:column';
     inputWrapper.parentNode.insertBefore(card, inputWrapper);
   }
   const cfg = aiDraftConfig;
@@ -1435,7 +1435,7 @@ function updateAiDraftCard() {
   // Wrap expanded section in a scrollable container
   if (exp && expandedHtml) {
     card.innerHTML = summaryHtml +
-      `<div style="overflow-y:auto;flex:1;border-top:1px solid rgba(255,255,255,.07)">${expandedHtml}</div>`;
+      `<div style="overflow-y:auto;flex:1;min-height:0;border-top:1px solid rgba(255,255,255,.07);max-height:320px">${expandedHtml}</div>`;
   } else {
     card.innerHTML = summaryHtml + expandedHtml;
   }
@@ -1609,8 +1609,24 @@ async function sendAiChat(productId) {
     // set_field events update the live draft card even without a product panel.
     // set_tab / add_rule / set_workflow also work when product panel is open.
     const dispatchTarget = productId || aiProductIdContext;
-    if (d.ui_events && d.ui_events.length) {
-      setTimeout(() => dispatchUiEvents(d.ui_events, dispatchTarget || null), 350);
+
+    // Safety: if stage 4+ and GPT response includes no set_workflow event,
+    // but rules_draft was returned in a prior turn, the draft card should still
+    // show a workflow step count badge. We detect stage ≥4 and if ai_events
+    // contains no set_workflow, we force-update the draft card so wCount badge
+    // reflects the aiDraftWorkflow already accumulated (nothing to inject here —
+    // handled below after dispatch). Also handle rules from rules_draft inline display.
+    const eventsToDispatch = (d.ui_events && d.ui_events.length) ? [...d.ui_events] : [];
+
+    // If stage ≥4 reached and no set_workflow ui_event was sent by GPT,
+    // re-render draft card anyway so expand button reflects wCount
+    const hasSetWorkflow = eventsToDispatch.some(ev => ev.type === 'set_workflow');
+    if (d.current_stage >= 4 && !hasSetWorkflow && aiDraftWorkflow.length > 0) {
+      setTimeout(() => updateAiDraftCard(), 400);
+    }
+
+    if (eventsToDispatch.length) {
+      setTimeout(() => dispatchUiEvents(eventsToDispatch, dispatchTarget || null), 350);
     }
 
     // ── Show confirm bar ──────────────────────────────────────────────────

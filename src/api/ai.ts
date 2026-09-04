@@ -196,24 +196,35 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
           // ── Safety guards: prevent GPT from skipping the conversation ──
           // 1. Never emit product_draft before stage 6
           if (aiReply.current_stage < 6) aiReply.product_draft = null
-          // 2. Never emit rules_draft before stage 3
+          // 2. Never emit rules_draft before stage 3, or AT stage 6 (prevents overwriting Stage 3's 17-rule set)
           if (aiReply.current_stage < 3) aiReply.rules_draft = null
+          if (aiReply.current_stage >= 6) aiReply.rules_draft = null
           // 3. show_roadmap only allowed on stage 1 (first identification)
           if (aiReply.current_stage > 1) aiReply.show_roadmap = false
-          // 4. If message doesn't end with a question and we're not confirming,
+          // 4. Replace generic "how would you like to proceed?" with stage-aware nudge
+          //    GPT sometimes emits this filler phrase when it has nothing concrete to ask.
+          const msgRaw: string = aiReply.message || ''
+          const isGenericProceed = /how would you like to proceed\?/i.test(msgRaw)
+          const stg = aiReply.current_stage || 1
+          const nudges: Record<number,string> = {
+            1: 'Type <strong>yes</strong> to confirm this product model, or let me know what to adjust.',
+            2: 'Type <strong>yes</strong> to confirm these parameters, or tell me which values to change.',
+            3: 'Type <strong>yes</strong> to generate the eligibility rules, or adjust the GSAS threshold.',
+            4: 'Type <strong>yes</strong> to confirm the workflow, or tell me if you want more human touchpoints.',
+            5: 'Type <strong>yes</strong> to apply these compliance parameters, or request adjustments.',
+            6: 'Click <strong>Confirm &amp; Publish</strong> above to save and publish the product.',
+          }
+          if (isGenericProceed) {
+            // Strip generic question and replace with stage-aware guidance
+            aiReply.message = msgRaw.replace(/how would you like to proceed\?/i, '').replace(/\s+$/, '') +
+              (msgRaw.replace(/how would you like to proceed\?/i, '').trim() ? '<br><br>' : '') +
+              '<em style="font-size:.8rem;color:rgba(255,255,255,.55)">' + (nudges[stg] || 'Reply to continue.') + '</em>'
+          }
+          // 5. If message doesn't end with a question and we're not confirming,
           //    append a stage-aware nudge so the user knows what to do next.
           const msg: string = aiReply.message || ''
           const hasQuestion = msg.includes('?')
           if (!hasQuestion && aiReply.action !== 'ready_to_confirm') {
-            const stg = aiReply.current_stage || 1
-            const nudges: Record<number,string> = {
-              1: 'Type <strong>yes</strong> to confirm this product model, or let me know what to adjust.',
-              2: 'Type <strong>yes</strong> to confirm these parameters, or tell me which values to change.',
-              3: 'Type <strong>yes</strong> to generate the eligibility rules, or adjust the GSAS threshold.',
-              4: 'Type <strong>yes</strong> to confirm the workflow, or tell me if you want more human touchpoints.',
-              5: 'Type <strong>yes</strong> to apply these compliance parameters, or request adjustments.',
-              6: 'Click <strong>Confirm &amp; Publish</strong> above to save and publish the product.',
-            }
             aiReply.message = msg + '<br><br><em style="font-size:.8rem;color:rgba(255,255,255,.55)">' + (nudges[stg] || 'Reply to continue.') + '</em>'
           }
         } else {
@@ -399,13 +410,13 @@ Product: ${name}. Description: ${product_draft.description || ''}. Base rate: ${
   }
 
   // Determine final pge_stage based on what was generated:
-  // 6 = everything (rules + workflow saved) — skip remaining stages in PGE
-  // 4 = rules saved, open PGE at workflow tab
-  // 3 = rules saved, open PGE at rules tab
+  // 6 = AI confirmed everything (rules saved) — all stages pre-completed, PGE is for review/edit
+  //     pge_stage=6 means locked = id > 6+1 = never locked → all 6 stages accessible
+  // 3 = rules saved, no workflow — PGE opens at rules tab
   // 1 = product model only
-  // Check if workflow was included in the product_draft or schema_draft
-  const hasWorkflow = !!(product_draft?.workflow_nodes || schema_draft?.workflow)
-  const finalPgeStage = ruleIds.length > 0 ? (hasWorkflow ? 4 : 3) : 1
+  // When AI completes full workflow (stages 1-6) and user confirms, set pge_stage=6
+  // so the PGE opens with all stages unlocked for review, not just Stage 1.
+  const finalPgeStage = ruleIds.length > 0 ? 6 : 1
 
   await c.env.DB.prepare(
     `UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,
