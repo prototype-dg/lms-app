@@ -132,13 +132,12 @@ import nodePath from 'node:path'
 
 app.use('*', async (c, next) => {
   const reqPath = c.req.path
-  const isHtml = reqPath.endsWith('.html') || reqPath === '/' || reqPath === ''
-  if (!isHtml) { await next(); return }
+  // Only redirect versioned cache-bust for portal HTML files — not root or API
+  const isPortalHtml = reqPath.endsWith('.html') && reqPath.startsWith('/portals/')
+  if (!isPortalHtml) { await next(); return }
 
   // Map request path → dist file on disk
-  const filePath = (reqPath === '/' || reqPath === '')
-    ? nodePath.join(process.cwd(), 'dist', 'index.html')
-    : nodePath.join(process.cwd(), 'dist', reqPath)
+  const filePath = nodePath.join(process.cwd(), 'dist', reqPath)
 
   if (!fs.existsSync(filePath)) { await next(); return }
 

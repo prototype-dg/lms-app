@@ -4450,14 +4450,14 @@ $.use("/api/*", Ie()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await L.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "475261b";
+var at = "ae5da46";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
-	if (!(n.endsWith(".html") || n === "/" || n === "")) {
+	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
 		await t();
 		return;
 	}
-	let r = n === "/" || n === "" ? a.join(process.cwd(), "dist", "index.html") : a.join(process.cwd(), "dist", n);
+	let r = a.join(process.cwd(), "dist", n);
 	if (!i.existsSync(r)) {
 		await t();
 		return;
