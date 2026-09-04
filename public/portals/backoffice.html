@@ -522,36 +522,34 @@ function openAiStudio() {
   // Reset state
   aiThreadId = null; aiProductDraft = null;
   aiCurrentStage = 0; aiProductIdContext = null;
-  openPanel('AI Product Studio');
+  openPanel('AI Product Studio', { narrow: true });
   document.getElementById('panelBody').innerHTML = `
-    <div class="ai-assistant" style="border-radius:var(--radius-md);overflow:hidden;display:flex;flex-direction:column;max-height:82vh">
-      <div class="ai-header" style="padding:1rem 1.25rem;flex-shrink:0">
-        <div class="ai-icon"><i class="fas fa-robot" style="color:var(--sea-glass)"></i></div>
+    <div class="ai-assistant" style="border-radius:var(--radius-md);overflow:hidden;display:flex;flex-direction:column;height:calc(100vh - 80px)">
+      <div class="ai-header" style="padding:.875rem 1.25rem;flex-shrink:0">
+        <div class="ai-icon" style="width:34px;height:34px"><i class="fas fa-wand-magic-sparkles" style="color:var(--sea-glass);font-size:.9rem"></i></div>
         <div style="flex:1">
-          <div style="font-weight:700;font-size:.95rem">AI Product Studio</div>
-          <div style="font-size:.75rem;color:rgba(255,255,255,.5)">6-stage guided creation &middot; Reads CBO regulations &middot; Live UI updates</div>
+          <div style="font-weight:700;font-size:.9rem">AI Product Studio</div>
+          <div style="font-size:.7rem;color:rgba(255,255,255,.45)">6-stage guided creation &middot; Live panel updates</div>
         </div>
-        <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none" onclick="resetAiChat(null)"><i class="fas fa-redo"></i> Reset</button>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none;font-size:.72rem" onclick="resetAiChat(null)"><i class="fas fa-redo"></i> Reset</button>
       </div>
 
-      <!-- Stage progress pills (standalone mode — no separate product panel to dispatch to) -->
-      <div style="display:flex;gap:.3rem;padding:.4rem .75rem;background:rgba(0,0,0,.2);flex-shrink:0;overflow-x:auto" id="aiStagePills">
-        ${['Product Model','Configuration','Rules','Workflow','Compliance','Simulation'].map((s,i)=>
-          `<span class="ai-stage-pill" id="pill-${i}" style="font-size:.63rem;font-weight:600;padding:.2rem .55rem;border-radius:20px;white-space:nowrap;background:rgba(255,255,255,.08);color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.1);cursor:default">${i+1}. ${s}</span>`
-        ).join('')}
-      </div>
+      <!-- Chat log — scrollable -->
+      <div style="flex:1;overflow-y:auto;padding:.75rem 1rem;display:flex;flex-direction:column;gap:10px" id="ai-chat-log"></div>
 
-      <div style="flex:1;overflow-y:auto;padding:1rem 1.25rem;display:flex;flex-direction:column;gap:12px" id="ai-chat-log"></div>
+      <!-- Compact roadmap strip inserted here dynamically by renderRoadmap() -->
 
-      <div style="padding:.75rem 1.25rem;flex-shrink:0;border-top:1px solid rgba(255,255,255,.08)">
-        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;display:flex;gap:.5rem;align-items:flex-end">
-          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="Describe the product — e.g. «Green home loan with GSAS certification»" style="flex:1;min-height:0;resize:none;background:transparent;border:none;color:rgba(255,255,255,.9);outline:none;font-size:.84rem"></textarea>
-          <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat(null)" style="height:44px;padding:0 16px;flex-shrink:0"><i class="fas fa-paper-plane"></i></button>
+      <!-- Input area -->
+      <div id="aiInputWrapper" style="padding:.6rem 1rem;flex-shrink:0;border-top:1px solid rgba(255,255,255,.08)">
+        <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 10px;display:flex;gap:.5rem;align-items:flex-end">
+          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="e.g. «Create a green home loan with GSAS certification»" style="flex:1;min-height:0;resize:none;background:transparent;border:none;color:rgba(255,255,255,.9);outline:none;font-size:.83rem;line-height:1.5"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiChat(null);}"></textarea>
+          <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat(null)" style="height:40px;padding:0 14px;flex-shrink:0;font-size:.82rem"><i class="fas fa-paper-plane"></i></button>
         </div>
-        <div id="ai-confirm-bar" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:8px;align-items:center;gap:10px">
-          <i class="fas fa-check-circle" style="color:#22c55e;flex-shrink:0"></i>
-          <span style="font-size:.82rem;color:rgba(255,255,255,.85);flex:1">All 6 stages complete. Review the draft above, then confirm to publish.</span>
-          <button class="btn btn-success btn-sm" onclick="confirmAiProduct(null)"><i class="fas fa-rocket"></i> Confirm &amp; Publish</button>
+        <div id="ai-confirm-bar" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:7px;align-items:center;gap:8px">
+          <i class="fas fa-check-circle" style="color:#22c55e;flex-shrink:0;font-size:.85rem"></i>
+          <span style="font-size:.78rem;color:rgba(255,255,255,.85);flex:1">All 6 stages complete. Ready to publish.</span>
+          <button class="btn btn-success btn-sm" onclick="confirmAiProduct(null)" style="font-size:.75rem"><i class="fas fa-rocket"></i> Confirm</button>
         </div>
       </div>
     </div>
@@ -1036,52 +1034,41 @@ function renderProductPanel(p, productRules) {
       </div>`,
 
     ai_assistant: `
-      <div class="ai-assistant" style="display:flex;flex-direction:column;gap:0">
-        <div class="ai-header" style="flex-shrink:0">
-          <div class="ai-icon"><i class="fas fa-wand-magic-sparkles" style="color:var(--sea-glass)"></i></div>
+      <div class="ai-assistant" style="display:flex;flex-direction:column;gap:0;height:420px">
+        <div class="ai-header" style="flex-shrink:0;padding:.75rem 1rem">
+          <div class="ai-icon" style="width:30px;height:30px"><i class="fas fa-wand-magic-sparkles" style="color:var(--sea-glass);font-size:.82rem"></i></div>
           <div style="flex:1">
-            <div style="font-weight:700;font-size:.92rem">AI Product Studio</div>
-            <div style="font-size:.72rem;color:rgba(255,255,255,.5)">6-stage guided assistant &middot; Model → Config → Rules → Workflow → Compliance → Simulation</div>
+            <div style="font-weight:700;font-size:.88rem">AI Product Studio</div>
+            <div style="font-size:.68rem;color:rgba(255,255,255,.45)">${p.name} &middot; 6-stage guided configuration</div>
           </div>
-          <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none;white-space:nowrap" onclick="resetAiChat('${p.id}')"><i class="fas fa-redo"></i> Reset</button>
+          <div style="display:flex;gap:.4rem;flex-shrink:0">
+            <a href="/portals/product-config.html?id=${p.id}" style="font-size:.68rem;font-weight:700;background:rgba(53,198,196,.15);color:var(--sea-glass);border:1px solid rgba(53,198,196,.3);padding:.2rem .55rem;border-radius:5px;text-decoration:none;white-space:nowrap"><i class="fas fa-external-link-alt"></i> PGE</a>
+            <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none;font-size:.68rem;padding:.2rem .55rem" onclick="resetAiChat('${p.id}')"><i class="fas fa-redo"></i></button>
+          </div>
         </div>
 
-        <!-- Stage progress pills -->
-        <div style="display:flex;gap:.3rem;padding:.5rem .75rem;background:rgba(0,0,0,.2);flex-shrink:0;overflow-x:auto" id="aiStagePills">
-          ${['Product Model','Configuration','Rules','Workflow','Compliance','Simulation'].map((s,i)=>
-            `<span class="ai-stage-pill" id="pill-${i}" style="font-size:.63rem;font-weight:600;padding:.2rem .55rem;border-radius:20px;white-space:nowrap;background:rgba(255,255,255,.08);color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.1);cursor:default">${i+1}. ${s}</span>`
-          ).join('')}
-        </div>
+        <!-- Chat log -->
+        <div id="ai-chat-log" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:.5rem .75rem"></div>
 
-        <!-- Open in PGE banner -->
-        <div style="margin:.625rem .75rem;padding:.625rem .875rem;background:rgba(53,198,196,.1);border:1px solid rgba(53,198,196,.25);border-radius:8px;display:flex;align-items:center;gap:.75rem;flex-shrink:0">
-          <i class="fas fa-arrow-up-right-from-square" style="color:var(--sea-glass);font-size:.9rem;flex-shrink:0"></i>
-          <div style="flex:1;font-size:.75rem;color:rgba(255,255,255,.75);line-height:1.4">
-            For full visual editing — drag-drop workflow canvas, rule matrix builder, simulation charts — open the full PGE workspace.
+        <!-- Compact roadmap strip inserted here dynamically by renderRoadmap() -->
+
+        <!-- Input -->
+        <div id="aiInputWrapper" style="flex-shrink:0;padding:.5rem .75rem;border-top:1px solid rgba(255,255,255,.08)">
+          <div style="display:flex;gap:.4rem;align-items:flex-end">
+            <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="Describe what you need — e.g. «Walk me through all 6 stages»" style="flex:1;min-height:0;resize:none;font-size:.8rem"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiChat('${p.id}');}"></textarea>
+            <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat('${p.id}')" style="height:40px;padding:0 14px;flex-shrink:0;font-size:.8rem"><i class="fas fa-paper-plane"></i></button>
           </div>
-          <a href="/portals/product-config.html?id=${p.id}" style="flex-shrink:0;background:rgba(53,198,196,.2);color:var(--sea-glass);border:1px solid rgba(53,198,196,.4);padding:.3rem .7rem;border-radius:6px;font-size:.72rem;font-weight:700;text-decoration:none;white-space:nowrap">
-            <i class="fas fa-external-link-alt"></i> Open in PGE
-          </a>
-        </div>
-
-        <div id="ai-chat-log" style="flex:1;min-height:200px;max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:.5rem .75rem"></div>
-
-        <div style="flex-shrink:0;padding:.5rem .75rem;border-top:1px solid rgba(255,255,255,.08)">
-          <div style="display:flex;gap:.5rem;align-items:flex-end">
-            <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="Describe what you want to configure, e.g. "Add a green discount rule of 25bps for A+ rated properties"" style="flex:1;min-height:0;resize:none"></textarea>
-            <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat('${p.id}')" style="height:48px;padding:0 18px;flex-shrink:0"><i class="fas fa-paper-plane"></i></button>
-          </div>
-          <div style="margin-top:.4rem;display:flex;gap:.4rem;flex-wrap:wrap">
-            ${['Add a rule','Set base rate','Assign workflow','Check compliance','Run simulation'].map(q=>
-              `<span onclick="document.getElementById('aiChatInput').value='${q}';sendAiChat('${p.id}')" style="font-size:.65rem;padding:.15rem .45rem;border-radius:12px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);cursor:pointer;border:1px solid rgba(255,255,255,.1)" onmouseover="this.style.background='rgba(53,198,196,.15)'" onmouseout="this.style.background='rgba(255,255,255,.08)'">${q}</span>`
+          <div style="margin-top:.35rem;display:flex;gap:.3rem;flex-wrap:wrap">
+            ${['Walk me through all 6 stages','Add an eligibility rule','Set pricing','Assign workflow','Check compliance'].map(q=>
+              `<span onclick="document.getElementById('aiChatInput').value='${q}';sendAiChat('${p.id}')" style="font-size:.6rem;padding:.12rem .4rem;border-radius:10px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.5);cursor:pointer;border:1px solid rgba(255,255,255,.1)" onmouseover="this.style.background='rgba(53,198,196,.15)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">${q}</span>`
             ).join('')}
           </div>
-        </div>
-
-        <div id="ai-confirm-bar" style="display:none;flex-shrink:0;margin:.5rem .75rem;padding:.625rem .875rem;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:8px;align-items:center;gap:.75rem">
-          <i class="fas fa-check-circle" style="color:#22c55e;flex-shrink:0"></i>
-          <span style="font-size:.8rem;color:rgba(255,255,255,.85);flex:1">Product configuration ready. Confirm to save all changes.</span>
-          <button class="btn btn-success btn-sm" onclick="confirmAiProduct('${p.id}')"><i class="fas fa-rocket"></i> Confirm &amp; Save</button>
+          <div id="ai-confirm-bar" style="display:none;margin-top:8px;padding:7px 9px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:7px;align-items:center;gap:7px">
+            <i class="fas fa-check-circle" style="color:#22c55e;flex-shrink:0;font-size:.82rem"></i>
+            <span style="font-size:.76rem;color:rgba(255,255,255,.85);flex:1">All stages complete. Ready to save.</span>
+            <button class="btn btn-success btn-sm" onclick="confirmAiProduct('${p.id}')" style="font-size:.72rem"><i class="fas fa-rocket"></i> Confirm</button>
+          </div>
         </div>
       </div>`
   };
@@ -1251,98 +1238,60 @@ function appendChatBubble(role, html) {
 }
 
 /* ── renderRoadmap ───────────────────────────────────────────────────────── *
- * Inserts (or replaces) the visual 6-stage stepper inside the chat log AND
- * advances the stage pills in the header strip.
- * Call whenever show_roadmap=true OR current_stage changes.
+ * Updates the compact horizontal progress bar pinned at bottom of chat area
+ * AND advances the header stage pills.
+ * Called whenever show_roadmap=true OR current_stage changes.
  * ─────────────────────────────────────────────────────────────────────────*/
 function renderRoadmap(activeStage) {
-  // activeStage is 1-based (1..6); 0 means not started
   aiCurrentStage = activeStage;
 
   // 1. Update header stage pills
   for (let i = 0; i < 6; i++) {
     const pill = document.getElementById('pill-' + i);
     if (!pill) continue;
-    const stageNum = i + 1;
-    if (stageNum < activeStage) {
-      // completed
-      pill.style.background = 'rgba(22,132,91,.25)';
-      pill.style.color = '#4ade80';
-      pill.style.borderColor = 'rgba(74,222,128,.35)';
-    } else if (stageNum === activeStage) {
-      // active
-      pill.style.background = 'rgba(53,198,196,.25)';
-      pill.style.color = 'var(--sea-glass)';
-      pill.style.borderColor = 'rgba(53,198,196,.5)';
-      pill.style.boxShadow = '0 0 8px rgba(53,198,196,.3)';
+    const n = i + 1;
+    if (n < activeStage) {
+      pill.style.cssText += ';background:rgba(22,132,91,.25);color:#4ade80;border-color:rgba(74,222,128,.35);box-shadow:none';
+    } else if (n === activeStage) {
+      pill.style.cssText += ';background:rgba(53,198,196,.22);color:var(--sea-glass);border-color:rgba(53,198,196,.5);box-shadow:0 0 6px rgba(53,198,196,.3)';
     } else {
-      // future
-      pill.style.background = 'rgba(255,255,255,.08)';
-      pill.style.color = 'rgba(255,255,255,.4)';
-      pill.style.borderColor = 'rgba(255,255,255,.1)';
-      pill.style.boxShadow = '';
+      pill.style.cssText += ';background:rgba(255,255,255,.08);color:rgba(255,255,255,.4);border-color:rgba(255,255,255,.1);box-shadow:none';
     }
   }
 
-  // 2. Build roadmap HTML block
-  const stepsHtml = AI_STAGE_LABELS.map((label, i) => {
-    const stageNum = i + 1;
-    let stateClass, checkHtml;
-    if (stageNum < activeStage) {
-      stateClass = 'done';
-      checkHtml = '<i class="fas fa-check" style="font-size:.65rem"></i>';
-    } else if (stageNum === activeStage) {
-      stateClass = 'active';
-      checkHtml = '<i class="fas fa-' + AI_STAGE_ICONS[i] + '" style="font-size:.65rem"></i>';
-    } else {
-      stateClass = 'future';
-      checkHtml = stageNum;
-    }
+  // 2. Update (or create) the compact horizontal roadmap strip
+  // It lives OUTSIDE the chat-log, pinned just above the input area
+  let strip = document.getElementById('ai-roadmap-strip');
+  if (!strip) {
+    // Find the input wrapper and insert the strip before it
+    const inputWrapper = document.getElementById('aiInputWrapper');
+    if (!inputWrapper) return;
+    strip = document.createElement('div');
+    strip.id = 'ai-roadmap-strip';
+    strip.style.cssText = 'display:flex;align-items:center;gap:0;padding:.35rem .75rem;background:rgba(0,0,0,.25);border-top:1px solid rgba(255,255,255,.07);flex-shrink:0';
+    inputWrapper.parentNode.insertBefore(strip, inputWrapper);
+  }
 
-    const dotBg   = stageNum < activeStage  ? '#4ade80'
-                  : stageNum === activeStage ? 'var(--sea-glass)'
-                  : 'rgba(255,255,255,.18)';
-    const dotBorder = stageNum === activeStage ? '2px solid var(--sea-glass)' : '2px solid transparent';
-    const labelColor = stageNum < activeStage  ? '#4ade80'
-                     : stageNum === activeStage ? 'var(--sea-glass)'
-                     : 'rgba(255,255,255,.35)';
-    const labelWeight = stageNum === activeStage ? '700' : '400';
-
+  strip.innerHTML = AI_STAGE_LABELS.map((label, i) => {
+    const n = i + 1;
+    const done   = n < activeStage;
+    const active = n === activeStage;
+    const dotBg  = done ? '#4ade80' : active ? 'var(--sea-glass)' : 'rgba(255,255,255,.18)';
+    const txtColor = done ? '#4ade80' : active ? 'var(--sea-glass)' : 'rgba(255,255,255,.32)';
+    const fw = active ? '700' : '400';
+    const dotContent = done ? '✓' : String(n);
+    // connector line between steps
     const connector = i < 5
-      ? '<div style="width:2px;height:12px;background:' + (stageNum < activeStage ? '#4ade80' : 'rgba(255,255,255,.15)') + ';margin:2px auto"></div>'
+      ? '<div style="flex:1;height:1px;background:' + (done ? 'rgba(74,222,128,.4)' : 'rgba(255,255,255,.12)') + ';margin:0 3px"></div>'
       : '';
-
-    return '<div style="display:flex;align-items:center;gap:8px">'
-      + '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">'
-        + '<div style="width:22px;height:22px;border-radius:50%;background:' + dotBg + ';border:' + dotBorder + ';display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:' + (stageNum <= activeStage ? '#0d2233' : 'rgba(255,255,255,.4)') + '">' + checkHtml + '</div>'
-        + connector
+    return '<div style="display:flex;align-items:center;flex-shrink:0">'
+      + '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">'
+        + '<div style="width:18px;height:18px;border-radius:50%;background:' + dotBg + ';display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;color:' + (active||done ? '#0d2233' : 'rgba(255,255,255,.4)') + '">' + dotContent + '</div>'
+        + '<span style="font-size:.56rem;font-weight:' + fw + ';color:' + txtColor + ';white-space:nowrap;max-width:56px;overflow:hidden;text-overflow:ellipsis">' + label + '</span>'
       + '</div>'
-      + '<div style="padding:2px 0 ' + (i < 5 ? '12px' : '0') + ' 0;line-height:1.3">'
-        + '<div style="font-size:.76rem;font-weight:' + labelWeight + ';color:' + labelColor + '">Stage ' + stageNum + ' — ' + label + '</div>'
-        + (stageNum === activeStage ? '<div style="font-size:.68rem;color:rgba(255,255,255,.45);margin-top:1px">In progress…</div>' : '')
-        + (stageNum < activeStage  ? '<div style="font-size:.68rem;color:rgba(74,222,128,.6);margin-top:1px">✓ Complete</div>' : '')
-      + '</div>'
-    + '</div>';
+    + '</div>'
+    + connector;
   }).join('');
-
-  const roadmapHtml = '<div style="margin:4px 0;padding:10px 14px;background:rgba(0,0,0,.3);border:1px solid rgba(53,198,196,.2);border-radius:10px;font-size:.8rem">'
-    + '<div style="font-weight:700;font-size:.78rem;color:var(--sea-glass);margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="fas fa-map-signs"></i> Product Creation Roadmap</div>'
-    + stepsHtml
-    + '</div>';
-
-  // Remove previous roadmap bubble if it exists
-  const log = document.getElementById('ai-chat-log');
-  if (!log) return;
-  const prev = log.querySelector('.ai-roadmap-bubble');
-  if (prev) prev.remove();
-
-  // Insert as a special assistant bubble with a marker class
-  const el = document.createElement('div');
-  el.className = 'ai-roadmap-bubble';
-  el.style.cssText = 'display:flex;justify-content:flex-start';
-  el.innerHTML = '<div style="max-width:95%;padding:9px 13px;border-radius:12px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.9)">' + roadmapHtml + '</div>';
-  log.appendChild(el);
-  log.scrollTop = log.scrollHeight;
 }
 
 /* ── dispatchUiEvents ────────────────────────────────────────────────────── *
@@ -1388,11 +1337,14 @@ async function dispatchUiEvents(events, productId) {
   for (const ev of events) {
 
     /* ── set_tab ─────────────────────────────────────────────────────────── */
-    if (ev.type === 'set_tab' && productId && ev.tab) {
-      // Switch the product panel tab — re-renders tab content
-      switchProductTab(ev.tab, productId);
-      // Allow DOM to paint before subsequent set_field / add_rule events
-      await new Promise(r => setTimeout(r, 200));
+    if (ev.type === 'set_tab' && ev.tab) {
+      // Use explicit productId, or fall back to the context product from AI Studio
+      const targetId = productId || aiProductIdContext;
+      if (targetId) {
+        switchProductTab(ev.tab, targetId);
+        // Allow DOM to paint before subsequent set_field / add_rule events
+        await new Promise(r => setTimeout(r, 220));
+      }
       continue;
     }
 
@@ -1533,11 +1485,12 @@ async function sendAiChat(productId) {
 
     appendChatBubble('assistant', replyHtml);
 
-    // ── Dispatch UI events to main product panel ───────────────────────────
-    // Only applies when there's a product panel open (productId is set)
-    if (d.ui_events && d.ui_events.length && productId) {
-      // Slight delay so the chat bubble renders first
-      setTimeout(() => dispatchUiEvents(d.ui_events, productId), 350);
+    // ── Dispatch UI events to main product panel ─────────────────────────
+    // Works for both the product tab (productId set) and standalone panel
+    // (uses aiProductIdContext as fallback — set when product is open behind it)
+    const dispatchTarget = productId || aiProductIdContext;
+    if (d.ui_events && d.ui_events.length && dispatchTarget) {
+      setTimeout(() => dispatchUiEvents(d.ui_events, dispatchTarget), 350);
     }
 
     // ── Show confirm bar ──────────────────────────────────────────────────
@@ -2575,14 +2528,18 @@ async function saveAiConfig(productId) {
 }
 
 /* ======================== PANEL / MODAL HELPERS ======================== */
-function openPanel(title) {
+function openPanel(title, opts={}) {
   document.getElementById('panelTitle').textContent = title;
   document.getElementById('panelOverlay').classList.add('open');
-  document.getElementById('slidePanel').classList.add('open');
+  const sp = document.getElementById('slidePanel');
+  if (opts.narrow) sp.classList.add('narrow'); else sp.classList.remove('narrow');
+  sp.classList.add('open');
 }
 function closePanel() {
   document.getElementById('panelOverlay').classList.remove('open');
-  document.getElementById('slidePanel').classList.remove('open');
+  const sp = document.getElementById('slidePanel');
+  sp.classList.remove('open');
+  sp.classList.remove('narrow');
 }
 function showModal(title, body, onConfirm, opts={}) {
   const confirmLabel = opts.confirmLabel || 'Confirm';

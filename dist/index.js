@@ -1335,9 +1335,9 @@ Only output JSON. No markdown, no code blocks. No explanation outside the JSON.`
 			t ? h = JSON.parse(t[0]) : h.message = e;
 		}
 	} catch {
-		h = Ge(n, c.length);
+		h = Ge(n, c.length, c);
 	}
-	else h = Ge(n, c.length);
+	else h = Ge(n, c.length, c);
 	let g = {
 		role: "assistant",
 		content: h.message,
@@ -1870,46 +1870,10 @@ function We(e) {
 		]
 	};
 }
-function Ge(e, t) {
-	let n = e.toLowerCase(), r = n.includes("green") || n.includes("gsas") || n.includes("esg") || n.includes("sustainable") || n.includes("eco") || n.includes("energy"), i = n.includes("auto") || n.includes("car") || n.includes("vehicle"), a = n.includes("personal") || n.includes("unsecured") || n.includes("consumer"), o = n.includes("sme") || n.includes("business") || n.includes("working capital");
-	if (n.includes("yes") || n.includes("ok") || n.includes("proceed") || n.includes("confirm") || n.includes("clone") || n.includes("standard") || n.includes("agree") || n.includes("sounds good") || n.includes("go ahead") || n.includes("correct"), t <= 2) return r ? {
-		message: "Understood. I've classified this as a <strong>Green Home Loan</strong> — a mortgage product with ESG eligibility criteria.<br><br>Our system is configured for <strong>Oman</strong> · regulator: <strong>CBO</strong> · currency: <strong>OMR</strong> · default max LTV: <strong>85%</strong>.<br><br>I've mapped out the 6 configuration stages below. We'll work through them one at a time.<br><br><strong>Stage 1 — Product Model:</strong> Would you like to clone from your existing <em>Standard Home Loan</em> (5.5% base rate, 90% LTV) as a starting point, or configure from scratch?",
-		current_stage: 1,
-		show_roadmap: !0,
-		action: "none",
-		ui_events: [],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	} : i ? {
-		message: "Understood — <strong>Auto Finance</strong> product. Our system is configured for <strong>Oman · CBO · OMR</strong>.<br><br>I've mapped the 6 configuration stages below.<br><br><strong>Stage 1 — Product Model:</strong> Should we clone from <em>Auto Finance – Personal</em>, or start fresh? And will this be a conventional or Islamic (Murabaha) structure?",
-		current_stage: 1,
-		show_roadmap: !0,
-		action: "none",
-		ui_events: [],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	} : a ? {
-		message: "Understood — <strong>Personal Loan</strong> product. Our system is configured for <strong>Oman · CBO · OMR</strong>.<br><br>I've mapped the 6 configuration stages below.<br><br><strong>Stage 1 — Product Model:</strong> Should we clone from the existing <em>Personal Loan</em> product? Any target customer segment (salaried, self-employed)?",
-		current_stage: 1,
-		show_roadmap: !0,
-		action: "none",
-		ui_events: [],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	} : o ? {
-		message: "Understood — <strong>SME Finance</strong> product. Our system is configured for <strong>Oman · CBO · OMR</strong>.<br><br>I've mapped the 6 configuration stages below.<br><br><strong>Stage 1 — Product Model:</strong> Should we clone from <em>SME Working Capital</em>? Any sector focus or collateral type to note?",
-		current_stage: 1,
-		show_roadmap: !0,
-		action: "none",
-		ui_events: [],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	} : {
-		message: "I can help you create a new regulated banking product. Our system is configured for <strong>Oman · CBO · OMR</strong>.<br><br>What type of product would you like to create?<br><br>• <strong>Home Loan</strong> (including Green / ESG variants)<br>• <strong>Auto Finance</strong><br>• <strong>Personal Loan</strong><br>• <strong>SME Finance</strong><br>• <strong>Commercial</strong><br>• <strong>Education Finance</strong>",
+function Ge(e, t, n) {
+	let r = e.toLowerCase(), i = r.includes("green") || r.includes("gsas") || r.includes("esg") || r.includes("sustainable") || r.includes("eco") || r.includes("energy"), a = r.includes("auto") || r.includes("car") || r.includes("vehicle"), o = r.includes("personal") || r.includes("unsecured") || r.includes("consumer"), s = r.includes("sme") || r.includes("business") || r.includes("working capital"), c = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great"), l = n || [], u = l.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), d = u.some((e) => e.includes("stage 1") || e.includes("product model") || e.includes("clone") || e.includes("start fresh")), f = u.some((e) => e.includes("stage 2") || e.includes("core config") || e.includes("base rate") || e.includes("dbr buffer") || e.includes("ltv")), p = u.some((e) => e.includes("stage 3") || e.includes("rule builder") || e.includes("gsas") || e.includes("eligibility rule")), m = u.some((e) => e.includes("stage 4") || e.includes("workflow") || e.includes("approval pipeline")), h = u.some((e) => e.includes("stage 5") || e.includes("compliance") || e.includes("risk weight") || e.includes("regulatory tag")), g = u.some((e) => e.includes("stage 6") || e.includes("confirm") || e.includes("ready to publish") || e.includes("all 6 stages")), _ = l.map((e) => e.content || "").join(" ").toLowerCase(), v = _.includes("green") || _.includes("gsas") || _.includes("esg") || _.includes("sustainable"), y = !v && (_.includes("auto") || _.includes("car") || _.includes("vehicle")), b = !v && !y && (_.includes("personal") || _.includes("unsecured") || _.includes("consumer")), x = !v && !y && !b && (_.includes("sme") || _.includes("business") || _.includes("working capital")), S = v ? "Green Home Loan – ESG" : y ? "Auto Finance" : b ? "Personal Loan" : x ? "SME Finance" : "Home Loan", C = v || !y && !b && !x ? "Standard Home Loan" : y ? "Auto Finance – Personal" : b ? "Personal Loan" : "SME Working Capital";
+	if (!i && !a && !o && !s && !d) return {
+		message: "I can help you create a new regulated banking product from scratch. I'll guide you through all 6 configuration stages step by step.<br><br>To get started — <strong>what type of product would you like to create?</strong><br><br>• 🏠 <strong>Home Loan</strong> (standard or green/ESG)<br>• 🚗 <strong>Auto Finance</strong><br>• 💳 <strong>Personal Loan</strong><br>• 🏢 <strong>SME Finance</strong><br>• 🎓 <strong>Education Finance</strong><br>• 🏗️ <strong>Commercial Real Estate</strong>",
 		current_stage: 0,
 		show_roadmap: !1,
 		action: "none",
@@ -1918,8 +1882,18 @@ function Ge(e, t) {
 		rules_draft: null,
 		schema_draft: null
 	};
-	if (t <= 4) return {
-		message: "✅ <strong>Stage 1 complete.</strong> I've cloned <em>Standard Home Loan</em> as the base and added two ESG attributes: <code>property_energy_rating</code> (A+ → C) and <code>property_green_cert_type</code> (EPC / LEED / BREEAM).<br><br><strong>Stage 2 — Core Configuration:</strong> The cloned defaults are: base rate <strong>5.5%</strong>, max LTV <strong>90%</strong>, max DBR <strong>60%</strong>, term up to <strong>25 years</strong>.<br><br>For a green product, CBO Circular 2026-12 recommends a <strong>5% DBR buffer</strong> (bringing green DBR to 55%). Should I apply that, or keep 60%?",
+	if (!d) return {
+		message: v ? "Great — a <strong>Green Home Loan</strong> with ESG / GSAS certification criteria. Our system is set up for <strong>Oman · CBO · OMR</strong>.<br><br>I've opened the 6-stage roadmap below.<br><br><strong>Stage 1 — Product Model:</strong> Would you like to clone from the existing <em>Standard Home Loan</em> (5.5% base, 90% LTV) as a starting point, or configure everything from scratch?" : y ? "Got it — an <strong>Auto Finance</strong> product. Our system is configured for <strong>Oman · CBO · OMR</strong>.<br><br><strong>Stage 1 — Product Model:</strong> Should we clone from <em>Auto Finance – Personal</em>, or start fresh? And should it be conventional or Islamic (Murabaha) structure?" : b ? "Understood — a <strong>Personal Loan</strong> product for <strong>Oman · CBO · OMR</strong>.<br><br><strong>Stage 1 — Product Model:</strong> Should we clone from the existing <em>Personal Loan</em>? And who is the target segment — salaried employees, self-employed, or both?" : x ? "Understood — an <strong>SME Finance</strong> product for <strong>Oman · CBO · OMR</strong>.<br><br><strong>Stage 1 — Product Model:</strong> Should we clone from <em>SME Working Capital</em>? Any specific sector focus or collateral type I should know about?" : "Understood. Let me set up the product for <strong>Oman · CBO · OMR</strong>.<br><br><strong>Stage 1 — Product Model:</strong> Should we clone from an existing product, or start from scratch? If cloning, which product should we use as a base?",
+		current_stage: 1,
+		show_roadmap: !0,
+		action: "none",
+		ui_events: [],
+		product_draft: null,
+		rules_draft: null,
+		schema_draft: null
+	};
+	if (d && !f) return c || r.includes("clone") || r.includes("base") || r.includes("standard") || r.includes("existing"), {
+		message: `✅ <strong>Stage 1 done.</strong> Product model set — ${r.includes("scratch") || r.includes("fresh") || r.includes("new") || r.includes("blank") ? "configured from scratch" : `cloned from <em>${C}</em>`}, type: <strong>${S}</strong>.<br><br><strong>Stage 2 — Core Configuration:</strong> Here are the suggested defaults based on your product type:<br>&bull; Base rate: <strong>${v ? "5.5" : y ? "6.5" : b ? "8.5" : "7.0"}%</strong><br>&bull; Max LTV: <strong>${v ? "90" : y ? "80" : b ? "N/A" : "70"}%</strong><br>&bull; Max DBR: <strong>${v ? "60" : y ? "55" : b ? "45" : "50"}%</strong><br>&bull; Max term: <strong>${v ? "25 years" : y || b ? "5 years" : "7 years"}</strong><br><br>` + (v ? "CBO Circular 2026-12 recommends a <strong>5% DBR buffer</strong> for green products (reducing max DBR to 55%). " : "") + "Would you like to use these defaults, or do you want to adjust any of them?",
 		current_stage: 2,
 		show_roadmap: !1,
 		action: "none",
@@ -1931,12 +1905,12 @@ function Ge(e, t) {
 			{
 				type: "set_field",
 				field: "name",
-				value: "Green Home Loan – ESG"
+				value: S
 			},
 			{
 				type: "set_field",
 				field: "description",
-				value: "Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on your property's sustainability score."
+				value: v ? "Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on your property's sustainability score." : `${S} — configured for CBO regulatory compliance in Oman.`
 			},
 			{
 				type: "highlight_field",
@@ -1947,47 +1921,53 @@ function Ge(e, t) {
 		rules_draft: null,
 		schema_draft: null
 	};
-	if (t <= 6) return {
-		message: "✅ <strong>Stage 2 complete.</strong> Core parameters locked in: rate <strong>5.5%</strong> · LTV <strong>90%</strong> · DBR <strong>55%</strong> (green buffer applied) · Term <strong>5–25 years</strong> · Amount <strong>OMR 10,000–500,000</strong>.<br><br><strong>Stage 3 — Rule Builder:</strong> I'll now generate the eligibility and pricing rules. Based on OS GSO 3000:2025, what should the minimum GSAS sustainability score be for eligibility? The regulation suggests <strong>70</strong> as the floor. And for the premium green discount (0.75%), what score threshold — <strong>85</strong>?",
-		current_stage: 3,
-		show_roadmap: !1,
-		action: "none",
-		ui_events: [
-			{
-				type: "set_tab",
-				tab: "pricing"
-			},
-			{
-				type: "set_field",
-				field: "base_rate",
-				value: 5.5
-			},
-			{
-				type: "set_field",
-				field: "max_ltv",
-				value: 90
-			},
-			{
-				type: "set_field",
-				field: "max_dbr",
-				value: 55
-			},
-			{
-				type: "set_field",
-				field: "max_term",
-				value: 25
-			},
-			{
-				type: "highlight_field",
-				field: "base_rate"
-			}
-		],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	};
-	if (t <= 8) {
-		let e = [
+	if (f && !p) {
+		let e = r.match(/(\d+(?:\.\d+)?)\s*%?\s*(?:rate|interest)/), t = r.match(/ltv\s*(?:of\s*)?(\d+)/), n = r.match(/dbr\s*(?:of\s*)?(\d+)/), i = e ? parseFloat(e[1]) : v ? 5.5 : y ? 6.5 : b ? 8.5 : 7, a = t ? parseInt(t[1]) : v ? 90 : y ? 80 : b ? 0 : 70, o = n ? parseInt(n[1]) : v || y ? 55 : b ? 45 : 50, s = v ? 25 : y || b ? 5 : 7;
+		return {
+			message: `✅ <strong>Stage 2 done.</strong> Core parameters set:<br>&bull; Base rate: <strong>${i}%</strong><br>&bull; Max LTV: <strong>${a > 0 ? a + "%" : "N/A (unsecured)"}</strong><br>&bull; Max DBR: <strong>${o}%</strong><br>&bull; Max term: <strong>${s} years</strong><br>&bull; Amount: <strong>OMR 10,000 – 500,000</strong><br><br><strong>Stage 3 — Rule Builder:</strong> I'll now generate the eligibility rules from CBO regulations.<br><br>` + (v ? "The rules I plan to add are:<br>1. GSAS Score ≥ <strong>70</strong> (minimum eligibility) — OS GSO 3000:2025<br>2. Green DBR ≤ <strong>55%</strong> — CBO Circular 2026-12<br>3. LTV ≤ <strong>90%</strong> — CBO BM/REG/2019/74<br>4. ESG document set mandatory (GSAS cert + EPC + EIA)<br><br>Should I use 70 as the GSAS minimum, or would you like a different threshold?" : "For this product type, standard rules include: max DBR enforcement, LTV cap, income verification, and CRB check. Should I generate these now? Any custom rules to add?"),
+			current_stage: 3,
+			show_roadmap: !1,
+			action: "none",
+			ui_events: [
+				{
+					type: "set_tab",
+					tab: "pricing"
+				},
+				{
+					type: "set_field",
+					field: "base_rate",
+					value: i
+				},
+				{
+					type: "set_field",
+					field: "max_ltv",
+					value: a
+				},
+				{
+					type: "set_field",
+					field: "max_dbr",
+					value: o
+				},
+				{
+					type: "set_field",
+					field: "max_term",
+					value: s
+				},
+				{
+					type: "highlight_field",
+					field: "base_rate"
+				}
+			],
+			product_draft: null,
+			rules_draft: null,
+			schema_draft: null
+		};
+	}
+	if (p && !m) {
+		let e = (() => {
+			let e = r.match(/(\d+)\s*(?:minimum|min|floor|threshold)?/);
+			return e ? parseInt(e[1]) : 70;
+		})(), t = v ? [
 			{
 				name: "Green DBR Buffer",
 				category: "creditworthiness",
@@ -2006,13 +1986,13 @@ function Ge(e, t) {
 				category: "esg",
 				metric: "gsas_score",
 				operator: ">=",
-				threshold_value: 70,
+				threshold_value: e,
 				threshold_condition: null,
 				action_on_breach: "reject",
 				severity: "hard",
 				regulatory_reference: "OS GSO 3000:2025, §4.2",
 				ai_confidence: 97,
-				description: "Minimum GSAS score 70 for eligibility."
+				description: `Minimum GSAS score ${e} for eligibility.`
 			},
 			{
 				name: "LTV Cap – Green Product",
@@ -2040,137 +2020,172 @@ function Ge(e, t) {
 				ai_confidence: 92,
 				description: "GSAS Cert + EPC Report + EIA Clearance all required."
 			}
+		] : [
+			{
+				name: "Max DBR",
+				category: "creditworthiness",
+				metric: "DBR",
+				operator: "<=",
+				threshold_value: 50,
+				threshold_condition: null,
+				action_on_breach: "reject",
+				severity: "hard",
+				regulatory_reference: "CBO Circular BM/REG/2019/74",
+				ai_confidence: 96,
+				description: "Maximum debt-to-income ratio per CBO regulations."
+			},
+			{
+				name: "Income Verification",
+				category: "creditworthiness",
+				metric: "income_verified",
+				operator: "=",
+				threshold_value: 1,
+				threshold_condition: null,
+				action_on_breach: "reject",
+				severity: "hard",
+				regulatory_reference: "CBO AML Guidelines §7",
+				ai_confidence: 95,
+				description: "Salary certificate required for all applications."
+			},
+			{
+				name: "CRB Clear",
+				category: "creditworthiness",
+				metric: "crb_status",
+				operator: "=",
+				threshold_value: 1,
+				threshold_condition: null,
+				action_on_breach: "reject",
+				severity: "hard",
+				regulatory_reference: "CBO Credit Bureau Circular",
+				ai_confidence: 93,
+				description: "Clean credit bureau report required."
+			}
 		];
 		return {
-			message: "✅ <strong>Stage 3 complete.</strong> 4 regulatory rules generated and added to the Eligibility tab:<br><br>1. <strong>Green DBR Buffer</strong> ≤ 55% · CBO Circular 2026-12 §3.2 · confidence 94%<br>2. <strong>GSAS Score ≥ 70</strong> (eligibility) · OS GSO 3000:2025 §4.2 · confidence 97%<br>3. <strong>LTV ≤ 90%</strong> · CBO BM/REG/2019/74 · confidence 95%<br>4. <strong>ESG Document Set Complete</strong> · CBO Circular 2026-12 §5.1 · confidence 92%<br><br><strong>Stage 4 — Workflow:</strong> For a green home loan I recommend this approval pipeline: <em>KYC/AML → Green Certificate Validation → Underwriting → Compliance Review → Final Approval</em>. Should I apply this template?",
+			message: `✅ <strong>Stage 3 done.</strong> ${t.length} eligibility rules generated and added to the Eligibility tab (check it now — they've appeared automatically).<br><br>` + t.map((e, t) => `${t + 1}. <strong>${e.name}</strong> · ${e.regulatory_reference} · AI confidence ${e.ai_confidence}%`).join("<br>") + `<br><br><strong>Stage 4 — Workflow:</strong> I'll set up the approval process now. For a <strong>${S}</strong>, I recommend this pipeline:<br><br><em>Application → KYC/AML (auto) → ${v ? "Green Cert Validation (auto) → " : ""}Underwriting → Compliance Review → Final Approval → Decision</em><br><br>Should I apply this workflow? Or do you need any changes — e.g. different approval roles, additional stages, or different SLA timings?`,
 			current_stage: 4,
 			show_roadmap: !1,
 			action: "none",
 			ui_events: [{
 				type: "set_tab",
 				tab: "eligibility"
-			}, ...e.map((e) => ({
+			}, ...t.map((e) => ({
 				type: "add_rule",
 				rule: e
 			}))],
 			product_draft: null,
-			rules_draft: e,
+			rules_draft: t,
 			schema_draft: null
 		};
 	}
-	return t <= 10 ? {
-		message: "✅ <strong>Stage 4 complete.</strong> Workflow applied to the product — 5 approval nodes, 3 roles, AI auto-processing for KYC and Green Certificate Validation.<br><br><strong>Stage 5 — Compliance:</strong> I'll now map the regulatory tags. Based on CBO Circular 2026-12 and Oman Vision 2040, I recommend attaching: <strong>#CLIMATE_RISK</strong>, <strong>#ESG_ELIGIBILITY</strong>, <strong>#GREEN_FINANCING</strong>. Risk weight: <strong>75%</strong>, provisioning rate: <strong>1.5%</strong>. Shall I apply these?",
-		current_stage: 5,
-		show_roadmap: !1,
-		action: "none",
-		ui_events: [{
-			type: "set_tab",
-			tab: "workflow"
-		}, {
-			type: "set_workflow",
-			nodes: [
-				{
-					id: "n1",
-					type: "start",
-					label: "Application Submitted",
-					role: null
-				},
-				{
-					id: "n2",
-					type: "task",
-					label: "KYC / AML Check",
-					role: "compliance_officer",
-					sla_hours: 24,
-					auto: !0
-				},
-				{
-					id: "n3",
-					type: "task",
-					label: "Green Certificate Validation",
-					role: "compliance_officer",
-					sla_hours: 48,
-					auto: !0
-				},
-				{
-					id: "n4",
-					type: "approval",
-					label: "Underwriting",
-					role: "risk_officer",
-					sla_hours: 48
-				},
-				{
-					id: "n5",
-					type: "approval",
-					label: "Compliance Review",
-					role: "compliance_officer",
-					sla_hours: 24
-				},
-				{
-					id: "n6",
-					type: "approval",
-					label: "Final Approval",
-					role: "product_manager",
-					sla_hours: 24
-				},
-				{
-					id: "n7",
-					type: "end",
-					label: "Decision",
-					role: null
-				}
-			]
-		}],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	} : {
-		message: "✅ <strong>Stages 5 & 6 complete.</strong> Compliance tags applied · Risk weight 75% · Provisioning 1.5%.<br><br>🎯 <strong>All 6 stages done.</strong> Here's the full summary:<br><br>📋 <strong>Product:</strong> Green Home Loan – ESG · 5.5% base · Cloned from Standard Home Loan<br>💚 <strong>Green discounts:</strong> 0.75% (GSAS ≥85) · 0.5% (GSAS 70–84)<br>📏 <strong>Limits:</strong> DBR 55% · LTV 90% · 5–25 years · OMR 10,000–500,000<br>📄 <strong>Required docs:</strong> GSAS Certificate · EPC Report · EIA Clearance<br>⚙️ <strong>4 rules</strong> · 5-node workflow · 3 compliance tags · GSAS schema (96% confidence)<br><br>Ready to publish. Click <strong>Confirm & Publish</strong> to save all configuration, generate portal marketing content, and make the product live.",
-		current_stage: 6,
-		show_roadmap: !1,
-		action: "ready_to_confirm",
-		ui_events: [{
-			type: "set_tab",
-			tab: "ai_config"
-		}],
-		product_draft: {
-			name: "Green Home Loan – ESG",
-			description: "Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on your sustainability score. Supports Oman Vision 2040.",
-			category: "home_loan",
-			base_rate: 5.5,
-			max_ltv: 90,
-			max_dbr: 60,
-			green_dbr: 55,
-			min_term: 5,
-			max_term: 25,
+	if (m && !h) {
+		let e = [
+			{
+				id: "n1",
+				type: "start",
+				label: "Application Submitted",
+				role: null
+			},
+			{
+				id: "n2",
+				type: "task",
+				label: "KYC / AML Check",
+				role: "compliance_officer",
+				sla_hours: 24,
+				auto: !0
+			},
+			...v ? [{
+				id: "n3",
+				type: "task",
+				label: "Green Certificate Validation",
+				role: "compliance_officer",
+				sla_hours: 48,
+				auto: !0
+			}] : [],
+			{
+				id: "n4",
+				type: "approval",
+				label: "Underwriting",
+				role: "risk_officer",
+				sla_hours: 48
+			},
+			{
+				id: "n5",
+				type: "approval",
+				label: "Compliance Review",
+				role: "compliance_officer",
+				sla_hours: 24
+			},
+			{
+				id: "n6",
+				type: "approval",
+				label: "Final Approval",
+				role: "product_manager",
+				sla_hours: 24
+			},
+			{
+				id: "n7",
+				type: "end",
+				label: "Decision",
+				role: null
+			}
+		];
+		return {
+			message: `✅ <strong>Stage 4 done.</strong> Workflow set up with ${e.filter((e) => e.type !== "start" && e.type !== "end").length} nodes, ${v ? "2 auto-processed steps" : "1 auto-processed step"}, and 3 human approval roles. You can see it in the Workflow tab.<br><br><strong>Stage 5 — Compliance:</strong> I'll now map the regulatory tags and risk parameters for this product.<br><br>Based on ${v ? "CBO Circular 2026-12 and Oman Vision 2040" : "standard CBO prudential guidelines"}, I recommend:<br>&bull; Tags: <strong>${v ? "#CLIMATE_RISK · #ESG_ELIGIBILITY · #GREEN_FINANCING" : "#RETAIL_CREDIT · #CONSUMER_PROTECTION"}</strong><br>&bull; Risk weight: <strong>${v ? "75%" : "100%"}</strong><br>&bull; Provisioning rate: <strong>${v ? "1.5%" : "2.0%"}</strong><br><br>Should I apply these compliance parameters? Or would you like different risk categorisation?`,
+			current_stage: 5,
+			show_roadmap: !1,
+			action: "none",
+			ui_events: [{
+				type: "set_tab",
+				tab: "workflow"
+			}, {
+				type: "set_workflow",
+				nodes: e
+			}],
+			product_draft: null,
+			rules_draft: null,
+			schema_draft: null
+		};
+	}
+	if (h && !g) {
+		let e = {
+			name: S,
+			description: v ? "Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on your sustainability score. Supports Oman Vision 2040." : `${S} — CBO-compliant product for Omani market.`,
+			category: v || !y && !b && !x ? "home_loan" : y ? "auto_loan" : b ? "personal_loan" : "sme",
+			base_rate: v ? 5.5 : y ? 6.5 : b ? 8.5 : 7,
+			max_ltv: v ? 90 : y ? 80 : 0,
+			max_dbr: v || y ? 55 : b ? 45 : 50,
+			green_dbr: v ? 55 : null,
+			min_term: 1,
+			max_term: v ? 25 : y || b ? 5 : 7,
 			min_amount: 1e4,
 			max_amount: 5e5,
-			gsas_min_score: 70,
-			gsas_premium_score: 85,
-			green_discount_premium: .75,
-			green_discount_standard: .5,
-			esg_required_docs: [
+			gsas_min_score: v ? 70 : null,
+			gsas_premium_score: v ? 85 : null,
+			green_discount_premium: v ? .75 : null,
+			green_discount_standard: v ? .5 : null,
+			esg_required_docs: v ? [
 				"gsas_cert",
 				"epc_report",
 				"eia_approval"
-			],
-			approved_materials: [
+			] : [],
+			approved_materials: v ? [
 				"Green Concrete",
 				"Thermal Insulation",
 				"Solar Panels",
 				"Energy-Efficient Appliances",
 				"Low-E Glass",
 				"Recycled Steel"
-			],
-			approved_vendors: [
+			] : [],
+			approved_vendors: v ? [
 				"Oman Readymix LLC",
 				"Gulf Insulation Group",
 				"SunTech Oman",
 				"Green Build Oman",
 				"EcoMaterials Oman"
-			],
-			clone_from_id: "p001"
-		},
-		rules_draft: [
+			] : [],
+			clone_from_id: v ? "p001" : null
+		}, t = v ? [
 			{
 				name: "Green DBR Buffer",
 				category: "creditworthiness",
@@ -2195,7 +2210,7 @@ function Ge(e, t) {
 				severity: "hard",
 				regulatory_reference: "OS GSO 3000:2025, §4.2",
 				ai_confidence: 97,
-				description: "Minimum GSAS score 70 for eligibility."
+				description: "Minimum GSAS score 70."
 			},
 			{
 				name: "LTV Cap – Green Product",
@@ -2223,27 +2238,44 @@ function Ge(e, t) {
 				ai_confidence: 92,
 				description: "GSAS Cert + EPC + EIA all required."
 			}
-		],
-		schema_draft: {
+		] : [{
+			name: "Max DBR",
+			category: "creditworthiness",
+			metric: "DBR",
+			operator: "<=",
+			threshold_value: 50,
+			threshold_condition: null,
+			action_on_breach: "reject",
+			severity: "hard",
+			regulatory_reference: "CBO Circular BM/REG/2019/74",
+			ai_confidence: 96,
+			description: "Maximum debt-to-income ratio."
+		}, {
+			name: "Income Verification",
+			category: "creditworthiness",
+			metric: "income_verified",
+			operator: "=",
+			threshold_value: 1,
+			threshold_condition: null,
+			action_on_breach: "reject",
+			severity: "hard",
+			regulatory_reference: "CBO AML Guidelines §7",
+			ai_confidence: 95,
+			description: "Salary certificate required."
+		}], n = v ? {
 			schema_type: "gsas_certificate_validation",
 			fields: [
 				{
 					name: "Certificate Number",
 					type: "String",
 					validation: "^GSAS-\\d{4}-\\d{3}$",
-					error_message: "Invalid certificate number format"
+					error_message: "Invalid format"
 				},
 				{
 					name: "Issuer",
 					type: "String",
 					validation: "Must be GORD or accredited body",
 					error_message: "Issuer not accredited"
-				},
-				{
-					name: "Issue Date",
-					type: "Date",
-					validation: "Must be ≤ today",
-					error_message: "Certificate not yet issued"
 				},
 				{
 					name: "Expiry Date",
@@ -2254,19 +2286,42 @@ function Ge(e, t) {
 				{
 					name: "Overall Score",
 					type: "Integer",
-					validation: "0–100, min 70 for eligibility",
-					error_message: "Score below minimum threshold (70)"
+					validation: "0–100, min 70",
+					error_message: "Score below minimum (70)"
 				},
 				{
 					name: "Rating",
 					type: "String",
 					validation: "Silver / Gold / Platinum",
-					error_message: "Rating does not meet minimum (Bronze rejected)"
+					error_message: "Bronze rejected"
 				}
 			],
 			ai_confidence: 96,
 			regulatory_reference: "OS GSO 3000:2025, §4.2"
-		}
+		} : null;
+		return {
+			message: `✅ <strong>Stage 5 done.</strong> Compliance tags and risk parameters applied.<br><br>🎯 <strong>All 6 stages complete.</strong> Here's your full product summary:<br><br>📋 <strong>${S}</strong>${v ? " · Cloned from Standard Home Loan" : ""}<br>📈 Rate: <strong>${e.base_rate}%</strong>${v ? " · Green discount: 0.75% (GSAS ≥85) · 0.5% (GSAS 70–84)" : ""}<br>📏 Max DBR: <strong>${e.max_dbr}%</strong> · Max term: <strong>${e.max_term} yr</strong> · OMR 10K–500K<br>` + (v ? "📄 Required: GSAS Cert · EPC Report · EIA Clearance<br>" : "") + `⚙️ <strong>${t.length} rules</strong> · Workflow configured · Compliance mapped<br><br>Everything is ready. Click <strong>Confirm & Publish</strong> to save the full configuration and make the product live on the customer portal.`,
+			current_stage: 6,
+			show_roadmap: !1,
+			action: "ready_to_confirm",
+			ui_events: [{
+				type: "set_tab",
+				tab: "ai_config"
+			}],
+			product_draft: e,
+			rules_draft: t,
+			schema_draft: n
+		};
+	}
+	return {
+		message: "All 6 stages are complete. Click <strong>Confirm & Publish</strong> above to save the product, or use <strong>Reset</strong> to start over with a new product.",
+		current_stage: 6,
+		show_roadmap: !1,
+		action: "ready_to_confirm",
+		ui_events: [],
+		product_draft: null,
+		rules_draft: null,
+		schema_draft: null
 	};
 }
 //#endregion
@@ -4681,7 +4736,7 @@ $.use("/api/*", Ie()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await L.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "e64c00a";
+var at = "525ab3c";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
