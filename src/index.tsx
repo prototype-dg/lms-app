@@ -111,27 +111,60 @@ app.get('/api/v1/customers/:id', async (c) => {
   return c.json({ customer })
 })
 
-// ── Cache-Control for HTML files — prevent stale browser cache after deploys ───
-// Use no-store so browsers never serve a locally cached copy, even on hard refresh.
-// This is the only directive that guarantees a fresh network fetch every time.
-// CSS/JS/image assets are NOT affected — they use content-hash filenames so they
-// can be cached indefinitely; only the HTML entry points need this treatment.
-//
-// Applied to: *.html files and the root path (which resolves to index.html)
-app.use('*', async (c, next) => {
-  await next()
-  const path = c.req.path
-  const isHtml = path.endsWith('.html') || path === '/' || path === ''
-  if (isHtml && (c.res.status === 200 || c.res.status === 304)) {
-    c.res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
-    c.res.headers.set('Pragma', 'no-cache')
-    c.res.headers.set('Expires', '0')
+// ── Build version token — injected into every HTML page to bust stale cache ───
+// DEPLOY_VERSION is replaced at build time by vite define; falls back to timestamp.
+// Every new deploy produces a new token → URL ?v=<token> changes → browser cannot
+// serve the old cached copy (different URL = cache miss).
+const DEPLOY_VERSION = (typeof __DEPLOY_VERSION__ !== 'undefined')
+  ? __DEPLOY_VERSION__
+  : Date.now().toString(36)
+
+// Cache-bust redirect script injected before </head> in every HTML response.
+// If the page URL doesn't already carry ?v=<token>, we redirect to the versioned
+// URL immediately — this forces a fresh fetch even on machines with deeply stale
+// disk cache from before no-store was deployed.
+const CACHE_BUST_SCRIPT = `
+<script>
+(function(){
+  var V='${DEPLOY_VERSION}';
+  var u=new URL(location.href);
+  if(u.searchParams.get('v')!==V){
+    u.searchParams.set('v',V);
+    location.replace(u.toString());
   }
+})();
+</script>`
+
+// ── HTML file handler — serves HTML with no-store headers + cache-bust redirect ─
+import fs from 'node:fs'
+import path from 'node:path'
+
+app.use('*', async (c, next) => {
+  const reqPath = c.req.path
+  const isHtml = reqPath.endsWith('.html') || reqPath === '/' || reqPath === ''
+
+  if (!isHtml) { await next(); return }
+
+  // Map request path → dist file path
+  const filePath = reqPath === '/' || reqPath === ''
+    ? path.join(process.cwd(), 'dist', 'index.html')
+    : path.join(process.cwd(), 'dist', reqPath)
+
+  if (!fs.existsSync(filePath)) { await next(); return }
+
+  let html = fs.readFileSync(filePath, 'utf-8')
+
+  // Inject cache-bust redirect before </head>
+  html = html.replace('</head>', CACHE_BUST_SCRIPT + '</head>')
+
+  return c.html(html, 200, {
+    'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+  })
 })
 
-// ── Static file serving — replaces Cloudflare ASSETS binding ──────────────────
-// After vite build, static assets land in dist/ (portals/, static/, assets/, index.html)
-// server.js runs from wwwroot, so dist/ is the correct relative root.
+// ── Static file serving — non-HTML assets (JS, CSS, images, fonts) ────────────
 app.use('/*', serveStatic({ root: './dist' }))
 
 // Export the Hono app — server startup is handled by server.js (not bundled)

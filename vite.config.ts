@@ -1,6 +1,18 @@
 import { defineConfig } from 'vite'
+import { execSync } from 'child_process'
+
+// Bake the git short hash into the bundle as a global constant.
+// Every deploy produces a unique token — the cache-bust redirect in index.tsx
+// uses it to force a fresh fetch on machines with stale disk cache.
+const deployVersion = (() => {
+  try { return execSync('git rev-parse --short HEAD').toString().trim() }
+  catch { return Date.now().toString(36) }
+})()
 
 export default defineConfig({
+  define: {
+    __DEPLOY_VERSION__: JSON.stringify(deployVersion),
+  },
   build: {
     // Build as an ES module library — Vite will NOT inject a serve() call
     lib: {
