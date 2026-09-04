@@ -201,11 +201,20 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
           // 3. show_roadmap only allowed on stage 1 (first identification)
           if (aiReply.current_stage > 1) aiReply.show_roadmap = false
           // 4. If message doesn't end with a question and we're not confirming,
-          //    append a nudge so the user knows what to do next
+          //    append a stage-aware nudge so the user knows what to do next.
           const msg: string = aiReply.message || ''
           const hasQuestion = msg.includes('?')
           if (!hasQuestion && aiReply.action !== 'ready_to_confirm') {
-            aiReply.message = msg + '<br><br>How would you like to proceed?'
+            const stg = aiReply.current_stage || 1
+            const nudges: Record<number,string> = {
+              1: 'Type <strong>yes</strong> to confirm this product model, or let me know what to adjust.',
+              2: 'Type <strong>yes</strong> to confirm these parameters, or tell me which values to change.',
+              3: 'Type <strong>yes</strong> to generate the eligibility rules, or adjust the GSAS threshold.',
+              4: 'Type <strong>yes</strong> to confirm the workflow, or tell me if you want more human touchpoints.',
+              5: 'Type <strong>yes</strong> to apply these compliance parameters, or request adjustments.',
+              6: 'Click <strong>Confirm &amp; Publish</strong> above to save and publish the product.',
+            }
+            aiReply.message = msg + '<br><br><em style="font-size:.8rem;color:rgba(255,255,255,.55)">' + (nudges[stg] || 'Reply to continue.') + '</em>'
           }
         } else {
           aiReply.message = text
@@ -264,15 +273,18 @@ app.post('/products/confirm', async (c) => {
   const body = await c.req.json() as any
   let { thread_id, product_draft, rules_draft, schema_draft, user_id = 'u001', user_name = 'Fatima Al-Rashdi' } = body
 
-  // If drafts not passed in body, load from saved thread result
-  if (thread_id && !product_draft) {
+  // Always load thread result to fill in any missing drafts.
+  // product_draft may be passed in body (from aiProductDraft client state),
+  // but rules_draft and schema_draft are usually NOT sent from the client —
+  // they must be loaded from the thread's saved result.
+  if (thread_id) {
     const thread = await c.env.DB.prepare('SELECT result FROM ai_threads WHERE id = ?').bind(thread_id).first() as any
     if (thread?.result) {
       try {
         const saved = JSON.parse(thread.result)
-        if (saved.product_draft) product_draft = saved.product_draft
-        if (saved.rules_draft && !rules_draft) rules_draft = saved.rules_draft
-        if (saved.schema_draft && !schema_draft) schema_draft = saved.schema_draft
+        if (!product_draft && saved.product_draft) product_draft = saved.product_draft
+        if (!rules_draft  && saved.rules_draft)   rules_draft  = saved.rules_draft
+        if (!schema_draft && saved.schema_draft)  schema_draft = saved.schema_draft
       } catch {}
     }
   }
@@ -386,9 +398,14 @@ Product: ${name}. Description: ${product_draft.description || ''}. Base rate: ${
     }
   }
 
-  // Determine final pge_stage based on what was generated
-  // rules_draft populated → at least stage 3; if product_draft has workflow → stage 4
-  const finalPgeStage = ruleIds.length > 0 ? 3 : 1
+  // Determine final pge_stage based on what was generated:
+  // 6 = everything (rules + workflow saved) — skip remaining stages in PGE
+  // 4 = rules saved, open PGE at workflow tab
+  // 3 = rules saved, open PGE at rules tab
+  // 1 = product model only
+  // Check if workflow was included in the product_draft or schema_draft
+  const hasWorkflow = !!(product_draft?.workflow_nodes || schema_draft?.workflow)
+  const finalPgeStage = ruleIds.length > 0 ? (hasWorkflow ? 4 : 3) : 1
 
   await c.env.DB.prepare(
     `UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,
@@ -1215,8 +1232,11 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
       return 5.25
     })()
 
-    // Derive description incorporating actual product name and confirmed settings
-    const isIslamic = fullConvText.includes('murabaha') || fullConvText.includes('musharaka') || fullConvText.includes('islamic')
+    // Derive structure — check USER messages only (not assistant, which lists Islamic as an option)
+    // The Stage 1b assistant message contains 'Islamic', 'Murabaha', 'Musharaka' as examples,
+    // so checking fullConvText gives false positives for Conventional products.
+    const userMsgText = userMsgs.join(' ')
+    const isIslamic = userMsgText.includes('islamic') || userMsgText.includes('murabaha') || userMsgText.includes('musharaka')
     const structureLabel = isIslamic ? 'Islamic (Diminishing Musharaka)' : 'Conventional'
 
     const productDraft = {
@@ -1280,13 +1300,16 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         `• Rate: <strong>${baseRateFromCtx}%</strong> · Tiers: ${(baseRateFromCtx-0.75).toFixed(2)}% (GSAS ≥85) · ${(baseRateFromCtx-0.5).toFixed(2)}% (GSAS 70–84)<br>` +
         `• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>` +
         `• Terms: <strong>3–25 years</strong> · Amount: <strong>OMR 25,000–${maxAmountFromCtx.toLocaleString()}</strong><br>` +
-        `• Eligibility: <strong>${rulesDraft.length} rules</strong> across credit, collateral, ESG, income<br>` +
+        `• Eligibility: <strong>17 rules</strong> across credit, collateral, ESG, income<br>` +
         `• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>` +
         `• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>` +
         `🚀 Everything is configured. Click <strong>Confirm &amp; Publish</strong> to save the full product and make it live on the customer portal.`,
       current_stage: 6, show_roadmap: false, action: 'ready_to_confirm',
       ui_events: [{ type: 'set_tab', tab: 'ai_config' }],
-      product_draft: productDraft, rules_draft: rulesDraft, schema_draft: schemaDraft,
+      // rules_draft intentionally null here — Stage 3 already saved the full 17-rule set
+      // to the thread result. Returning rules_draft here would overwrite with this 12-rule
+      // subset. Confirm endpoint loads rules from thread result (Stage 3 saved version).
+      product_draft: productDraft, rules_draft: null, schema_draft: schemaDraft,
     }
   }
 

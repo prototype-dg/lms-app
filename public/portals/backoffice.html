@@ -393,14 +393,17 @@ async function renderProducts() {
     const statusLabel = isAr ? (p.status==='active'?'نشط':p.status==='draft'?'مسودة':'مؤرشف') : p.status;
     return `<div class="product-card ${isEsg?'green':''} ${p.status==='draft'?'draft-card':''}" style="cursor:pointer;position:relative">
         <div class="product-card-header" onclick="openProductDetail('${p.id}')">
-          <div>
-            <div class="product-card-title"><i class="fas ${meta.icon}" style="color:${meta.color};margin-right:.4rem;font-size:.8rem"></i>${p.name}</div>
+          <div style="min-width:0;flex:1">
+            <div class="product-card-title" style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap">
+              <i class="fas ${meta.icon}" style="color:${meta.color};font-size:.8rem;flex-shrink:0"></i>
+              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
+              ${isEsg ? `<span class="badge badge-esg" style="font-size:.58rem;padding:.1rem .35rem;margin:0"><i class="fas fa-leaf" style="margin-right:.2rem"></i>${isAr?'ESG':'ESG'}</span>` : ''}
+            </div>
             <div class="product-card-meta">${meta.label}</div>
           </div>
-          <span class="badge ${statusColor[p.status]||'badge-draft'}">${statusLabel}</span>
+          <span class="badge ${statusColor[p.status]||'badge-draft'}" style="flex-shrink:0">${statusLabel}</span>
         </div>
-        ${isEsg ? `<span class="badge badge-esg" style="margin-bottom:.5rem"><i class="fas fa-leaf"></i> ${isAr?'منتج ESG':'ESG Product'}</span>` : ''}
-        <p style="font-size:.78rem;color:var(--grey-500);margin:.5rem 0;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.description||''}</p>
+        <p style="font-size:.78rem;color:var(--grey-500);margin:.45rem 0;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.4em">${p.description||'&nbsp;'}</p>
         <div class="product-card-stats" onclick="openProductDetail('${p.id}')">
           <div class="product-stat"><strong>${p.base_rate||5.5}%</strong>${isAr?'السعر الأساسي':'Base Rate'}</div>
           <div class="product-stat"><strong>${(p.applications_ytd||0).toLocaleString()}</strong>${isAr?'طلبات':'Apps YTD'}</div>
@@ -1322,7 +1325,7 @@ function updateAiDraftCard() {
     if (!inputWrapper) return;
     card = document.createElement('div');
     card.id = 'ai-draft-card';
-    card.style.cssText = 'margin:.35rem 1rem;background:rgba(0,59,92,.6);border:1px solid rgba(53,198,196,.32);border-radius:9px;font-size:.77rem;animation:fadeIn .4s ease;overflow:hidden';
+    card.style.cssText = 'margin:.35rem 1rem;background:rgba(0,59,92,.6);border:1px solid rgba(53,198,196,.32);border-radius:9px;font-size:.77rem;animation:fadeIn .4s ease;overflow:hidden;max-height:420px;display:flex;flex-direction:column';
     inputWrapper.parentNode.insertBefore(card, inputWrapper);
   }
   const cfg = aiDraftConfig;
@@ -1336,33 +1339,42 @@ function updateAiDraftCard() {
         <span style="color:${color||'rgba(255,255,255,.84)'};font-weight:600;font-size:.73rem">${val}</span>
        </div>` : '';
 
-  // ── Summary (always visible) ──────────────────────────────────────────
+  // ── Summary (always visible — compact: name, rate, term range, max amount, badges) ─
+  // Build concise rate string: base rate + best effective rate if discounts exist
+  const effectiveRate = cfg.green_discount_premium != null
+    ? ((cfg.base_rate||5.25) - (cfg.green_discount_premium||0.75)).toFixed(2) + '%'
+    : null;
+  const rateStr = cfg.base_rate != null
+    ? cfg.base_rate + '%' + (effectiveRate ? ' → ' + effectiveRate : '')
+    : null;
+  const termStr = cfg.max_term != null
+    ? (cfg.min_term||3) + '\u2013' + cfg.max_term + ' yrs'
+    : null;
+  const amountStr = cfg.max_amount != null
+    ? 'OMR\u00a0' + Number(cfg.max_amount).toLocaleString()
+    : null;
+
   const summaryHtml =
-    `<div style="padding:.6rem .85rem .45rem">` +
-    `<div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.38rem">` +
-      `<i class="fas fa-file-invoice" style="color:var(--sea-glass);font-size:.78rem"></i>` +
-      `<span style="font-weight:700;color:rgba(255,255,255,.9);font-size:.8rem">Product Draft</span>` +
-      `<span style="font-size:.6rem;color:rgba(255,255,255,.28);margin-left:.15rem">live preview</span>` +
-      `<button onclick="aiDraftCardExpanded=!aiDraftCardExpanded;updateAiDraftCard()" style="margin-left:auto;background:rgba(53,198,196,.12);border:1px solid rgba(53,198,196,.25);color:var(--sea-glass);border-radius:5px;padding:.12rem .5rem;font-size:.65rem;cursor:pointer;white-space:nowrap">` +
-        `<i class="fas fa-${exp ? 'compress-alt' : 'expand-alt'}" style="margin-right:.2rem"></i>${exp ? 'Collapse' : 'Expand'}` +
-      `</button>` +
+    `<div style="padding:.5rem .85rem .35rem;flex-shrink:0">` +
+    `<div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem">` +
+      `<i class="fas fa-file-invoice" style="color:var(--sea-glass);font-size:.75rem"></i>` +
+      `<span style="font-weight:700;color:rgba(255,255,255,.9);font-size:.78rem">Product Draft</span>` +
+      `<span style="font-size:.58rem;color:rgba(255,255,255,.28);margin-left:.1rem">live preview</span>` +
+      (rCount > 0 || wCount > 0 ? `<button onclick="aiDraftCardExpanded=!aiDraftCardExpanded;updateAiDraftCard()" style="margin-left:auto;background:rgba(53,198,196,.12);border:1px solid rgba(53,198,196,.25);color:var(--sea-glass);border-radius:5px;padding:.1rem .45rem;font-size:.62rem;cursor:pointer;white-space:nowrap"><i class="fas fa-${exp ? 'compress-alt' : 'expand-alt'}" style="margin-right:.18rem"></i>${exp ? 'Collapse' : 'Expand'}</button>` : '') +
     `</div>` +
-    fr('Name', cfg.name, 'var(--sea-glass)') +
-    fr('Base rate', cfg.base_rate != null ? cfg.base_rate + '%' : null) +
-    (cfg.green_discount_premium != null ? fr('Gold discount (GSAS\u226585)', '\u22120.75\u2009% \u2192 ' + ((cfg.base_rate||5.25)-0.75).toFixed(2) + '%', '#4ade80') : '') +
-    (cfg.green_discount_standard != null ? fr('Silver discount (GSAS 70\u201384)', '\u22120.50\u2009% \u2192 ' + ((cfg.base_rate||5.25)-0.5).toFixed(2) + '%', '#86efac') : '') +
-    fr('LTV', cfg.max_ltv != null ? cfg.max_ltv + '% (first home) / 80% (subsequent)' : null) +
-    fr('DBR', cfg.max_dbr != null ? cfg.max_dbr + '%' : null) +
-    fr('Term', cfg.max_term != null ? (cfg.min_term||3) + '\u2013' + cfg.max_term + ' yrs' : null) +
-    fr('Loan amount', cfg.max_amount != null ? 'OMR\u00a0' + Number(cfg.min_amount||25000).toLocaleString() + '\u2013' + Number(cfg.max_amount).toLocaleString() : null) +
-    fr('GSAS min score', cfg.gsas_min_score != null ? cfg.gsas_min_score + '\u00a0pts' : null) +
-    `<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.35rem">` +
-      (rCount > 0 ? `<span style="font-size:.67rem;background:rgba(53,198,196,.1);color:var(--sea-glass);padding:.1rem .45rem;border-radius:8px;border:1px solid rgba(53,198,196,.2)"><i class="fas fa-list-check" style="margin-right:.25rem"></i>${rCount} rules</span>` : '') +
-      (wCount > 0 ? `<span style="font-size:.67rem;background:rgba(244,179,91,.1);color:#fbbf24;padding:.1rem .45rem;border-radius:8px;border:1px solid rgba(244,179,91,.2)"><i class="fas fa-sitemap" style="margin-right:.25rem"></i>${wCount} workflow steps</span>` : '') +
+    (cfg.name ? `<div style="font-size:.75rem;font-weight:600;color:var(--sea-glass);margin-bottom:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cfg.name}</div>` : '') +
+    `<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">` +
+      (rateStr ? `<span style="font-size:.72rem;color:rgba(255,255,255,.85);font-weight:600">${rateStr}</span>` : '') +
+      (termStr ? `<span style="font-size:.68rem;color:rgba(255,255,255,.45)">&middot; ${termStr}</span>` : '') +
+      (amountStr ? `<span style="font-size:.68rem;color:rgba(255,255,255,.45)">up to ${amountStr}</span>` : '') +
+    `</div>` +
+    `<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.28rem">` +
+      (rCount > 0 ? `<span style="font-size:.64rem;background:rgba(53,198,196,.1);color:var(--sea-glass);padding:.08rem .4rem;border-radius:8px;border:1px solid rgba(53,198,196,.2)"><i class="fas fa-list-check" style="margin-right:.2rem"></i>${rCount} rules</span>` : '') +
+      (wCount > 0 ? `<span style="font-size:.64rem;background:rgba(244,179,91,.1);color:#fbbf24;padding:.08rem .4rem;border-radius:8px;border:1px solid rgba(244,179,91,.2)"><i class="fas fa-sitemap" style="margin-right:.2rem"></i>${wCount} steps</span>` : '') +
     `</div>` +
     `</div>`;
 
-  // ── Expanded sections ─────────────────────────────────────────────────
+  // ── Expanded sections (scrollable) ─────────────────────────────────────
   let expandedHtml = '';
   if (exp) {
     // Rules section
@@ -1420,7 +1432,13 @@ function updateAiDraftCard() {
     }
   }
 
-  card.innerHTML = summaryHtml + expandedHtml;
+  // Wrap expanded section in a scrollable container
+  if (exp && expandedHtml) {
+    card.innerHTML = summaryHtml +
+      `<div style="overflow-y:auto;flex:1;border-top:1px solid rgba(255,255,255,.07)">${expandedHtml}</div>`;
+  } else {
+    card.innerHTML = summaryHtml + expandedHtml;
+  }
 }
 
 /* ── dispatchUiEvents ─────────────────────────────────────────────────────
@@ -1620,6 +1638,9 @@ async function confirmAiProduct(productId) {
     const body = { thread_id: aiThreadId, user_id: currentUserId() };
     if (productId) body.product_id = productId;
     if (aiProductDraft) body.product_draft = aiProductDraft;
+    // Also send locally-accumulated rules and schema as a fallback —
+    // backend prefers thread result but uses these if thread is missing them.
+    if (aiDraftRules && aiDraftRules.length) body.rules_draft = aiDraftRules;
     const r = await fetch('/api/v1/ai/products/confirm', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body)
