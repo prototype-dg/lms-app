@@ -64,12 +64,24 @@
     return r.json();
   }
 
+  /* Default "system" user used when no session user is available */
+  const SYS_USER = { id: 'u001', name: 'Fatima Al-Rashdi', role: 'product_manager' };
+
   const API = {
     getProduct:  (id) => api('GET', `/products/${id}`),
     patchProduct:(id, data) => api('PATCH', `/products/${id}`, data),
+    /* Generic PATCH — convenience alias used by stage modules */
+    patch:       (path, data) => api('PATCH', path, data),
     getMarket:   () => api('GET', '/markets/default/current'),
     getVersions: (id) => api('GET', `/products/${id}/versions`),
-    snapshot:    (id, stage, data) => api('POST', `/products/${id}/versions/snapshot`, { stage, ...data }),
+    /* snapshot — always injects required user fields the backend needs */
+    snapshot:    (id, stage, data) => api('POST', `/products/${id}/versions/snapshot`, {
+      stage,
+      user_id:   SYS_USER.id,
+      user_name: SYS_USER.name,
+      user_role: SYS_USER.role,
+      ...data,
+    }),
     getRules:    (productId) => api('GET', `/rules?product_id=${productId}`),
     getMatrices: (productId) => api('GET', `/rule-matrices?product_id=${productId}`),
     getTags:     (productId) => api('GET', `/compliance-tags/product/${productId}`),

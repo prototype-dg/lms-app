@@ -1106,8 +1106,9 @@ ${isAr() ? 'Respond in Arabic.' : 'Respond in English.'}
   }
 
   async function _doSave() {
+    // pge_stage_data is a JSON blob column added in migration 0005 — stores per-stage metadata
     const payload = {
-      simulation_data: JSON.stringify({
+      pge_stage_data: JSON.stringify({
         version:   SIM_VERSION,
         sliders:   _sliderVals,
         approvals: _approvals,
@@ -1116,7 +1117,7 @@ ${isAr() ? 'Respond in Arabic.' : 'Respond in English.'}
       }),
     };
     try {
-      await API.patch(`/products/${_pid}`, payload);
+      await API.patchProduct(_pid, payload);
     } catch (err) {
       console.warn('[pge-stage6] save error:', err);
       throw err;
@@ -1149,7 +1150,7 @@ ${isAr() ? 'Respond in Arabic.' : 'Respond in English.'}
 
     try {
       await _doSave();
-      await API.patch(`/products/${_pid}`, { status: 'approved', current_stage: 6 });
+      await API.patchProduct(_pid, { status: 'approved', pge_stage: 6 });
       await API.snapshot(_pid, 6, {
         sliders: _sliderVals, approvals: _approvals,
         finalized_at: new Date().toISOString(),
