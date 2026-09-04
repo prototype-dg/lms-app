@@ -19,7 +19,13 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install production dependencies
+      - name: Install all dependencies (including devDeps for build)
+        run: npm ci
+
+      - name: Build frontend (Vite → dist/)
+        run: npm run build
+
+      - name: Install production dependencies only (after build)
         run: npm ci --omit=dev
 
       - name: Verify key files exist
