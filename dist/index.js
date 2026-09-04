@@ -1963,11 +1963,11 @@ function We(e) {
 	};
 }
 function Ge(e, t, n) {
-	let r = e.toLowerCase(), i = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great") || r.includes("continue") || r.includes("use") || r.includes("keep") || r.includes("proceed"), a = n || [], o = a.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), s = o.some((e) => e.includes("clone") || e.includes("from scratch") || e.includes("product model") || e.includes("stage 1")), c = o.some((e) => e.includes("islamic") || e.includes("murabaha") || e.includes("conventional") || e.includes("structure")), l = o.some((e) => e.includes("target segment") || e.includes("omani nationals") || e.includes("expat") || e.includes("income band")), u = o.some((e) => e.includes("product name") || e.includes("sohar green") || e.includes("confirm the name")), d = o.some((e) => e.includes("base rate") || e.includes("pricing structure") || e.includes("stage 2") || e.includes("5.25%")), f = o.some((e) => e.includes("discount tier") || e.includes("green discount") || e.includes("gsas score band")), p = o.some((e) => e.includes("ltv band") || e.includes("loan-to-value") || e.includes("first home")), m = o.some((e) => e.includes("dbr") && (e.includes("55%") || e.includes("stage 2") || e.includes("debt burden"))), h = o.some((e) => e.includes("term range") || e.includes("amount range") || e.includes("omr 10,000") || e.includes("min/max")), g = o.some((e) => e.includes("arrangement fee") || e.includes("early settlement") || e.includes("fee")), _ = o.some((e) => e.includes("14 eligibility") || e.includes("eligibility rules") || e.includes("gsas minimum") || e.includes("stage 3")), v = o.some((e) => e.includes("10-step") || e.includes("ekyc") || e.includes("workflow") || e.includes("stage 4")), y = o.some((e) => e.includes("compliance classification") || e.includes("risk weight") || e.includes("provisioning") || e.includes("stage 5")), b = o.some((e) => e.includes("ready to publish") || e.includes("confirm & publish") || e.includes("stage 6")), x = [...a.map((e) => e.content || ""), e].join(" ").toLowerCase(), S = x.includes("green") || x.includes("gsas") || x.includes("esg") || x.includes("sustainable"), C = !S && (x.includes("auto") || x.includes("car") || x.includes("vehicle")), w = !S && !C && (x.includes("personal") || x.includes("unsecured") || x.includes("consumer")), T = !S && !C && !w && (x.includes("sme") || x.includes("business") || x.includes("working capital")), E = (() => {
+	let r = e.toLowerCase(), i = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great") || r.includes("continue") || r.includes("use") || r.includes("keep") || r.includes("proceed"), a = n || [], o = a.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), s = o.some((e) => e.includes("clone") || e.includes("from scratch") || e.includes("product model") || e.includes("stage 1")), c = o.some((e) => e.includes("islamic") || e.includes("murabaha") || e.includes("conventional") || e.includes("structure")), l = o.some((e) => e.includes("target segment") || e.includes("omani nationals") || e.includes("expat") || e.includes("income band")), u = o.some((e) => e.includes("product name") || e.includes("sohar green") || e.includes("sohar eco") || e.includes("ecohome") || e.includes("confirm the name") || e.includes("shall i use") || e.includes("for the product name") || e.includes("i suggest") && e.includes("name")), d = o.some((e) => e.includes("base rate") || e.includes("pricing structure") || e.includes("stage 2") || e.includes("5.25%")), f = o.some((e) => e.includes("discount tier") || e.includes("green discount") || e.includes("gsas score band")), p = o.some((e) => e.includes("ltv band") || e.includes("loan-to-value") || e.includes("ltv") && e.includes("first home") && e.includes("subsequent") || e.includes("90% ltv") || e.includes("ltv settings")), m = o.some((e) => e.includes("dbr") && (e.includes("55%") || e.includes("stage 2") || e.includes("debt burden"))), h = o.some((e) => e.includes("term range") || e.includes("amount range") || e.includes("omr 10,000") || e.includes("min/max")), g = o.some((e) => e.includes("arrangement fee") || e.includes("early settlement") || e.includes("fee")), _ = o.some((e) => e.includes("17 eligibility rules") || e.includes("gsas minimum") || e.includes("stage 3") && e.includes("credit risk")), v = o.some((e) => e.includes("10-step workflow") || e.includes("10-step approval workflow") || e.includes("more human touchpoints in the automated phase") || e.includes("should i configure automated processing")), y = o.some((e) => e.includes("stage 4 complete.") || e.includes("10-step approval workflow configured") || e.includes("nci ekyc · oman credit bureau") && e.includes("muscat municipality")), b = o.some((e) => e.includes("shall i apply these compliance parameters") || e.includes("compliance parameters, or do you want to adjust") || e.includes("stage 5 complete")), x = o.some((e) => e.includes("ready to publish") || e.includes("confirm &amp; publish") || e.includes("confirm & publish") || e.includes("stage 6") || e.includes("click confirm")), S = [...a.map((e) => e.content || ""), e].join(" ").toLowerCase(), C = S.includes("green") || S.includes("gsas") || S.includes("esg") || S.includes("sustainable"), w = !C && (S.includes("auto") || S.includes("car") || S.includes("vehicle")), T = !C && !w && (S.includes("personal") || S.includes("unsecured") || S.includes("consumer")), E = !C && !w && !T && (S.includes("sme") || S.includes("business") || S.includes("working capital")), ee = (() => {
 		let e = r.match(/\b(7[0-9]|80|85|90)\b/);
 		return e ? parseInt(e[1]) : 70;
-	})(), ee = S ? "Sohar Green Home Finance – GSAS" : C ? "Auto Finance" : w ? "Personal Finance" : T ? "SME Working Capital" : "Home Finance";
-	if (!s && !S && !C && !w && !T) return {
+	})(), D = C ? "Sohar Green Home Finance – GSAS" : w ? "Auto Finance" : T ? "Personal Finance" : E ? "SME Working Capital" : "Home Finance";
+	if (!s && !C && !w && !T && !E) return {
 		message: "I can help you create a new fully-regulated banking product from scratch — I'll guide you through all 6 stages, ask the right expert questions, and automatically populate the configuration on screen.<br><br><strong>What type of product would you like to create?</strong><br><br>🏠 <strong>Green Home Loan</strong> (GSAS/ESG-certified mortgages)<br>🏠 <strong>Standard Home Loan</strong> (conventional or Islamic Murabaha)<br>🚗 <strong>Auto Finance</strong> (personal or fleet)<br>💳 <strong>Personal Finance</strong> (salary-backed unsecured)<br>🏢 <strong>SME Finance</strong> (working capital, equipment, trade)<br>🎓 <strong>Education Finance</strong><br>🏗️ <strong>Commercial Real Estate</strong>",
 		current_stage: 0,
 		show_roadmap: !1,
@@ -1978,9 +1978,9 @@ function Ge(e, t, n) {
 		schema_draft: null
 	};
 	if (!s) {
-		let e = S ? "Standard Home Loan (5.5% base, LTV 90%, DBR 60%, term 25yr)" : C ? "Auto Finance – Personal (6.5% base, LTV 80%, DBR 55%)" : w ? "Personal Finance (8.5% base, DBR 45%)" : T ? "SME Working Capital (7.0% base, DBR 50%)" : "Standard Home Loan";
+		let e = C ? "Standard Home Loan (5.5% base, LTV 90%, DBR 60%, term 25yr)" : w ? "Auto Finance – Personal (6.5% base, LTV 80%, DBR 55%)" : T ? "Personal Finance (8.5% base, DBR 45%)" : E ? "SME Working Capital (7.0% base, DBR 50%)" : "Standard Home Loan";
 		return {
-			message: S ? `Excellent choice. A <strong>Green Home Loan linked to GSAS certification</strong> is a strategically important product — it aligns with CBO Circular 2026-12 on green finance and Oman Vision 2040 sustainability targets.<br><br><strong>Stage 1 — Product Model</strong><br><br>The closest base is our existing <em>${e}</em>. We'd inherit the core credit parameters and then layer on ESG-specific attributes (GSAS score bands, green discounts, ESG document requirements).<br><br><strong>Would you like to clone from Standard Home Loan as a starting point, or configure everything from scratch?</strong>` : `Good. I'll help configure this as a CBO-compliant <strong>${ee}</strong> for the Omani market.<br><br><strong>Stage 1 — Product Model</strong><br><br>Closest existing product: <em>${e}</em>.<br><br><strong>Shall we clone from this as a base?</strong>`,
+			message: C ? `Excellent choice. A <strong>Green Home Loan linked to GSAS certification</strong> is a strategically important product — it aligns with CBO Circular 2026-12 on green finance and Oman Vision 2040 sustainability targets.<br><br><strong>Stage 1 — Product Model</strong><br><br>The closest base is our existing <em>${e}</em>. We'd inherit the core credit parameters and then layer on ESG-specific attributes (GSAS score bands, green discounts, ESG document requirements).<br><br><strong>Would you like to clone from Standard Home Loan as a starting point, or configure everything from scratch?</strong>` : `Good. I'll help configure this as a CBO-compliant <strong>${D}</strong> for the Omani market.<br><br><strong>Stage 1 — Product Model</strong><br><br>Closest existing product: <em>${e}</em>.<br><br><strong>Shall we clone from this as a base?</strong>`,
 			current_stage: 1,
 			show_roadmap: !0,
 			action: "none",
@@ -2012,7 +2012,7 @@ function Ge(e, t, n) {
 	};
 	if (s && c && l && !u) {
 		r.includes("both") || r.includes("all");
-		let e = r.includes("national") && !r.includes("both"), t = r.includes("affluent") || r.includes("2,000") || r.includes("2000"), n = S ? t ? "Sohar Green Home Finance – GSAS Premium" : "Sohar Green Home Finance – GSAS" : `${ee}`;
+		let e = r.includes("national") && !r.includes("both"), t = r.includes("affluent") || r.includes("2,000") || r.includes("2000"), n = C ? t ? "Sohar Green Home Finance – GSAS Premium" : "Sohar Green Home Finance – GSAS" : `${D}`;
 		return {
 			message: `Segment noted — ${e ? "Omani nationals" : "nationals and expats"}, ${t ? "affluent tier (OMR 2K+)" : "mass and affluent"}.<br><br>For the product name, I suggest: <strong>"${n}"</strong><br><br>This follows our naming convention: Bank · Product Type · Variant. The GSAS suffix signals the ESG positioning immediately to customers and regulators.<br><br><strong>Shall I use "${n}", or do you have a different name in mind?</strong>`,
 			current_stage: 1,
@@ -2056,7 +2056,7 @@ function Ge(e, t, n) {
 			schema_draft: null
 		};
 	}
-	if (d && !f && S) return {
+	if (d && !f && C) return {
 		message: "Base rate set at 5.25%. Confirmed.<br><br><strong>ESG Green Discount tiers</strong> — this is what differentiates a real green product from a standard one:<br><br>&bull; <strong>GSAS Score ≥ 85 (Gold/Platinum)</strong> → −0.75% discount → effective rate <strong>4.50%</strong><br>&bull; <strong>GSAS Score 70–84 (Silver)</strong> → −0.50% discount → effective rate <strong>4.75%</strong><br>&bull; <strong>GSAS Score &lt; 70</strong> → <span style=\"color:#f87171\">NOT eligible</span> (product requires minimum Silver certification)<br><br>These tiers incentivise customers to choose higher-rated green properties. Oman's GORD (Gulf Organisation for Research & Development) manages GSAS ratings under OS GSO 3000:2025.<br><br><strong>Should I apply these discount tiers, or do you want different GSAS score thresholds or discount spreads?</strong>",
 		current_stage: 2,
 		show_roadmap: !1,
@@ -2080,7 +2080,7 @@ function Ge(e, t, n) {
 		rules_draft: null,
 		schema_draft: null
 	};
-	if ((f || d && !S) && !p) return {
+	if ((f || d && !C) && !p) return {
 		message: "Green discount tiers confirmed — 0.75% for Gold/Platinum (≥85), 0.5% for Silver (70–84).<br><br><strong>Loan-to-Value (LTV) bands:</strong><br><br>Under CBO Circular BM/REG/2019/74, residential mortgages are capped at:<br>&bull; <strong>First home purchase</strong>: up to <strong>90% LTV</strong><br>&bull; <strong>Second/subsequent property</strong>: up to <strong>80% LTV</strong><br>&bull; <strong>Expat customers</strong>: max <strong>80% LTV</strong> regardless of purchase number<br><br>For a green home loan, I recommend keeping the CBO maximum (90% for first home, 80% otherwise) — the GSAS certification already provides quality collateral assurance through certified construction standards.<br><br><strong>Shall I configure LTV at 90% (first home) / 80% (subsequent/expat), or do you want stricter limits?</strong>",
 		current_stage: 2,
 		show_roadmap: !1,
@@ -2190,7 +2190,7 @@ function Ge(e, t, n) {
 		schema_draft: null
 	};
 	if (_ && !v) {
-		let e = r.includes("75") ? 75 : r.includes("70") ? 70 : E >= 70 ? E : 70, t = [
+		let e = r.includes("75") ? 75 : r.includes("70") ? 70 : ee >= 70 ? ee : 70, t = [
 			{
 				name: "DBR ≤ 55% (Loans > OMR 100K)",
 				category: "creditworthiness",
@@ -2431,7 +2431,7 @@ function Ge(e, t, n) {
 		};
 	}
 	if (v && !y) return {
-		message: "✅ <strong>Stage 4 complete.</strong> 10-step approval workflow configured and visible in the Workflow tab.<br><br><strong>Automated steps (1–6):</strong> eKYC/AML → Credit Bureau → OCR/Validation → GSAS Registry (GORD) → Property Valuation → Title Check<br><strong>Human review steps (7–10):</strong> Credit Underwriting (24h) → Green Finance ESG Review (24h) → Risk & Compliance (48h) → PM Final Approval (24h)<br><br>⏱️ Total SLA: <strong>~5 working days</strong> (automated: <19h, human: ~4 days)<br>🔗 External integrations: NCI eKYC · Oman Credit Bureau · GORD GSAS API · Al Mashora/JLL · Muscat Municipality<br><br><strong>Stage 5 — Compliance Classification</strong><br><br>For regulatory reporting, I recommend classifying this product as follows:<br>&bull; <strong>Basel III risk weight</strong>: 75% (residential retail mortgage, LTV ≤90%)<br>&bull; <strong>IFRS 9 provisioning</strong>: 1.5% Stage 1 ECL (higher than standard 1.0% due to green portfolio concentration, per IFRS 9 §5.5)<br>&bull; <strong>CBO classification</strong>: Green Finance (reportable under Circular 2026-12 §7 monthly ESG portfolio return)<br>&bull; <strong>AML risk tier</strong>: LOW (eKYC + OCB auto-verified, green property reduces beneficial ownership complexity)<br>&bull; <strong>Regulatory tags</strong>: #CLIMATE_RISK · #ESG_ELIGIBILITY · #GREEN_FINANCING · #OMAN_VISION_2040<br><br><strong>Shall I apply these compliance parameters, or do you want to adjust the risk weight or provisioning rate?</strong>",
+		message: "✅ <strong>Stage 4 complete.</strong> 10-step approval workflow configured and visible in the Workflow tab.<br><br><strong>Automated steps (1–6):</strong> eKYC/AML → Credit Bureau → OCR/Validation → GSAS Registry (GORD) → Property Valuation → Title Check<br><strong>Human review steps (7–10):</strong> Credit Underwriting (24h) → Green Finance ESG Review (24h) → Risk & Compliance (48h) → PM Final Approval (24h)<br><br>⏱️ Total SLA: <strong>~5 working days</strong> (automated: <19h, human: ~4 days)<br>🔗 External integrations: NCI eKYC · Oman Credit Bureau · GORD GSAS API · Al Mashora/JLL · Muscat Municipality<br><br><strong>Ready for Stage 5 — Compliance Classification?</strong> I'll apply Basel III capital rules, IFRS 9 provisioning, and CBO green finance tagging. Shall I proceed?",
 		current_stage: 5,
 		show_roadmap: !1,
 		action: "none",
@@ -2538,20 +2538,60 @@ function Ge(e, t, n) {
 		rules_draft: null,
 		schema_draft: null
 	};
-	if (y && !b) {
-		let e = {
-			name: "Sohar Green Home Finance – GSAS",
-			description: "Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on sustainability score (GSAS ≥85: Gold tier). Supports Oman Vision 2040 and CBO green finance objectives. Conventional financing structure, CBO-compliant.",
+	if (y && !b) return {
+		message: "<strong>Stage 5 — Compliance Classification</strong><br><br>For regulatory reporting, I recommend classifying this product as follows:<br>&bull; <strong>Basel III risk weight</strong>: 75% (residential retail mortgage, LTV ≤90% per CBO BM/REG/2019/74 Schedule 3)<br>&bull; <strong>IFRS 9 provisioning</strong>: 1.5% Stage 1 ECL (higher than standard 1.0% due to green portfolio concentration, per IFRS 9 §5.5)<br>&bull; <strong>CBO classification</strong>: Green Finance (reportable under Circular 2026-12 §7 monthly ESG portfolio return)<br>&bull; <strong>AML risk tier</strong>: LOW (eKYC + OCB auto-verified; green property reduces beneficial ownership complexity)<br>&bull; <strong>Regulatory tags</strong>: #CLIMATE_RISK · #ESG_ELIGIBILITY · #GREEN_FINANCING · #OMAN_VISION_2040<br><br><strong>Shall I apply these compliance parameters, or do you want to adjust the risk weight or provisioning rate?</strong>",
+		current_stage: 5,
+		show_roadmap: !1,
+		action: "none",
+		ui_events: [{
+			type: "set_tab",
+			tab: "compliance"
+		}],
+		product_draft: null,
+		rules_draft: null,
+		schema_draft: null
+	};
+	if (b && !x) {
+		let e = a.filter((e) => e.role === "user").map((e) => (e.content || "").toLowerCase()), t = [...o, ...e].join(" "), n = "Sohar Green Home Finance – GSAS", r = o.find((e) => e.includes("ecohome") || e.includes("eco home") || e.includes("sohar eco")), i = o.find((e) => e.includes("sohar green home finance"));
+		if (r) {
+			let e = r.match(/[""""]([^""""\n]{5,60})[""""]|"([^"\n]{5,60})"|'([^'\n]{5,60})'/);
+			e ? n = (e[1] || e[2] || e[3]).trim() : (r.includes("ecohome elite") || r.includes("ecohome")) && (n = "Sohar EcoHome Elite");
+		} else i && (n = "Sohar Green Home Finance – GSAS");
+		a.filter((e) => e.role === "user").find((e) => {
+			let t = (e.content || "").toLowerCase();
+			return (t.includes("sohar") || t.includes("eco") || t.includes("green home")) && t.length < 80;
+		});
+		let s = o.find((e) => (e.includes("has been set") || e.includes("the product name")) && (e.includes("sohar") || e.includes("eco") || e.includes("green")));
+		if (s) {
+			let e = s.match(/'([^']{5,60})'|"([^"]{5,60})"/);
+			e && (n = (e[1] || e[2]).trim());
+		}
+		let c = t.includes("1m omr") || t.includes("1,000,000") || t.includes("1m max") ? 1e6 : t.includes("750,000") || t.includes("750k") ? 75e4 : (t.includes("500,000") || t.includes("500k") || t.includes("omr 500"), 5e5), l = (() => {
+			let e = o.find((e) => e.includes("gsas ≥") || e.includes("gsas minimum") || e.includes("gsas score ≥"));
+			if (e) {
+				let t = e.match(/gsas[^0-9]*([0-9]{2})/i);
+				if (t) {
+					let e = parseInt(t[1]);
+					if (e >= 65 && e <= 90) return e;
+				}
+			}
+			return t.includes("75") ? 75 : 70;
+		})(), u = (() => {
+			let e = t.match(/base rate[^0-9]*([0-9]+\.[0-9]+)%/);
+			return e ? parseFloat(e[1]) : (t.includes("5.25"), 5.25);
+		})(), d = t.includes("murabaha") || t.includes("musharaka") || t.includes("islamic") ? "Islamic (Diminishing Musharaka)" : "Conventional", f = {
+			name: n,
+			description: `${d} home financing for GSAS-certified green properties in Oman. Earn up to 0.75% rate discount based on sustainability score (GSAS ≥85: Gold tier, 0.5% for GSAS 70–84: Silver). Targets affluent and HNW customers. Supports Oman Vision 2040, CBO green finance objectives, and OS GSO 3000:2025.`,
 			category: "home_loan",
-			base_rate: 5.25,
+			base_rate: u,
 			max_ltv: 90,
 			max_dbr: 55,
 			green_dbr: 55,
 			min_term: 3,
 			max_term: 25,
 			min_amount: 25e3,
-			max_amount: 5e5,
-			gsas_min_score: 70,
+			max_amount: c,
+			gsas_min_score: l,
 			gsas_premium_score: 85,
 			green_discount_premium: .75,
 			green_discount_standard: .5,
@@ -2580,7 +2620,7 @@ function Ge(e, t, n) {
 				"Voltec Solar Oman"
 			],
 			clone_from_id: "p001"
-		}, t = [
+		}, p = [
 			{
 				name: "DBR ≤ 55% (Loans > OMR 100K)",
 				category: "creditworthiness",
@@ -2660,17 +2700,17 @@ function Ge(e, t, n) {
 				description: "Non-first home and expat LTV cap."
 			},
 			{
-				name: "GSAS Score ≥ 70",
+				name: `GSAS Score ≥ ${l}`,
 				category: "esg",
 				metric: "gsas_score",
 				operator: ">=",
-				threshold_value: 70,
+				threshold_value: l,
 				threshold_condition: null,
 				action_on_breach: "reject",
 				severity: "hard",
 				regulatory_reference: "OS GSO 3000:2025, §4.2",
 				ai_confidence: 98,
-				description: "GSAS minimum 70."
+				description: `GSAS minimum ${l}.`
 			},
 			{
 				name: "EPC Rating ≥ C",
@@ -2737,9 +2777,63 @@ function Ge(e, t, n) {
 				ai_confidence: 95,
 				description: "≥12 months remaining on residency permit."
 			}
-		];
+		], m = {
+			schema_type: "gsas_certificate_validation",
+			fields: [
+				{
+					name: "Certificate Number",
+					type: "String",
+					validation: "^GSAS-\\d{4}-\\d{3,5}$",
+					error_message: "Invalid GSAS certificate number format (expected: GSAS-YYYY-NNN)"
+				},
+				{
+					name: "Issuer",
+					type: "String",
+					validation: "Must be \"GORD\" or GORD-accredited body",
+					error_message: "Issuer not GORD-accredited"
+				},
+				{
+					name: "Issue Date",
+					type: "Date",
+					validation: "Must be ≤ today",
+					error_message: "Certificate issue date is in the future"
+				},
+				{
+					name: "Expiry Date",
+					type: "Date",
+					validation: "Must be ≥ today + 90 days",
+					error_message: "Certificate expires within 90 days — not acceptable"
+				},
+				{
+					name: "Overall Score",
+					type: "Integer",
+					validation: `0–100, minimum ${l} for eligibility`,
+					error_message: `Score below minimum threshold (${l})`
+				},
+				{
+					name: "Rating",
+					type: "String",
+					validation: "Silver / Gold / Platinum only (Bronze rejected)",
+					error_message: "Bronze rating does not meet minimum requirement"
+				},
+				{
+					name: "Property Address",
+					type: "String",
+					validation: "Must match application property address (fuzzy match ≥85%)",
+					error_message: "Certificate property address does not match application"
+				},
+				{
+					name: "EPC Rating",
+					type: "String",
+					validation: "A / B / C minimum (D/E/F/G rejected)",
+					error_message: "EPC rating below minimum required (C)"
+				}
+			],
+			ai_confidence: 96,
+			regulatory_reference: "OS GSO 3000:2025, §4.2 · OEESC §5.1"
+		};
 		return {
-			message: `✅ <strong>Stage 5 complete.</strong> Compliance classification applied — Basel III 75% risk weight, IFRS9 1.5% Stage 1 ECL, CBO Green Finance designation.<br><br><strong>Stage 6 — Portfolio Simulation</strong><br><br>📊 <strong>12-month portfolio projections</strong> (based on current Standard Home Loan pipeline data):<br>&bull; Target: <strong>180 accounts, OMR 52M</strong> in Year 1 (conservative: 15% of current mortgage pipeline targeting green properties)<br>&bull; NIM: <strong>1.45%</strong> on green rate (vs 1.75% standard) — offset by 0.4% lower provisioning (green ECL) + CBO capital relief of ~8 bps<br>&bull; <strong>Stress test</strong>: at +200 bps rate shock, 98% of modelled portfolio still passes DBR ≤55% — built-in buffer works<br>&bull; <strong>Break-even</strong>: month 11 post-launch (setup costs: OMR 85K for GORD API integration + Green Finance Officer role)<br>&bull; ESG reporting: monthly CBO Green Finance Return under Circular 2026-12 §7, plus annual TCFD disclosure<br><br>📋 <strong>Full product configuration summary:</strong><br>• <strong>Sohar Green Home Finance – GSAS</strong> · Conventional · Cloned from Standard Home Loan<br>• Rate: <strong>5.25%</strong> · Tiers: 4.50% (GSAS ≥85) · 4.75% (GSAS 70–84)<br>• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>• Terms: <strong>3–25 years</strong> · Amount: <strong>OMR 25,000–500,000</strong><br>• Eligibility: <strong>${t.length} rules</strong> across credit, collateral, ESG, income<br>• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>🚀 Everything is configured. Click <strong>Confirm & Publish</strong> to save the full product and make it live on the customer portal.`,
+			message: `✅ <strong>Stage 5 complete.</strong> Compliance classification applied — Basel III 75% risk weight, IFRS9 1.5% Stage 1 ECL, CBO Green Finance designation.<br><br><strong>Stage 6 — Portfolio Simulation</strong><br><br>📊 <strong>12-month portfolio projections</strong> (based on current Standard Home Loan pipeline data):<br>&bull; Target: <strong>180 accounts, OMR 52M</strong> in Year 1 (conservative: 15% of current mortgage pipeline targeting green properties)<br>&bull; NIM: <strong>1.45%</strong> on green rate (vs 1.75% standard) — offset by 0.4% lower provisioning (green ECL) + CBO capital relief of ~8 bps<br>&bull; <strong>Stress test</strong>: at +200 bps rate shock, 98% of modelled portfolio still passes DBR ≤55% — built-in buffer works<br>&bull; <strong>Break-even</strong>: month 11 post-launch (setup costs: OMR 85K for GORD API integration + Green Finance Officer role)<br>&bull; ESG reporting: monthly CBO Green Finance Return under Circular 2026-12 §7, plus annual TCFD disclosure<br><br>📋 <strong>Full product configuration summary:</strong><br>• <strong>${n}</strong> · ${d} · Cloned from Standard Home Loan<br>• Rate: <strong>${u}%</strong> · Tiers: ${(u - .75).toFixed(2)}% (GSAS ≥85) · ${(u - .5).toFixed(2)}% (GSAS 70–84)<br>• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>• Terms: <strong>3–25 years</strong> · Amount: <strong>OMR 25,000–${c.toLocaleString()}</strong><br>• Eligibility: <strong>${p.length} rules</strong> across credit, collateral, ESG, income<br>• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>🚀 Everything is configured. Click <strong>Confirm &amp; Publish</strong> to save the full product and make it live on the customer portal.`,
 			current_stage: 6,
 			show_roadmap: !1,
 			action: "ready_to_confirm",
@@ -2747,63 +2841,9 @@ function Ge(e, t, n) {
 				type: "set_tab",
 				tab: "ai_config"
 			}],
-			product_draft: e,
-			rules_draft: t,
-			schema_draft: {
-				schema_type: "gsas_certificate_validation",
-				fields: [
-					{
-						name: "Certificate Number",
-						type: "String",
-						validation: "^GSAS-\\d{4}-\\d{3,5}$",
-						error_message: "Invalid GSAS certificate number format (expected: GSAS-YYYY-NNN)"
-					},
-					{
-						name: "Issuer",
-						type: "String",
-						validation: "Must be \"GORD\" or GORD-accredited body",
-						error_message: "Issuer not GORD-accredited"
-					},
-					{
-						name: "Issue Date",
-						type: "Date",
-						validation: "Must be ≤ today",
-						error_message: "Certificate issue date is in the future"
-					},
-					{
-						name: "Expiry Date",
-						type: "Date",
-						validation: "Must be ≥ today + 90 days",
-						error_message: "Certificate expires within 90 days — not acceptable"
-					},
-					{
-						name: "Overall Score",
-						type: "Integer",
-						validation: "0–100, minimum 70 for eligibility",
-						error_message: "Score below minimum threshold (70)"
-					},
-					{
-						name: "Rating",
-						type: "String",
-						validation: "Silver / Gold / Platinum only (Bronze rejected)",
-						error_message: "Bronze rating does not meet minimum requirement"
-					},
-					{
-						name: "Property Address",
-						type: "String",
-						validation: "Must match application property address (fuzzy match ≥85%)",
-						error_message: "Certificate property address does not match application"
-					},
-					{
-						name: "EPC Rating",
-						type: "String",
-						validation: "A / B / C minimum (D/E/F/G rejected)",
-						error_message: "EPC rating below minimum required (C)"
-					}
-				],
-				ai_confidence: 96,
-				regulatory_reference: "OS GSO 3000:2025, §4.2 · OEESC §5.1"
-			}
+			product_draft: f,
+			rules_draft: p,
+			schema_draft: m
 		};
 	}
 	return {
@@ -5229,7 +5269,7 @@ $.use("/api/*", Ie()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await L.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "38aefec";
+var at = "b279cdf";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

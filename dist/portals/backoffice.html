@@ -1310,8 +1310,11 @@ let aiDraftWorkflow = [];
 
 /* ── updateAiDraftCard ───────────────────────────────────────────────────── *
  * Renders / updates the live configuration card at bottom of AI chat.
+ * Supports collapsed summary view (default) and expanded full view.
  * Called whenever set_field / add_rule / set_workflow events arrive.
  * ─────────────────────────────────────────────────────────────────────────*/
+let aiDraftCardExpanded = false;
+
 function updateAiDraftCard() {
   let card = document.getElementById('ai-draft-card');
   if (!card) {
@@ -1319,27 +1322,105 @@ function updateAiDraftCard() {
     if (!inputWrapper) return;
     card = document.createElement('div');
     card.id = 'ai-draft-card';
-    card.style.cssText = 'margin:.35rem 1rem;padding:.65rem .85rem;background:rgba(0,59,92,.55);border:1px solid rgba(53,198,196,.28);border-radius:8px;font-size:.77rem;animation:fadeIn .4s ease';
+    card.style.cssText = 'margin:.35rem 1rem;background:rgba(0,59,92,.6);border:1px solid rgba(53,198,196,.32);border-radius:9px;font-size:.77rem;animation:fadeIn .4s ease;overflow:hidden';
     inputWrapper.parentNode.insertBefore(card, inputWrapper);
   }
   const cfg = aiDraftConfig;
   const rCount = aiDraftRules.length;
   const wCount = aiDraftWorkflow.length;
+  const exp = aiDraftCardExpanded;
+
   const fr = (label, val, color) => val != null
-    ? `<div style="display:flex;justify-content:space-between;padding:.13rem 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:rgba(255,255,255,.42)">${label}</span><span style="color:${color||'rgba(255,255,255,.82)'};font-weight:600">${val}</span></div>` : '';
-  card.innerHTML =
-    `<div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem"><i class="fas fa-file-invoice" style="color:var(--sea-glass);font-size:.78rem"></i><span style="font-weight:700;color:rgba(255,255,255,.88)">Product Draft — Live Preview</span><span style="margin-left:auto;font-size:.63rem;color:rgba(255,255,255,.3)">updates as you configure</span></div>` +
+    ? `<div style="display:flex;justify-content:space-between;padding:.14rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="color:rgba(255,255,255,.42);font-size:.72rem">${label}</span>
+        <span style="color:${color||'rgba(255,255,255,.84)'};font-weight:600;font-size:.73rem">${val}</span>
+       </div>` : '';
+
+  // ── Summary (always visible) ──────────────────────────────────────────
+  const summaryHtml =
+    `<div style="padding:.6rem .85rem .45rem">` +
+    `<div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.38rem">` +
+      `<i class="fas fa-file-invoice" style="color:var(--sea-glass);font-size:.78rem"></i>` +
+      `<span style="font-weight:700;color:rgba(255,255,255,.9);font-size:.8rem">Product Draft</span>` +
+      `<span style="font-size:.6rem;color:rgba(255,255,255,.28);margin-left:.15rem">live preview</span>` +
+      `<button onclick="aiDraftCardExpanded=!aiDraftCardExpanded;updateAiDraftCard()" style="margin-left:auto;background:rgba(53,198,196,.12);border:1px solid rgba(53,198,196,.25);color:var(--sea-glass);border-radius:5px;padding:.12rem .5rem;font-size:.65rem;cursor:pointer;white-space:nowrap">` +
+        `<i class="fas fa-${exp ? 'compress-alt' : 'expand-alt'}" style="margin-right:.2rem"></i>${exp ? 'Collapse' : 'Expand'}` +
+      `</button>` +
+    `</div>` +
     fr('Name', cfg.name, 'var(--sea-glass)') +
     fr('Base rate', cfg.base_rate != null ? cfg.base_rate + '%' : null) +
-    (cfg.green_discount_premium != null ? fr('Gold discount (GSAS≥85)', '\u22120.75\u2009% \u2192 ' + ((cfg.base_rate||5.25)-0.75).toFixed(2) + '%', '#4ade80') : '') +
+    (cfg.green_discount_premium != null ? fr('Gold discount (GSAS\u226585)', '\u22120.75\u2009% \u2192 ' + ((cfg.base_rate||5.25)-0.75).toFixed(2) + '%', '#4ade80') : '') +
     (cfg.green_discount_standard != null ? fr('Silver discount (GSAS 70\u201384)', '\u22120.50\u2009% \u2192 ' + ((cfg.base_rate||5.25)-0.5).toFixed(2) + '%', '#86efac') : '') +
-    fr('Max LTV', cfg.max_ltv != null ? cfg.max_ltv + '%' : null) +
-    fr('Max DBR', cfg.max_dbr != null ? cfg.max_dbr + '%' : null) +
+    fr('LTV', cfg.max_ltv != null ? cfg.max_ltv + '% (first home) / 80% (subsequent)' : null) +
+    fr('DBR', cfg.max_dbr != null ? cfg.max_dbr + '%' : null) +
     fr('Term', cfg.max_term != null ? (cfg.min_term||3) + '\u2013' + cfg.max_term + ' yrs' : null) +
     fr('Loan amount', cfg.max_amount != null ? 'OMR\u00a0' + Number(cfg.min_amount||25000).toLocaleString() + '\u2013' + Number(cfg.max_amount).toLocaleString() : null) +
-    fr('GSAS minimum', cfg.gsas_min_score != null ? cfg.gsas_min_score + '\u00a0pts' : null) +
-    (rCount > 0 ? `<div style="margin-top:.38rem;color:rgba(255,255,255,.6)"><i class="fas fa-list-check" style="color:var(--sea-glass);margin-right:.3rem"></i><strong style="color:rgba(255,255,255,.85)">${rCount} eligibility rules</strong> generated</div>` : '') +
-    (wCount > 0 ? `<div style="margin-top:.2rem;color:rgba(255,255,255,.6)"><i class="fas fa-sitemap" style="color:var(--sea-glass);margin-right:.3rem"></i><strong style="color:rgba(255,255,255,.85)">${wCount} workflow nodes</strong> configured</div>` : '');
+    fr('GSAS min score', cfg.gsas_min_score != null ? cfg.gsas_min_score + '\u00a0pts' : null) +
+    `<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.35rem">` +
+      (rCount > 0 ? `<span style="font-size:.67rem;background:rgba(53,198,196,.1);color:var(--sea-glass);padding:.1rem .45rem;border-radius:8px;border:1px solid rgba(53,198,196,.2)"><i class="fas fa-list-check" style="margin-right:.25rem"></i>${rCount} rules</span>` : '') +
+      (wCount > 0 ? `<span style="font-size:.67rem;background:rgba(244,179,91,.1);color:#fbbf24;padding:.1rem .45rem;border-radius:8px;border:1px solid rgba(244,179,91,.2)"><i class="fas fa-sitemap" style="margin-right:.25rem"></i>${wCount} workflow steps</span>` : '') +
+    `</div>` +
+    `</div>`;
+
+  // ── Expanded sections ─────────────────────────────────────────────────
+  let expandedHtml = '';
+  if (exp) {
+    // Rules section
+    if (rCount > 0) {
+      const catColors = {creditworthiness:'#60a5fa',esg:'#4ade80',collateral:'#fbbf24',eligibility:'#c084fc',compliance:'#f87171'};
+      const sevColors = {hard:'#f87171',soft:'#fbbf24',warning:'#60a5fa'};
+      expandedHtml += `<div style="border-top:1px solid rgba(255,255,255,.08);padding:.55rem .85rem">` +
+        `<div style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.4rem">` +
+          `<i class="fas fa-list-check" style="color:var(--sea-glass);margin-right:.3rem"></i>Eligibility Rules (${rCount})` +
+        `</div>` +
+        aiDraftRules.map(r =>
+          `<div style="display:flex;align-items:flex-start;gap:.4rem;padding:.3rem .4rem;margin-bottom:.25rem;background:rgba(255,255,255,.03);border-radius:5px;border-left:3px solid ${sevColors[r.severity]||'#60a5fa'}">` +
+            `<div style="flex:1;min-width:0">` +
+              `<div style="font-size:.72rem;font-weight:600;color:rgba(255,255,255,.85)">${r.name||r.metric||'Rule'}</div>` +
+              `<div style="font-size:.63rem;color:rgba(255,255,255,.38);margin-top:.05rem">${r.regulatory_reference||''}</div>` +
+              (r.description ? `<div style="font-size:.62rem;color:rgba(255,255,255,.28);margin-top:.07rem">${r.description.slice(0,90)}${r.description.length>90?'…':''}</div>` : '') +
+            `</div>` +
+            `<div style="flex-shrink:0;text-align:right">` +
+              `<span style="font-size:.63rem;background:rgba(53,198,196,.12);color:var(--sea-glass);padding:.08rem .3rem;border-radius:6px;white-space:nowrap">${r.metric||''} ${r.operator||''} ${r.threshold_value??''}</span><br>` +
+              `<span style="font-size:.6rem;color:${catColors[r.category]||'rgba(255,255,255,.3)'};text-transform:uppercase">${r.category||''}</span>` +
+            `</div>` +
+          `</div>`
+        ).join('') +
+      `</div>`;
+    }
+    // Workflow section
+    if (wCount > 0) {
+      const typeIcons = {start:'fa-play-circle',end:'fa-flag-checkered',approval:'fa-user-check',task:'fa-cog',decision:'fa-code-branch'};
+      expandedHtml += `<div style="border-top:1px solid rgba(255,255,255,.08);padding:.55rem .85rem">` +
+        `<div style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.4rem">` +
+          `<i class="fas fa-sitemap" style="color:#fbbf24;margin-right:.3rem"></i>Approval Workflow (${wCount} steps)` +
+        `</div>` +
+        aiDraftWorkflow.map((n, idx) =>
+          `<div style="display:flex;align-items:flex-start;gap:.4rem;margin-bottom:.3rem">` +
+            `<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">` +
+              `<div style="width:22px;height:22px;border-radius:50%;background:${n.type==='start'?'rgba(53,198,196,.25)':n.type==='end'?'rgba(22,132,91,.25)':n.auto?'rgba(244,179,91,.15)':'rgba(255,255,255,.08)'};border:1px solid ${n.type==='start'?'rgba(53,198,196,.4)':n.type==='end'?'rgba(22,132,91,.4)':n.auto?'rgba(244,179,91,.3)':'rgba(255,255,255,.15)'};display:flex;align-items:center;justify-content:center">` +
+                `<i class="fas ${typeIcons[n.type]||'fa-circle'}" style="font-size:.55rem;color:${n.type==='start'?'var(--sea-glass)':n.type==='end'?'#4ade80':n.auto?'#fbbf24':'rgba(255,255,255,.5)'}"></i>` +
+              `</div>` +
+              (idx < aiDraftWorkflow.length-1 ? `<div style="width:1px;height:10px;background:rgba(255,255,255,.1);margin:.05rem 0"></div>` : '') +
+            `</div>` +
+            `<div style="flex:1;min-width:0;padding-top:.1rem">` +
+              `<div style="font-size:.72rem;font-weight:600;color:rgba(255,255,255,.85)">${n.label||n.id}` +
+                (n.auto ? `<span style="font-size:.58rem;background:rgba(244,179,91,.15);color:#fbbf24;padding:.07rem .28rem;border-radius:4px;margin-left:.3rem">AUTO</span>` : '') +
+              `</div>` +
+              (n.role || n.sla_hours ? `<div style="font-size:.63rem;color:rgba(255,255,255,.35)">${(n.role||'').replace(/_/g,' ')}${n.sla_hours ? ' · SLA '+n.sla_hours+'h' : ''}</div>` : '') +
+              (n.description ? `<div style="font-size:.62rem;color:rgba(255,255,255,.25);margin-top:.05rem">${n.description.slice(0,80)}${n.description.length>80?'…':''}</div>` : '') +
+            `</div>` +
+          `</div>`
+        ).join('') +
+      `</div>`;
+    }
+    // If nothing to expand yet
+    if (rCount === 0 && wCount === 0) {
+      expandedHtml += `<div style="border-top:1px solid rgba(255,255,255,.08);padding:.5rem .85rem;font-size:.72rem;color:rgba(255,255,255,.3);text-align:center">More details will appear as we progress through the stages.</div>`;
+    }
+  }
+
+  card.innerHTML = summaryHtml + expandedHtml;
 }
 
 /* ── dispatchUiEvents ─────────────────────────────────────────────────────
