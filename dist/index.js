@@ -1273,7 +1273,11 @@ THE 6-STAGE PRODUCT GOVERNANCE PROCESS (PGE):
 ══════════════════════════════════════════════════════════════════
 
 CONVERSATION RULES — NON-NEGOTIABLE:
-1. ONE FOCUSED QUESTION PER TURN. End every turn with exactly one "?" on the decision point that actually blocks you from progressing.
+1. ONE FOCUSED QUESTION PER TURN. Every single response MUST end with exactly one "?" — no exceptions.
+   BANNED: Any response that ends without a "?". If you've confirmed something, immediately pivot to the NEXT sub-question in the same turn.
+   BAD: "Great. Conventional structure confirmed. Let's proceed to Stage 2."   ← NO "?" — FORBIDDEN
+   GOOD: "Conventional structure confirmed. Next: should this product target Omani nationals only, or include expats too? And what income band — Mass (OMR 800–2K), Affluent (OMR 2K–5K), or HNW (OMR 5K+)?"
+   NEVER emit a pure acknowledgement like "Great.", "Understood.", "Noted." without immediately asking the next sub-question in the SAME message.
 2. ACT AS THE EXPERT. Don't just ask open questions — give specific recommendations with regulatory citations, then ask the user to confirm or modify.
    BAD: "What interest rate do you want?"
    GOOD: "For a Green Home Loan targeting GSAS-certified properties, I recommend base rate 5.25% (10 bps below Standard Home Loan to incentivise green adoption), with a tiered green discount: 0.75% off for GSAS Score ≥85 (Gold), 0.5% off for Score 70–84 (Silver). Effective floor rate: 4.5%. CBO Circular 2026-12 §3.1 allows this structure. Shall I apply these pricing tiers, or do you want a different spread?"
@@ -1283,6 +1287,10 @@ CONVERSATION RULES — NON-NEGOTIABLE:
 6. product_draft ONLY at stage 6 (ready_to_confirm). Set null for all prior turns.
 7. show_roadmap=true ONLY on Turn 1 when you first identify the product type.
 8. current_stage must ONLY increase, never decrease. Track it carefully.
+9. STAGE TRANSITIONS: When moving from one stage to the next, combine the "Stage X complete" acknowledgement WITH the first sub-question of Stage X+1 in a SINGLE message. Never send a stage transition without a question at the end.
+   BAD: "✅ Stage 1 complete. Moving to Stage 2 — Core Configuration."   ← FORBIDDEN, no "?"
+   GOOD: "✅ Stage 1 complete — EcoElite Home Finance, conventional, targeting HNW. <br><br>Stage 2 — Core Configuration. For the base rate: I recommend 5.25% (10 bps below Standard Home Loan). CBO Circular 2026-12 §3.1 permits preferential green pricing. Shall I set 5.25% as the base rate, or adjust?"
+10. NEVER repeat a question the user has already answered in this conversation. Check the full message history before asking anything.
 
 STAGE 1 — PRODUCT MODEL (ask these sub-questions in order):
   1a. Clone or scratch? Name the closest existing product and suggest it as a clone source.
@@ -1429,8 +1437,8 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 					6: "Click <strong>Confirm &amp; Publish</strong> above to save and publish the product."
 				};
 				n && (h.message = e.replace(/how would you like to proceed\?/i, "").replace(/\s+$/, "") + (e.replace(/how would you like to proceed\?/i, "").trim() ? "<br><br>" : "") + "<em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">" + (i[r] || "Reply to continue.") + "</em>");
-				let a = h.message || "";
-				!a.includes("?") && h.action !== "ready_to_confirm" && (h.message = a + "<br><br><em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">" + (i[r] || "Reply to continue.") + "</em>");
+				let a = h.message || "", o = a.includes("?"), s = !o && (/stage \d+ complete/i.test(a) || /let'?s (proceed|move on|move to|configure|set up)/i.test(a) || /we('ll| will) (proceed|move|configure|set)/i.test(a) || /moving (on|to) stage/i.test(a) || /^(great|noted|understood|confirmed|perfect)\b.{0,120}$/i.test(a.replace(/<[^>]+>/g, "")));
+				!o && !n && h.action !== "ready_to_confirm" && (s ? h.message = a + "<br><br><em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">Reply to continue.</em>" : h.message = a + "<br><br><em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">" + (i[r] || "Reply to continue.") + "</em>");
 			} else h.message = e;
 		}
 	} catch {
@@ -5123,7 +5131,7 @@ $.use("/api/*", Ie()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await L.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "53ebb20";
+var at = "6fc3b22";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

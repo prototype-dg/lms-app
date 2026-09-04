@@ -61,7 +61,11 @@ THE 6-STAGE PRODUCT GOVERNANCE PROCESS (PGE):
 ══════════════════════════════════════════════════════════════════
 
 CONVERSATION RULES — NON-NEGOTIABLE:
-1. ONE FOCUSED QUESTION PER TURN. End every turn with exactly one "?" on the decision point that actually blocks you from progressing.
+1. ONE FOCUSED QUESTION PER TURN. Every single response MUST end with exactly one "?" — no exceptions.
+   BANNED: Any response that ends without a "?". If you've confirmed something, immediately pivot to the NEXT sub-question in the same turn.
+   BAD: "Great. Conventional structure confirmed. Let's proceed to Stage 2."   ← NO "?" — FORBIDDEN
+   GOOD: "Conventional structure confirmed. Next: should this product target Omani nationals only, or include expats too? And what income band — Mass (OMR 800–2K), Affluent (OMR 2K–5K), or HNW (OMR 5K+)?"
+   NEVER emit a pure acknowledgement like "Great.", "Understood.", "Noted." without immediately asking the next sub-question in the SAME message.
 2. ACT AS THE EXPERT. Don't just ask open questions — give specific recommendations with regulatory citations, then ask the user to confirm or modify.
    BAD: "What interest rate do you want?"
    GOOD: "For a Green Home Loan targeting GSAS-certified properties, I recommend base rate 5.25% (10 bps below Standard Home Loan to incentivise green adoption), with a tiered green discount: 0.75% off for GSAS Score ≥85 (Gold), 0.5% off for Score 70–84 (Silver). Effective floor rate: 4.5%. CBO Circular 2026-12 §3.1 allows this structure. Shall I apply these pricing tiers, or do you want a different spread?"
@@ -71,6 +75,10 @@ CONVERSATION RULES — NON-NEGOTIABLE:
 6. product_draft ONLY at stage 6 (ready_to_confirm). Set null for all prior turns.
 7. show_roadmap=true ONLY on Turn 1 when you first identify the product type.
 8. current_stage must ONLY increase, never decrease. Track it carefully.
+9. STAGE TRANSITIONS: When moving from one stage to the next, combine the "Stage X complete" acknowledgement WITH the first sub-question of Stage X+1 in a SINGLE message. Never send a stage transition without a question at the end.
+   BAD: "✅ Stage 1 complete. Moving to Stage 2 — Core Configuration."   ← FORBIDDEN, no "?"
+   GOOD: "✅ Stage 1 complete — EcoElite Home Finance, conventional, targeting HNW. <br><br>Stage 2 — Core Configuration. For the base rate: I recommend 5.25% (10 bps below Standard Home Loan). CBO Circular 2026-12 §3.1 permits preferential green pricing. Shall I set 5.25% as the base rate, or adjust?"
+10. NEVER repeat a question the user has already answered in this conversation. Check the full message history before asking anything.
 
 STAGE 1 — PRODUCT MODEL (ask these sub-questions in order):
   1a. Clone or scratch? Name the closest existing product and suggest it as a clone source.
@@ -215,17 +223,38 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
             6: 'Click <strong>Confirm &amp; Publish</strong> above to save and publish the product.',
           }
           if (isGenericProceed) {
-            // Strip generic question and replace with stage-aware guidance
+            // Strip generic question and replace with stage-aware guidance.
+            // Mark as already nudged so step 5 below doesn't double-append.
             aiReply.message = msgRaw.replace(/how would you like to proceed\?/i, '').replace(/\s+$/, '') +
               (msgRaw.replace(/how would you like to proceed\?/i, '').trim() ? '<br><br>' : '') +
               '<em style="font-size:.8rem;color:rgba(255,255,255,.55)">' + (nudges[stg] || 'Reply to continue.') + '</em>'
           }
           // 5. If message doesn't end with a question and we're not confirming,
+          //    and the generic-proceed replacement hasn't already handled this turn:
           //    append a stage-aware nudge so the user knows what to do next.
+          //    Exception: pure transition/acknowledgement messages (GPT violated rule #1 and
+          //    sent a "Stage X complete. Let's move to Stage Y." with no sub-question).
+          //    Appending "Type yes to confirm these parameters" to a transition is misleading —
+          //    the user hasn't been shown any parameters yet. Detect transitions and skip nudge.
           const msg: string = aiReply.message || ''
           const hasQuestion = msg.includes('?')
-          if (!hasQuestion && aiReply.action !== 'ready_to_confirm') {
-            aiReply.message = msg + '<br><br><em style="font-size:.8rem;color:rgba(255,255,255,.55)">' + (nudges[stg] || 'Reply to continue.') + '</em>'
+          const isTransitionOnly =
+            !hasQuestion && (
+              // Stage-complete acknowledgement without a question
+              /stage \d+ complete/i.test(msg) ||
+              /let'?s (proceed|move on|move to|configure|set up)/i.test(msg) ||
+              /we('ll| will) (proceed|move|configure|set)/i.test(msg) ||
+              /moving (on|to) stage/i.test(msg) ||
+              /^(great|noted|understood|confirmed|perfect)\b.{0,120}$/i.test(msg.replace(/<[^>]+>/g, ''))
+            )
+          if (!hasQuestion && !isGenericProceed && aiReply.action !== 'ready_to_confirm') {
+            if (isTransitionOnly) {
+              // GPT sent a bare acknowledgement/transition with no question — just show a soft prompt
+              aiReply.message = msg + '<br><br><em style="font-size:.8rem;color:rgba(255,255,255,.55)">Reply to continue.</em>'
+            } else {
+              // GPT said something substantive but forgot the question — add the stage nudge
+              aiReply.message = msg + '<br><br><em style="font-size:.8rem;color:rgba(255,255,255,.55)">' + (nudges[stg] || 'Reply to continue.') + '</em>'
+            }
           }
         } else {
           aiReply.message = text
