@@ -277,6 +277,8 @@ async function renderPage(page) {
   switch(page) {
     case 'products': await loadProducts(); await renderProducts(); break;
     case 'rules': await renderRules(); break;
+    case 'workflows': await renderWorkflows(); break;
+    case 'compliance_config': await renderCompliance(); break;
     case 'audit_logs': await renderAuditLogs(); break;
     case 'tasks': await renderComplianceTasks(); break;
     case 'esg_review': await renderEsgReview(); break;
@@ -422,6 +424,41 @@ async function renderProducts() {
       </div>`;
   };
 
+  // Market regulatory context panel
+  const marketPanel = activeMarket ? `
+    <div style="background:linear-gradient(135deg,var(--navy-dark),var(--navy));border-radius:var(--radius-lg);padding:1.1rem 1.35rem;margin-bottom:1.5rem;display:flex;align-items:stretch;gap:1.5rem;border:1px solid rgba(53,198,196,.15)">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25rem;padding-right:1.25rem;border-right:1px solid rgba(255,255,255,.1)">
+        <div style="font-size:2.5rem">${getFlagEmoji(activeMarket.country_code)}</div>
+        <div style="font-size:.7rem;color:rgba(255,255,255,.5);font-weight:600;text-transform:uppercase;letter-spacing:.5px">${activeMarket.country_code}</div>
+      </div>
+      <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;align-items:center">
+        <div>
+          <div style="font-size:.68rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.25rem">Market</div>
+          <div style="font-weight:700;color:#fff;font-size:.92rem">${activeMarket.name}</div>
+          ${activeMarket.name_ar?`<div style="font-size:.75rem;color:rgba(255,255,255,.4);direction:rtl;font-family:'Noto Sans Arabic',sans-serif">${activeMarket.name_ar}</div>`:''}
+        </div>
+        <div>
+          <div style="font-size:.68rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.25rem">Regulator</div>
+          <div style="font-weight:700;color:var(--sea-glass,#35C6C4);font-size:.92rem">${activeMarket.regulator_name}</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.4)">Central Bank of Oman</div>
+        </div>
+        <div>
+          <div style="font-size:.68rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.25rem">Currency</div>
+          <div style="font-weight:700;color:#fff;font-size:.92rem">${activeMarket.currency_code} ${activeMarket.currency_symbol}</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.4)">Omani Rial</div>
+        </div>
+        <div>
+          <div style="font-size:.68rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.25rem">Market ID</div>
+          <div style="font-weight:600;color:rgba(255,255,255,.6);font-size:.8rem;font-family:monospace">${activeMarket.id}</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.4)">Active market config</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.4rem;justify-content:center;padding-left:1rem;border-left:1px solid rgba(255,255,255,.1)">
+        <div style="font-size:.68rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px">Regulatory Stack</div>
+        ${['CBO Circular 2024-01','AML/CFT Rules 2022','PDPL 2022','OS GSO 3000:2025'].map(r=>`<div style="font-size:.72rem;color:rgba(255,255,255,.55);display:flex;align-items:center;gap:.35rem"><i class="fas fa-check-circle" style="color:var(--sea-glass,#35C6C4);font-size:.65rem"></i>${r}</div>`).join('')}
+      </div>
+    </div>` : '';
+
   const groupSections = catOrder.filter(cat => groups[cat] && groups[cat].length > 0).map(cat => {
     const meta = catMeta[cat] || {icon:'fa-file', label:cat, color:'#aaa'};
     return `<div style="margin-bottom:2rem">
@@ -449,6 +486,7 @@ async function renderProducts() {
         <button class="btn btn-amber" onclick="openAiStudio()" style="font-weight:700"><i class="fas fa-robot"></i> Create with AI</button>
       </div>
     </div>
+    ${marketPanel}
     <div onclick="openAiStudio()" style="background:linear-gradient(135deg,var(--navy-dark) 0%,var(--navy) 50%,#004d5c 100%);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1.75rem;cursor:pointer;display:flex;align-items:center;gap:1.25rem;border:1px solid rgba(53,198,196,.2);transition:opacity .2s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
       <div style="width:44px;height:44px;border-radius:50%;background:rgba(53,198,196,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fas fa-robot" style="color:var(--sea);font-size:1.1rem"></i></div>
       <div style="flex:1"><div style="font-weight:700;color:#fff;font-size:.95rem;margin-bottom:.2rem">AI Product Studio</div><div style="font-size:.78rem;color:rgba(255,255,255,.6)">Launch a new regulated product in minutes — AI reads CBO circulars, generates rules, builds portal content, and publishes.</div></div>
@@ -788,27 +826,59 @@ function renderProductPanel(p, productRules) {
     eligibility: `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
         <h4>Eligibility Rules</h4>
-        <span style="font-size:.75rem;color:var(--grey-500)">Showing rules applicable to ${catLabels[p.category]||p.category}</span>
+        <button class="btn btn-ghost btn-sm" onclick="renderPage('rules');renderRules('${p.id}');closePanel()"><i class="fas fa-external-link-alt"></i> View in Rules Engine</button>
       </div>
       ${(() => {
-        // Filter rules by relevance to product type
-        const relevantCategories = ['creditworthiness','compliance','stress_test'];
-        if (isSecured) relevantCategories.push('collateral');
-        if (isEsg) relevantCategories.push('esg');
-        if (isHomeLoan) relevantCategories.push('eligibility','product');
-        const filtered = productRules.filter(r => r.is_active && relevantCategories.includes(r.category));
-        if (!filtered.length) return '<p style="color:var(--grey-500);font-size:.85rem">No eligibility rules configured.</p>';
-        return '<div style="background:var(--grey-100);border-radius:var(--radius-lg);overflow:hidden">' +
-          '<div style="display:grid;grid-template-columns:2fr 1.2fr 1.5fr 1.5fr .8fr;padding:.5rem .75rem;font-size:.7rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;border-bottom:1px solid var(--grey-200)">' +
-          '<span>Rule Name</span><span>Category</span><span>Condition</span><span>Reference</span><span>Severity</span></div>' +
-          filtered.map(r => `
-          <div style="display:grid;grid-template-columns:2fr 1.2fr 1.5fr 1.5fr .8fr;padding:.625rem .75rem;font-size:.8rem;border-bottom:1px solid var(--grey-100);align-items:center">
-            <span style="font-weight:500">${r.name}</span>
-            <span class="rule-category-tag rule-cat-${r.category}" style="font-size:.68rem">${r.category}</span>
-            <span style="font-family:monospace;font-size:.75rem;color:var(--teal)">${r.metric} ${r.operator} ${r.threshold_value??r.threshold_condition??'–'}</span>
-            <span style="font-size:.72rem;color:var(--grey-500)">${r.regulatory_reference||'–'}</span>
-            <span class="badge ${r.severity==='hard'?'badge-red':'badge-amber'}">${r.severity}</span>
-          </div>`).join('') + '</div>';
+        // Separate product-specific from global (product_id null)
+        const specificRules = productRules.filter(r => r.is_active && r.product_id === p.id);
+        const globalRuleList = productRules.filter(r => r.is_active && !r.product_id);
+
+        function eligibilityTable(ruleList) {
+          return '<div style="background:var(--grey-50);border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--grey-200)">' +
+            '<div style="display:grid;grid-template-columns:2fr 1.2fr 1.5fr 1.5fr .8fr;padding:.45rem .75rem;font-size:.68rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;border-bottom:1px solid var(--grey-200);background:var(--grey-100)">' +
+            '<span>Rule Name</span><span>Category</span><span>Condition</span><span>Reference</span><span>Severity</span></div>' +
+            ruleList.map(r => `
+            <div style="display:grid;grid-template-columns:2fr 1.2fr 1.5fr 1.5fr .8fr;padding:.55rem .75rem;font-size:.8rem;border-bottom:1px solid var(--grey-100);align-items:center">
+              <span style="font-weight:500;color:var(--navy)">${r.name}</span>
+              <span class="rule-category-tag rule-cat-${r.category}" style="font-size:.68rem">${r.category}</span>
+              <span style="font-family:monospace;font-size:.75rem;color:var(--teal)">${r.metric} ${r.operator} ${r.threshold_value??r.threshold_condition??'–'}</span>
+              <span style="font-size:.72rem;color:var(--grey-500)">${r.regulatory_reference||'–'}</span>
+              <span class="badge ${r.severity==='hard'?'badge-red':'badge-amber'}">${r.severity}</span>
+            </div>`).join('') + '</div>';
+        }
+
+        let html = '';
+
+        // Product-specific rules first
+        if (specificRules.length) {
+          html += `<div style="margin-bottom:1rem">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+              <span style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal)"><i class="fas fa-cube"></i> ${p.name} — Product Rules</span>
+              <span style="font-size:.68rem;color:var(--grey-400)">${specificRules.length} rule${specificRules.length!==1?'s':''}</span>
+            </div>
+            ${eligibilityTable(specificRules)}
+          </div>`;
+        } else {
+          html += `<div style="margin-bottom:1rem;padding:.6rem .75rem;background:rgba(0,127,134,.06);border:1px dashed var(--teal);border-radius:var(--radius-md);font-size:.8rem;color:var(--grey-500)">
+            <i class="fas fa-info-circle" style="color:var(--teal)"></i> No product-specific rules configured for ${p.name} yet.
+          </div>`;
+        }
+
+        // Global CBO rules
+        if (globalRuleList.length) {
+          html += `<div>
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+              <span style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--grey-500)"><i class="fas fa-gavel"></i> CBO Global Rules</span>
+              <span style="font-size:.68rem;color:var(--grey-400)">${globalRuleList.length} rule${globalRuleList.length!==1?'s':''} · applies to all products</span>
+            </div>
+            ${eligibilityTable(globalRuleList)}
+          </div>`;
+        }
+
+        if (!specificRules.length && !globalRuleList.length) {
+          html = '<p style="color:var(--grey-500);font-size:.85rem;padding:.5rem 0">No eligibility rules found.</p>';
+        }
+        return html;
       })()}`,
 
     documents: `
@@ -857,7 +927,15 @@ function renderProductPanel(p, productRules) {
 
     workflow: `
       <h4 style="margin-bottom:1rem">Workflow Configuration</h4>
-      <div class="card" style="margin-bottom:1rem">
+      <div id="workflowTemplateSection">
+        <div style="display:flex;align-items:center;justify-content:center;padding:1rem;color:var(--grey-400)">
+          <i class="fas fa-spinner fa-spin"></i><span style="margin-left:.5rem;font-size:.83rem">Loading workflow template…</span>
+        </div>
+      </div>
+
+      <!-- Product-type toggles -->
+      <div class="card" style="margin-top:1rem;margin-bottom:1rem">
+        <div class="card-header"><h4><i class="fas fa-sliders"></i> Disbursement & Channel Settings</h4></div>
         <div class="card-body">
           ${isHomeLoan || isAutoLoan ? `
           <div style="display:flex;justify-content:space-between;align-items:center;${isHomeLoan?'margin-bottom:1rem':''}">
@@ -887,6 +965,7 @@ function renderProductPanel(p, productRules) {
           </div>` : ''}
         </div>
       </div>
+
       ${isHomeLoan ? `
       <div class="card">
         <div class="card-header"><h4>Construction Milestones</h4><span style="font-size:.72rem;color:var(--grey-400)">Home loans only</span></div>
@@ -898,10 +977,7 @@ function renderProductPanel(p, productRules) {
             ${isEsg?'<span class="badge badge-green">Green material check</span>':'<span class="badge badge-navy">Standard check</span>'}
           </div>`).join('')}
         </div>
-      </div>` : `
-      <div style="padding:.5rem;color:var(--grey-400);font-size:.82rem;font-style:italic">
-        <i class="fas fa-info-circle"></i> Construction milestone disbursement is only applicable to Home Loan products.
-      </div>`}`,
+      </div>` : ''}`,
 
     ai_config: `
       <h4 style="margin-bottom:1rem">AI Configuration</h4>
@@ -966,6 +1042,88 @@ function renderProductPanel(p, productRules) {
       <button class="btn btn-ghost" onclick="cloneProduct('${p.id}','${p.name}')"><i class="fas fa-copy"></i> Clone</button>
     </div>`;
   openPanel(p.name);
+  // Async: load workflow template for the Workflow tab
+  if (selectedTab === 'workflow') {
+    loadProductWorkflowTemplate(p);
+  }
+}
+
+async function loadProductWorkflowTemplate(p) {
+  const container = document.getElementById('workflowTemplateSection');
+  if (!container) return;
+  const wftId = p.workflow_template_id;
+  if (!wftId) {
+    container.innerHTML = `<div style="padding:1rem;background:var(--grey-50);border:1px dashed var(--grey-300);border-radius:var(--radius-md);color:var(--grey-500);font-size:.83rem;margin-bottom:1rem">
+      <i class="fas fa-exclamation-circle" style="margin-right:.4rem"></i> No workflow template assigned. <a href="/portals/product-config.html?id=${p.id}" style="color:var(--teal);font-weight:600">Open in PGE</a> to configure the workflow stage.
+    </div>`;
+    return;
+  }
+  try {
+    const r = await fetch('/api/v1/workflow-templates/' + wftId);
+    const d = await r.json();
+    const t = d.template;
+    if (!t) throw new Error('not found');
+    let nodes = [], edges = [];
+    try { nodes = JSON.parse(t.nodes||'[]'); } catch{}
+    try { edges = JSON.parse(t.edges||'[]'); } catch{}
+    const taskNodes = nodes.filter(n => n.type !== 'start' && n.type !== 'end');
+    const catColors2 = { mortgage:'#007F86', auto:'#35C6C4', personal:'#F4B35B', sme:'#003B5C', commercial:'#6c757d', education:'#a855f7', home_equity:'#10b981', general:'#64748b' };
+    const catColor = catColors2[t.category] || '#64748b';
+    container.innerHTML = `
+    <div class="card" style="margin-bottom:1rem;border-left:4px solid ${catColor}">
+      <div class="card-header" style="background:${catColor}08">
+        <div style="display:flex;align-items:center;gap:.75rem;flex:1">
+          <i class="fas fa-sitemap" style="color:${catColor};font-size:1rem"></i>
+          <div>
+            <div style="font-weight:700;color:var(--navy)">${t.name}</div>
+            ${t.name_ar ? `<div style="font-size:.72rem;color:var(--grey-400);direction:rtl;font-family:'Noto Sans Arabic',sans-serif">${t.name_ar}</div>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:.4rem;align-items:center">
+          <span style="font-size:.68rem;padding:.2rem .5rem;border-radius:4px;background:${catColor}15;color:${catColor};font-weight:600;text-transform:uppercase">${t.category}</span>
+          ${t.is_system ? '<span style="font-size:.65rem;padding:.15rem .4rem;border-radius:4px;background:var(--navy);color:white;font-weight:600">SYSTEM</span>' : ''}
+          <span style="font-size:.67rem;padding:.15rem .4rem;border-radius:4px;background:' + (t.is_active ? 'var(--success-light)' : 'var(--grey-100)') + ';color:' + (t.is_active ? 'var(--success)' : 'var(--grey-400)') + ';font-weight:600">' + (t.is_active ? 'Active' : 'Inactive') + '</span>
+        </div>
+      </div>
+      <div class="card-body">
+        ${t.description ? `<p style="font-size:.82rem;color:var(--grey-600);margin-bottom:.75rem;line-height:1.5">${t.description}</p>` : ''}
+        <div style="display:flex;gap:1.5rem;font-size:.78rem;color:var(--grey-500);margin-bottom:1rem">
+          <span><i class="fas fa-project-diagram" style="margin-right:.25rem"></i>${nodes.length} nodes</span>
+          <span><i class="fas fa-arrow-right" style="margin-right:.25rem"></i>${edges.length} transitions</span>
+          <span><i class="fas fa-tasks" style="margin-right:.25rem"></i>${taskNodes.length} review stages</span>
+        </div>
+        <div style="margin-bottom:.75rem">
+          <div style="font-size:.7rem;font-weight:600;color:var(--grey-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">Approval Pipeline</div>
+          <div style="display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;padding:.625rem;background:var(--grey-50);border-radius:var(--radius-md)">
+            ${nodes.map((n,i) => {
+              const nc = n.type==='start'?'#10b981':n.type==='end'?'#ef4444':n.type==='approval'?'#007F86':n.type==='review'?'#f59e0b':'#64748b';
+              return '<span style="font-size:.72rem;padding:.25rem .5rem;border-radius:5px;background:'+nc+'15;color:'+nc+';font-weight:600;white-space:nowrap;border:1px solid '+nc+'30">'+(n.label||n.type)+'</span>'+(i<nodes.length-1?'<i class="fas fa-long-arrow-alt-right" style="font-size:.65rem;color:var(--grey-300)"></i>':'');
+            }).join('')}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.35rem">
+          ${nodes.filter(n=>n.type!=='start'&&n.type!=='end').map((n,i) => {
+            const rc = n.role==='compliance_officer'?'#007F86':n.role==='risk_officer'?'#f59e0b':n.role==='product_manager'?'#003B5C':'#64748b';
+            const ti = n.type==='approval'?'fa-check-double':n.type==='review'?'fa-search':'fa-tasks';
+            return '<div style="display:flex;align-items:center;gap:.625rem;padding:.4rem .5rem;border-radius:6px;background:var(--grey-50)">'
+              +'<span style="width:20px;height:20px;border-radius:50%;background:'+rc+';color:white;font-size:.6rem;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">'+(i+1)+'</span>'
+              +'<i class="fas '+ti+'" style="color:'+rc+';font-size:.75rem;flex-shrink:0"></i>'
+              +'<span style="font-size:.8rem;font-weight:500;color:var(--navy);flex:1">'+(n.label||n.type)+'</span>'
+              +(n.role?'<span style="font-size:.68rem;padding:.15rem .4rem;border-radius:4px;background:'+rc+'12;color:'+rc+'">'+n.role.replace(/_/g,' ')+'</span>':'')
+              +(n.auto?'<span style="font-size:.67rem;padding:.15rem .4rem;border-radius:4px;background:var(--teal);color:white"><i class="fas fa-robot"></i> auto</span>':'')
+              +(n.sla_hours?'<span style="font-size:.67rem;color:var(--grey-400)"><i class="fas fa-clock"></i> '+n.sla_hours+'h</span>':'')
+              +'</div>';
+          }).join('')}
+        </div>
+        <div style="margin-top:.75rem;padding-top:.625rem;border-top:1px solid var(--grey-100);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:.72rem;color:var(--grey-400)">Template ID: <code>${t.id}</code></span>
+          <button class="btn btn-ghost btn-sm" onclick="showWorkflowDetail('${t.id}')"><i class="fas fa-expand-alt"></i> Full detail</button>
+        </div>
+      </div>
+    </div>`;
+  } catch(e) {
+    container.innerHTML = '<div style="padding:.75rem;background:var(--grey-50);border-radius:var(--radius-md);color:var(--grey-400);font-size:.82rem;margin-bottom:1rem"><i class="fas fa-exclamation-triangle"></i> Could not load workflow template.</div>';
+  }
 }
 
 function switchProductTab(tab, productId) {
@@ -1078,47 +1236,466 @@ async function confirmAiProduct(productId) {
   if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-rocket"></i> Confirm &amp; Publish'; }
 }
 
-/* ======================== RULES PAGE ======================== */
-async function renderRules() {
-  document.getElementById('pageTitle').textContent = 'Rules Engine';
-  document.getElementById('pageSubtitle').textContent = '15 active CBO rules';
+/* ======================== WORKFLOWS PAGE ======================== */
+async function renderWorkflows() {
+  document.getElementById('pageTitle').textContent = 'Workflows';
+  document.getElementById('pageSubtitle').textContent = '';
+
+  let templates = [];
   try {
-    const pid = selectedProduct || (products[0] && products[0].id) || 'p001';
-    const r = await fetch(`/api/v1/products/${pid}/rules`);
+    const r = await fetch('/api/v1/workflow-templates');
     const d = await r.json();
-    rules = d.rules || [];
-  } catch(e) { rules = []; }
-  
-  const catColors = { creditworthiness:'rule-cat-creditworthiness', collateral:'rule-cat-collateral', esg:'rule-cat-esg', compliance:'rule-cat-compliance', stress_test:'rule-cat-stress_test', product:'rule-cat-product', eligibility:'rule-cat-eligibility' };
-  
+    templates = d.templates || [];
+  } catch(e) { templates = []; }
+
+  const catMeta = {
+    mortgage:     { icon:'fa-house',         color:'#007F86', label:'Mortgage' },
+    auto:         { icon:'fa-car',            color:'#35C6C4', label:'Auto Finance' },
+    personal:     { icon:'fa-user',           color:'#F4B35B', label:'Personal Loan' },
+    sme:          { icon:'fa-briefcase',      color:'#003B5C', label:'SME Finance' },
+    commercial:   { icon:'fa-building',       color:'#6c757d', label:'Commercial' },
+    education:    { icon:'fa-graduation-cap', color:'#a855f7', label:'Education' },
+    home_equity:  { icon:'fa-home',           color:'#10b981', label:'Home Equity' },
+    general:      { icon:'fa-sitemap',        color:'#64748b', label:'General' },
+  };
+
+  // Count how many products use each template
+  const templateUsage = {};
+  for (const p of products) {
+    if (p.workflow_template_id) {
+      templateUsage[p.workflow_template_id] = (templateUsage[p.workflow_template_id] || 0) + 1;
+    }
+  }
+
+  const activeCount = templates.filter(t => t.is_active).length;
+  const systemCount = templates.filter(t => t.is_system).length;
+
+  document.getElementById('pageSubtitle').textContent = `${activeCount} active templates · ${systemCount} system`;
+
   document.getElementById('mainContent').innerHTML = `<div class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <div><h2>Rules Engine</h2><p>CBO-compliant regulatory rules library</p></div>
-      <button class="btn btn-navy" onclick="toast('Open AI Assistant to generate new rules','info')"><i class="fas fa-robot"></i> Generate from Regulatory Text</button>
+      <div><h2>Workflow Templates</h2><p>Multi-stage approval and review paths for loan processing</p></div>
+      <button class="btn btn-navy" onclick="toast('Workflow builder coming in next sprint','info')"><i class="fas fa-plus"></i> New Template</button>
     </div>
-    <div class="card">
-      <div class="card-header">
-        <h4>Active Rules (${rules.filter(r=>r.is_active).length})</h4>
-        <div class="search-bar" style="width:200px"><i class="fas fa-search"></i><input type="text" placeholder="Search rules…"></div>
+
+    <!-- Market Context Banner -->
+    ${activeMarket ? `
+    <div style="background:linear-gradient(135deg,var(--navy-dark),var(--navy));border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1.25rem">
+      <div style="font-size:2rem">${getFlagEmoji(activeMarket.country_code)}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;color:#fff;margin-bottom:.15rem">${activeMarket.name} · ${activeMarket.regulator_name} Regulatory Framework</div>
+        <div style="font-size:.78rem;color:rgba(255,255,255,.55)">All workflow templates operate under ${activeMarket.regulator_name} circular requirements · Currency: ${activeMarket.currency_code} ${activeMarket.currency_symbol}</div>
       </div>
-      <div>
-        <div style="display:grid;grid-template-columns:2fr 1fr 1.5fr 2fr 1fr;padding:.5rem .75rem;font-size:.7rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;background:var(--grey-100);border-bottom:1px solid var(--grey-200)">
-          <span>Rule Name</span><span>Category</span><span>Condition</span><span>Regulatory Reference</span><span>Severity</span>
-        </div>
-        ${rules.map(r => `
-        <div style="display:grid;grid-template-columns:2fr 1fr 1.5fr 2fr 1fr;padding:.625rem .75rem;font-size:.82rem;border-bottom:1px solid var(--grey-100);align-items:center" class="${r.source==='ai_generated'?'ai-row':''}">
-          <div>
-            <span style="font-weight:500;color:var(--navy)">${r.name}</span>
-            ${r.source==='ai_generated'?'<span class="ai-confidence-tag"><i class="fas fa-robot"></i> AI ${r.ai_confidence||94}%</span>':''}
+      <div style="text-align:right;color:rgba(255,255,255,.5);font-size:.75rem">${templates.length} templates configured</div>
+    </div>` : ''}
+
+    <!-- Stats -->
+    <div class="metric-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
+      <div class="metric-card"><div class="metric-value">${templates.length}</div><div class="metric-label">Total Templates</div></div>
+      <div class="metric-card"><div class="metric-value">${activeCount}</div><div class="metric-label">Active</div></div>
+      <div class="metric-card"><div class="metric-value">${systemCount}</div><div class="metric-label">System Templates</div></div>
+      <div class="metric-card"><div class="metric-value">${products.filter(p=>p.workflow_template_id).length}</div><div class="metric-label">Products Assigned</div></div>
+    </div>
+
+    <!-- Template Cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem">
+      ${templates.map(t => {
+        const meta = catMeta[t.category] || catMeta.general;
+        let nodes = [], edges = [];
+        try { nodes = JSON.parse(t.nodes||'[]'); } catch{}
+        try { edges = JSON.parse(t.edges||'[]'); } catch{}
+        const taskNodes = nodes.filter(n=>n.type==='task'||n.type==='approval');
+        const usage = templateUsage[t.id] || 0;
+        const assignedProducts = products.filter(p=>p.workflow_template_id===t.id);
+        return `
+        <div class="card" style="border-top:3px solid ${meta.color};cursor:pointer;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow=''">
+          <div class="card-body" onclick="showWorkflowDetail('${t.id}')">
+            <div style="display:flex;align-items:flex-start;gap:.75rem;margin-bottom:.75rem">
+              <div style="width:40px;height:40px;border-radius:10px;background:${meta.color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="fas ${meta.icon}" style="color:${meta.color};font-size:1rem"></i>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:700;color:var(--navy);font-size:.9rem;margin-bottom:.15rem">${t.name}</div>
+                ${t.name_ar ? `<div style="font-size:.75rem;color:var(--grey-400);font-family:'Noto Sans Arabic',sans-serif;direction:rtl">${t.name_ar}</div>` : ''}
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
+                <span style="font-size:.68rem;padding:.2rem .5rem;border-radius:4px;background:${meta.color}15;color:${meta.color};font-weight:600;text-transform:uppercase">${meta.label}</span>
+                ${t.is_system ? '<span style="font-size:.65rem;padding:.1rem .4rem;border-radius:4px;background:var(--navy-dark);color:white;font-weight:600">SYSTEM</span>' : ''}
+                <span style="font-size:.67rem;padding:.15rem .4rem;border-radius:4px;background:${t.is_active?'var(--success-light)':'var(--grey-100)'};color:${t.is_active?'var(--success)':'var(--grey-400)'};font-weight:600">${t.is_active?'● Active':'○ Inactive'}</span>
+              </div>
+            </div>
+            <p style="font-size:.78rem;color:var(--grey-500);line-height:1.5;margin-bottom:.75rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${t.description||'No description provided.'}</p>
+
+            <!-- Node pipeline preview -->
+            <div style="display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;margin-bottom:.75rem;padding:.5rem;background:var(--grey-50);border-radius:var(--radius-sm)">
+              ${nodes.map((n,i) => {
+                const nodeColor = n.type==='start'?'#10b981':n.type==='end'?'#ef4444':n.type==='approval'?'#007F86':n.type==='review'?'#f59e0b':'#64748b';
+                return `<span style="font-size:.67rem;padding:.2rem .45rem;border-radius:4px;background:${nodeColor}15;color:${nodeColor};font-weight:500;white-space:nowrap" title="${n.label||n.type}">${n.label||n.type}</span>${i<nodes.length-1?'<i class="fas fa-chevron-right" style="font-size:.55rem;color:var(--grey-300)"></i>':''}`;
+              }).join('')}
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:.75rem;color:var(--grey-500)">
+              <span><i class="fas fa-project-diagram" style="margin-right:.3rem"></i>${nodes.length} nodes · ${edges.length} transitions</span>
+              <span><i class="fas fa-cube" style="margin-right:.3rem"></i>${usage > 0 ? `${usage} product${usage!==1?'s':''} assigned` : 'Unassigned'}</span>
+            </div>
+            ${assignedProducts.length ? `
+            <div style="margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--grey-100)">
+              <div style="font-size:.68rem;color:var(--grey-400);margin-bottom:.3rem">ASSIGNED TO</div>
+              <div style="display:flex;flex-wrap:wrap;gap:.25rem">
+                ${assignedProducts.map(p=>`<span style="font-size:.7rem;padding:.2rem .45rem;border-radius:4px;background:var(--teal);color:white;font-weight:500">${p.name}</span>`).join('')}
+              </div>
+            </div>` : ''}
           </div>
-          <span class="rule-category-tag ${catColors[r.category]||''}">${r.category}</span>
-          <code style="font-size:.75rem;color:var(--teal)">${r.metric} ${r.operator} ${r.threshold_value??r.threshold_condition??'–'}</code>
-          <span style="font-size:.75rem;color:var(--grey-500)">${r.regulatory_reference||'–'}</span>
-          <span class="badge ${r.severity==='hard'?'badge-red':'badge-amber'}">${r.severity||'hard'}</span>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
+    </div>
+    ${templates.length === 0 ? '<div class="empty-state"><i class="fas fa-sitemap" style="font-size:2rem;color:var(--grey-300);margin-bottom:1rem"></i><p>No workflow templates found.</p></div>' : ''}
+  </div>`;
+}
+
+async function showWorkflowDetail(templateId) {
+  try {
+    const r = await fetch(`/api/v1/workflow-templates/${templateId}`);
+    const d = await r.json();
+    const t = d.template;
+    if (!t) return;
+    let nodes = [], edges = [];
+    try { nodes = JSON.parse(t.nodes||'[]'); } catch{}
+    try { edges = JSON.parse(t.edges||'[]'); } catch{}
+    const assignedProducts = products.filter(p=>p.workflow_template_id===t.id);
+    openPanel(t.name);
+    document.getElementById('panelBody').innerHTML = `
+      <div style="margin-bottom:1.25rem">
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem">
+          <span class="badge ${t.is_active?'badge-active':'badge-archived'}">${t.is_active?'Active':'Inactive'}</span>
+          ${t.is_system ? '<span class="badge badge-navy">System Template</span>' : '<span class="badge badge-draft">Custom</span>'}
+          <span class="badge" style="background:var(--grey-100);color:var(--grey-600)">${t.category}</span>
+        </div>
+        <p style="font-size:.85rem;color:var(--grey-600);line-height:1.6">${t.description||''}</p>
+        ${t.description_ar ? `<p style="font-size:.82rem;color:var(--grey-400);direction:rtl;text-align:right;font-family:'Noto Sans Arabic',sans-serif;margin-top:.25rem">${t.description_ar}</p>` : ''}
+      </div>
+
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-header"><h4><i class="fas fa-project-diagram"></i> Workflow Stages (${nodes.length} nodes)</h4></div>
+        <div class="card-body" style="padding:.5rem">
+          ${nodes.map((n,i) => {
+            const roleColor = n.role==='compliance_officer'?'#007F86':n.role==='risk_officer'?'#f59e0b':n.role==='product_manager'?'#003B5C':'#64748b';
+            const typeIcon = n.type==='start'?'fa-play-circle':n.type==='end'?'fa-stop-circle':n.type==='approval'?'fa-check-double':n.type==='review'?'fa-search':'fa-tasks';
+            const typeColor = n.type==='start'?'#10b981':n.type==='end'?'#ef4444':n.type==='approval'?'#007F86':'#64748b';
+            return `
+            <div style="display:flex;align-items:flex-start;gap:.75rem;padding:.625rem .5rem;border-bottom:1px solid var(--grey-100)">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:2px">
+                <div style="width:26px;height:26px;border-radius:50%;background:${typeColor}15;display:flex;align-items:center;justify-content:center">
+                  <i class="fas ${typeIcon}" style="font-size:.65rem;color:${typeColor}"></i>
+                </div>
+                ${i<nodes.length-1?`<div style="width:1px;height:16px;background:var(--grey-200)"></div>`:''}
+              </div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:.85rem;color:var(--navy)">${n.label||n.type}</div>
+                ${n.label_ar ? `<div style="font-size:.72rem;color:var(--grey-400);direction:rtl;font-family:'Noto Sans Arabic',sans-serif">${n.label_ar}</div>` : ''}
+                <div style="display:flex;gap:.5rem;margin-top:.3rem;flex-wrap:wrap">
+                  <span style="font-size:.68rem;padding:.15rem .4rem;border-radius:4px;background:${typeColor}12;color:${typeColor};font-weight:600;text-transform:uppercase">${n.type}</span>
+                  ${n.role ? `<span style="font-size:.68rem;padding:.15rem .4rem;border-radius:4px;background:${roleColor}12;color:${roleColor};font-weight:500">${n.role.replace(/_/g,' ')}</span>` : ''}
+                  ${n.auto ? '<span style="font-size:.68rem;padding:.15rem .4rem;border-radius:4px;background:var(--teal);color:white;font-weight:500"><i class="fas fa-robot"></i> auto</span>' : ''}
+                  ${n.sla_hours ? `<span style="font-size:.68rem;color:var(--grey-400)"><i class="fas fa-clock"></i> SLA ${n.sla_hours}h</span>` : ''}
+                </div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      ${assignedProducts.length ? `
+      <div class="card">
+        <div class="card-header"><h4>Assigned Products (${assignedProducts.length})</h4></div>
+        <div class="card-body">
+          ${assignedProducts.map(p=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--grey-100);font-size:.83rem">
+            <span style="font-weight:500;color:var(--navy)">${p.name}</span>
+            <span class="badge ${p.status==='active'?'badge-active':'badge-draft'}">${p.status}</span>
+          </div>`).join('')}
+        </div>
+      </div>` : ''}`;
+  } catch(e) { toast('Failed to load template details','error'); }
+}
+
+/* ======================== COMPLIANCE PAGE ======================== */
+async function renderCompliance() {
+  document.getElementById('pageTitle').textContent = 'Compliance';
+  document.getElementById('pageSubtitle').textContent = '';
+
+  let tags = [], allTags = [];
+  try {
+    const r = await fetch('/api/v1/compliance-tags');
+    const d = await r.json();
+    allTags = d.tags || [];
+    tags = allTags;
+  } catch(e) { tags = []; }
+
+  // Build product coverage: for each tag, how many products have it mapped
+  let productTagMap = {}; // tagId → Set of productIds
+  await Promise.all(products.map(async p => {
+    try {
+      const r = await fetch(`/api/v1/compliance-tags/product/${p.id}`);
+      const d = await r.json();
+      (d.tags || []).forEach(t => {
+        if (!productTagMap[t.id]) productTagMap[t.id] = new Set();
+        productTagMap[t.id].add(p.id);
+      });
+    } catch{}
+  }));
+
+  // Group tags by category
+  const groups = {};
+  for (const tag of tags) {
+    if (!groups[tag.category]) groups[tag.category] = [];
+    groups[tag.category].push(tag);
+  }
+
+  const catMeta2 = {
+    aml_kyc:             { icon:'fa-shield-halved',  color:'#ef4444', label:'AML / KYC' },
+    consumer_protection: { icon:'fa-user-shield',    color:'#f59e0b', label:'Consumer Protection' },
+    credit_risk:         { icon:'fa-chart-bar',      color:'#007F86', label:'Credit Risk' },
+    esg:                 { icon:'fa-leaf',            color:'#10b981', label:'ESG / Green' },
+    pdpl:                { icon:'fa-lock',            color:'#8b5cf6', label:'PDPL Data Privacy' },
+    reporting:           { icon:'fa-chart-line',      color:'#3b82f6', label:'Regulatory Reporting' },
+    capital:             { icon:'fa-university',      color:'#003B5C', label:'Capital Adequacy' },
+    conduct:             { icon:'fa-balance-scale',   color:'#f59e0b', label:'Market Conduct' },
+    general:             { icon:'fa-file-shield',     color:'#64748b', label:'General' },
+  };
+
+  const mandatoryCount = tags.filter(t=>t.severity==='mandatory').length;
+  const activeCount = tags.filter(t=>t.is_active).length;
+  const coveredCount = Object.values(productTagMap).filter(s=>s.size>0).length;
+
+  document.getElementById('pageSubtitle').textContent = `${activeCount} active tags · ${mandatoryCount} mandatory`;
+
+  document.getElementById('mainContent').innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div><h2>Compliance Configuration</h2><p>CBO regulatory compliance tags and product coverage</p></div>
+      <button class="btn btn-navy" onclick="toast('Tag management coming in next sprint','info')"><i class="fas fa-plus"></i> Add Tag</button>
+    </div>
+
+    <!-- Regulatory Context Banner -->
+    ${activeMarket ? `
+    <div style="background:linear-gradient(135deg,#1e3a5f,#003B5C);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem">
+      <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="fas fa-shield-halved" style="color:#35C6C4;font-size:1.1rem"></i>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700;color:#fff;margin-bottom:.15rem">${activeMarket.regulator_name} Compliance Framework — ${activeMarket.name}</div>
+        <div style="font-size:.78rem;color:rgba(255,255,255,.55)">AML/CFT · PDPL Data Privacy · ESG Disclosure · CBO Capital Adequacy · Market Conduct Rules</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:1.5rem;font-weight:700;color:#35C6C4">${Math.round((coveredCount/Math.max(tags.length,1))*100)}%</div>
+        <div style="font-size:.7rem;color:rgba(255,255,255,.5)">Coverage</div>
+      </div>
+    </div>` : ''}
+
+    <!-- Stats -->
+    <div class="metric-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.5rem">
+      <div class="metric-card"><div class="metric-value">${tags.length}</div><div class="metric-label">Total Tags</div></div>
+      <div class="metric-card"><div class="metric-value">${mandatoryCount}</div><div class="metric-label">Mandatory</div></div>
+      <div class="metric-card"><div class="metric-value">${activeCount}</div><div class="metric-label">Active</div></div>
+      <div class="metric-card"><div class="metric-value">${coveredCount}</div><div class="metric-label">Tags w/ Products</div></div>
+      <div class="metric-card"><div class="metric-value">${Object.keys(groups).length}</div><div class="metric-label">Categories</div></div>
+    </div>
+
+    <!-- Tags by Category -->
+    ${Object.entries(groups).map(([cat, catTags]) => {
+      const meta = catMeta2[cat] || catMeta2.general;
+      return `
+      <div class="card" style="margin-bottom:1.25rem;border-top:3px solid ${meta.color}">
+        <div class="card-header">
+          <h4><i class="fas ${meta.icon}" style="color:${meta.color};margin-right:.5rem"></i>${meta.label} <span style="font-size:.75rem;font-weight:400;color:var(--grey-400)">(${catTags.length} tags)</span></h4>
+        </div>
+        <div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr 2fr 1fr 1fr;padding:.45rem .75rem;font-size:.68rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;background:var(--grey-50);border-bottom:1px solid var(--grey-200)">
+            <span>Tag Name</span><span>Code</span><span>Severity</span><span>Regulatory Ref</span><span>Products</span><span>Status</span>
+          </div>
+          ${catTags.map(tag => {
+            const coverage = productTagMap[tag.id]?.size || 0;
+            const appliesTo = (() => { try { return JSON.parse(tag.applies_to||'[]'); } catch{return[];} })();
+            return `
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr 2fr 1fr 1fr;padding:.6rem .75rem;font-size:.8rem;border-bottom:1px solid var(--grey-100);align-items:center">
+              <div>
+                <div style="font-weight:500;color:var(--navy)">${tag.name}</div>
+                ${tag.name_ar ? `<div style="font-size:.7rem;color:var(--grey-400);direction:rtl;font-family:'Noto Sans Arabic',sans-serif">${tag.name_ar}</div>` : ''}
+                ${appliesTo.length ? `<div style="margin-top:.2rem;display:flex;gap:.25rem;flex-wrap:wrap">${appliesTo.map(a=>`<span style="font-size:.63rem;padding:.1rem .3rem;border-radius:3px;background:var(--grey-100);color:var(--grey-500)">${a}</span>`).join('')}</div>` : ''}
+              </div>
+              <code style="font-size:.7rem;color:var(--teal)">${tag.code||tag.id}</code>
+              <span class="badge ${tag.severity==='mandatory'?'badge-red':'badge-amber'}" style="font-size:.67rem">${tag.severity}</span>
+              <span style="font-size:.72rem;color:var(--grey-500)">${tag.regulatory_reference||'—'}</span>
+              <div>
+                ${coverage > 0
+                  ? `<span style="font-size:.75rem;font-weight:600;color:var(--success)">${coverage} product${coverage!==1?'s':''}</span>`
+                  : `<span style="font-size:.75rem;color:var(--grey-400)">None</span>`}
+              </div>
+              <span style="font-size:.72rem;font-weight:600;color:${tag.is_active?'var(--success)':'var(--grey-400)'}">${tag.is_active?'Active':'Inactive'}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+
+    <!-- Product Compliance Coverage Matrix -->
+    <div class="card" style="margin-bottom:1.25rem">
+      <div class="card-header">
+        <h4><i class="fas fa-table"></i> Product Compliance Coverage</h4>
+        <span style="font-size:.75rem;color:var(--grey-400)">Mandatory tags per product</span>
+      </div>
+      <div class="card-body" style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.75rem;min-width:600px">
+          <thead>
+            <tr style="background:var(--grey-50)">
+              <th style="padding:.5rem .75rem;text-align:left;font-weight:600;color:var(--grey-600);border-bottom:2px solid var(--grey-200)">Product</th>
+              ${tags.filter(t=>t.severity==='mandatory').map(t=>`<th style="padding:.5rem .4rem;text-align:center;font-weight:600;color:var(--grey-600);border-bottom:2px solid var(--grey-200);writing-mode:vertical-lr;min-width:28px;max-width:40px" title="${t.name}">${t.code||t.id.slice(-4)}</th>`).join('')}
+              <th style="padding:.5rem .75rem;text-align:center;font-weight:600;color:var(--grey-600);border-bottom:2px solid var(--grey-200)">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${products.map(p => {
+              const mandatoryTags = tags.filter(t=>t.severity==='mandatory');
+              const covered = mandatoryTags.filter(t => productTagMap[t.id]?.has(p.id)).length;
+              const pct = mandatoryTags.length > 0 ? Math.round((covered/mandatoryTags.length)*100) : 100;
+              return `
+              <tr style="border-bottom:1px solid var(--grey-100)">
+                <td style="padding:.5rem .75rem;font-weight:500;color:var(--navy)">${p.name}</td>
+                ${mandatoryTags.map(t => {
+                  const has = productTagMap[t.id]?.has(p.id);
+                  return `<td style="padding:.4rem;text-align:center">${has ? '<i class="fas fa-check-circle" style="color:var(--success);font-size:.8rem"></i>' : '<i class="fas fa-times-circle" style="color:var(--grey-200);font-size:.8rem"></i>'}</td>`;
+                }).join('')}
+                <td style="padding:.4rem .75rem;text-align:center">
+                  <span style="font-weight:700;font-size:.8rem;color:${pct>=80?'var(--success)':pct>=50?'var(--amber)':'var(--danger)'}">${pct}%</span>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>`;
+}
+
+/* ======================== RULES PAGE ======================== */
+let _rulesFilterProduct = null; // null = global CBO rules only
+async function renderRules(filterProductId) {
+  if (filterProductId !== undefined) _rulesFilterProduct = filterProductId;
+  const showingProduct = _rulesFilterProduct;
+
+  document.getElementById('pageTitle').textContent = 'Rules Engine';
+
+  // Fetch global rules + product-specific rules
+  let globalRules = [], productRules = [];
+  try {
+    const gr = await fetch('/api/v1/rules');
+    const gd = await gr.json();
+    globalRules = (gd.rules || []).filter(r => !r.product_id);
+  } catch(e) { globalRules = []; }
+
+  if (showingProduct) {
+    try {
+      const pr = await fetch(`/api/v1/rules?product_id=${showingProduct}`);
+      const pd = await pr.json();
+      productRules = (pd.rules || []).filter(r => r.product_id === showingProduct);
+    } catch(e) { productRules = []; }
+  }
+
+  rules = [...globalRules, ...productRules];
+  const activeCount = rules.filter(r => r.is_active).length;
+  const productLabel = showingProduct ? (products.find(p=>p.id===showingProduct)?.name || showingProduct) : null;
+  document.getElementById('pageSubtitle').textContent = showingProduct
+    ? `${globalRules.filter(r=>r.is_active).length} CBO global + ${productRules.filter(r=>r.is_active).length} product-specific rules`
+    : `${activeCount} CBO global regulatory rules`;
+
+  const catColors = { creditworthiness:'rule-cat-creditworthiness', collateral:'rule-cat-collateral', esg:'rule-cat-esg', compliance:'rule-cat-compliance', stress_test:'rule-cat-stress_test', product:'rule-cat-product', eligibility:'rule-cat-eligibility' };
+
+  function ruleRows(ruleList, showOrigin) {
+    if (!ruleList.length) return '<p style="color:var(--grey-400);font-size:.83rem;padding:.75rem;font-style:italic">No rules in this section.</p>';
+    return ruleList.map(r => `
+    <div style="display:grid;grid-template-columns:2.5fr 1.1fr 1.6fr 2fr .9fr;padding:.625rem .75rem;font-size:.82rem;border-bottom:1px solid var(--grey-100);align-items:center" class="${r.source==='ai_generated'?'ai-row':''}">
+      <div>
+        <span style="font-weight:500;color:var(--navy)">${r.name}</span>
+        ${showOrigin && r.product_id ? `<span style="margin-left:.4rem;font-size:.67rem;padding:.1rem .4rem;border-radius:4px;background:rgba(0,127,134,.1);color:var(--teal);font-weight:600">PRODUCT</span>` : ''}
+        ${r.source==='ai_generated'?'<span class="ai-confidence-tag"><i class="fas fa-robot"></i> AI ${r.ai_confidence||94}%</span>':''}
+      </div>
+      <span class="rule-category-tag ${catColors[r.category]||''}">${r.category}</span>
+      <code style="font-size:.75rem;color:var(--teal)">${r.metric} ${r.operator} ${r.threshold_value??r.threshold_condition??'–'}</code>
+      <span style="font-size:.75rem;color:var(--grey-500)">${r.regulatory_reference||'–'}</span>
+      <span class="badge ${r.severity==='hard'?'badge-red':'badge-amber'}">${r.severity||'hard'}</span>
+    </div>`).join('');
+  }
+
+  const productSelector = `<select class="form-control" style="width:220px;font-size:.82rem;padding:.3rem .6rem" onchange="renderRules(this.value||null)">
+    <option value="">CBO Global Rules only</option>
+    ${products.map(p=>`<option value="${p.id}" ${p.id===showingProduct?'selected':''}>${p.name}</option>`).join('')}
+  </select>`;
+
+  document.getElementById('mainContent').innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div>
+        <h2>Rules Engine</h2>
+        <p>CBO-compliant regulatory rules library${productLabel ? ` · filtered for <strong>${productLabel}</strong>` : ''}</p>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        ${productSelector}
+        <button class="btn btn-navy" onclick="toast('Open AI Assistant to generate new rules from regulatory text','info')"><i class="fas fa-robot"></i> Generate from Regulatory Text</button>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="metric-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
+      <div class="metric-card"><div class="metric-value">${globalRules.filter(r=>r.is_active).length}</div><div class="metric-label">CBO Global Rules</div></div>
+      <div class="metric-card"><div class="metric-value">${showingProduct ? productRules.filter(r=>r.is_active).length : '—'}</div><div class="metric-label">Product-Specific Rules</div></div>
+      <div class="metric-card"><div class="metric-value">${globalRules.filter(r=>r.severity==='hard').length}</div><div class="metric-label">Hard Constraints</div></div>
+      <div class="metric-card"><div class="metric-value">${globalRules.filter(r=>r.source==='ai_generated').length}</div><div class="metric-label">AI-Generated</div></div>
+    </div>
+
+    <!-- Global Rules Section -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="card-header" style="background:var(--navy);color:white">
+        <h4 style="color:white"><i class="fas fa-gavel"></i> CBO Global Rules <span style="font-size:.8rem;font-weight:400;opacity:.7;margin-left:.5rem">(applies to all products)</span></h4>
+        <div class="search-bar" style="width:180px;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)">
+          <i class="fas fa-search" style="color:rgba(255,255,255,.5)"></i>
+          <input type="text" placeholder="Search rules…" style="color:white;background:transparent" oninput="filterRulesTable(this.value,'globalRulesTable')">
+        </div>
+      </div>
+      <div id="globalRulesTable">
+        <div style="display:grid;grid-template-columns:2.5fr 1.1fr 1.6fr 2fr .9fr;padding:.5rem .75rem;font-size:.7rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;background:var(--grey-100);border-bottom:1px solid var(--grey-200)">
+          <span>Rule Name</span><span>Category</span><span>Condition</span><span>Regulatory Reference</span><span>Severity</span>
+        </div>
+        ${ruleRows(globalRules, false)}
+      </div>
+    </div>
+
+    <!-- Product-Specific Rules Section -->
+    ${showingProduct ? `
+    <div class="card">
+      <div class="card-header" style="background:linear-gradient(135deg,var(--teal-dark,#006b72),var(--teal));color:white">
+        <h4 style="color:white"><i class="fas fa-cube"></i> ${productLabel} — Product Rules <span style="font-size:.8rem;font-weight:400;opacity:.7;margin-left:.5rem">(product-specific overrides)</span></h4>
+        <span style="font-size:.78rem;opacity:.7">${productRules.length} rules</span>
+      </div>
+      <div id="productRulesTable">
+        <div style="display:grid;grid-template-columns:2.5fr 1.1fr 1.6fr 2fr .9fr;padding:.5rem .75rem;font-size:.7rem;font-weight:600;color:var(--grey-500);text-transform:uppercase;background:var(--grey-100);border-bottom:1px solid var(--grey-200)">
+          <span>Rule Name</span><span>Category</span><span>Condition</span><span>Regulatory Reference</span><span>Severity</span>
+        </div>
+        ${ruleRows(productRules, true)}
+      </div>
+    </div>` : `
+    <div style="background:var(--grey-50);border:1px dashed var(--grey-300);border-radius:var(--radius-md);padding:1.25rem;text-align:center;color:var(--grey-500);font-size:.85rem">
+      <i class="fas fa-cube" style="margin-right:.4rem"></i> Select a product from the dropdown above to also show its product-specific rules.
+    </div>`}
+  </div>`;
+}
+
+function filterRulesTable(q, tableId) {
+  const lq = q.toLowerCase();
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  table.querySelectorAll('div[style*="grid-template-columns"]').forEach((row, i) => {
+    if (i === 0) return; // skip header
+    row.style.display = (row.textContent.toLowerCase().includes(lq)) ? '' : 'none';
+  });
 }
 
 /* ======================== COMPLIANCE TASKS ======================== */
