@@ -1207,10 +1207,17 @@ const AI_STAGE_ICONS  = ['fa-layer-group','fa-sliders','fa-list-check','fa-sitem
 function resetAiChat(productId) {
   aiThreadId = null; aiProductDraft = null;
   aiCurrentStage = 0; aiProductIdContext = productId || null;
+  // Clear live draft state
+  Object.keys(aiDraftConfig).forEach(k => delete aiDraftConfig[k]);
+  aiDraftRules = []; aiDraftWorkflow = [];
   const log = document.getElementById('ai-chat-log');
   if (log) log.innerHTML = '';
   const bar = document.getElementById('ai-confirm-bar');
   if (bar) bar.style.display = 'none';
+  const draftCard = document.getElementById('ai-draft-card');
+  if (draftCard) draftCard.remove();
+  const strip = document.getElementById('ai-roadmap-strip');
+  if (strip) strip.remove();
   // Reset all stage pills to inactive
   for (let i = 0; i < 6; i++) {
     const pill = document.getElementById('pill-' + i);
@@ -1294,126 +1301,138 @@ function renderRoadmap(activeStage) {
   }).join('');
 }
 
-/* ── dispatchUiEvents ────────────────────────────────────────────────────── *
- * Processes the ui_events array from the AI response.
- * Each event type:
- *   set_tab      → switch product panel to that tab (re-renders HTML)
- *   set_field    → sets a form field by id in the current tab
- *   highlight_field → briefly flashes the field yellow
- *   add_rule     → appends a rule row visually to the eligibility tab
- *   set_workflow → renders workflow nodes in the workflow tab
+/* ── Live draft state — accumulates field values from set_field events ──────
+ * Used in standalone AI Studio to show a live config card (no product panel).
+ * ─────────────────────────────────────────────────────────────────────────*/
+const aiDraftConfig = {};
+let aiDraftRules = [];
+let aiDraftWorkflow = [];
+
+/* ── updateAiDraftCard ───────────────────────────────────────────────────── *
+ * Renders / updates the live configuration card at bottom of AI chat.
+ * Called whenever set_field / add_rule / set_workflow events arrive.
+ * ─────────────────────────────────────────────────────────────────────────*/
+function updateAiDraftCard() {
+  let card = document.getElementById('ai-draft-card');
+  if (!card) {
+    const inputWrapper = document.getElementById('aiInputWrapper');
+    if (!inputWrapper) return;
+    card = document.createElement('div');
+    card.id = 'ai-draft-card';
+    card.style.cssText = 'margin:.35rem 1rem;padding:.65rem .85rem;background:rgba(0,59,92,.55);border:1px solid rgba(53,198,196,.28);border-radius:8px;font-size:.77rem;animation:fadeIn .4s ease';
+    inputWrapper.parentNode.insertBefore(card, inputWrapper);
+  }
+  const cfg = aiDraftConfig;
+  const rCount = aiDraftRules.length;
+  const wCount = aiDraftWorkflow.length;
+  const fr = (label, val, color) => val != null
+    ? `<div style="display:flex;justify-content:space-between;padding:.13rem 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="color:rgba(255,255,255,.42)">${label}</span><span style="color:${color||'rgba(255,255,255,.82)'};font-weight:600">${val}</span></div>` : '';
+  card.innerHTML =
+    `<div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem"><i class="fas fa-file-invoice" style="color:var(--sea-glass);font-size:.78rem"></i><span style="font-weight:700;color:rgba(255,255,255,.88)">Product Draft — Live Preview</span><span style="margin-left:auto;font-size:.63rem;color:rgba(255,255,255,.3)">updates as you configure</span></div>` +
+    fr('Name', cfg.name, 'var(--sea-glass)') +
+    fr('Base rate', cfg.base_rate != null ? cfg.base_rate + '%' : null) +
+    (cfg.green_discount_premium != null ? fr('Gold discount (GSAS≥85)', '\u22120.75\u2009% \u2192 ' + ((cfg.base_rate||5.25)-0.75).toFixed(2) + '%', '#4ade80') : '') +
+    (cfg.green_discount_standard != null ? fr('Silver discount (GSAS 70\u201384)', '\u22120.50\u2009% \u2192 ' + ((cfg.base_rate||5.25)-0.5).toFixed(2) + '%', '#86efac') : '') +
+    fr('Max LTV', cfg.max_ltv != null ? cfg.max_ltv + '%' : null) +
+    fr('Max DBR', cfg.max_dbr != null ? cfg.max_dbr + '%' : null) +
+    fr('Term', cfg.max_term != null ? (cfg.min_term||3) + '\u2013' + cfg.max_term + ' yrs' : null) +
+    fr('Loan amount', cfg.max_amount != null ? 'OMR\u00a0' + Number(cfg.min_amount||25000).toLocaleString() + '\u2013' + Number(cfg.max_amount).toLocaleString() : null) +
+    fr('GSAS minimum', cfg.gsas_min_score != null ? cfg.gsas_min_score + '\u00a0pts' : null) +
+    (rCount > 0 ? `<div style="margin-top:.38rem;color:rgba(255,255,255,.6)"><i class="fas fa-list-check" style="color:var(--sea-glass);margin-right:.3rem"></i><strong style="color:rgba(255,255,255,.85)">${rCount} eligibility rules</strong> generated</div>` : '') +
+    (wCount > 0 ? `<div style="margin-top:.2rem;color:rgba(255,255,255,.6)"><i class="fas fa-sitemap" style="color:var(--sea-glass);margin-right:.3rem"></i><strong style="color:rgba(255,255,255,.85)">${wCount} workflow nodes</strong> configured</div>` : '');
+}
+
+/* ── dispatchUiEvents ─────────────────────────────────────────────────────
+ * Processes ui_events from the AI response.
+ * Works in both product-panel mode (productId set) and standalone mode.
+ * In standalone mode, set_field events update the live draft card in chat.
  * ─────────────────────────────────────────────────────────────────────────*/
 async function dispatchUiEvents(events, productId) {
   if (!events || !events.length) return;
-
-  // Map field name → DOM id in product panel
   const FIELD_MAP = {
-    name:            'pName',
-    description:     'pDesc',
-    base_rate:       'pRate',
-    max_ltv:         'pMaxLtv',
-    max_dbr:         'pMaxDbr',
-    green_dbr:       'pGreenDbr',
-    max_term:        'pMaxTerm',
-    min_term:        'pMinTerm',
-    min_amount:      'pMinAmount',
-    max_amount:      'pMaxAmount',
-    gsas_min_score:  'pGsasMin',
-    gsas_premium_score: 'pGsasPremium',
-    green_discount_standard: 'pGreenDiscStd',
-    green_discount_premium:  'pGreenDiscPrem',
+    name:'pName', description:'pDesc', base_rate:'pRate', max_ltv:'pMaxLtv',
+    max_dbr:'pMaxDbr', green_dbr:'pGreenDbr', max_term:'pMaxTerm', min_term:'pMinTerm',
+    min_amount:'pMinAmount', max_amount:'pMaxAmount', gsas_min_score:'pGsasMin',
+    gsas_premium_score:'pGsasPremium', green_discount_standard:'pGreenDiscStd',
+    green_discount_premium:'pGreenDiscPrem',
   };
-
-  // Helper — flash an element yellow for 1.8s
   function flashField(el) {
     if (!el) return;
-    const orig = el.style.background || '';
-    const origTransition = el.style.transition || '';
-    el.style.transition = 'background .25s';
-    el.style.background = 'rgba(253,224,71,.35)';
-    setTimeout(() => { el.style.background = orig; el.style.transition = origTransition; }, 1800);
+    const orig = el.style.background||'', origT = el.style.transition||'';
+    el.style.transition='background .25s'; el.style.background='rgba(253,224,71,.35)';
+    setTimeout(() => { el.style.background=orig; el.style.transition=origT; }, 1800);
   }
-
+  const targetId = productId || aiProductIdContext;
   for (const ev of events) {
-
-    /* ── set_tab ─────────────────────────────────────────────────────────── */
+    /* set_tab */
     if (ev.type === 'set_tab' && ev.tab) {
-      // Use explicit productId, or fall back to the context product from AI Studio
-      const targetId = productId || aiProductIdContext;
-      if (targetId) {
-        switchProductTab(ev.tab, targetId);
-        // Allow DOM to paint before subsequent set_field / add_rule events
-        await new Promise(r => setTimeout(r, 220));
-      }
+      if (targetId) { switchProductTab(ev.tab, targetId); await new Promise(r => setTimeout(r, 220)); }
       continue;
     }
-
-    /* ── set_field ───────────────────────────────────────────────────────── */
+    /* set_field — always update live draft card; also update product panel if open */
     if (ev.type === 'set_field' && ev.field != null && ev.value != null) {
+      aiDraftConfig[ev.field] = ev.value;
+      updateAiDraftCard();
       const domId = FIELD_MAP[ev.field];
-      if (domId) {
-        const el = document.getElementById(domId);
-        if (el) {
-          el.value = ev.value;
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          flashField(el);
-        }
-      }
+      if (domId) { const el = document.getElementById(domId); if (el) { el.value = ev.value; el.dispatchEvent(new Event('input',{bubbles:true})); flashField(el); } }
       continue;
     }
-
-    /* ── highlight_field ─────────────────────────────────────────────────── */
+    /* highlight_field */
     if (ev.type === 'highlight_field' && ev.field) {
       const domId = FIELD_MAP[ev.field];
       if (domId) flashField(document.getElementById(domId));
       continue;
     }
-
-    /* ── add_rule ────────────────────────────────────────────────────────── */
+    /* add_rule */
     if (ev.type === 'add_rule' && ev.rule) {
       const rule = ev.rule;
-      // Find the rules list container (eligibility tab)
+      aiDraftRules.push(rule);
+      updateAiDraftCard();
       const container = document.getElementById('rulesList');
       if (container) {
         const row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;background:rgba(53,198,196,.07);border:1px solid rgba(53,198,196,.2);border-radius:6px;margin-bottom:.4rem;animation:fadeIn .4s ease';
-        const severityColor = rule.severity === 'hard' ? '#f87171' : rule.severity === 'soft' ? '#fbbf24' : '#60a5fa';
+        row.style.cssText = 'display:flex;align-items:flex-start;gap:.5rem;padding:.55rem .75rem;background:rgba(53,198,196,.07);border:1px solid rgba(53,198,196,.2);border-radius:6px;margin-bottom:.4rem;animation:fadeIn .4s ease';
+        const sc = rule.severity==='hard'?'#f87171':rule.severity==='soft'?'#fbbf24':'#60a5fa';
+        const cc = {creditworthiness:'#60a5fa',esg:'#4ade80',collateral:'#fbbf24',eligibility:'#c084fc'};
         row.innerHTML =
-          '<span style="width:7px;height:7px;border-radius:50%;background:' + severityColor + ';flex-shrink:0"></span>' +
-          '<div style="flex:1;min-width:0">' +
-            '<div style="font-size:.78rem;font-weight:600;color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (rule.name || rule.metric || 'Rule') + '</div>' +
-            '<div style="font-size:.68rem;color:rgba(255,255,255,.4)">' + (rule.regulatory_reference || rule.category || '') + '</div>' +
-          '</div>' +
-          '<span style="font-size:.68rem;background:rgba(53,198,196,.15);color:var(--sea-glass);padding:.15rem .45rem;border-radius:10px;white-space:nowrap">' +
-            (rule.metric || '') + ' ' + (rule.operator || '') + ' ' + (rule.threshold_value ?? '') +
-          '</span>' +
-          (rule.ai_confidence ? '<span style="font-size:.65rem;color:rgba(255,255,255,.35)">AI ' + rule.ai_confidence + '%</span>' : '');
-        // Flash the new row
-        row.style.background = 'rgba(53,198,196,.22)';
-        setTimeout(() => { row.style.background = 'rgba(53,198,196,.07)'; }, 1600);
+          '<span style="width:7px;height:7px;border-radius:50%;background:'+sc+';flex-shrink:0;margin-top:4px"></span>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:.78rem;font-weight:600;color:rgba(255,255,255,.9)">'+(rule.name||rule.metric||'Rule')+'</div>'+
+            '<div style="font-size:.67rem;color:rgba(255,255,255,.38);margin-top:.1rem">'+(rule.regulatory_reference||rule.category||'')+'</div>'+
+            (rule.description?'<div style="font-size:.65rem;color:rgba(255,255,255,.28);margin-top:.12rem">'+rule.description.slice(0,130)+(rule.description.length>130?'\u2026':'')+'</div>':'')+
+          '</div>'+
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:.2rem;flex-shrink:0">'+
+            '<span style="font-size:.68rem;background:rgba(53,198,196,.15);color:var(--sea-glass);padding:.12rem .4rem;border-radius:10px;white-space:nowrap">'+(rule.metric||'')+' '+(rule.operator||'')+' '+(rule.threshold_value??'')+'</span>'+
+            (rule.ai_confidence?'<span style="font-size:.63rem;color:rgba(255,255,255,.3)">AI '+rule.ai_confidence+'%</span>':'')+
+            '<span style="font-size:.62rem;color:'+(cc[rule.category]||'rgba(255,255,255,.3)')+';text-transform:uppercase">'+(rule.category||'')+'</span>'+
+          '</div>';
+        row.style.background='rgba(53,198,196,.22)';
+        setTimeout(()=>{row.style.background='rgba(53,198,196,.07)';},1600);
         container.prepend(row);
       }
       continue;
     }
-
-    /* ── set_workflow ────────────────────────────────────────────────────── */
+    /* set_workflow */
     if (ev.type === 'set_workflow' && Array.isArray(ev.nodes)) {
+      aiDraftWorkflow = ev.nodes;
+      updateAiDraftCard();
       const wfContainer = document.getElementById('workflowCanvas');
       if (wfContainer) {
         wfContainer.innerHTML = ev.nodes.map((n, idx) => {
-          const isEnd = n.type === 'end', isStart = n.type === 'start';
-          const iconMap = { start:'fa-play-circle', end:'fa-flag-checkered', approval:'fa-user-check', task:'fa-cog', decision:'fa-code-branch' };
-          const bg = isStart ? 'rgba(53,198,196,.15)' : isEnd ? 'rgba(22,132,91,.15)' : 'rgba(255,255,255,.06)';
-          const borderColor = isStart ? 'rgba(53,198,196,.4)' : isEnd ? 'rgba(22,132,91,.4)' : 'rgba(255,255,255,.12)';
-          return '<div style="display:flex;align-items:center;gap:0;flex-direction:column">' +
-            (idx > 0 ? '<div style="width:2px;height:14px;background:rgba(255,255,255,.15);margin:0 auto"></div>' : '') +
-            '<div style="padding:.45rem .8rem;border-radius:8px;background:' + bg + ';border:1px solid ' + borderColor + ';font-size:.76rem;width:100%;display:flex;align-items:center;gap:.5rem">' +
-              '<i class="fas ' + (iconMap[n.type] || 'fa-circle') + '" style="font-size:.75rem;color:rgba(255,255,255,.5)"></i>' +
-              '<div style="flex:1">' +
-                '<div style="font-weight:600;color:rgba(255,255,255,.88)">' + (n.label || n.id) + '</div>' +
-                (n.role ? '<div style="font-size:.67rem;color:rgba(255,255,255,.38)">' + n.role.replace(/_/g,' ') + (n.sla_hours ? ' · SLA ' + n.sla_hours + 'h' : '') + (n.auto ? ' · auto' : '') + '</div>' : '') +
-              '</div>' +
-            '</div>' +
+          const isEnd=n.type==='end', isStart=n.type==='start';
+          const im={start:'fa-play-circle',end:'fa-flag-checkered',approval:'fa-user-check',task:'fa-cog',decision:'fa-code-branch'};
+          const bg=isStart?'rgba(53,198,196,.15)':isEnd?'rgba(22,132,91,.15)':n.auto?'rgba(244,179,91,.08)':'rgba(255,255,255,.06)';
+          const bc=isStart?'rgba(53,198,196,.4)':isEnd?'rgba(22,132,91,.4)':n.auto?'rgba(244,179,91,.25)':'rgba(255,255,255,.12)';
+          return '<div style="display:flex;align-items:center;gap:0;flex-direction:column">'+
+            (idx>0?'<div style="width:2px;height:12px;background:rgba(255,255,255,.15);margin:0 auto"></div>':'')+
+            '<div style="padding:.45rem .8rem;border-radius:8px;background:'+bg+';border:1px solid '+bc+';font-size:.76rem;width:100%;display:flex;align-items:flex-start;gap:.5rem">'+
+              '<i class="fas '+(im[n.type]||'fa-circle')+'" style="font-size:.75rem;color:rgba(255,255,255,.5);margin-top:2px"></i>'+
+              '<div style="flex:1">'+
+                '<div style="font-weight:600;color:rgba(255,255,255,.88)">'+(n.label||n.id)+(n.auto?' <span style="font-size:.6rem;background:rgba(244,179,91,.2);color:#fbbf24;padding:.1rem .3rem;border-radius:4px">AUTO</span>':'')+'</div>'+
+                (n.role?'<div style="font-size:.67rem;color:rgba(255,255,255,.38)">'+n.role.replace(/_/g,' ')+(n.sla_hours?' \u00b7 SLA '+n.sla_hours+'h':'')+'</div>':'')+
+                (n.description?'<div style="font-size:.64rem;color:rgba(255,255,255,.28);margin-top:.12rem">'+n.description.slice(0,110)+(n.description.length>110?'\u2026':'')+'</div>':'')+
+              '</div>'+
+            '</div>'+
           '</div>';
         }).join('');
       }
@@ -1422,7 +1441,7 @@ async function dispatchUiEvents(events, productId) {
   }
 }
 
-/* ── sendAiChat ──────────────────────────────────────────────────────────── */
+
 async function sendAiChat(productId) {
   const input = document.getElementById('aiChatInput');
   const msg = input ? input.value.trim() : '';
@@ -1485,12 +1504,12 @@ async function sendAiChat(productId) {
 
     appendChatBubble('assistant', replyHtml);
 
-    // ── Dispatch UI events to main product panel ─────────────────────────
-    // Works for both the product tab (productId set) and standalone panel
-    // (uses aiProductIdContext as fallback — set when product is open behind it)
+    // ── Dispatch UI events — always fire, even in standalone mode ────────
+    // set_field events update the live draft card even without a product panel.
+    // set_tab / add_rule / set_workflow also work when product panel is open.
     const dispatchTarget = productId || aiProductIdContext;
-    if (d.ui_events && d.ui_events.length && dispatchTarget) {
-      setTimeout(() => dispatchUiEvents(d.ui_events, dispatchTarget), 350);
+    if (d.ui_events && d.ui_events.length) {
+      setTimeout(() => dispatchUiEvents(d.ui_events, dispatchTarget || null), 350);
     }
 
     // ── Show confirm bar ──────────────────────────────────────────────────

@@ -39,83 +39,129 @@ app.post('/products/chat', async (c) => {
     "SELECT id, name, code, base_rate, max_ltv, max_dbr, max_term FROM products WHERE status = 'active' ORDER BY name"
   ).all() as any
 
-  const systemPrompt = `You are an AI Product Specialist at Sohar International Bank.
-You help Product Managers create new financial products through a structured 6-stage process driven by free conversation.
-System configured for: jurisdiction Oman, currency OMR, regulator Central Bank of Oman (CBO).
+  const systemPrompt = `You are a Senior Banking Product Architect at Sohar International Bank, Oman.
+You have 20+ years of experience in Islamic and conventional banking product design, CBO regulatory compliance, ESG/green finance, credit risk modelling, and digital banking workflow design.
+You are NOT a generic assistant. You are a domain expert who knows exactly what questions to ask, what parameters matter, and what regulators require.
+System: jurisdiction Oman, currency OMR, regulator Central Bank of Oman (CBO), rating agency: CBUAE Credit Bureau (Oman), ESG standard: OS GSO 3000:2025.
 
-REGULATORY KNOWLEDGE BASE:
+REGULATORY KNOWLEDGE BASE (cite these precisely):
 ${kbContext}
 
-EXISTING PRODUCTS (for cloning):
-${existingProducts.map((p: any) => `- ${p.name} (${p.id}): rate ${p.base_rate}%, LTV ${p.max_ltv}%, DBR ${p.max_dbr}%, term ${p.max_term}yr`).join('\n')}
+EXISTING PRODUCTS IN PORTFOLIO (use real IDs for cloning):
+${existingProducts.map((p: any) => `- ${p.name} (ID: ${p.id}): rate ${p.base_rate}%, LTV ${p.max_ltv}%, DBR ${p.max_dbr}%, term ${p.max_term}yr`).join('\n')}
 
-═══════════════════════════════════════════════════════
-THE 6 STAGES (advance ONE per user confirmation):
-  Stage 1 – Product Model    : archetype, name, clone source
-  Stage 2 – Core Config      : rate, LTV, DBR, term, amounts
-  Stage 3 – Rule Builder     : eligibility + pricing rules (cite CBO regs)
-  Stage 4 – Workflow         : approval nodes, roles, SLA hours
-  Stage 5 – Compliance       : regulatory tags, risk weights, gap analysis
-  Stage 6 – Simulation       : summary, financial projections, publish
-═══════════════════════════════════════════════════════
+══════════════════════════════════════════════════════════════════
+THE 6-STAGE PRODUCT GOVERNANCE PROCESS (PGE):
+  Stage 1 – Product Model       : archetype, name, Islamic vs conventional, clone source, target segment, jurisdiction
+  Stage 2 – Core Configuration  : pricing (rate, DBR, LTV, terms, amounts), green discount tiers, fees, promotional rates
+  Stage 3 – Eligibility Rules   : 10–15 rules covering credit, collateral, ESG, income, nationality, employment
+  Stage 4 – Approval Workflow   : 8–12 nodes with external API integrations (eKYC, credit bureau, property valuation, ESG registry)
+  Stage 5 – Compliance          : CBO regulatory tags, ECAI risk weights, IFRS9 provisioning, gap analysis, AML flags
+  Stage 6 – Simulation          : portfolio modelling, P&L projection, stress test, approval matrix, publish
+══════════════════════════════════════════════════════════════════
 
-ABSOLUTE CONVERSATION RULES — NEVER BREAK THESE:
+CONVERSATION RULES — NON-NEGOTIABLE:
+1. ONE FOCUSED QUESTION PER TURN. End every turn with exactly one "?" on the decision point that actually blocks you from progressing.
+2. ACT AS THE EXPERT. Don't just ask open questions — give specific recommendations with regulatory citations, then ask the user to confirm or modify.
+   BAD: "What interest rate do you want?"
+   GOOD: "For a Green Home Loan targeting GSAS-certified properties, I recommend base rate 5.25% (10 bps below Standard Home Loan to incentivise green adoption), with a tiered green discount: 0.75% off for GSAS Score ≥85 (Gold), 0.5% off for Score 70–84 (Silver). Effective floor rate: 4.5%. CBO Circular 2026-12 §3.1 allows this structure. Shall I apply these pricing tiers, or do you want a different spread?"
+3. ADVANCE STAGES ONLY ON EXPLICIT USER CONFIRMATION ("yes", "ok", "apply", "go ahead", "proceed", "correct", "sounds good", "use that").
+4. WITHIN A STAGE, ask multiple sub-questions if needed before moving on. Don't rush.
+5. EMIT UI EVENTS immediately when you apply configuration (not when you're asking). This updates the live product panel on screen.
+6. product_draft ONLY at stage 6 (ready_to_confirm). Set null for all prior turns.
+7. show_roadmap=true ONLY on Turn 1 when you first identify the product type.
+8. current_stage must ONLY increase, never decrease. Track it carefully.
 
-1. ONE QUESTION PER TURN. Every message must end with exactly one question mark.
-   You acknowledge what the user said, then ask the single next decision point.
-   NEVER proceed to the next stage without the user explicitly confirming.
+STAGE 1 — PRODUCT MODEL (ask these sub-questions in order):
+  1a. Clone or scratch? Name the closest existing product and suggest it as a clone source.
+  1b. Islamic (Murabaha/Diminishing Musharaka) or Conventional?
+  1c. Target segment: Omani nationals only, expats too, or both? Income band (Mass, Affluent >OMR 3,000/mo, HNW)?
+  1d. Product name (suggest one, e.g. "Sohar Green Home Finance – GSAS Premium").
+  Emit set_field for name and description once confirmed.
 
-2. DO NOT FILL IN VALUES YOURSELF. Ask the user. If they say "use defaults" or
-   "yes" or "sounds good", THEN you may apply the values and move to the next stage.
+STAGE 2 — CORE CONFIGURATION (ask these sub-questions in order):
+  2a. Base rate and pricing structure. Give specific recommendation with CBO ceiling reference.
+  2b. ESG-specific discount tiers (if green product): GSAS score bands → rate discounts.
+  2c. LTV bands: standard vs green (CBO allows up to 90% for green). First home vs non-first.
+  2d. DBR: standard 50%, green buffer 55% (CBO Circular 2026-12 §3.2 allows relaxed DBR for green products).
+  2e. Term range (min/max years) and amount range (OMR min/max).
+  2f. Fees: arrangement fee (suggest 1% capped at OMR 500), early settlement penalty (per CBO rules: 1% max).
+  Emit set_field events for each confirmed value.
 
-3. STAGE GATE. You may NOT set current_stage=2 until the user has answered your
-   Stage 1 question. You may NOT set current_stage=3 until they answered Stage 2. Etc.
+STAGE 3 — ELIGIBILITY RULES (for Green Home Loan, generate ALL of these):
+  First ASK: "I'll now generate 14 eligibility rules covering credit, collateral, ESG, income, nationality and employment. For the GSAS minimum — should I use 70 (Silver, minimum eligibility) or 75 (stricter, premium positioning)?"
+  Then on confirmation, emit ALL these rules as add_rule events:
 
-4. product_draft ONLY at stage 6. Set product_draft=null for all turns EXCEPT
-   the final ready_to_confirm turn (stage 6). Never emit a partial product_draft.
+  CREDIT RULES (cite CBO Circular BM/REG/2019/74):
+  R1: DBR ≤ 55% (hard) — "max_dbr" — for loan >OMR 100K
+  R2: DBR ≤ 60% (hard) — "max_dbr" — for loan ≤OMR 100K  
+  R3: Credit Score ≥ 620 (hard) — "credit_score" — Oman Credit Bureau minimum
+  R4: No active defaults in 24 months (hard) — "default_history"
+  R5: Maximum 3 active credit facilities (soft) — "active_facilities"
 
-5. show_roadmap=true ONLY on the FIRST reply when you identify the product type.
-   Keep show_roadmap=false for all subsequent turns.
+  COLLATERAL RULES (cite CBO Circular BM/REG/2019/74):
+  R6: LTV ≤ 90% (hard) — "LTV" — first home; ≤80% subsequent
+  R7: Property valuation by CBO-approved valuator (hard) — "valuation_approved"
+  R8: Title deed must be freehold or 99-year leasehold (hard) — "title_type"
+  R9: Property location: Integrated Tourism Circuit (ITC) or Omani ownership zones (hard) — "property_zone"
 
-STAGE-BY-STAGE QUESTION GUIDE (follow this order exactly):
+  ESG RULES (cite OS GSO 3000:2025 and CBO Circular 2026-12):
+  R10: GSAS Score ≥ [user-confirmed threshold] (hard) — "gsas_score"
+  R11: EPC Rating ≥ C (hard) — "epc_rating" — OEESC minimum
+  R12: GSAS Certificate issued by GORD, valid ≥90 days (hard) — "gsas_cert_valid"
+  R13: EIA clearance from Environment Authority (hard for projects >20 units) — "eia_approval"
+  R14: ESG document set complete: GSAS cert + EPC report + EIA approval (hard) — "esg_docs_complete"
 
-  After intent identified → Stage 1 question:
-    "Would you like to clone from [existing product] as a starting point, or configure from scratch?"
+  INCOME/EMPLOYMENT RULES:
+  R15: Minimum net monthly income OMR 800 (hard) — "net_income"
+  R16: Employment: minimum 6 months at current employer (soft) — "employment_tenure"
+  R17: Omani nationals: no restriction. Expats: valid residency ≥ 1 year remaining (hard) — "residency_valid"
 
-  After Stage 1 answer → Stage 2 question:
-    "The cloned defaults are: rate X%, LTV Y%, DBR Z%, term N years.
-     Would you like to keep these, or change any of them?"
+STAGE 4 — WORKFLOW (for Green Home Loan, generate all these nodes):
+  First ASK: "I'll configure a 10-step approval workflow integrating 4 external data sources. Estimated processing time: 3–5 working days. Should I use automated processing for the first 4 steps (eKYC, credit check, document OCR, property lookup), or do you want more human touchpoints?"
+  Then on confirmation, set_workflow with these nodes:
 
-  After Stage 2 answer → Stage 3 question:
-    "I'll generate the eligibility rules now. For a green product, the minimum GSAS
-     score per OS GSO 3000:2025 is 70. Should I use 70, or a different threshold?"
+  N1 (start): "Application Submitted via Portal / Branch"
+  N2 (task, auto=true, sla_hours=1, role=system): "eKYC & Identity Verification" — desc: "Calls National Centre for Information [NCI] eKYC API to verify Civil ID biometrics. AML screening via WorldCheck/Refinitiv. Result: identity_verified=true/false."
+  N3 (task, auto=true, sla_hours=4, role=system): "CBO Credit Bureau Check" — desc: "Calls Oman Credit Bureau API. Retrieves credit score, active facilities count, default history. Auto-rejects if score <620 or default in 24 months."
+  N4 (task, auto=true, sla_hours=2, role=system): "Document OCR & Extraction" — desc: "AI OCR extracts fields from: salary cert, civil ID, GSAS certificate, EPC report, EIA approval. Validates formats against product schema."
+  N5 (task, auto=true, sla_hours=8, role=system): "GSAS Registry Verification" — desc: "Calls GORD (Gulf Organisation for Research & Development) GSAS API. Validates certificate number, issuer, score, rating, expiry. Confirms property matches submitted certificate."
+  N6 (task, auto=true, sla_hours=4, role=system): "Property Valuation & Title Check" — desc: "Integrates with approved valuation firms API (Al Mashora, JLL Oman) for drive-by or desktop valuation. Calls Muscat Municipality / MRMEWR for title deed verification. Confirms ITC/ownership zone eligibility."
+  N7 (approval, sla_hours=24, role=credit_analyst): "Credit Underwriting" — desc: "Credit analyst reviews full application: income verification vs salary cert, DBR calculation, stress test at +2% rate, LTV confirmation. Uses bank's internal credit scoring model."
+  N8 (approval, sla_hours=24, role=green_finance_officer): "ESG Compliance Review" — desc: "Dedicated Green Finance Officer validates: GSAS score vs product threshold, EPC rating band (A/B/C), EIA coverage matches property units, approved materials list for construction-stage disbursement. Determines discount tier (0.75% or 0.5%)."
+  N9 (approval, sla_hours=48, role=risk_officer): "Risk & Compliance Approval" — desc: "Risk Officer signs off: concentration risk check, IFRS9 staging (Stage 1 expected), regulatory capital adequacy (risk weight 75%), AML/CFT secondary review."
+  N10 (approval, sla_hours=24, role=product_manager): "Product Manager Final Approval" — desc: "PM confirms product terms match approved configuration. Validates green discount applied correctly. Issues Letter of Offer."
+  N11 (end): "Decision & Letter of Offer Issued"
 
-  After Stage 3 answer → Stage 4 question:
-    "I've added [N] rules to the Eligibility tab. For the approval workflow, I
-     recommend: KYC/AML (auto) → Green Cert Validation (auto) → Underwriting →
-     Compliance Review → Final Approval. Shall I apply this pipeline?"
+STAGE 5 — COMPLIANCE (ask then apply):
+  First ASK: "For compliance classification: I recommend tagging this as Basel III risk weight 75% (residential retail mortgage, LTV ≤90%), IFRS9 Stage 1 provisioning at 1.5% (higher than standard 1.0% due to ESG concentration), and CBO green finance classification. The AML risk score is LOW given eKYC + credit bureau auto-verification. Shall I apply these parameters?"
+  Then emit ui_events set_field for:
+  - risk_weight: 75%
+  - provisioning_rate: 1.5%
+  - regulatory_tags: ["#CLIMATE_RISK", "#ESG_ELIGIBILITY", "#GREEN_FINANCING", "#OMAN_VISION_2040"]
+  - aml_risk: "LOW"
+  - cbo_classification: "GREEN_FINANCE"
+  - capital_treatment: "RETAIL_RESIDENTIAL_MORTGAGE"
 
-  After Stage 4 answer → Stage 5 question:
-    "Workflow is set. For compliance, I recommend tags: #CLIMATE_RISK,
-     #ESG_ELIGIBILITY, #GREEN_FINANCING · Risk weight 75% · Provisioning 1.5%.
-     Shall I apply these?"
+STAGE 6 — SIMULATION (this turn: emit full product_draft + rules_draft + schema_draft):
+  Provide real portfolio projections:
+  - Portfolio target: 500 accounts, OMR 150M in first 24 months
+  - Revenue model: NIM ~1.8% on green rate (vs 2.2% standard), offset by 0.4% lower provisioning + 10 bps CBO green capital relief
+  - Stress test: portfolio performs at 100% pass rate if rates increase by 200 bps (DBR ≤55% built-in buffer)
+  - Break-even: month 14 after launch
+  - CBO reporting: monthly ESG portfolio report under Circular 2026-12 §7
 
-  After Stage 5 answer → Stage 6 (ready_to_confirm):
-    Emit full summary in message, set action=ready_to_confirm, include product_draft,
-    rules_draft, schema_draft. Message ends with:
-    "Ready to publish — click Confirm & Publish to make it live."
-
-UI EVENTS — emit when you actually apply something (not when you're asking):
+UI EVENTS — emit immediately when you apply something:
 - { type: "set_tab", tab: "general"|"pricing"|"eligibility"|"workflow"|"ai_config" }
-- { type: "set_field", field: "name"|"description"|"base_rate"|"max_ltv"|"max_dbr"|"max_term"|"min_amount"|"max_amount", value: any }
+- { type: "set_field", field: "name"|"description"|"base_rate"|"max_ltv"|"max_dbr"|"max_term"|"min_amount"|"max_amount"|"gsas_min_score"|"gsas_premium_score"|"green_discount_premium"|"green_discount_standard", value: any }
 - { type: "add_rule", rule: { name, category, metric, operator, threshold_value, severity, regulatory_reference, ai_confidence, description } }
-- { type: "set_workflow", nodes: [{id,type,label,role,sla_hours,auto}] }
+- { type: "set_workflow", nodes: [{id, type, label, role, sla_hours, auto, description}] }
 - { type: "highlight_field", field: string }
 
-RESPONSE FORMAT — output ONLY valid JSON, no markdown, no code fences:
+RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 {
-  "message": "Your reply here — must end with a question (?) unless action=ready_to_confirm",
-  "current_stage": 0-6,
+  "message": "Expert reply with specifics, recommendations, regulatory citations — ends with one focused question (?)",
+  "current_stage": 1,
   "show_roadmap": false,
   "action": "none",
   "ui_events": [],
@@ -705,151 +751,303 @@ function getDemoReport(apps: any[]) {
 
 function getFallbackChatResponse(message: string, msgCount: number, allMessages?: any[]): any {
   const lower = message.toLowerCase()
-  const isGreen = lower.includes('green') || lower.includes('gsas') || lower.includes('esg') || lower.includes('sustainable') || lower.includes('eco') || lower.includes('energy')
-  const isAuto  = lower.includes('auto') || lower.includes('car') || lower.includes('vehicle')
-  const isPersonal = lower.includes('personal') || lower.includes('unsecured') || lower.includes('consumer')
-  const isSme  = lower.includes('sme') || lower.includes('business') || lower.includes('working capital')
-  const isYes  = lower.includes('yes') || lower.includes('ok') || lower.includes('proceed') || lower.includes('confirm') || lower.includes('clone') || lower.includes('standard') || lower.includes('agree') || lower.includes('sounds good') || lower.includes('go ahead') || lower.includes('correct') || lower.includes('apply') || lower.includes('sure') || lower.includes('fine') || lower.includes('good') || lower.includes('perfect') || lower.includes('great')
+  const isYes = lower.includes('yes') || lower.includes('ok') || lower.includes('proceed') || lower.includes('confirm')
+    || lower.includes('clone') || lower.includes('standard') || lower.includes('agree') || lower.includes('sounds good')
+    || lower.includes('go ahead') || lower.includes('correct') || lower.includes('apply') || lower.includes('sure')
+    || lower.includes('fine') || lower.includes('good') || lower.includes('perfect') || lower.includes('great')
+    || lower.includes('continue') || lower.includes('use') || lower.includes('keep') || lower.includes('proceed')
 
-  // ── Derive conversation state from message history ────────────────────────
-  // We look at which stage questions have been asked in prior assistant turns
-  // to know where we are — not just msgCount.
+  // ── Derive conversation state from full message history ───────────────────
   const history = allMessages || []
   const assistantMsgs = history.filter((m: any) => m.role === 'assistant').map((m: any) => (m.content || '').toLowerCase())
-  const hasAskedStage1  = assistantMsgs.some(m => m.includes('stage 1') || m.includes('product model') || m.includes('clone') || m.includes('start fresh'))
-  const hasAskedStage2  = assistantMsgs.some(m => m.includes('stage 2') || m.includes('core config') || m.includes('base rate') || m.includes('dbr buffer') || m.includes('ltv'))
-  const hasAskedStage3  = assistantMsgs.some(m => m.includes('stage 3') || m.includes('rule builder') || m.includes('gsas') || m.includes('eligibility rule'))
-  const hasAskedStage4  = assistantMsgs.some(m => m.includes('stage 4') || m.includes('workflow') || m.includes('approval pipeline'))
-  const hasAskedStage5  = assistantMsgs.some(m => m.includes('stage 5') || m.includes('compliance') || m.includes('risk weight') || m.includes('regulatory tag'))
-  const hasAskedConfirm = assistantMsgs.some(m => m.includes('stage 6') || m.includes('confirm') || m.includes('ready to publish') || m.includes('all 6 stages'))
+  const hasAskedStage1  = assistantMsgs.some(m => m.includes('clone') || m.includes('from scratch') || m.includes('product model') || m.includes('stage 1'))
+  const hasAskedStage1b = assistantMsgs.some(m => m.includes('islamic') || m.includes('murabaha') || m.includes('conventional') || m.includes('structure'))
+  const hasAskedStage1c = assistantMsgs.some(m => m.includes('target segment') || m.includes('omani nationals') || m.includes('expat') || m.includes('income band'))
+  const hasAskedStage1d = assistantMsgs.some(m => m.includes('product name') || m.includes('sohar green') || m.includes('confirm the name'))
+  const hasAskedStage2  = assistantMsgs.some(m => m.includes('base rate') || m.includes('pricing structure') || m.includes('stage 2') || m.includes('5.25%'))
+  const hasAskedStage2b = assistantMsgs.some(m => m.includes('discount tier') || m.includes('green discount') || m.includes('gsas score band'))
+  const hasAskedStage2c = assistantMsgs.some(m => m.includes('ltv band') || m.includes('loan-to-value') || m.includes('first home'))
+  const hasAskedStage2d = assistantMsgs.some(m => m.includes('dbr') && (m.includes('55%') || m.includes('stage 2') || m.includes('debt burden')))
+  const hasAskedStage2e = assistantMsgs.some(m => m.includes('term range') || m.includes('amount range') || m.includes('omr 10,000') || m.includes('min/max'))
+  const hasAskedStage2f = assistantMsgs.some(m => m.includes('arrangement fee') || m.includes('early settlement') || m.includes('fee'))
+  const hasAskedStage3  = assistantMsgs.some(m => m.includes('14 eligibility') || m.includes('eligibility rules') || m.includes('gsas minimum') || m.includes('stage 3'))
+  const hasAskedStage4  = assistantMsgs.some(m => m.includes('10-step') || m.includes('ekyc') || m.includes('workflow') || m.includes('stage 4'))
+  const hasAskedStage5  = assistantMsgs.some(m => m.includes('compliance classification') || m.includes('risk weight') || m.includes('provisioning') || m.includes('stage 5'))
+  const hasAskedConfirm = assistantMsgs.some(m => m.includes('ready to publish') || m.includes('confirm & publish') || m.includes('stage 6'))
 
-  // Detect product type from entire conversation, not just latest message
-  const fullContext = history.map((m: any) => m.content || '').join(' ').toLowerCase()
+  // Product type detection from full conversation context
+  const fullContext = [...history.map((m: any) => m.content || ''), message].join(' ').toLowerCase()
   const ctxGreen    = fullContext.includes('green') || fullContext.includes('gsas') || fullContext.includes('esg') || fullContext.includes('sustainable')
   const ctxAuto     = !ctxGreen && (fullContext.includes('auto') || fullContext.includes('car') || fullContext.includes('vehicle'))
   const ctxPersonal = !ctxGreen && !ctxAuto && (fullContext.includes('personal') || fullContext.includes('unsecured') || fullContext.includes('consumer'))
   const ctxSme      = !ctxGreen && !ctxAuto && !ctxPersonal && (fullContext.includes('sme') || fullContext.includes('business') || fullContext.includes('working capital'))
 
-  // Product display name for context
-  const productLabel = ctxGreen ? 'Green Home Loan – ESG' : ctxAuto ? 'Auto Finance' : ctxPersonal ? 'Personal Loan' : ctxSme ? 'SME Finance' : 'Home Loan'
-  const cloneFrom    = ctxGreen || (!ctxAuto && !ctxPersonal && !ctxSme) ? 'Standard Home Loan' : ctxAuto ? 'Auto Finance – Personal' : ctxPersonal ? 'Personal Loan' : 'SME Working Capital'
+  // Parse numeric values from user message
+  const gsasFromMsg = (() => { const m = lower.match(/\b(7[0-9]|80|85|90)\b/); return m ? parseInt(m[1]) : 70 })()
 
-  // ── TURN 0: No prior context — ask for product type ───────────────────────
-  if (!isGreen && !isAuto && !isPersonal && !isSme && !hasAskedStage1) {
+  const productLabel = ctxGreen ? 'Sohar Green Home Finance – GSAS' : ctxAuto ? 'Auto Finance' : ctxPersonal ? 'Personal Finance' : ctxSme ? 'SME Working Capital' : 'Home Finance'
+
+  // ── No prior context — ask for product type ───────────────────────────────
+  if (!hasAskedStage1 && !ctxGreen && !ctxAuto && !ctxPersonal && !ctxSme) {
     return {
-      message: "I can help you create a new regulated banking product from scratch. I'll guide you through all 6 configuration stages step by step.<br><br>" +
-        "To get started — <strong>what type of product would you like to create?</strong><br><br>" +
-        "• 🏠 <strong>Home Loan</strong> (standard or green/ESG)<br>" +
-        "• 🚗 <strong>Auto Finance</strong><br>" +
-        "• 💳 <strong>Personal Loan</strong><br>" +
-        "• 🏢 <strong>SME Finance</strong><br>" +
-        "• 🎓 <strong>Education Finance</strong><br>" +
-        "• 🏗️ <strong>Commercial Real Estate</strong>",
+      message: "I can help you create a new fully-regulated banking product from scratch — I'll guide you through all 6 stages, ask the right expert questions, and automatically populate the configuration on screen.<br><br>" +
+        "<strong>What type of product would you like to create?</strong><br><br>" +
+        "🏠 <strong>Green Home Loan</strong> (GSAS/ESG-certified mortgages)<br>" +
+        "🏠 <strong>Standard Home Loan</strong> (conventional or Islamic Murabaha)<br>" +
+        "🚗 <strong>Auto Finance</strong> (personal or fleet)<br>" +
+        "💳 <strong>Personal Finance</strong> (salary-backed unsecured)<br>" +
+        "🏢 <strong>SME Finance</strong> (working capital, equipment, trade)<br>" +
+        "🎓 <strong>Education Finance</strong><br>" +
+        "🏗️ <strong>Commercial Real Estate</strong>",
       current_stage: 0, show_roadmap: false, action: 'none', ui_events: [], product_draft: null, rules_draft: null, schema_draft: null,
     }
   }
 
-  // ── TURN 1: Product type identified — ask Stage 1 question ───────────────
+  // ── STAGE 1a: Product type identified — Clone or scratch? ────────────────
   if (!hasAskedStage1) {
-    const q = ctxGreen
-      ? "Great — a <strong>Green Home Loan</strong> with ESG / GSAS certification criteria. Our system is set up for <strong>Oman · CBO · OMR</strong>.<br><br>I've opened the 6-stage roadmap below.<br><br><strong>Stage 1 — Product Model:</strong> Would you like to clone from the existing <em>Standard Home Loan</em> (5.5% base, 90% LTV) as a starting point, or configure everything from scratch?"
-      : ctxAuto
-      ? "Got it — an <strong>Auto Finance</strong> product. Our system is configured for <strong>Oman · CBO · OMR</strong>.<br><br><strong>Stage 1 — Product Model:</strong> Should we clone from <em>Auto Finance – Personal</em>, or start fresh? And should it be conventional or Islamic (Murabaha) structure?"
-      : ctxPersonal
-      ? "Understood — a <strong>Personal Loan</strong> product for <strong>Oman · CBO · OMR</strong>.<br><br><strong>Stage 1 — Product Model:</strong> Should we clone from the existing <em>Personal Loan</em>? And who is the target segment — salaried employees, self-employed, or both?"
-      : ctxSme
-      ? "Understood — an <strong>SME Finance</strong> product for <strong>Oman · CBO · OMR</strong>.<br><br><strong>Stage 1 — Product Model:</strong> Should we clone from <em>SME Working Capital</em>? Any specific sector focus or collateral type I should know about?"
-      : "Understood. Let me set up the product for <strong>Oman · CBO · OMR</strong>.<br><br><strong>Stage 1 — Product Model:</strong> Should we clone from an existing product, or start from scratch? If cloning, which product should we use as a base?"
+    const cloneProduct = ctxGreen ? 'Standard Home Loan (5.5% base, LTV 90%, DBR 60%, term 25yr)'
+      : ctxAuto ? 'Auto Finance – Personal (6.5% base, LTV 80%, DBR 55%)'
+      : ctxPersonal ? 'Personal Finance (8.5% base, DBR 45%)'
+      : ctxSme ? 'SME Working Capital (7.0% base, DBR 50%)'
+      : 'Standard Home Loan'
     return {
-      message: q,
+      message: ctxGreen
+        ? `Excellent choice. A <strong>Green Home Loan linked to GSAS certification</strong> is a strategically important product — it aligns with CBO Circular 2026-12 on green finance and Oman Vision 2040 sustainability targets.<br><br>` +
+          `<strong>Stage 1 — Product Model</strong><br><br>` +
+          `The closest base is our existing <em>${cloneProduct}</em>. We'd inherit the core credit parameters and then layer on ESG-specific attributes (GSAS score bands, green discounts, ESG document requirements).<br><br>` +
+          `<strong>Would you like to clone from Standard Home Loan as a starting point, or configure everything from scratch?</strong>`
+        : `Good. I'll help configure this as a CBO-compliant <strong>${productLabel}</strong> for the Omani market.<br><br>` +
+          `<strong>Stage 1 — Product Model</strong><br><br>` +
+          `Closest existing product: <em>${cloneProduct}</em>.<br><br>` +
+          `<strong>Shall we clone from this as a base?</strong>`,
       current_stage: 1, show_roadmap: true, action: 'none', ui_events: [], product_draft: null, rules_draft: null, schema_draft: null,
     }
   }
 
-  // ── STAGE 1 answered — move to Stage 2 ───────────────────────────────────
-  if (hasAskedStage1 && !hasAskedStage2) {
-    const cloning = isYes || lower.includes('clone') || lower.includes('base') || lower.includes('standard') || lower.includes('existing')
-    const fromScratch = lower.includes('scratch') || lower.includes('fresh') || lower.includes('new') || lower.includes('blank')
-    const approach = fromScratch ? 'configured from scratch' : `cloned from <em>${cloneFrom}</em>`
-    const defaultRate = ctxGreen ? '5.5' : ctxAuto ? '6.5' : ctxPersonal ? '8.5' : '7.0'
-    const defaultLtv  = ctxGreen ? '90' : ctxAuto ? '80' : ctxPersonal ? 'N/A' : '70'
-    const defaultDbr  = ctxGreen ? '60' : ctxAuto ? '55' : ctxPersonal ? '45' : '50'
-    const defaultTerm = ctxGreen ? '25 years' : ctxAuto ? '5 years' : ctxPersonal ? '5 years' : '7 years'
+  // ── STAGE 1b: Islamic or Conventional? ───────────────────────────────────
+  if (hasAskedStage1 && !hasAskedStage1b) {
+    const cloningFrom = isYes || lower.includes('clone') || lower.includes('standard') ? 'Standard Home Loan (p001)' : 'scratch'
     return {
-      message: `✅ <strong>Stage 1 done.</strong> Product model set — ${approach}, type: <strong>${productLabel}</strong>.<br><br>` +
-        `<strong>Stage 2 — Core Configuration:</strong> Here are the suggested defaults based on your product type:<br>` +
-        `&bull; Base rate: <strong>${defaultRate}%</strong><br>` +
-        `&bull; Max LTV: <strong>${defaultLtv}%</strong><br>` +
-        `&bull; Max DBR: <strong>${defaultDbr}%</strong><br>` +
-        `&bull; Max term: <strong>${defaultTerm}</strong><br><br>` +
-        (ctxGreen ? `CBO Circular 2026-12 recommends a <strong>5% DBR buffer</strong> for green products (reducing max DBR to 55%). ` : '') +
-        `Would you like to use these defaults, or do you want to adjust any of them?`,
+      message: `Noted — ${lower.includes('scratch') ? 'configuring from scratch' : `cloning from <em>Standard Home Loan</em>`}.<br><br>` +
+        `<strong>Financing structure:</strong> Should this product be:<br><br>` +
+        `&bull; <strong>Conventional</strong> — standard interest-bearing mortgage (most of our existing portfolio)<br>` +
+        `&bull; <strong>Islamic – Diminishing Musharaka</strong> — co-ownership with declining bank share; more complex to configure but growing demand (especially for Omani nationals)<br>` +
+        `&bull; <strong>Islamic – Murabaha</strong> — cost-plus financing, simpler structure<br><br>` +
+        `Most of our green home loan applicants are conventional at this stage. <strong>Which structure should this product use?</strong>`,
+      current_stage: 1, show_roadmap: false, action: 'none', ui_events: [], product_draft: null, rules_draft: null, schema_draft: null,
+    }
+  }
+
+  // ── STAGE 1c: Target segment ──────────────────────────────────────────────
+  if (hasAskedStage1 && hasAskedStage1b && !hasAskedStage1c) {
+    const structure = lower.includes('islamic') || lower.includes('musharaka') || lower.includes('murabaha') ? 'Islamic' : 'Conventional'
+    return {
+      message: `${structure} structure — confirmed.<br><br>` +
+        `<strong>Target customer segment:</strong><br><br>` +
+        `&bull; <strong>Omani Nationals only</strong> — higher LTV permitted (up to 90%), eligible for government salary-backed schemes<br>` +
+        `&bull; <strong>Expats included</strong> — residency ≥1 year remaining required; max LTV typically 80% for expats; GSAS requirement still applies<br>` +
+        `&bull; <strong>Both, with tiered terms</strong> — different LTV and income thresholds per nationality<br><br>` +
+        `Income band target:<br>` +
+        `&bull; <strong>Mass market</strong> (OMR 800–2,000/mo net) — larger volume, stricter DBR management<br>` +
+        `&bull; <strong>Affluent</strong> (OMR 2,000–5,000/mo) — preferred for green premium tier<br>` +
+        `&bull; <strong>Both</strong><br><br>` +
+        `<strong>Who is the primary target — nationals only or both, and what income segment?</strong>`,
+      current_stage: 1, show_roadmap: false, action: 'none', ui_events: [], product_draft: null, rules_draft: null, schema_draft: null,
+    }
+  }
+
+  // ── STAGE 1d: Product name confirmation ──────────────────────────────────
+  if (hasAskedStage1 && hasAskedStage1b && hasAskedStage1c && !hasAskedStage1d) {
+    const bothSegs = lower.includes('both') || lower.includes('all')
+    const nationalsOnly = lower.includes('national') && !lower.includes('both')
+    const affluent = lower.includes('affluent') || lower.includes('2,000') || lower.includes('2000')
+    const suggestedName = ctxGreen
+      ? (affluent ? 'Sohar Green Home Finance – GSAS Premium' : 'Sohar Green Home Finance – GSAS')
+      : `${productLabel}`
+    return {
+      message: `Segment noted — ${nationalsOnly ? 'Omani nationals' : 'nationals and expats'}, ${affluent ? 'affluent tier (OMR 2K+)' : 'mass and affluent'}.<br><br>` +
+        `For the product name, I suggest: <strong>"${suggestedName}"</strong><br><br>` +
+        `This follows our naming convention: Bank · Product Type · Variant. The GSAS suffix signals the ESG positioning immediately to customers and regulators.<br><br>` +
+        `<strong>Shall I use "${suggestedName}", or do you have a different name in mind?</strong>`,
+      current_stage: 1, show_roadmap: false, action: 'none', ui_events: [], product_draft: null, rules_draft: null, schema_draft: null,
+    }
+  }
+
+  // ── STAGE 2a: Base rate and pricing ──────────────────────────────────────
+  if (hasAskedStage1d && !hasAskedStage2) {
+    const nameConfirmed = isYes ? 'Sohar Green Home Finance – GSAS' : (message.length > 3 && message.length < 80 ? message.trim() : 'Sohar Green Home Finance – GSAS')
+    return {
+      message: `✅ <strong>Stage 1 complete.</strong> Product model defined — "${nameConfirmed}", conventional, cloned from Standard Home Loan.<br><br>` +
+        `<strong>Stage 2 — Core Configuration</strong><br><br>` +
+        `<strong>Pricing structure recommendation:</strong><br><br>` +
+        `Base rate: <strong>5.25%</strong> per annum (10 bps below Standard Home Loan at 5.35%) — a modest incentive for green adoption without significant NIM compression.<br><br>` +
+        `CBO Circular 2026-12 §3.1 permits preferential pricing for green-certified products. Our current cost of funds is ~3.8%, giving a spread of ~1.45% — acceptable for this asset class.<br><br>` +
+        `<strong>Shall I set the base rate at 5.25%, or would you like to adjust it?</strong>`,
       current_stage: 2, show_roadmap: false, action: 'none',
       ui_events: [
         { type: 'set_tab', tab: 'general' },
-        { type: 'set_field', field: 'name', value: productLabel },
-        { type: 'set_field', field: 'description', value: ctxGreen
-          ? 'Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on your property\'s sustainability score.'
-          : `${productLabel} — configured for CBO regulatory compliance in Oman.` },
+        { type: 'set_field', field: 'name', value: nameConfirmed },
+        { type: 'set_field', field: 'description', value: 'Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on sustainability score. Supports Oman Vision 2040 and CBO green finance objectives.' },
         { type: 'highlight_field', field: 'name' },
       ],
       product_draft: null, rules_draft: null, schema_draft: null,
     }
   }
 
-  // ── STAGE 2 answered — move to Stage 3 ───────────────────────────────────
-  if (hasAskedStage2 && !hasAskedStage3) {
-    // Parse any custom values from user message
-    const rateMatch  = lower.match(/(\d+(?:\.\d+)?)\s*%?\s*(?:rate|interest)/)
-    const ltvMatch   = lower.match(/ltv\s*(?:of\s*)?(\d+)/)
-    const dbrMatch   = lower.match(/dbr\s*(?:of\s*)?(\d+)/)
-    const rate  = rateMatch  ? parseFloat(rateMatch[1])  : ctxGreen ? 5.5 : ctxAuto ? 6.5 : ctxPersonal ? 8.5 : 7.0
-    const ltv   = ltvMatch   ? parseInt(ltvMatch[1])     : ctxGreen ? 90  : ctxAuto ? 80  : ctxPersonal ? 0   : 70
-    const dbr   = dbrMatch   ? parseInt(dbrMatch[1])     : ctxGreen ? 55  : ctxAuto ? 55  : ctxPersonal ? 45  : 50
-    const term  = ctxGreen ? 25 : ctxAuto ? 5 : ctxPersonal ? 5 : 7
+  // ── STAGE 2b: Green discount tiers ───────────────────────────────────────
+  if (hasAskedStage2 && !hasAskedStage2b && ctxGreen) {
     return {
-      message: `✅ <strong>Stage 2 done.</strong> Core parameters set:<br>` +
-        `&bull; Base rate: <strong>${rate}%</strong><br>` +
-        `&bull; Max LTV: <strong>${ltv > 0 ? ltv + '%' : 'N/A (unsecured)'}</strong><br>` +
-        `&bull; Max DBR: <strong>${dbr}%</strong><br>` +
-        `&bull; Max term: <strong>${term} years</strong><br>` +
-        `&bull; Amount: <strong>OMR 10,000 – 500,000</strong><br><br>` +
-        `<strong>Stage 3 — Rule Builder:</strong> I'll now generate the eligibility rules from CBO regulations.<br><br>` +
-        (ctxGreen
-          ? `The rules I plan to add are:<br>1. GSAS Score ≥ <strong>70</strong> (minimum eligibility) — OS GSO 3000:2025<br>2. Green DBR ≤ <strong>55%</strong> — CBO Circular 2026-12<br>3. LTV ≤ <strong>90%</strong> — CBO BM/REG/2019/74<br>4. ESG document set mandatory (GSAS cert + EPC + EIA)<br><br>Should I use 70 as the GSAS minimum, or would you like a different threshold?`
-          : `For this product type, standard rules include: max DBR enforcement, LTV cap, income verification, and CRB check. Should I generate these now? Any custom rules to add?`),
-      current_stage: 3, show_roadmap: false, action: 'none',
+      message: `Base rate set at 5.25%. Confirmed.<br><br>` +
+        `<strong>ESG Green Discount tiers</strong> — this is what differentiates a real green product from a standard one:<br><br>` +
+        `&bull; <strong>GSAS Score ≥ 85 (Gold/Platinum)</strong> → −0.75% discount → effective rate <strong>4.50%</strong><br>` +
+        `&bull; <strong>GSAS Score 70–84 (Silver)</strong> → −0.50% discount → effective rate <strong>4.75%</strong><br>` +
+        `&bull; <strong>GSAS Score &lt; 70</strong> → <span style="color:#f87171">NOT eligible</span> (product requires minimum Silver certification)<br><br>` +
+        `These tiers incentivise customers to choose higher-rated green properties. Oman's GORD (Gulf Organisation for Research & Development) manages GSAS ratings under OS GSO 3000:2025.<br><br>` +
+        `<strong>Should I apply these discount tiers, or do you want different GSAS score thresholds or discount spreads?</strong>`,
+      current_stage: 2, show_roadmap: false, action: 'none',
       ui_events: [
         { type: 'set_tab', tab: 'pricing' },
-        { type: 'set_field', field: 'base_rate', value: rate },
-        { type: 'set_field', field: 'max_ltv', value: ltv },
-        { type: 'set_field', field: 'max_dbr', value: dbr },
-        { type: 'set_field', field: 'max_term', value: term },
+        { type: 'set_field', field: 'base_rate', value: 5.25 },
         { type: 'highlight_field', field: 'base_rate' },
       ],
       product_draft: null, rules_draft: null, schema_draft: null,
     }
   }
 
-  // ── STAGE 3 answered — move to Stage 4 ───────────────────────────────────
+  // ── STAGE 2c: LTV bands ───────────────────────────────────────────────────
+  if ((hasAskedStage2b || (hasAskedStage2 && !ctxGreen)) && !hasAskedStage2c) {
+    return {
+      message: `Green discount tiers confirmed — 0.75% for Gold/Platinum (≥85), 0.5% for Silver (70–84).<br><br>` +
+        `<strong>Loan-to-Value (LTV) bands:</strong><br><br>` +
+        `Under CBO Circular BM/REG/2019/74, residential mortgages are capped at:<br>` +
+        `&bull; <strong>First home purchase</strong>: up to <strong>90% LTV</strong><br>` +
+        `&bull; <strong>Second/subsequent property</strong>: up to <strong>80% LTV</strong><br>` +
+        `&bull; <strong>Expat customers</strong>: max <strong>80% LTV</strong> regardless of purchase number<br><br>` +
+        `For a green home loan, I recommend keeping the CBO maximum (90% for first home, 80% otherwise) — the GSAS certification already provides quality collateral assurance through certified construction standards.<br><br>` +
+        `<strong>Shall I configure LTV at 90% (first home) / 80% (subsequent/expat), or do you want stricter limits?</strong>`,
+      current_stage: 2, show_roadmap: false, action: 'none',
+      ui_events: [
+        { type: 'set_field', field: 'gsas_min_score', value: 70 },
+        { type: 'set_field', field: 'gsas_premium_score', value: 85 },
+        { type: 'set_field', field: 'green_discount_premium', value: 0.75 },
+        { type: 'set_field', field: 'green_discount_standard', value: 0.5 },
+        { type: 'highlight_field', field: 'green_discount_premium' },
+      ],
+      product_draft: null, rules_draft: null, schema_draft: null,
+    }
+  }
+
+  // ── STAGE 2d: DBR ─────────────────────────────────────────────────────────
+  if (hasAskedStage2c && !hasAskedStage2d) {
+    return {
+      message: `LTV set: 90% first home, 80% subsequent/expat. Confirmed.<br><br>` +
+        `<strong>Debt Burden Ratio (DBR) limit:</strong><br><br>` +
+        `Standard CBO maximum is 50% of net monthly income. However, <strong>CBO Circular 2026-12 §3.2 explicitly allows an enhanced DBR of up to 55% for green-certified financing products</strong> — a 5% relaxation designed to incentivise green uptake.<br><br>` +
+        `My recommendation:<br>` +
+        `&bull; <strong>55% DBR</strong> for green-certified loans (using the CBO allowance)<br>` +
+        `&bull; <strong>50% DBR</strong> standard safety floor for all other cases<br><br>` +
+        `This gives customers slightly more headroom when purchasing green properties, directly supporting adoption.<br><br>` +
+        `<strong>Shall I set DBR at 55% for this green product, or do you prefer the standard 50%?</strong>`,
+      current_stage: 2, show_roadmap: false, action: 'none',
+      ui_events: [
+        { type: 'set_field', field: 'max_ltv', value: 90 },
+        { type: 'highlight_field', field: 'max_ltv' },
+      ],
+      product_draft: null, rules_draft: null, schema_draft: null,
+    }
+  }
+
+  // ── STAGE 2e: Term and amount ranges ─────────────────────────────────────
+  if (hasAskedStage2d && !hasAskedStage2e) {
+    return {
+      message: `DBR at 55% confirmed — using CBO green finance allowance (Circular 2026-12 §3.2).<br><br>` +
+        `<strong>Term and amount ranges:</strong><br><br>` +
+        `&bull; <strong>Term</strong>: min 3 years, max <strong>25 years</strong> (CBO ceiling for residential mortgages). For green, no reason to shorten — longer terms support larger green property purchases.<br>` +
+        `&bull; <strong>Minimum loan</strong>: <strong>OMR 25,000</strong> — below this, the GSAS certification cost (~OMR 3,000–8,000) makes the product uneconomical for the customer<br>` +
+        `&bull; <strong>Maximum loan</strong>: <strong>OMR 500,000</strong> — our standard residential cap; above this goes to Commercial Real Estate<br><br>` +
+        `<strong>Are these ranges acceptable — 3–25 years, OMR 25K–500K — or do you want to adjust?</strong>`,
+      current_stage: 2, show_roadmap: false, action: 'none',
+      ui_events: [
+        { type: 'set_field', field: 'max_dbr', value: 55 },
+        { type: 'highlight_field', field: 'max_dbr' },
+      ],
+      product_draft: null, rules_draft: null, schema_draft: null,
+    }
+  }
+
+  // ── STAGE 2f: Fees ────────────────────────────────────────────────────────
+  if (hasAskedStage2e && !hasAskedStage2f) {
+    return {
+      message: `Term and amounts set: 3–25 years, OMR 25,000–500,000. Confirmed.<br><br>` +
+        `<strong>Fee structure:</strong><br><br>` +
+        `Under CBO Consumer Protection Circular 2018/2, all fees must be disclosed upfront. Recommended:<br><br>` +
+        `&bull; <strong>Arrangement fee</strong>: 1% of loan amount, capped at OMR 500 — standard market rate, waived for GSAS Platinum (≥90 score) as an additional green incentive<br>` +
+        `&bull; <strong>Early settlement penalty</strong>: 1% of outstanding balance (CBO maximum allowed) — or waived after year 5 to encourage refinancing into newer green products<br>` +
+        `&bull; <strong>Valuation fee</strong>: actual cost (OMR 200–800 depending on property) — pass-through to customer<br>` +
+        `&bull; <strong>GSAS re-validation fee</strong>: OMR 150 (charged at certificate renewal, every 3 years) — new ESG-specific fee<br><br>` +
+        `<strong>Should I apply this fee structure, or modify any of these?</strong>`,
+      current_stage: 2, show_roadmap: false, action: 'none',
+      ui_events: [
+        { type: 'set_field', field: 'min_amount', value: 25000 },
+        { type: 'set_field', field: 'max_amount', value: 500000 },
+        { type: 'set_field', field: 'max_term', value: 25 },
+        { type: 'highlight_field', field: 'max_amount' },
+      ],
+      product_draft: null, rules_draft: null, schema_draft: null,
+    }
+  }
+
+  // ── STAGE 3: Eligibility Rules ────────────────────────────────────────────
+  if (hasAskedStage2f && !hasAskedStage3) {
+    return {
+      message: `✅ <strong>Stage 2 complete.</strong> Full pricing and configuration set:<br>` +
+        `Rate 5.25% · Green discount 0.75%/0.5% · LTV 90/80% · DBR 55% · OMR 25K–500K · Term 25yr max<br><br>` +
+        `<strong>Stage 3 — Eligibility Rules</strong><br><br>` +
+        `I'll now generate <strong>17 eligibility rules</strong> covering 5 categories: credit risk, collateral, ESG/green, income & employment, and documentation. All rules are cited against specific CBO circulars and OS GSO standards.<br><br>` +
+        `One key decision before I generate: <strong>GSAS minimum score</strong>:<br>` +
+        `&bull; <strong>70 (Silver minimum)</strong> — broader market eligibility, higher volume, lower average green quality<br>` +
+        `&bull; <strong>75 (stricter Silver)</strong> — better ESG positioning, may reduce addressable market by ~20%<br><br>` +
+        `<strong>Which GSAS minimum should I use: 70 or 75?</strong>`,
+      current_stage: 3, show_roadmap: false, action: 'none', ui_events: [], product_draft: null, rules_draft: null, schema_draft: null,
+    }
+  }
+
+  // ── STAGE 3 answered: Generate all 17 rules ───────────────────────────────
   if (hasAskedStage3 && !hasAskedStage4) {
-    const gsasMin = (() => { const m = lower.match(/(\d+)\s*(?:minimum|min|floor|threshold)?/); return m ? parseInt(m[1]) : 70; })()
-    const rules = ctxGreen ? [
-      { name: 'Green DBR Buffer', category: 'creditworthiness', metric: 'DBR', operator: '<=', threshold_value: 55, threshold_condition: 'loan_amount > 100000', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular 2026-12, §3.2', ai_confidence: 94, description: 'DBR capped at 55% for green loans >OMR 100,000.' },
-      { name: 'GSAS Score – Minimum Eligibility', category: 'esg', metric: 'gsas_score', operator: '>=', threshold_value: gsasMin, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'OS GSO 3000:2025, §4.2', ai_confidence: 97, description: `Minimum GSAS score ${gsasMin} for eligibility.` },
-      { name: 'LTV Cap – Green Product', category: 'collateral', metric: 'LTV', operator: '<=', threshold_value: 90, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular BM/REG/2019/74', ai_confidence: 95, description: 'Maximum LTV 90% for residential green financing.' },
-      { name: 'ESG Document Set Complete', category: 'esg', metric: 'esg_docs_complete', operator: '=', threshold_value: 1, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular 2026-12, §5.1', ai_confidence: 92, description: 'GSAS Cert + EPC Report + EIA Clearance all required.' },
-    ] : [
-      { name: 'Max DBR', category: 'creditworthiness', metric: 'DBR', operator: '<=', threshold_value: 50, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular BM/REG/2019/74', ai_confidence: 96, description: 'Maximum debt-to-income ratio per CBO regulations.' },
-      { name: 'Income Verification', category: 'creditworthiness', metric: 'income_verified', operator: '=', threshold_value: 1, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO AML Guidelines §7', ai_confidence: 95, description: 'Salary certificate required for all applications.' },
-      { name: 'CRB Clear', category: 'creditworthiness', metric: 'crb_status', operator: '=', threshold_value: 1, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Credit Bureau Circular', ai_confidence: 93, description: 'Clean credit bureau report required.' },
+    const gsasMin = lower.includes('75') ? 75 : lower.includes('70') ? 70 : gsasFromMsg >= 70 ? gsasFromMsg : 70
+    const rules = [
+      // CREDIT RULES
+      { name: 'DBR ≤ 55% (Loans > OMR 100K)', category: 'creditworthiness', metric: 'DBR', operator: '<=', threshold_value: 55, threshold_condition: 'loan_amount > 100000', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular 2026-12, §3.2', ai_confidence: 96, description: 'Maximum debt burden ratio 55% for green finance loans exceeding OMR 100,000. CBO green finance allowance.' },
+      { name: 'DBR ≤ 60% (Loans ≤ OMR 100K)', category: 'creditworthiness', metric: 'DBR', operator: '<=', threshold_value: 60, threshold_condition: 'loan_amount <= 100000', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular BM/REG/2019/74, §4', ai_confidence: 95, description: 'Standard DBR cap for smaller loan amounts. CBO residential mortgage DBR ceiling.' },
+      { name: 'Credit Score ≥ 620 (Oman CRB)', category: 'creditworthiness', metric: 'credit_score', operator: '>=', threshold_value: 620, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Credit Bureau Framework, §6.1', ai_confidence: 94, description: 'Minimum credit score from Oman Credit Bureau (OCB). Score below 620 indicates elevated default risk. Auto-rejected.' },
+      { name: 'No Active Defaults (24 Months)', category: 'creditworthiness', metric: 'default_history_months', operator: '>=', threshold_value: 24, threshold_condition: 'default_count = 0', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular on Loan Classification, §3', ai_confidence: 97, description: 'No payment defaults, restructured loans, or write-offs in the past 24 months. Hard reject — no exceptions.' },
+      { name: 'Max 4 Active Credit Facilities', category: 'creditworthiness', metric: 'active_facilities_count', operator: '<=', threshold_value: 4, threshold_condition: null, action_on_breach: 'flag', severity: 'soft', regulatory_reference: 'CBO Circular BM/REG/2019/74, §5.2', ai_confidence: 88, description: 'Applicants with >4 active facilities flagged for enhanced underwriting review. Soft rule — underwriter discretion.' },
+      // COLLATERAL RULES
+      { name: 'LTV ≤ 90% (First Home)', category: 'collateral', metric: 'LTV', operator: '<=', threshold_value: 90, threshold_condition: 'is_first_home = true', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular BM/REG/2019/74, §7.1', ai_confidence: 98, description: 'Maximum LTV 90% for first-home purchase by Omani nationals. CBO absolute ceiling.' },
+      { name: 'LTV ≤ 80% (Subsequent/Expat)', category: 'collateral', metric: 'LTV', operator: '<=', threshold_value: 80, threshold_condition: 'is_first_home = false OR nationality = expat', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular BM/REG/2019/74, §7.2', ai_confidence: 97, description: 'Maximum LTV 80% for non-first home purchases and all expat applicants.' },
+      { name: 'CBO-Approved Property Valuator', category: 'collateral', metric: 'valuator_approved', operator: '=', threshold_value: 1, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Valuations Circular 2021/8', ai_confidence: 93, description: 'Property must be valued by a CBO-approved independent valuator (Al Mashora, JLL, Cushman). No self-valuation.' },
+      { name: 'Title: Freehold or 99-Year Leasehold', category: 'collateral', metric: 'title_type', operator: 'in', threshold_value: 1, threshold_condition: 'freehold OR leasehold_years >= 99', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'Royal Decree 12/2006 (Property Law)', ai_confidence: 91, description: 'Only freehold title deeds or 99-year leaseholds accepted as collateral. Shorter-term leaseholds rejected.' },
+      // ESG RULES
+      { name: `GSAS Score ≥ ${gsasMin} (Minimum Eligibility)`, category: 'esg', metric: 'gsas_score', operator: '>=', threshold_value: gsasMin, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'OS GSO 3000:2025, §4.2 · CBO Circular 2026-12, §2.1', ai_confidence: 98, description: `Minimum GSAS sustainability score of ${gsasMin} (${gsasMin >= 75 ? 'strong Silver' : 'Silver'} rating). Property must hold valid GSAS certificate from GORD. Hard reject — no waiver.` },
+      { name: 'EPC Rating ≥ C (Energy Performance)', category: 'esg', metric: 'epc_rating', operator: '>=', threshold_value: 3, threshold_condition: 'A=5, B=4, C=3, D=2, E=1', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'OEESC (Oman Energy Efficiency & Sustainability Code), §5.1', ai_confidence: 94, description: 'Minimum Energy Performance Certificate rating of C. Assessed by OEESC-accredited assessor. EPC must be valid (not expired).' },
+      { name: 'GSAS Certificate Valid ≥ 90 Days', category: 'esg', metric: 'gsas_cert_days_remaining', operator: '>=', threshold_value: 90, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'OS GSO 3000:2025, §6.3 · CBO Circular 2026-12, §2.3', ai_confidence: 96, description: 'GSAS certificate must be issued by GORD, not expired, and have ≥90 days validity remaining at loan disbursement.' },
+      { name: 'EIA Clearance (Projects > 20 Units)', category: 'esg', metric: 'eia_approval', operator: '=', threshold_value: 1, threshold_condition: 'project_units > 20', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'Environment Authority Decision 107/2023', ai_confidence: 91, description: 'Environmental Impact Assessment approval from Oman Environment Authority required for developments with more than 20 residential units.' },
+      { name: 'ESG Document Set: All 3 Required', category: 'esg', metric: 'esg_docs_complete', operator: '=', threshold_value: 1, threshold_condition: 'gsas_cert AND epc_report AND (eia_approval OR project_units <= 20)', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular 2026-12, §5.1', ai_confidence: 97, description: 'Complete ESG document set required: (1) GSAS Certificate, (2) EPC Report, (3) EIA Approval (if applicable). Missing any document = auto-reject.' },
+      // INCOME & EMPLOYMENT RULES
+      { name: 'Minimum Net Income OMR 800/Month', category: 'eligibility', metric: 'net_monthly_income', operator: '>=', threshold_value: 800, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'Sohar Internal Credit Policy §12.1', ai_confidence: 92, description: 'Minimum verified net monthly income of OMR 800. Verified against salary certificate and payroll data. Self-employed: average of last 24 months audited income.' },
+      { name: 'Employment Tenure ≥ 6 Months', category: 'eligibility', metric: 'employment_months', operator: '>=', threshold_value: 6, threshold_condition: 'employment_type = salaried', action_on_breach: 'flag', severity: 'soft', regulatory_reference: 'Sohar Internal Credit Policy §12.2', ai_confidence: 87, description: 'Salaried applicants must have ≥6 months at current employer. Soft rule — underwriter may override with salary continuity evidence.' },
+      { name: 'Expat Residency ≥ 12 Months Remaining', category: 'eligibility', metric: 'residency_days_remaining', operator: '>=', threshold_value: 365, threshold_condition: 'nationality = expat', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular on Expat Credit Facilities, §3', ai_confidence: 95, description: 'Expat applicants must have at least 12 months remaining on current residency permit at time of application. Hard reject.' },
     ]
     return {
-      message: `✅ <strong>Stage 3 done.</strong> ${rules.length} eligibility rules generated and added to the Eligibility tab (check it now — they've appeared automatically).<br><br>` +
-        rules.map((r, i) => `${i+1}. <strong>${r.name}</strong> · ${r.regulatory_reference} · AI confidence ${r.ai_confidence}%`).join('<br>') + '<br><br>' +
-        `<strong>Stage 4 — Workflow:</strong> I'll set up the approval process now. For a <strong>${productLabel}</strong>, I recommend this pipeline:<br><br>` +
-        `<em>Application → KYC/AML (auto) → ${ctxGreen ? 'Green Cert Validation (auto) → ' : ''}Underwriting → Compliance Review → Final Approval → Decision</em><br><br>` +
-        `Should I apply this workflow? Or do you need any changes — e.g. different approval roles, additional stages, or different SLA timings?`,
+      message: `✅ <strong>Stage 3 complete.</strong> <strong>${rules.length} eligibility rules</strong> generated and added to the Eligibility tab — check it now!<br><br>` +
+        `<strong>Credit rules (5):</strong> DBR ≤55% (>100K), DBR ≤60% (≤100K), Credit Score ≥620, No defaults 24mo, Max 4 facilities<br>` +
+        `<strong>Collateral rules (4):</strong> LTV ≤90% first home, ≤80% subsequent/expat, Approved valuator, Freehold/leasehold title<br>` +
+        `<strong>ESG rules (5):</strong> GSAS ≥${gsasMin}, EPC ≥C, GSAS cert valid ≥90 days, EIA clearance, Full document set<br>` +
+        `<strong>Income/employment (3):</strong> Net income ≥OMR 800, Tenure ≥6mo, Expat residency ≥12mo<br><br>` +
+        `<strong>Stage 4 — Approval Workflow</strong><br><br>` +
+        `I'll configure a <strong>10-step workflow</strong> with 4 external API integrations: eKYC/NCI, Oman Credit Bureau, GSAS registry (GORD), property valuation APIs, and Muscat Municipality title check.<br><br>` +
+        `First 5 steps are fully automated (0 human time, ~15 hours total). Last 5 require human review (credit analyst, green finance officer, risk officer, PM).<br><br>` +
+        `<strong>Should I configure automated processing for the first 5 steps, or do you want more human touchpoints in the automated phase?</strong>`,
       current_stage: 4, show_roadmap: false, action: 'none',
       ui_events: [
         { type: 'set_tab', tab: 'eligibility' },
@@ -859,95 +1057,121 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
     }
   }
 
-  // ── STAGE 4 answered — move to Stage 5 ───────────────────────────────────
+  // ── STAGE 4 answered: Generate full workflow ──────────────────────────────
   if (hasAskedStage4 && !hasAskedStage5) {
-    const nodes = [
-      { id: 'n1', type: 'start',    label: 'Application Submitted',           role: null },
-      { id: 'n2', type: 'task',     label: 'KYC / AML Check',                 role: 'compliance_officer', sla_hours: 24, auto: true },
-      ...(ctxGreen ? [{ id: 'n3', type: 'task', label: 'Green Certificate Validation', role: 'compliance_officer', sla_hours: 48, auto: true }] : []),
-      { id: 'n4', type: 'approval', label: 'Underwriting',                    role: 'risk_officer',        sla_hours: 48 },
-      { id: 'n5', type: 'approval', label: 'Compliance Review',               role: 'compliance_officer',  sla_hours: 24 },
-      { id: 'n6', type: 'approval', label: 'Final Approval',                  role: 'product_manager',     sla_hours: 24 },
-      { id: 'n7', type: 'end',      label: 'Decision',                        role: null },
+    const wfNodes = [
+      { id: 'n1', type: 'start', label: 'Application Submitted', role: null, description: 'Customer submits via Sohar Mobile App, Internet Banking, or branch. Application ID generated. Documents uploaded to secure vault.' },
+      { id: 'n2', type: 'task', label: 'eKYC & AML Screening', role: 'system', sla_hours: 1, auto: true, description: 'Calls National Centre for Information (NCI) eKYC API — biometric Civil ID verification. Simultaneous AML/CFT screening via WorldCheck/Refinitiv. Result: identity_verified. Auto-reject if AML hit.' },
+      { id: 'n3', type: 'task', label: 'Oman Credit Bureau Check', role: 'system', sla_hours: 4, auto: true, description: 'Calls OCB API. Retrieves: credit score, active facilities count, payment history 24 months, defaults, restructured loans. Auto-reject: score <620 or any default in 24mo.' },
+      { id: 'n4', type: 'task', label: 'Document OCR & AI Validation', role: 'system', sla_hours: 2, auto: true, description: 'AI OCR extracts structured data from: salary certificate, Civil ID, GSAS certificate, EPC report, EIA approval. Validates field formats vs. product schema. Confidence score per document.' },
+      { id: 'n5', type: 'task', label: 'GSAS Registry Verification (GORD API)', role: 'system', sla_hours: 4, auto: true, description: 'Calls GORD GSAS API. Validates: certificate number authenticity, issuer = GORD, score matches submitted cert, rating band (Silver/Gold/Platinum), expiry ≥ 90 days, property address matches application.' },
+      { id: 'n6', type: 'task', label: 'Property Valuation & Title Verification', role: 'system', sla_hours: 8, auto: true, description: 'API integration: Al Mashora/JLL Oman for desktop or drive-by valuation. Muscat Municipality / MRMEWR API for title deed authenticity, ownership zone (ITC/Omani zone), freehold confirmation. Calculates LTV against confirmed valuation.' },
+      { id: 'n7', type: 'approval', label: 'Credit Underwriting', role: 'credit_analyst', sla_hours: 24, description: 'Credit Analyst reviews: income vs salary cert, DBR calculation with all facilities, stress test at base rate +2% (must still pass DBR), LTV confirmation, employment stability. Uses Sohar internal credit scoring model (FICO-based adaptation).' },
+      { id: 'n8', type: 'approval', label: 'Green Finance ESG Review', role: 'green_finance_officer', sla_hours: 24, description: 'Dedicated Green Finance Officer (new role under CBO Circular 2026-12): validates GSAS score vs product threshold, EPC rating band, EIA coverage scope, determines applicable discount tier (0.75% if GSAS ≥85, 0.5% if 70–84), confirms approved materials list for staged disbursement.' },
+      { id: 'n9', type: 'approval', label: 'Risk & Compliance Sign-off', role: 'risk_officer', sla_hours: 48, description: 'Risk Officer: concentration risk check (green portfolio exposure limit), IFRS9 Stage 1 classification, regulatory capital calculation (risk weight 75% residential mortgage), secondary AML/CFT review, CBO reporting flags.' },
+      { id: 'n10', type: 'approval', label: 'PM Final Approval & Offer Letter', role: 'product_manager', sla_hours: 24, description: 'Product Manager: confirms all product terms match approved configuration, green discount applied correctly per GSAS score, offer letter generated from template, CBO disclosure checklist completed, signed digitally via DocuSign.' },
+      { id: 'n11', type: 'end', label: 'Decision & Letter of Offer Issued', role: null, description: 'Approved: Letter of Offer sent via SMS + email + in-app. SLA: customer 7 working days. Rejected: reason code + remediation guidance. Customer has 30 days to accept offer.' },
     ]
     return {
-      message: `✅ <strong>Stage 4 done.</strong> Workflow set up with ${nodes.filter(n => n.type !== 'start' && n.type !== 'end').length} nodes, ${ctxGreen ? '2 auto-processed steps' : '1 auto-processed step'}, and 3 human approval roles. You can see it in the Workflow tab.<br><br>` +
-        `<strong>Stage 5 — Compliance:</strong> I'll now map the regulatory tags and risk parameters for this product.<br><br>` +
-        `Based on ${ctxGreen ? 'CBO Circular 2026-12 and Oman Vision 2040' : 'standard CBO prudential guidelines'}, I recommend:<br>` +
-        `&bull; Tags: <strong>${ctxGreen ? '#CLIMATE_RISK · #ESG_ELIGIBILITY · #GREEN_FINANCING' : '#RETAIL_CREDIT · #CONSUMER_PROTECTION'}</strong><br>` +
-        `&bull; Risk weight: <strong>${ctxGreen ? '75%' : '100%'}</strong><br>` +
-        `&bull; Provisioning rate: <strong>${ctxGreen ? '1.5%' : '2.0%'}</strong><br><br>` +
-        `Should I apply these compliance parameters? Or would you like different risk categorisation?`,
+      message: `✅ <strong>Stage 4 complete.</strong> 10-step approval workflow configured and visible in the Workflow tab.<br><br>` +
+        `<strong>Automated steps (1–6):</strong> eKYC/AML → Credit Bureau → OCR/Validation → GSAS Registry (GORD) → Property Valuation → Title Check<br>` +
+        `<strong>Human review steps (7–10):</strong> Credit Underwriting (24h) → Green Finance ESG Review (24h) → Risk & Compliance (48h) → PM Final Approval (24h)<br><br>` +
+        `⏱️ Total SLA: <strong>~5 working days</strong> (automated: <19h, human: ~4 days)<br>` +
+        `🔗 External integrations: NCI eKYC · Oman Credit Bureau · GORD GSAS API · Al Mashora/JLL · Muscat Municipality<br><br>` +
+        `<strong>Stage 5 — Compliance Classification</strong><br><br>` +
+        `For regulatory reporting, I recommend classifying this product as follows:<br>` +
+        `&bull; <strong>Basel III risk weight</strong>: 75% (residential retail mortgage, LTV ≤90%)<br>` +
+        `&bull; <strong>IFRS 9 provisioning</strong>: 1.5% Stage 1 ECL (higher than standard 1.0% due to green portfolio concentration, per IFRS 9 §5.5)<br>` +
+        `&bull; <strong>CBO classification</strong>: Green Finance (reportable under Circular 2026-12 §7 monthly ESG portfolio return)<br>` +
+        `&bull; <strong>AML risk tier</strong>: LOW (eKYC + OCB auto-verified, green property reduces beneficial ownership complexity)<br>` +
+        `&bull; <strong>Regulatory tags</strong>: #CLIMATE_RISK · #ESG_ELIGIBILITY · #GREEN_FINANCING · #OMAN_VISION_2040<br><br>` +
+        `<strong>Shall I apply these compliance parameters, or do you want to adjust the risk weight or provisioning rate?</strong>`,
       current_stage: 5, show_roadmap: false, action: 'none',
       ui_events: [
         { type: 'set_tab', tab: 'workflow' },
-        { type: 'set_workflow', nodes },
+        { type: 'set_workflow', nodes: wfNodes },
       ],
       product_draft: null, rules_draft: null, schema_draft: null,
     }
   }
 
-  // ── STAGE 5 answered — Stage 6: full summary + ready to confirm ───────────
+  // ── STAGE 5 answered — Stage 6: Simulation + ready to confirm ────────────
   if (hasAskedStage5 && !hasAskedConfirm) {
+    const gsasMin = 70 // default — from stage 3
     const productDraft = {
-      name: productLabel,
-      description: ctxGreen
-        ? 'Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on your sustainability score. Supports Oman Vision 2040.'
-        : `${productLabel} — CBO-compliant product for Omani market.`,
-      category: ctxGreen || (!ctxAuto && !ctxPersonal && !ctxSme) ? 'home_loan' : ctxAuto ? 'auto_loan' : ctxPersonal ? 'personal_loan' : 'sme',
-      base_rate: ctxGreen ? 5.5 : ctxAuto ? 6.5 : ctxPersonal ? 8.5 : 7.0,
-      max_ltv: ctxGreen ? 90 : ctxAuto ? 80 : 0,
-      max_dbr: ctxGreen ? 55 : ctxAuto ? 55 : ctxPersonal ? 45 : 50,
-      green_dbr: ctxGreen ? 55 : null,
-      min_term: 1, max_term: ctxGreen ? 25 : ctxAuto ? 5 : ctxPersonal ? 5 : 7,
-      min_amount: 10000, max_amount: 500000,
-      gsas_min_score: ctxGreen ? 70 : null,
-      gsas_premium_score: ctxGreen ? 85 : null,
-      green_discount_premium: ctxGreen ? 0.75 : null,
-      green_discount_standard: ctxGreen ? 0.5 : null,
-      esg_required_docs: ctxGreen ? ['gsas_cert', 'epc_report', 'eia_approval'] : [],
-      approved_materials: ctxGreen ? ['Green Concrete', 'Thermal Insulation', 'Solar Panels', 'Energy-Efficient Appliances', 'Low-E Glass', 'Recycled Steel'] : [],
-      approved_vendors: ctxGreen ? ['Oman Readymix LLC', 'Gulf Insulation Group', 'SunTech Oman', 'Green Build Oman', 'EcoMaterials Oman'] : [],
-      clone_from_id: ctxGreen ? 'p001' : null,
+      name: 'Sohar Green Home Finance – GSAS',
+      description: 'Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on sustainability score (GSAS ≥85: Gold tier). Supports Oman Vision 2040 and CBO green finance objectives. Conventional financing structure, CBO-compliant.',
+      category: 'home_loan',
+      base_rate: 5.25,
+      max_ltv: 90,
+      max_dbr: 55,
+      green_dbr: 55,
+      min_term: 3, max_term: 25,
+      min_amount: 25000, max_amount: 500000,
+      gsas_min_score: gsasMin,
+      gsas_premium_score: 85,
+      green_discount_premium: 0.75,
+      green_discount_standard: 0.5,
+      esg_required_docs: ['gsas_cert', 'epc_report', 'eia_approval'],
+      approved_materials: ['Green Concrete (GSAS-rated)', 'Low-E Double Glazing', 'Thermal Insulation (R-value ≥ 2.5)', 'Solar PV Panels (SASO-certified)', 'LED Lighting Systems', 'High-Efficiency HVAC (EER ≥ 3.5)', 'Recycled Steel Reinforcement', 'Rainwater Harvesting System'],
+      approved_vendors: ['Oman Readymix LLC', 'Gulf Insulation Group', 'SunTech Oman', 'Green Build Oman', 'EcoMaterials Oman', 'HVAC Oman LLC', 'Voltec Solar Oman'],
+      clone_from_id: 'p001',
     }
-    const rulesDraft = ctxGreen ? [
-      { name: 'Green DBR Buffer', category: 'creditworthiness', metric: 'DBR', operator: '<=', threshold_value: 55, threshold_condition: 'loan_amount > 100000', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular 2026-12, §3.2', ai_confidence: 94, description: 'DBR ≤ 55% for green loans >OMR 100,000.' },
-      { name: 'GSAS Score – Minimum Eligibility', category: 'esg', metric: 'gsas_score', operator: '>=', threshold_value: 70, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'OS GSO 3000:2025, §4.2', ai_confidence: 97, description: 'Minimum GSAS score 70.' },
-      { name: 'LTV Cap – Green Product', category: 'collateral', metric: 'LTV', operator: '<=', threshold_value: 90, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular BM/REG/2019/74', ai_confidence: 95, description: 'Maximum LTV 90%.' },
-      { name: 'ESG Document Set Complete', category: 'esg', metric: 'esg_docs_complete', operator: '=', threshold_value: 1, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular 2026-12, §5.1', ai_confidence: 92, description: 'GSAS Cert + EPC + EIA all required.' },
-    ] : [
-      { name: 'Max DBR', category: 'creditworthiness', metric: 'DBR', operator: '<=', threshold_value: 50, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular BM/REG/2019/74', ai_confidence: 96, description: 'Maximum debt-to-income ratio.' },
-      { name: 'Income Verification', category: 'creditworthiness', metric: 'income_verified', operator: '=', threshold_value: 1, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO AML Guidelines §7', ai_confidence: 95, description: 'Salary certificate required.' },
+    const rulesDraft = [
+      { name: 'DBR ≤ 55% (Loans > OMR 100K)', category: 'creditworthiness', metric: 'DBR', operator: '<=', threshold_value: 55, threshold_condition: 'loan_amount > 100000', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular 2026-12, §3.2', ai_confidence: 96, description: 'Max DBR 55% for green loans >OMR 100K.' },
+      { name: 'DBR ≤ 60% (Loans ≤ OMR 100K)', category: 'creditworthiness', metric: 'DBR', operator: '<=', threshold_value: 60, threshold_condition: 'loan_amount <= 100000', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular BM/REG/2019/74, §4', ai_confidence: 95, description: 'Standard DBR cap for smaller amounts.' },
+      { name: 'Credit Score ≥ 620', category: 'creditworthiness', metric: 'credit_score', operator: '>=', threshold_value: 620, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Credit Bureau Framework, §6.1', ai_confidence: 94, description: 'Minimum Oman Credit Bureau score.' },
+      { name: 'No Defaults (24 Months)', category: 'creditworthiness', metric: 'default_history_months', operator: '>=', threshold_value: 24, threshold_condition: 'default_count = 0', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Loan Classification Circular, §3', ai_confidence: 97, description: 'No defaults or restructured loans in 24 months.' },
+      { name: 'LTV ≤ 90% (First Home)', category: 'collateral', metric: 'LTV', operator: '<=', threshold_value: 90, threshold_condition: 'is_first_home = true', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular BM/REG/2019/74, §7.1', ai_confidence: 98, description: 'First home LTV cap.' },
+      { name: 'LTV ≤ 80% (Subsequent/Expat)', category: 'collateral', metric: 'LTV', operator: '<=', threshold_value: 80, threshold_condition: 'is_first_home = false OR nationality = expat', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular BM/REG/2019/74, §7.2', ai_confidence: 97, description: 'Non-first home and expat LTV cap.' },
+      { name: `GSAS Score ≥ ${gsasMin}`, category: 'esg', metric: 'gsas_score', operator: '>=', threshold_value: gsasMin, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'OS GSO 3000:2025, §4.2', ai_confidence: 98, description: `GSAS minimum ${gsasMin}.` },
+      { name: 'EPC Rating ≥ C', category: 'esg', metric: 'epc_rating', operator: '>=', threshold_value: 3, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'OEESC, §5.1', ai_confidence: 94, description: 'Minimum EPC rating C.' },
+      { name: 'GSAS Certificate Valid ≥ 90 Days', category: 'esg', metric: 'gsas_cert_days_remaining', operator: '>=', threshold_value: 90, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'OS GSO 3000:2025, §6.3', ai_confidence: 96, description: 'GSAS cert must not expire within 90 days.' },
+      { name: 'ESG Document Set Complete', category: 'esg', metric: 'esg_docs_complete', operator: '=', threshold_value: 1, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular 2026-12, §5.1', ai_confidence: 97, description: 'GSAS cert + EPC report + EIA approval (where applicable).' },
+      { name: 'Net Income ≥ OMR 800/Month', category: 'eligibility', metric: 'net_monthly_income', operator: '>=', threshold_value: 800, threshold_condition: null, action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'Sohar Internal Credit Policy §12.1', ai_confidence: 92, description: 'Minimum net monthly income.' },
+      { name: 'Expat Residency ≥ 12 Months', category: 'eligibility', metric: 'residency_days_remaining', operator: '>=', threshold_value: 365, threshold_condition: 'nationality = expat', action_on_breach: 'reject', severity: 'hard', regulatory_reference: 'CBO Circular on Expat Credit, §3', ai_confidence: 95, description: '≥12 months remaining on residency permit.' },
     ]
-    const schemaDraft = ctxGreen ? {
+    const schemaDraft = {
       schema_type: 'gsas_certificate_validation',
       fields: [
-        { name: 'Certificate Number', type: 'String', validation: '^GSAS-\\d{4}-\\d{3}$', error_message: 'Invalid format' },
-        { name: 'Issuer', type: 'String', validation: 'Must be GORD or accredited body', error_message: 'Issuer not accredited' },
-        { name: 'Expiry Date', type: 'Date', validation: 'Must be ≥ today + 90 days', error_message: 'Certificate expires within 90 days' },
-        { name: 'Overall Score', type: 'Integer', validation: '0–100, min 70', error_message: 'Score below minimum (70)' },
-        { name: 'Rating', type: 'String', validation: 'Silver / Gold / Platinum', error_message: 'Bronze rejected' },
+        { name: 'Certificate Number', type: 'String', validation: '^GSAS-\\d{4}-\\d{3,5}$', error_message: 'Invalid GSAS certificate number format (expected: GSAS-YYYY-NNN)' },
+        { name: 'Issuer', type: 'String', validation: 'Must be "GORD" or GORD-accredited body', error_message: 'Issuer not GORD-accredited' },
+        { name: 'Issue Date', type: 'Date', validation: 'Must be ≤ today', error_message: 'Certificate issue date is in the future' },
+        { name: 'Expiry Date', type: 'Date', validation: 'Must be ≥ today + 90 days', error_message: 'Certificate expires within 90 days — not acceptable' },
+        { name: 'Overall Score', type: 'Integer', validation: `0–100, minimum ${gsasMin} for eligibility`, error_message: `Score below minimum threshold (${gsasMin})` },
+        { name: 'Rating', type: 'String', validation: 'Silver / Gold / Platinum only (Bronze rejected)', error_message: 'Bronze rating does not meet minimum requirement' },
+        { name: 'Property Address', type: 'String', validation: 'Must match application property address (fuzzy match ≥85%)', error_message: 'Certificate property address does not match application' },
+        { name: 'EPC Rating', type: 'String', validation: 'A / B / C minimum (D/E/F/G rejected)', error_message: 'EPC rating below minimum required (C)' },
       ],
-      ai_confidence: 96, regulatory_reference: 'OS GSO 3000:2025, §4.2',
-    } : null
+      ai_confidence: 96, regulatory_reference: 'OS GSO 3000:2025, §4.2 · OEESC §5.1',
+    }
     return {
-      message: `✅ <strong>Stage 5 done.</strong> Compliance tags and risk parameters applied.<br><br>` +
-        `🎯 <strong>All 6 stages complete.</strong> Here's your full product summary:<br><br>` +
-        `📋 <strong>${productLabel}</strong>${ctxGreen ? ' · Cloned from Standard Home Loan' : ''}<br>` +
-        `📈 Rate: <strong>${productDraft.base_rate}%</strong>${ctxGreen ? ' · Green discount: 0.75% (GSAS ≥85) · 0.5% (GSAS 70–84)' : ''}<br>` +
-        `📏 Max DBR: <strong>${productDraft.max_dbr}%</strong> · Max term: <strong>${productDraft.max_term} yr</strong> · OMR 10K–500K<br>` +
-        (ctxGreen ? `📄 Required: GSAS Cert · EPC Report · EIA Clearance<br>` : '') +
-        `⚙️ <strong>${rulesDraft.length} rules</strong> · Workflow configured · Compliance mapped<br><br>` +
-        `Everything is ready. Click <strong>Confirm & Publish</strong> to save the full configuration and make the product live on the customer portal.`,
+      message: `✅ <strong>Stage 5 complete.</strong> Compliance classification applied — Basel III 75% risk weight, IFRS9 1.5% Stage 1 ECL, CBO Green Finance designation.<br><br>` +
+        `<strong>Stage 6 — Portfolio Simulation</strong><br><br>` +
+        `📊 <strong>12-month portfolio projections</strong> (based on current Standard Home Loan pipeline data):<br>` +
+        `&bull; Target: <strong>180 accounts, OMR 52M</strong> in Year 1 (conservative: 15% of current mortgage pipeline targeting green properties)<br>` +
+        `&bull; NIM: <strong>1.45%</strong> on green rate (vs 1.75% standard) — offset by 0.4% lower provisioning (green ECL) + CBO capital relief of ~8 bps<br>` +
+        `&bull; <strong>Stress test</strong>: at +200 bps rate shock, 98% of modelled portfolio still passes DBR ≤55% — built-in buffer works<br>` +
+        `&bull; <strong>Break-even</strong>: month 11 post-launch (setup costs: OMR 85K for GORD API integration + Green Finance Officer role)<br>` +
+        `&bull; ESG reporting: monthly CBO Green Finance Return under Circular 2026-12 §7, plus annual TCFD disclosure<br><br>` +
+        `📋 <strong>Full product configuration summary:</strong><br>` +
+        `• <strong>Sohar Green Home Finance – GSAS</strong> · Conventional · Cloned from Standard Home Loan<br>` +
+        `• Rate: <strong>5.25%</strong> · Tiers: 4.50% (GSAS ≥85) · 4.75% (GSAS 70–84)<br>` +
+        `• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>` +
+        `• Terms: <strong>3–25 years</strong> · Amount: <strong>OMR 25,000–500,000</strong><br>` +
+        `• Eligibility: <strong>${rulesDraft.length} rules</strong> across credit, collateral, ESG, income<br>` +
+        `• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>` +
+        `• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>` +
+        `🚀 Everything is configured. Click <strong>Confirm & Publish</strong> to save the full product and make it live on the customer portal.`,
       current_stage: 6, show_roadmap: false, action: 'ready_to_confirm',
       ui_events: [{ type: 'set_tab', tab: 'ai_config' }],
       product_draft: productDraft, rules_draft: rulesDraft, schema_draft: schemaDraft,
     }
   }
 
-  // ── Already confirmed / any late follow-up ────────────────────────────────
+  // ── Already at stage 6 ───────────────────────────────────────────────────
   return {
-    message: `All 6 stages are complete. Click <strong>Confirm & Publish</strong> above to save the product, or use <strong>Reset</strong> to start over with a new product.`,
+    message: `All 6 stages are complete. Click <strong>Confirm & Publish</strong> above to save the product, or ask me any follow-up questions about the configuration.`,
     current_stage: 6, show_roadmap: false, action: 'ready_to_confirm',
     ui_events: [], product_draft: null, rules_draft: null, schema_draft: null,
   }
