@@ -28,6 +28,7 @@ const MIGRATION_FILES = [
   './migrations/0003_portal_columns.sql',
   './migrations/0004_project_images.sql',
   './migrations/0005_pge_foundation.sql',
+  './migrations/0006_align_existing_products.sql',
 ]
 
 function runMigrations() {
