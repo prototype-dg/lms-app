@@ -482,7 +482,7 @@ async function renderProducts() {
       <div style="display:flex;gap:.5rem;align-items:center">
         <div class="search-bar" style="width:200px"><i class="fas fa-search"></i><input type="text" placeholder="Search…" oninput="filterProducts(this.value)"></div>
         <button class="btn btn-ghost btn-sm" onclick="showCloneModal()"><i class="fas fa-copy"></i> Clone</button>
-        <button class="btn btn-ghost btn-sm" onclick="showNewProductModal()"><i class="fas fa-plus"></i> Manual</button>
+        <button class="btn btn-ghost btn-sm" onclick="showNewProductModal()"><i class="fas fa-plus"></i> New Product</button>
         <button class="btn btn-amber" onclick="openAiStudio()" style="font-weight:700"><i class="fas fa-robot"></i> Create with AI</button>
       </div>
     </div>
@@ -1013,20 +1013,51 @@ function renderProductPanel(p, productRules) {
       </div>`,
 
     ai_assistant: `
-      <div class="ai-assistant">
-        <div class="ai-header">
-          <div class="ai-icon"><i class="fas fa-robot" style="color:var(--sea-glass)"></i></div>
-          <div><div style="font-weight:600;font-size:.9rem">AI Product Studio</div>
-          <div style="font-size:.75rem;color:rgba(255,255,255,.5)">Multi-turn conversation &middot; Creates full product: name, rates, rules, schema</div></div>
-          <button class="btn btn-sm" style="margin-left:auto;background:rgba(255,255,255,.1);color:white;border:none" onclick="resetAiChat('${p.id}')"><i class="fas fa-redo"></i> New</button>
+      <div class="ai-assistant" style="display:flex;flex-direction:column;gap:0">
+        <div class="ai-header" style="flex-shrink:0">
+          <div class="ai-icon"><i class="fas fa-wand-magic-sparkles" style="color:var(--sea-glass)"></i></div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:.92rem">AI Product Studio</div>
+            <div style="font-size:.72rem;color:rgba(255,255,255,.5)">6-stage guided assistant &middot; Model → Config → Rules → Workflow → Compliance → Simulation</div>
+          </div>
+          <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:none;white-space:nowrap" onclick="resetAiChat('${p.id}')"><i class="fas fa-redo"></i> Reset</button>
         </div>
-        <div id="ai-chat-log" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:10px;padding:4px 0"></div>
-        <div style="display:flex;gap:.5rem;align-items:flex-end">
-          <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="Type here to describe the new product highlights…" style="flex:1;min-height:0;resize:none"></textarea>
-          <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat('${p.id}')" style="height:48px;padding:0 18px"><i class="fas fa-paper-plane"></i></button>
+
+        <!-- Stage progress pills -->
+        <div style="display:flex;gap:.3rem;padding:.5rem .75rem;background:rgba(0,0,0,.2);flex-shrink:0;overflow-x:auto" id="aiStagePills">
+          ${['Product Model','Configuration','Rules','Workflow','Compliance','Simulation'].map((s,i)=>
+            `<span class="ai-stage-pill" id="pill-${i}" style="font-size:.63rem;font-weight:600;padding:.2rem .55rem;border-radius:20px;white-space:nowrap;background:rgba(255,255,255,.08);color:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.1);cursor:default">${i+1}. ${s}</span>`
+          ).join('')}
         </div>
-        <div id="ai-confirm-bar" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:8px;align-items:center;gap:10px">
-          <span style="font-size:.82rem;color:rgba(255,255,255,.85);flex:1">Product ready. Confirm to save and publish.</span>
+
+        <!-- Open in PGE banner -->
+        <div style="margin:.625rem .75rem;padding:.625rem .875rem;background:rgba(53,198,196,.1);border:1px solid rgba(53,198,196,.25);border-radius:8px;display:flex;align-items:center;gap:.75rem;flex-shrink:0">
+          <i class="fas fa-arrow-up-right-from-square" style="color:var(--sea-glass);font-size:.9rem;flex-shrink:0"></i>
+          <div style="flex:1;font-size:.75rem;color:rgba(255,255,255,.75);line-height:1.4">
+            For full visual editing — drag-drop workflow canvas, rule matrix builder, simulation charts — open the full PGE workspace.
+          </div>
+          <a href="/portals/product-config.html?id=${p.id}" style="flex-shrink:0;background:rgba(53,198,196,.2);color:var(--sea-glass);border:1px solid rgba(53,198,196,.4);padding:.3rem .7rem;border-radius:6px;font-size:.72rem;font-weight:700;text-decoration:none;white-space:nowrap">
+            <i class="fas fa-external-link-alt"></i> Open in PGE
+          </a>
+        </div>
+
+        <div id="ai-chat-log" style="flex:1;min-height:200px;max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:.5rem .75rem"></div>
+
+        <div style="flex-shrink:0;padding:.5rem .75rem;border-top:1px solid rgba(255,255,255,.08)">
+          <div style="display:flex;gap:.5rem;align-items:flex-end">
+            <textarea class="ai-textarea" id="aiChatInput" rows="2" placeholder="Describe what you want to configure, e.g. "Add a green discount rule of 25bps for A+ rated properties"" style="flex:1;min-height:0;resize:none"></textarea>
+            <button class="btn btn-amber" id="aiChatSendBtn" onclick="sendAiChat('${p.id}')" style="height:48px;padding:0 18px;flex-shrink:0"><i class="fas fa-paper-plane"></i></button>
+          </div>
+          <div style="margin-top:.4rem;display:flex;gap:.4rem;flex-wrap:wrap">
+            ${['Add a rule','Set base rate','Assign workflow','Check compliance','Run simulation'].map(q=>
+              `<span onclick="document.getElementById('aiChatInput').value='${q}';sendAiChat('${p.id}')" style="font-size:.65rem;padding:.15rem .45rem;border-radius:12px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);cursor:pointer;border:1px solid rgba(255,255,255,.1)" onmouseover="this.style.background='rgba(53,198,196,.15)'" onmouseout="this.style.background='rgba(255,255,255,.08)'">${q}</span>`
+            ).join('')}
+          </div>
+        </div>
+
+        <div id="ai-confirm-bar" style="display:none;flex-shrink:0;margin:.5rem .75rem;padding:.625rem .875rem;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:8px;align-items:center;gap:.75rem">
+          <i class="fas fa-check-circle" style="color:#22c55e;flex-shrink:0"></i>
+          <span style="font-size:.8rem;color:rgba(255,255,255,.85);flex:1">Product configuration ready. Confirm to save all changes.</span>
           <button class="btn btn-success btn-sm" onclick="confirmAiProduct('${p.id}')"><i class="fas fa-rocket"></i> Confirm &amp; Save</button>
         </div>
       </div>`
@@ -2124,10 +2155,15 @@ function showCloneModal() {
 }
 
 function showNewProductModal() {
-  showModal('Create Product Manually', `
-    <p style="font-size:.78rem;color:var(--grey-500);margin-bottom:.75rem">Creates a draft product. Open it to configure all rules, eligibility, documents, and portal content.</p>
+  showModal('Create New Product', `
+    <div style="margin-bottom:1rem;padding:.875rem 1rem;background:linear-gradient(135deg,var(--navy-dark),var(--navy));border-radius:var(--radius-md);display:flex;align-items:flex-start;gap:.75rem">
+      <i class="fas fa-info-circle" style="color:var(--sea-glass);margin-top:.1rem;flex-shrink:0"></i>
+      <div style="font-size:.78rem;color:rgba(255,255,255,.8);line-height:1.5">
+        Enter a name and category — a draft product will be created and opened in the <strong style="color:var(--sea-glass)">Product Genesis Engine</strong> where you configure all 6 stages (model, parameters, rules, workflow, compliance, simulation).
+      </div>
+    </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Product Name *</label><input class="form-control" id="newName" placeholder="e.g. Premium Home Loan"></div>
+      <div class="form-group"><label class="form-label">Product Name *</label><input class="form-control" id="newName" placeholder="e.g. Premium Home Loan" autofocus></div>
       <div class="form-group"><label class="form-label">Category *</label>
         <select class="form-control" id="newCat">
           <option value="home_loan">Home Loan</option>
@@ -2139,18 +2175,10 @@ function showNewProductModal() {
         </select>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">Description</label><textarea class="form-control" id="newDesc" rows="2" placeholder="Brief product description…"></textarea></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Base Rate (%)</label><input class="form-control" type="number" id="newRate" value="5.5" step="0.01"></div>
-      <div class="form-group"><label class="form-label">Max LTV (%)</label><input class="form-control" type="number" id="newLtv" value="90"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Max DBR (%)</label><input class="form-control" type="number" id="newDbr" value="60"></div>
-      <div class="form-group"><label class="form-label">Max Term (years)</label><input class="form-control" type="number" id="newTerm" value="25"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Min Amount (OMR)</label><input class="form-control" type="number" id="newMinAmt" value="10000"></div>
-      <div class="form-group"><label class="form-label">Max Amount (OMR)</label><input class="form-control" type="number" id="newMaxAmt" value="500000"></div>
+    <div class="form-group"><label class="form-label">Description <span style="color:var(--grey-400);font-weight:400">(optional)</span></label><textarea class="form-control" id="newDesc" rows="2" placeholder="Brief product description…"></textarea></div>
+    <div style="margin-top:.75rem;padding:.625rem .875rem;background:var(--grey-50);border-radius:var(--radius-md);font-size:.75rem;color:var(--grey-500)">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:.35rem"></i>
+      Prefer AI-guided creation? Close this and use <strong>Create with AI</strong> to let the AI Assistant walk through all stages automatically.
     </div>
   `, async () => {
     const name = document.getElementById('newName').value.trim();
@@ -2159,24 +2187,18 @@ function showNewProductModal() {
       name, status:'draft', created_by: currentUserId(), user_id: currentUserId(), user_name: currentUserName(),
       category: document.getElementById('newCat').value,
       description: document.getElementById('newDesc').value,
-      base_rate: parseFloat(document.getElementById('newRate').value)||5.5,
-      max_ltv: parseInt(document.getElementById('newLtv').value)||90,
-      max_dbr: parseInt(document.getElementById('newDbr').value)||60,
-      max_term: parseInt(document.getElementById('newTerm').value)||25,
-      min_term: 1,
-      min_amount: parseInt(document.getElementById('newMinAmt').value)||10000,
-      max_amount: parseInt(document.getElementById('newMaxAmt').value)||500000,
+      base_rate: 5.5, max_ltv: 90, max_dbr: 60, max_term: 25, min_term: 1,
+      min_amount: 10000, max_amount: 500000,
     };
     const r = await fetch('/api/v1/products', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
     const d = await r.json();
     if (d.success || d.product_id) {
-      toast(`Draft product "${name}" created — open it to configure rules and portal content`,'success');
-      await loadProducts();
-      await renderProducts();
+      toast(`Draft "${name}" created — opening in PGE…`, 'success');
       closeModal();
-      if (d.product_id) setTimeout(() => openProductDetail(d.product_id), 300);
+      // Open directly in PGE (Product Genesis Engine) with all 6 stages
+      setTimeout(() => { window.location.href = `/portals/product-config.html?id=${d.product_id}`; }, 400);
     } else { toast(d.error||'Create failed','error'); }
-  });
+  }, { confirmLabel: 'Create & Open in PGE <i class="fas fa-arrow-right" style="margin-left:.3rem"></i>' });
 }
 
 async function saveProductChanges(id) {
@@ -2241,7 +2263,8 @@ function closePanel() {
   document.getElementById('panelOverlay').classList.remove('open');
   document.getElementById('slidePanel').classList.remove('open');
 }
-function showModal(title, body, onConfirm) {
+function showModal(title, body, onConfirm, opts={}) {
+  const confirmLabel = opts.confirmLabel || 'Confirm';
   const mc = document.getElementById('modalContainer');
   mc.innerHTML = `<div class="modal-overlay" onclick="closeModal()">
     <div class="modal" onclick="event.stopPropagation()">
@@ -2249,7 +2272,7 @@ function showModal(title, body, onConfirm) {
       <div class="modal-body">${body}</div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-navy" id="modalConfirmBtn">Confirm</button>
+        <button class="btn btn-navy" id="modalConfirmBtn">${confirmLabel}</button>
       </div>
     </div>
   </div>`;

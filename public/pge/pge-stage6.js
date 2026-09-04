@@ -389,19 +389,19 @@
       <div class="s6-charts-grid">
         <div class="s6-chart-card">
           <div class="s6-chart-title">${t('Amortization Schedule','جدول الإطفاء')}</div>
-          <canvas id="chartAmort" height="220"></canvas>
+          <div class="s6-chart-wrap"><canvas id="chartAmort"></canvas></div>
         </div>
         <div class="s6-chart-card">
           <div class="s6-chart-title">${t('Cumulative Balance','الرصيد التراكمي')}</div>
-          <canvas id="chartBalance" height="220"></canvas>
+          <div class="s6-chart-wrap"><canvas id="chartBalance"></canvas></div>
         </div>
         <div class="s6-chart-card">
           <div class="s6-chart-title">${t('Interest vs Principal Split','الفائدة مقابل الأصل')}</div>
-          <canvas id="chartSplit" height="220"></canvas>
+          <div class="s6-chart-wrap"><canvas id="chartSplit"></canvas></div>
         </div>
         <div class="s6-chart-card">
           <div class="s6-chart-title">${t('Cash Flow Timeline','الجدول الزمني للتدفق النقدي')}</div>
-          <canvas id="chartCash" height="220"></canvas>
+          <div class="s6-chart-wrap"><canvas id="chartCash"></canvas></div>
         </div>
       </div>
     `;
@@ -651,7 +651,7 @@
         <!-- Tornado chart -->
         <div class="s6-sens-card">
           <div class="s6-chart-title">${t('Tornado: Parameter Sensitivity','إعصار: حساسية المعاملات')}</div>
-          <canvas id="chartTornado" height="220"></canvas>
+          <div class="s6-chart-wrap" style="height:200px"><canvas id="chartTornado"></canvas></div>
         </div>
 
         <!-- Scenario compare table -->
@@ -799,7 +799,7 @@
         <!-- Overlay chart -->
         <div class="s6-stress-chart-card">
           <div class="s6-chart-title">${t('Scenario Amortization Overlay','تراكب مخططات الإطفاء')}</div>
-          <canvas id="chartStressOverlay" height="240"></canvas>
+          <div class="s6-chart-wrap" style="height:220px"><canvas id="chartStressOverlay"></canvas></div>
         </div>
 
         <!-- Risk indicator table -->
@@ -1209,7 +1209,8 @@ ${isAr() ? 'Respond in Arabic.' : 'Respond in English.'}
       /* ── Charts tab ── */
       .s6-charts-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(400px,1fr)); gap:16px; }
       .s6-chart-card  { background:#fff; border-radius:10px; padding:16px;
-                        box-shadow:0 1px 4px rgba(0,0,0,.06); }
+                        box-shadow:0 1px 4px rgba(0,0,0,.06); height:300px; display:flex; flex-direction:column; }
+      .s6-chart-wrap  { position:relative; flex:1; min-height:0; }
       .s6-chart-title { font-size:12px; font-weight:700; color:#0a2342; margin-bottom:12px;
                         padding-bottom:8px; border-bottom:1px solid #e2e8f0; }
 
