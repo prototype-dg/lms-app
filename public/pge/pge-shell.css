@@ -1,0 +1,259 @@
+/* ============================================================
+   pge-shell.css — Product Genesis Engine layout & shell styles
+   ============================================================ */
+
+/* ── Keyframes ── */
+@keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeIn        { from { opacity: 0; }                              to { opacity: 1; } }
+@keyframes pulse         { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+
+/* ── Root layout ── */
+html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
+body { display: flex; flex-direction: column; background: #f8f9fa; }
+
+/* ── Topbar ── */
+.pge-topbar {
+  height: 56px; min-height: 56px;
+  background: #003B5C; color: white;
+  display: flex; align-items: center; gap: .75rem;
+  padding: 0 1rem; border-bottom: 2px solid #002540;
+  flex-shrink: 0; z-index: 100;
+}
+.pge-back-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.7); text-decoration: none;
+  transition: all .2s; flex-shrink: 0;
+}
+.pge-back-btn:hover { background: rgba(255,255,255,.1); color: white; }
+.pge-topbar-product { display: flex; flex-direction: column; gap: .1rem; flex-shrink: 0; min-width: 0; }
+.pge-product-name { font-size: .88rem; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.pge-product-code { font-size: .7rem; color: rgba(255,255,255,.5); }
+.pge-topbar-center { flex: 1; display: flex; justify-content: center; }
+.pge-topbar-actions { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+
+/* ── Stepper (topbar) ── */
+.pge-stepper { display: flex; align-items: center; gap: 0; }
+.pge-step {
+  display: flex; align-items: center; gap: .35rem;
+  padding: .35rem .6rem; border-radius: 8px;
+  font-size: .72rem; font-weight: 500; cursor: pointer;
+  color: rgba(255,255,255,.5); transition: all .2s;
+  white-space: nowrap;
+}
+.pge-step:hover { color: rgba(255,255,255,.85); background: rgba(255,255,255,.07); }
+.pge-step.active { color: #35C6C4; background: rgba(53,198,196,.15); }
+.pge-step.completed { color: rgba(255,255,255,.75); }
+.pge-step.completed .pge-step-num { background: #16845B; color: white; }
+.pge-step-num {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(255,255,255,.12); color: rgba(255,255,255,.5);
+  font-size: .65rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.pge-step.active .pge-step-num { background: #35C6C4; color: #003B5C; }
+.pge-step-connector { width: 20px; height: 1px; background: rgba(255,255,255,.15); flex-shrink: 0; }
+
+/* ── Market badge ── */
+.pge-market-badge {
+  font-size: .72rem; color: rgba(255,255,255,.65);
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px; padding: .25rem .6rem;
+  display: flex; align-items: center; gap: .3rem;
+}
+
+/* ── Buttons ── */
+.pge-btn {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .38rem .8rem; border-radius: 8px;
+  font-size: .78rem; font-weight: 500; border: none;
+  cursor: pointer; transition: all .2s; text-decoration: none; white-space: nowrap;
+}
+.pge-btn-sm { padding: .3rem .65rem; font-size: .72rem; }
+.pge-btn-primary { background: #007F86; color: white; }
+.pge-btn-primary:hover { background: #35C6C4; }
+.pge-btn-ghost { background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); border: 1px solid rgba(255,255,255,.15); }
+.pge-btn-ghost:hover { background: rgba(255,255,255,.18); color: white; }
+.pge-btn-ai { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: white; }
+.pge-btn-ai:hover { background: linear-gradient(135deg,#4f46e5,#7c3aed); }
+.pge-btn-ai.active { background: linear-gradient(135deg,#4f46e5,#7c3aed); box-shadow: 0 0 0 2px rgba(99,102,241,.4); }
+.pge-btn-success { background: #16845B; color: white; }
+.pge-btn-success:hover { background: #115e41; }
+.pge-btn-danger  { background: #BD3B4B; color: white; }
+.pge-btn-outline {
+  background: transparent; color: #007F86;
+  border: 1px solid #007F86;
+}
+.pge-btn-outline:hover { background: #007F86; color: white; }
+
+/* ── 3-column body ── */
+.pge-body {
+  flex: 1; display: flex; overflow: hidden;
+}
+
+/* ── Left rail ── */
+.pge-rail {
+  width: 200px; min-width: 200px; background: white;
+  border-right: 1px solid #e9ecef;
+  overflow-y: auto; flex-shrink: 0;
+  transition: width .25s;
+}
+.pge-rail-inner { padding: 1rem .75rem; }
+.pge-rail-stage {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .6rem .75rem; border-radius: 10px;
+  font-size: .8rem; font-weight: 500; cursor: pointer;
+  color: #6c757d; transition: all .2s; margin-bottom: .25rem;
+  border: 1px solid transparent;
+}
+.pge-rail-stage:hover { background: #f8f9fa; color: #003B5C; }
+.pge-rail-stage.active { background: #eaf5f4; color: #007F86; border-color: rgba(0,127,134,.2); }
+.pge-rail-stage.completed { color: #16845B; }
+.pge-rail-stage.completed .pge-rail-icon { color: #16845B; }
+.pge-rail-icon { width: 28px; height: 28px; border-radius: 8px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; font-size: .7rem; flex-shrink: 0; }
+.pge-rail-stage.active .pge-rail-icon { background: rgba(0,127,134,.12); color: #007F86; }
+.pge-rail-stage.completed .pge-rail-icon { background: #e8f7f0; }
+.pge-rail-label { flex: 1; line-height: 1.2; }
+.pge-rail-check { font-size: .65rem; color: #16845B; }
+.pge-rail-divider { margin: .75rem 0; border: none; border-top: 1px solid #e9ecef; }
+
+/* ── Stage canvas (center) ── */
+.pge-canvas {
+  flex: 1; overflow-y: auto; position: relative;
+  background: #f8f9fa; min-width: 0;
+}
+.pge-loading {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .75rem; height: 100%; color: #6c757d; font-size: .9rem;
+}
+.pge-loading i { font-size: 2rem; color: #007F86; }
+
+/* ── Stage canvas content wrapper ── */
+.stage-content {
+  max-width: 860px; margin: 0 auto; padding: 1.5rem;
+  animation: fadeIn .2s ease;
+}
+.stage-header { margin-bottom: 1.5rem; }
+.stage-header h2 { font-size: 1.15rem; font-weight: 700; color: #003B5C; margin-bottom: .25rem; }
+.stage-header p  { font-size: .82rem; color: #6c757d; line-height: 1.5; }
+
+/* ── Cards ── */
+.pge-card {
+  background: white; border: 1px solid #e9ecef;
+  border-radius: 14px; margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0,59,92,.06);
+}
+.pge-card-header {
+  padding: .875rem 1.125rem; border-bottom: 1px solid #e9ecef;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.pge-card-header h3 { font-size: .88rem; font-weight: 600; color: #003B5C; margin: 0; }
+.pge-card-body { padding: 1.125rem; }
+
+/* ── Form controls ── */
+.pge-field { margin-bottom: .875rem; }
+.pge-label { display: block; font-size: .75rem; font-weight: 600; color: #495057; margin-bottom: .35rem; }
+.pge-label .pge-required { color: #BD3B4B; margin-left: .2rem; }
+.pge-input, .pge-select, .pge-textarea {
+  width: 100%; padding: .5rem .75rem;
+  border: 1px solid #dee2e6; border-radius: 9px;
+  font-size: .83rem; font-family: inherit; color: #212529;
+  background: white; transition: border-color .15s, box-shadow .15s;
+  outline: none;
+}
+.pge-input:focus, .pge-select:focus, .pge-textarea:focus {
+  border-color: #007F86; box-shadow: 0 0 0 3px rgba(0,127,134,.12);
+}
+.pge-textarea { resize: vertical; min-height: 80px; }
+.pge-hint { font-size: .7rem; color: #6c757d; margin-top: .25rem; }
+.pge-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.pge-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .75rem; }
+
+/* ── Archetype picker ── */
+.archetype-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .625rem; }
+.archetype-card {
+  padding: .875rem .75rem; border-radius: 12px; cursor: pointer;
+  border: 2px solid #e9ecef; text-align: center; transition: all .18s;
+  background: white;
+}
+.archetype-card:hover { border-color: #35C6C4; transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,59,92,.1); }
+.archetype-card.selected { border-color: #007F86; background: #eaf5f4; box-shadow: 0 0 0 3px rgba(0,127,134,.12); }
+.archetype-icon { font-size: 1.4rem; margin-bottom: .4rem; }
+.archetype-name { font-size: .78rem; font-weight: 600; color: #003B5C; }
+
+/* ── Stage navigation footer ── */
+.stage-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;
+  background: white; position: sticky; bottom: 0;
+  margin-top: 1.5rem;
+}
+
+/* ── AI Drawer ── */
+.pge-ai-drawer {
+  width: 0; overflow: hidden; background: white;
+  border-left: 1px solid #e9ecef;
+  transition: width .25s ease; flex-shrink: 0;
+  display: flex; flex-direction: column;
+}
+.pge-ai-drawer.open { width: 340px; min-width: 340px; }
+.ai-drawer-header {
+  padding: .875rem 1rem; border-bottom: 1px solid #e9ecef;
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.ai-drawer-header h3 { font-size: .88rem; font-weight: 600; color: #003B5C; margin: 0; }
+.ai-messages { flex: 1; overflow-y: auto; padding: .875rem; display: flex; flex-direction: column; gap: .625rem; }
+.ai-msg { padding: .625rem .8rem; border-radius: 10px; font-size: .8rem; line-height: 1.55; max-width: 94%; }
+.ai-msg.user { background: #003B5C; color: white; align-self: flex-end; border-radius: 10px 10px 3px 10px; }
+.ai-msg.assistant { background: #f8f9fa; color: #212529; border: 1px solid #e9ecef; align-self: flex-start; border-radius: 10px 10px 10px 3px; }
+.ai-msg.thinking { animation: pulse 1.2s infinite; background: #f8f9fa; color: #6c757d; align-self: flex-start; }
+.ai-input-row {
+  padding: .75rem; border-top: 1px solid #e9ecef; flex-shrink: 0;
+  display: flex; gap: .5rem; align-items: flex-end;
+}
+.ai-input-row textarea {
+  flex: 1; resize: none; border: 1px solid #dee2e6; border-radius: 9px;
+  padding: .5rem .7rem; font-size: .8rem; font-family: inherit; outline: none;
+  max-height: 100px; transition: border-color .15s;
+}
+.ai-input-row textarea:focus { border-color: #007F86; }
+
+/* ── Badges ── */
+.pge-badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: .2rem .55rem; border-radius: 6px;
+  font-size: .7rem; font-weight: 600;
+}
+.pge-badge-active  { background: #e8f7f0; color: #16845B; }
+.pge-badge-draft   { background: #fef9ee; color: #9B6A13; }
+.pge-badge-info    { background: #eaf5f4; color: #007F86; }
+.pge-badge-purple  { background: #f3f0ff; color: #6366f1; }
+
+/* ── Version panel ── */
+.version-item {
+  padding: .75rem; border-radius: 10px; border: 1px solid #e9ecef;
+  margin-bottom: .5rem; cursor: pointer; transition: all .18s;
+}
+.version-item:hover { border-color: #007F86; background: #f8f9fa; }
+.version-meta { font-size: .72rem; color: #6c757d; margin-top: .25rem; }
+
+/* ── Toast ── */
+#pge-toast-container {
+  position: fixed; bottom: 1.25rem; right: 1.25rem;
+  z-index: 9999; display: flex; flex-direction: column; gap: .4rem;
+}
+
+/* ── RTL overrides ── */
+[dir="rtl"] .pge-back-btn { transform: scaleX(-1); }
+[dir="rtl"] .pge-rail { border-right: none; border-left: 1px solid #e9ecef; }
+[dir="rtl"] .pge-ai-drawer { border-left: none; border-right: 1px solid #e9ecef; }
+[dir="rtl"] #pge-toast-container { right: auto; left: 1.25rem; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .pge-rail { display: none; }
+  .pge-step span { display: none; }
+  .pge-product-name { max-width: 100px; }
+  .archetype-grid { grid-template-columns: repeat(2,1fr); }
+  .pge-grid-2, .pge-grid-3 { grid-template-columns: 1fr; }
+}

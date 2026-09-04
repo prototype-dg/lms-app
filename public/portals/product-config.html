@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Product Genesis Engine – Sohar International</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/pge/pge-shell.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     TOPBAR
+═══════════════════════════════════════════════ -->
+<header class="pge-topbar" id="pgeTopbar">
+  <a href="/portals/backoffice.html" class="pge-back-btn" title="Back to Back-Office">
+    <i class="fas fa-arrow-left"></i>
+  </a>
+
+  <div class="pge-topbar-product">
+    <span class="pge-product-name" id="topbarProductName">Loading…</span>
+    <span class="pge-product-code" id="topbarProductCode"></span>
+  </div>
+
+  <div class="pge-topbar-center">
+    <!-- Stepper — rendered by shell JS -->
+    <nav class="pge-stepper" id="pgeStepper" aria-label="Configuration stages"></nav>
+  </div>
+
+  <div class="pge-topbar-actions">
+    <span class="pge-market-badge" id="pgeMarketBadge"></span>
+    <button class="pge-btn pge-btn-ghost pge-btn-sm" onclick="PGEShell.toggleLang()" id="langToggleBtn">ع</button>
+    <button class="pge-btn pge-btn-ghost pge-btn-sm" id="versionBtn" onclick="PGEShell.openVersions()" title="Version history">
+      <i class="fas fa-clock-rotate-left"></i>
+    </button>
+    <button class="pge-btn pge-btn-primary pge-btn-sm" id="saveBtn" onclick="PGEShell.save()">
+      <i class="fas fa-floppy-disk"></i> <span data-i18n="save">Save</span>
+    </button>
+    <button class="pge-btn pge-btn-ai pge-btn-sm" id="aiToggleBtn" onclick="PGEShell.toggleAI()">
+      <i class="fas fa-wand-magic-sparkles"></i> <span data-i18n="ai_assist">AI Assist</span>
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════
+     BODY — 3-column layout
+═══════════════════════════════════════════════ -->
+<div class="pge-body" id="pgeBody">
+
+  <!-- LEFT: Stage progress rail -->
+  <aside class="pge-rail" id="pgeRail">
+    <div class="pge-rail-inner" id="pgeRailInner">
+      <!-- rendered by shell JS -->
+    </div>
+  </aside>
+
+  <!-- CENTER: Stage canvas -->
+  <main class="pge-canvas" id="pgeCanvas">
+    <div class="pge-loading" id="pgeLoadingOverlay">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span data-i18n="loading">Loading product…</span>
+    </div>
+    <!-- Stage modules mount here -->
+    <div id="stageMount"></div>
+  </main>
+
+  <!-- RIGHT: AI Drawer (collapsed by default) -->
+  <aside class="pge-ai-drawer" id="pgeAiDrawer" aria-label="AI Assistant">
+    <!-- mounted by pge-ai-drawer.js -->
+    <div id="aiDrawerMount"></div>
+  </aside>
+
+</div>
+
+<!-- Toast container -->
+<div id="pge-toast-container"></div>
+
+<!-- Modal container -->
+<div id="pgeModal"></div>
+
+<!-- ═══════════════════════════════════════════════
+     SCRIPTS — load order matters
+═══════════════════════════════════════════════ -->
+<script src="/pge/pge-shared.js"></script>
+<script src="/pge/pge-ai-drawer.js"></script>
+<script src="/pge/pge-stage1.js"></script>
+<script src="/pge/pge-stage2.js"></script>
+<script src="/pge/pge-shell.js"></script>
+
+</body>
+</html>
