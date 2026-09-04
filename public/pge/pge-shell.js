@@ -11,7 +11,9 @@
     1: window.PGEStage1,
     2: window.PGEStage2,
     3: window.PGEStage3,
-    // 4-6 loaded lazily in future sprints
+    4: window.PGEStage4,
+    5: window.PGEStage5,
+    6: window.PGEStage6,
   };
 
   /* ── Init ── */
