@@ -1112,6 +1112,39 @@ Product: ${i.name}. Description: ${i.description}. Base rate: ${i.base_rate}%.${
 		id: r,
 		success: !0
 	});
+}), R.patch("/:productId/rules/:ruleId", async (e) => {
+	let { productId: t, ruleId: n } = e.req.param(), r = await e.req.json(), i = [
+		"name",
+		"category",
+		"metric",
+		"operator",
+		"threshold_value",
+		"threshold_condition",
+		"action_on_breach",
+		"severity",
+		"regulatory_reference",
+		"description",
+		"is_active"
+	], a = Object.keys(r).filter((e) => i.includes(e));
+	if (!a.length) return e.json({ error: "No valid fields" }, 400);
+	let o = `UPDATE rules SET ${a.map((e) => `${e}=?`).join(",")} WHERE id=? AND product_id=?`;
+	return await e.env.DB.prepare(o).bind(...a.map((e) => r[e]), n, t).run(), await L(e.env.DB, {
+		userId: r.user_id || "u001",
+		userName: r.user_name || "System",
+		userRole: "product_manager",
+		action: "RULE_UPDATED",
+		entityType: "rule",
+		entityId: n,
+		details: r
+	}), e.json({ success: !0 });
+}), R.delete("/:productId/rules/:ruleId", async (e) => {
+	let { productId: t, ruleId: n } = e.req.param();
+	return await e.env.DB.prepare("DELETE FROM rules WHERE id=? AND product_id=?").bind(n, t).run(), e.json({ success: !0 });
+}), R.get("/rule-templates", async (e) => {
+	let t = e.req.query("category"), n = "SELECT * FROM rule_templates WHERE 1=1", r = [];
+	t && (n += " AND category=?", r.push(t)), n += " ORDER BY category, name";
+	let { results: i } = r.length ? await e.env.DB.prepare(n).bind(...r).all() : await e.env.DB.prepare(n).all();
+	return e.json({ templates: i });
 });
 //#endregion
 //#region src/api/applications.ts

@@ -179,4 +179,36 @@ app.post('/:id/rules', async (c) => {
   return c.json({ id, success: true })
 })
 
+app.patch('/:productId/rules/:ruleId', async (c) => {
+  const { productId, ruleId } = c.req.param()
+  const body = await c.req.json()
+  const allowed = ['name','category','metric','operator','threshold_value','threshold_condition',
+    'action_on_breach','severity','regulatory_reference','description','is_active']
+  const sets = Object.keys(body).filter(k => allowed.includes(k))
+  if (!sets.length) return c.json({ error: 'No valid fields' }, 400)
+  const sql = `UPDATE rules SET ${sets.map(k=>`${k}=?`).join(',')} WHERE id=? AND product_id=?`
+  await c.env.DB.prepare(sql).bind(...sets.map(k=>body[k]), ruleId, productId).run()
+  await logAudit(c.env.DB, { userId: body.user_id||'u001', userName: body.user_name||'System', userRole:'product_manager', action:'RULE_UPDATED', entityType:'rule', entityId:ruleId, details:body })
+  return c.json({ success: true })
+})
+
+app.delete('/:productId/rules/:ruleId', async (c) => {
+  const { productId, ruleId } = c.req.param()
+  await c.env.DB.prepare('DELETE FROM rules WHERE id=? AND product_id=?').bind(ruleId, productId).run()
+  return c.json({ success: true })
+})
+
+// Rule templates library
+app.get('/rule-templates', async (c) => {
+  const category = c.req.query('category')
+  let sql = 'SELECT * FROM rule_templates WHERE 1=1'
+  const params: string[] = []
+  if (category) { sql += ' AND category=?'; params.push(category) }
+  sql += ' ORDER BY category, name'
+  const { results } = params.length
+    ? await c.env.DB.prepare(sql).bind(...params).all()
+    : await c.env.DB.prepare(sql).all()
+  return c.json({ templates: results })
+})
+
 export { app as productsApi }

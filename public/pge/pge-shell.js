@@ -10,7 +10,8 @@
   const STAGE_MODULES = {
     1: window.PGEStage1,
     2: window.PGEStage2,
-    // 3-6 loaded lazily in future sprints
+    3: window.PGEStage3,
+    // 4-6 loaded lazily in future sprints
   };
 
   /* ── Init ── */
