@@ -1470,7 +1470,9 @@ async function sendAiChat(productId) {
     if (thinkEl && thinkEl.parentNode) thinkEl.parentNode.removeChild(thinkEl);
 
     if (d.thread_id) aiThreadId = d.thread_id;
-    const newStage = d.current_stage || 0;
+    // Monotonic stage guard — stage can only advance, never go back
+    // This prevents GPT returning an earlier stage number from resetting the UI
+    const newStage = Math.max(d.current_stage || 0, aiCurrentStage);
 
     // ── Roadmap: render when show_roadmap=true OR when stage advances ──────
     if (d.show_roadmap || (newStage > 0 && newStage !== aiCurrentStage)) {
@@ -1544,15 +1546,21 @@ async function confirmAiProduct(productId) {
     const d = await r.json();
     if (d.success || d.product_id) {
       const newId = d.product_id || productId;
-      toast('✅ Product published! Now live on customer portal.', 'success');
-      appendChatBubble('assistant', `<strong>Done!</strong> The product has been saved and published.<br><br>
-        ${newId ? `<span onclick="openProductDetail('${newId}')" style="color:var(--sea);cursor:pointer;text-decoration:underline">→ Open product configuration</span>` : ''}
-        <br><small style="opacity:.5">Customer portal will show it after refresh. Developer portal updated.</small>`);
+      toast('✅ Product published! Now live.', 'success');
+      // Show success with direct PGE link — keep panel open so user can see it
+      appendChatBubble('assistant',
+        '<strong style="color:#4ade80">✅ Product published!</strong><br><br>' +
+        '<strong>' + (d.product_name || 'Green Home Loan') + '</strong> is now live.<br>' +
+        (d.rule_ids && d.rule_ids.length ? '<span style="color:rgba(255,255,255,.55);font-size:.78rem">✓ ' + d.rule_ids.length + ' eligibility rules saved</span><br>' : '') +
+        '<div style="display:flex;gap:.5rem;margin-top:.65rem;flex-wrap:wrap">' +
+        (newId ? '<a href="/portals/product-config.html?id=' + newId + '" style="display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .85rem;background:rgba(53,198,196,.18);color:var(--sea-glass);border:1px solid rgba(53,198,196,.4);border-radius:6px;font-size:.78rem;font-weight:600;text-decoration:none" target="_blank"><i class="fas fa-wand-magic-sparkles"></i> Open in PGE</a>' : '') +
+        '</div>' +
+        '<br><small style="opacity:.4">Customer portal updated. Go to Products tab to see the new card.</small>'
+      );
       const bar = document.getElementById('ai-confirm-bar');
       if (bar) bar.style.display = 'none';
       aiThreadId = null; aiProductDraft = null;
-      // Close panel, refresh products list and re-render the products page
-      closePanel();
+      // Refresh product list in background; don't close panel — user sees the PGE link
       await loadProducts();
       await renderProducts();
     } else { toast(d.error||'Confirm failed', 'error'); }

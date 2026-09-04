@@ -298,8 +298,8 @@ app.post('/products/confirm', async (c) => {
     gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,
     ai_confidence_threshold, allow_byop, allow_partner_inventory,
     required_docs, esg_required_docs, approved_materials, approved_vendors,
-    configuration, portal_visible, developer_portal_visible, created_by, created_at, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `).bind(
     id, name, code,
     product_draft.description || (cloneSource?.description) || '',
@@ -321,7 +321,9 @@ app.post('/products/confirm', async (c) => {
     JSON.stringify(product_draft.esg_required_docs || ['gsas_cert', 'epc_report', 'eia_approval']),
     JSON.stringify(product_draft.approved_materials || ['Green Concrete', 'Thermal Insulation', 'Solar Panels', 'Energy-Efficient Appliances', 'Low-E Glass', 'Recycled Steel']),
     JSON.stringify(product_draft.approved_vendors || ['Oman Readymix LLC', 'Gulf Insulation Group', 'SunTech Oman', 'Green Build Oman', 'EcoMaterials Oman']),
-    JSON.stringify(config), 0, 0, user_id, ts, ts
+    JSON.stringify(config), 0, 0,
+    1,  // pge_stage=1 so PGE opens on Stage 1 with product data pre-filled
+    user_id, ts, ts
   ).run()
 
   // Save rules
@@ -338,7 +340,7 @@ app.post('/products/confirm', async (c) => {
         rule.threshold_value || null, rule.threshold_condition || null,
         rule.action_on_breach || 'reject', rule.severity || 'hard',
         rule.regulatory_reference || null, 'ai_generated', rule.ai_confidence || null,
-        rule.description || null, 0, user_id, ts
+        rule.description || null, 1, user_id, ts  // is_active=1 so PGE Stage 3 shows them
       ).run()
       ruleIds.push(ruleId)
     }
@@ -384,10 +386,14 @@ Product: ${name}. Description: ${product_draft.description || ''}. Base rate: ${
     }
   }
 
+  // Determine final pge_stage based on what was generated
+  // rules_draft populated → at least stage 3; if product_draft has workflow → stage 4
+  const finalPgeStage = ruleIds.length > 0 ? 3 : 1
+
   await c.env.DB.prepare(
     `UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,
-     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, updated_at=? WHERE id=?`
-  ).bind(isGreen ? 1 : 0, portalHeroTitle, JSON.stringify(portalHighlights), portalBadge, ts, ts, id).run()
+     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, pge_stage=?, updated_at=? WHERE id=?`
+  ).bind(isGreen ? 1 : 0, portalHeroTitle, JSON.stringify(portalHighlights), portalBadge, ts, finalPgeStage, ts, id).run()
 
   // Mark thread as completed
   if (thread_id) {
