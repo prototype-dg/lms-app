@@ -769,17 +769,57 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
   const hasAskedStage1  = assistantMsgs.some(m => m.includes('clone') || m.includes('from scratch') || m.includes('product model') || m.includes('stage 1'))
   const hasAskedStage1b = assistantMsgs.some(m => m.includes('islamic') || m.includes('murabaha') || m.includes('conventional') || m.includes('structure'))
   const hasAskedStage1c = assistantMsgs.some(m => m.includes('target segment') || m.includes('omani nationals') || m.includes('expat') || m.includes('income band'))
-  const hasAskedStage1d = assistantMsgs.some(m => m.includes('product name') || m.includes('sohar green') || m.includes('confirm the name'))
+  const hasAskedStage1d = assistantMsgs.some(m =>
+    m.includes('product name') || m.includes('sohar green') || m.includes('sohar eco') ||
+    m.includes('ecohome') || m.includes('confirm the name') || m.includes('shall i use') ||
+    m.includes('for the product name') || m.includes('i suggest') && m.includes('name')
+  )
   const hasAskedStage2  = assistantMsgs.some(m => m.includes('base rate') || m.includes('pricing structure') || m.includes('stage 2') || m.includes('5.25%'))
   const hasAskedStage2b = assistantMsgs.some(m => m.includes('discount tier') || m.includes('green discount') || m.includes('gsas score band'))
-  const hasAskedStage2c = assistantMsgs.some(m => m.includes('ltv band') || m.includes('loan-to-value') || m.includes('first home'))
+  const hasAskedStage2c = assistantMsgs.some(m =>
+    m.includes('ltv band') || m.includes('loan-to-value') ||
+    (m.includes('ltv') && m.includes('first home') && m.includes('subsequent')) ||
+    m.includes('90% ltv') || m.includes('ltv settings')
+  )
   const hasAskedStage2d = assistantMsgs.some(m => m.includes('dbr') && (m.includes('55%') || m.includes('stage 2') || m.includes('debt burden')))
   const hasAskedStage2e = assistantMsgs.some(m => m.includes('term range') || m.includes('amount range') || m.includes('omr 10,000') || m.includes('min/max'))
   const hasAskedStage2f = assistantMsgs.some(m => m.includes('arrangement fee') || m.includes('early settlement') || m.includes('fee'))
-  const hasAskedStage3  = assistantMsgs.some(m => m.includes('14 eligibility') || m.includes('eligibility rules') || m.includes('gsas minimum') || m.includes('stage 3'))
-  const hasAskedStage4  = assistantMsgs.some(m => m.includes('10-step') || m.includes('ekyc') || m.includes('workflow') || m.includes('stage 4'))
-  const hasAskedStage5  = assistantMsgs.some(m => m.includes('compliance classification') || m.includes('risk weight') || m.includes('provisioning') || m.includes('stage 5'))
-  const hasAskedConfirm = assistantMsgs.some(m => m.includes('ready to publish') || m.includes('confirm & publish') || m.includes('stage 6'))
+  // Stage 3 QUESTION marker — must be UNIQUE to the stage-3 question turn only.
+  // Do NOT use 'eligibility rules' or 'workflow' — Stage 3 COMPLETION message also contains both.
+  // Use '17 eligibility rules' (question) or 'gsas minimum' (question text).
+  const hasAskedStage3  = assistantMsgs.some(m =>
+    m.includes('17 eligibility rules') || m.includes('gsas minimum') ||
+    (m.includes('stage 3') && m.includes('credit risk'))
+  )
+  // Stage 4 QUESTION marker: user was asked the workflow automation question.
+  // Detect by the Stage 3 completion message's unique "10-step workflow" ask phrase.
+  const hasAskedStage4  = assistantMsgs.some(m =>
+    m.includes('10-step workflow') ||
+    m.includes('10-step approval workflow') ||
+    m.includes('more human touchpoints in the automated phase') ||
+    m.includes('should i configure automated processing')
+  )
+  // Stage 4 COMPLETE marker: Stage 4 response was returned (workflow built).
+  // Use 'stage 4 complete.' (unique — only in the Stage 4 response message).
+  // Must NOT use 'nci ekyc' alone — that string also appears in Stage 4 ask.
+  const hasAskedStage4Complete = assistantMsgs.some(m =>
+    m.includes('stage 4 complete.') ||
+    m.includes('10-step approval workflow configured') ||
+    (m.includes('nci ekyc · oman credit bureau') && m.includes('muscat municipality'))  // only in stage 4 response
+  )
+  // Stage 5 QUESTION marker: Stage 5 compliance ask was shown to user.
+  // Use 'shall i apply these compliance parameters' — unique to stage 5 ask message.
+  // Do NOT use 'aml risk score' or 'basel iii' — those are in stage 4 response too.
+  const hasAskedStage5  = assistantMsgs.some(m =>
+    m.includes('shall i apply these compliance parameters') ||
+    m.includes('compliance parameters, or do you want to adjust') ||
+    m.includes('stage 5 complete')
+  )
+  const hasAskedConfirm = assistantMsgs.some(m =>
+    m.includes('ready to publish') || m.includes('confirm &amp; publish') ||
+    m.includes('confirm & publish') || m.includes('stage 6') ||
+    m.includes('click confirm')
+  )
 
   // Product type detection from full conversation context
   const fullContext = [...history.map((m: any) => m.content || ''), message].join(' ').toLowerCase()
@@ -1064,7 +1104,7 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
   }
 
   // ── STAGE 4 answered: Generate full workflow ──────────────────────────────
-  if (hasAskedStage4 && !hasAskedStage5) {
+  if (hasAskedStage4 && !hasAskedStage4Complete) {
     const wfNodes = [
       { id: 'n1', type: 'start', label: 'Application Submitted', role: null, description: 'Customer submits via Sohar Mobile App, Internet Banking, or branch. Application ID generated. Documents uploaded to secure vault.' },
       { id: 'n2', type: 'task', label: 'eKYC & AML Screening', role: 'system', sla_hours: 1, auto: true, description: 'Calls National Centre for Information (NCI) eKYC API — biometric Civil ID verification. Simultaneous AML/CFT screening via WorldCheck/Refinitiv. Result: identity_verified. Auto-reject if AML hit.' },
@@ -1084,14 +1124,7 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         `<strong>Human review steps (7–10):</strong> Credit Underwriting (24h) → Green Finance ESG Review (24h) → Risk & Compliance (48h) → PM Final Approval (24h)<br><br>` +
         `⏱️ Total SLA: <strong>~5 working days</strong> (automated: <19h, human: ~4 days)<br>` +
         `🔗 External integrations: NCI eKYC · Oman Credit Bureau · GORD GSAS API · Al Mashora/JLL · Muscat Municipality<br><br>` +
-        `<strong>Stage 5 — Compliance Classification</strong><br><br>` +
-        `For regulatory reporting, I recommend classifying this product as follows:<br>` +
-        `&bull; <strong>Basel III risk weight</strong>: 75% (residential retail mortgage, LTV ≤90%)<br>` +
-        `&bull; <strong>IFRS 9 provisioning</strong>: 1.5% Stage 1 ECL (higher than standard 1.0% due to green portfolio concentration, per IFRS 9 §5.5)<br>` +
-        `&bull; <strong>CBO classification</strong>: Green Finance (reportable under Circular 2026-12 §7 monthly ESG portfolio return)<br>` +
-        `&bull; <strong>AML risk tier</strong>: LOW (eKYC + OCB auto-verified, green property reduces beneficial ownership complexity)<br>` +
-        `&bull; <strong>Regulatory tags</strong>: #CLIMATE_RISK · #ESG_ELIGIBILITY · #GREEN_FINANCING · #OMAN_VISION_2040<br><br>` +
-        `<strong>Shall I apply these compliance parameters, or do you want to adjust the risk weight or provisioning rate?</strong>`,
+        `<strong>Ready for Stage 5 — Compliance Classification?</strong> I'll apply Basel III capital rules, IFRS 9 provisioning, and CBO green finance tagging. Shall I proceed?`,
       current_stage: 5, show_roadmap: false, action: 'none',
       ui_events: [
         { type: 'set_tab', tab: 'workflow' },
@@ -1101,19 +1134,101 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
     }
   }
 
+  // ── STAGE 4 complete → ask Stage 5 compliance question ───────────────────
+  if (hasAskedStage4Complete && !hasAskedStage5) {
+    return {
+      message: `<strong>Stage 5 — Compliance Classification</strong><br><br>` +
+        `For regulatory reporting, I recommend classifying this product as follows:<br>` +
+        `&bull; <strong>Basel III risk weight</strong>: 75% (residential retail mortgage, LTV ≤90% per CBO BM/REG/2019/74 Schedule 3)<br>` +
+        `&bull; <strong>IFRS 9 provisioning</strong>: 1.5% Stage 1 ECL (higher than standard 1.0% due to green portfolio concentration, per IFRS 9 §5.5)<br>` +
+        `&bull; <strong>CBO classification</strong>: Green Finance (reportable under Circular 2026-12 §7 monthly ESG portfolio return)<br>` +
+        `&bull; <strong>AML risk tier</strong>: LOW (eKYC + OCB auto-verified; green property reduces beneficial ownership complexity)<br>` +
+        `&bull; <strong>Regulatory tags</strong>: #CLIMATE_RISK · #ESG_ELIGIBILITY · #GREEN_FINANCING · #OMAN_VISION_2040<br><br>` +
+        `<strong>Shall I apply these compliance parameters, or do you want to adjust the risk weight or provisioning rate?</strong>`,
+      current_stage: 5, show_roadmap: false, action: 'none',
+      ui_events: [{ type: 'set_tab', tab: 'compliance' }],
+      product_draft: null, rules_draft: null, schema_draft: null,
+    }
+  }
+
   // ── STAGE 5 answered — Stage 6: Simulation + ready to confirm ────────────
   if (hasAskedStage5 && !hasAskedConfirm) {
-    const gsasMin = 70 // default — from stage 3
+    // ── Derive actual values from conversation context ──────────────────────
+    // Product name: look for a confirmed custom name in user messages or assistant confirmation
+    const userMsgs = history.filter((m: any) => m.role === 'user').map((m: any) => (m.content || '').toLowerCase())
+    const fullConvText = [...assistantMsgs, ...userMsgs].join(' ')
+
+    // Extract product name: look for "sohar [word]" pattern in assistant messages (suggestion)
+    // or just use what the name-confirmation turn shows
+    let derivedName = 'Sohar Green Home Finance – GSAS'
+    const nameMatch = assistantMsgs.find(m => m.includes('ecohome') || m.includes('eco home') || m.includes('sohar eco'))
+    const nameSuggestMatch = assistantMsgs.find(m => m.includes('sohar green home finance'))
+    if (nameMatch) {
+      // Extract name from the suggestion text
+      const m = nameMatch.match(/[""""]([^""""\n]{5,60})[""""]|"([^"\n]{5,60})"|'([^'\n]{5,60})'/)
+      if (m) derivedName = (m[1] || m[2] || m[3]).trim()
+      else if (nameMatch.includes('ecohome elite')) derivedName = 'Sohar EcoHome Elite'
+      else if (nameMatch.includes('ecohome')) derivedName = 'Sohar EcoHome Elite'
+    } else if (nameSuggestMatch) {
+      derivedName = 'Sohar Green Home Finance – GSAS'
+    }
+    // Also check user messages for a custom name they typed
+    const userNameMsg = history.filter((m: any) => m.role === 'user').find((m: any) => {
+      const c = (m.content || '').toLowerCase()
+      return (c.includes('sohar') || c.includes('eco') || c.includes('green home')) && c.length < 80
+    })
+    // Check if assistant confirmed a specific user-proposed name
+    const confirmNameAssistant = assistantMsgs.find(m =>
+      (m.includes('has been set') || m.includes('the product name')) &&
+      (m.includes('sohar') || m.includes('eco') || m.includes('green'))
+    )
+    if (confirmNameAssistant) {
+      // Extract quoted name from confirmation message
+      const qm = confirmNameAssistant.match(/'([^']{5,60})'|"([^"]{5,60})"/)
+      if (qm) derivedName = (qm[1] || qm[2]).trim()
+    }
+
+    // Extract max_amount: look for '1m' or '1,000,000' or '500,000' in full conversation
+    const maxAmountFromCtx = (() => {
+      if (fullConvText.includes('1m omr') || fullConvText.includes('1,000,000') || fullConvText.includes('1m max')) return 1000000
+      if (fullConvText.includes('750,000') || fullConvText.includes('750k')) return 750000
+      if (fullConvText.includes('500,000') || fullConvText.includes('500k') || fullConvText.includes('omr 500')) return 500000
+      return 500000
+    })()
+
+    // Extract GSAS min from stage 3 context
+    const gsasMin = (() => {
+      const s3msg = assistantMsgs.find(m => m.includes('gsas ≥') || m.includes('gsas minimum') || m.includes('gsas score ≥'))
+      if (s3msg) {
+        const gm = s3msg.match(/gsas[^0-9]*([0-9]{2})/i)
+        if (gm) { const v = parseInt(gm[1]); if (v >= 65 && v <= 90) return v }
+      }
+      if (fullConvText.includes('75')) return 75
+      return 70
+    })()
+
+    // Extract base rate
+    const baseRateFromCtx = (() => {
+      const rm = fullConvText.match(/base rate[^0-9]*([0-9]+\.[0-9]+)%/)
+      if (rm) return parseFloat(rm[1])
+      if (fullConvText.includes('5.25')) return 5.25
+      return 5.25
+    })()
+
+    // Derive description incorporating actual product name and confirmed settings
+    const isIslamic = fullConvText.includes('murabaha') || fullConvText.includes('musharaka') || fullConvText.includes('islamic')
+    const structureLabel = isIslamic ? 'Islamic (Diminishing Musharaka)' : 'Conventional'
+
     const productDraft = {
-      name: 'Sohar Green Home Finance – GSAS',
-      description: 'Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on sustainability score (GSAS ≥85: Gold tier). Supports Oman Vision 2040 and CBO green finance objectives. Conventional financing structure, CBO-compliant.',
+      name: derivedName,
+      description: `${structureLabel} home financing for GSAS-certified green properties in Oman. Earn up to 0.75% rate discount based on sustainability score (GSAS ≥85: Gold tier, 0.5% for GSAS 70–84: Silver). Targets affluent and HNW customers. Supports Oman Vision 2040, CBO green finance objectives, and OS GSO 3000:2025.`,
       category: 'home_loan',
-      base_rate: 5.25,
+      base_rate: baseRateFromCtx,
       max_ltv: 90,
       max_dbr: 55,
       green_dbr: 55,
       min_term: 3, max_term: 25,
-      min_amount: 25000, max_amount: 500000,
+      min_amount: 25000, max_amount: maxAmountFromCtx,
       gsas_min_score: gsasMin,
       gsas_premium_score: 85,
       green_discount_premium: 0.75,
@@ -1161,14 +1276,14 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         `&bull; <strong>Break-even</strong>: month 11 post-launch (setup costs: OMR 85K for GORD API integration + Green Finance Officer role)<br>` +
         `&bull; ESG reporting: monthly CBO Green Finance Return under Circular 2026-12 §7, plus annual TCFD disclosure<br><br>` +
         `📋 <strong>Full product configuration summary:</strong><br>` +
-        `• <strong>Sohar Green Home Finance – GSAS</strong> · Conventional · Cloned from Standard Home Loan<br>` +
-        `• Rate: <strong>5.25%</strong> · Tiers: 4.50% (GSAS ≥85) · 4.75% (GSAS 70–84)<br>` +
+        `• <strong>${derivedName}</strong> · ${structureLabel} · Cloned from Standard Home Loan<br>` +
+        `• Rate: <strong>${baseRateFromCtx}%</strong> · Tiers: ${(baseRateFromCtx-0.75).toFixed(2)}% (GSAS ≥85) · ${(baseRateFromCtx-0.5).toFixed(2)}% (GSAS 70–84)<br>` +
         `• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>` +
-        `• Terms: <strong>3–25 years</strong> · Amount: <strong>OMR 25,000–500,000</strong><br>` +
+        `• Terms: <strong>3–25 years</strong> · Amount: <strong>OMR 25,000–${maxAmountFromCtx.toLocaleString()}</strong><br>` +
         `• Eligibility: <strong>${rulesDraft.length} rules</strong> across credit, collateral, ESG, income<br>` +
         `• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>` +
         `• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>` +
-        `🚀 Everything is configured. Click <strong>Confirm & Publish</strong> to save the full product and make it live on the customer portal.`,
+        `🚀 Everything is configured. Click <strong>Confirm &amp; Publish</strong> to save the full product and make it live on the customer portal.`,
       current_stage: 6, show_roadmap: false, action: 'ready_to_confirm',
       ui_events: [{ type: 'set_tab', tab: 'ai_config' }],
       product_draft: productDraft, rules_draft: rulesDraft, schema_draft: schemaDraft,
