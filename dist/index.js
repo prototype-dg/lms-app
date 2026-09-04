@@ -4450,7 +4450,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 }), $.use("*", async (e, t) => {
 	await t();
 	let n = e.req.path;
-	(n.endsWith(".html") || n === "/" || n === "") && e.res.status === 200 && (e.res.headers.set("Cache-Control", "no-cache, must-revalidate"), e.res.headers.set("Pragma", "no-cache"));
+	(n.endsWith(".html") || n === "/" || n === "") && (e.res.status === 200 || e.res.status === 304) && (e.res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0"), e.res.headers.set("Pragma", "no-cache"), e.res.headers.set("Expires", "0"));
 }), $.use("/*", e({ root: "./dist" }));
 //#endregion
 export { $ as default, nt as env };
