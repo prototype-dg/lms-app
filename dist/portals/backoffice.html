@@ -1793,6 +1793,87 @@ async function sendAiChat(productId) {
       setTimeout(() => updateAiDraftCard(), 100);
     }
 
+    // ── Per-turn Stage 2 field extraction ─────────────────────────────────
+    // GPT often confirms values in message text ("LTV set: 90%...") but skips
+    // the corresponding set_field ui_event. Extract confirmed values from every
+    // Stage 2 message and seed aiDraftConfig for any field still missing.
+    // This runs on every turn so values appear immediately, not just at completion.
+    if (newStage === 2 || (newStage >= 2 && Object.keys(aiDraftConfig).length < 6)) {
+      const rawTurn = d.reply || d.message || '';
+      const plainTurn = rawTurn.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      const ptLower = plainTurn.toLowerCase();
+      let fieldSeeded = false;
+
+      // base_rate: "base rate 5.25%" / "rate: 5.25%" / "5.25% base"
+      if (!aiDraftConfig.base_rate) {
+        const m = plainTurn.match(/(?:base\s+rate|rate)[^0-9]*(\d+\.\d+)%/i)
+          || plainTurn.match(/(\d+\.\d+)%[^,]*(?:base|rate|per annum)/i);
+        if (m) { aiDraftConfig.base_rate = parseFloat(m[1]); fieldSeeded = true; }
+      }
+
+      // green_discount_premium: "0.75% off" / "0.75% discount" / "0.75% for GSAS ≥85"
+      if (!aiDraftConfig.green_discount_premium) {
+        const m = plainTurn.match(/(\d+\.\d+)%\s*(?:off|discount|for\s+gsas)/i);
+        if (m) { aiDraftConfig.green_discount_premium = parseFloat(m[1]); fieldSeeded = true; }
+      }
+
+      // max_ltv: "90% LTV" / "LTV: 90%" / "LTV set.*90%"
+      if (!aiDraftConfig.max_ltv) {
+        const m = plainTurn.match(/(?:ltv|loan.to.value)[^0-9]*(\d{2,3})%/i)
+          || plainTurn.match(/(\d{2,3})%\s*ltv/i);
+        if (m) { const v = parseInt(m[1]); if (v >= 60 && v <= 100) { aiDraftConfig.max_ltv = v; fieldSeeded = true; } }
+      }
+
+      // max_dbr: smart extraction — prefer explicit "set at X% DBR" pattern,
+      // else take MINIMUM of all DBR-adjacent percentages.
+      // Rationale: GPT says "standard DBR is 60%, green is 55%" — min() picks 55
+      if (!aiDraftConfig.max_dbr) {
+        const applied = plainTurn.match(/(?:set\s+at|applying|apply)\s*(\d{2,3})%\s*(?:dbr|debt)/i)
+          || plainTurn.match(/(\d{2,3})%\s*(?:dbr|buffer|debt)[^.]*(?:green|product|this)/i)
+          || plainTurn.match(/(?:dbr\s+(?:set|applied|confirmed)\s+(?:at|to))\s*(\d{2,3})%/i);
+        if (applied) {
+          const v = parseInt(applied[1]);
+          if (v >= 30 && v <= 80) { aiDraftConfig.max_dbr = v; fieldSeeded = true; }
+        } else {
+          // Collect all percentages mentioned in DBR context, pick minimum
+          const dbrCtxMatches = [...plainTurn.matchAll(/(\d{2,3})%[^.]*(?:dbr|debt.burden)|(?:dbr|debt.burden)[^.]*?(\d{2,3})%/gi)];
+          const dbrVals = dbrCtxMatches.map(mm => parseInt(mm[1] || mm[2])).filter(v => v >= 30 && v <= 80);
+          if (dbrVals.length) { aiDraftConfig.max_dbr = Math.min(...dbrVals); fieldSeeded = true; }
+        }
+      }
+
+      // max_amount: "OMR 1,000,000" / "OMR 500,000" / "up to OMR 1M"
+      if (!aiDraftConfig.max_amount) {
+        // "OMR X to OMR Y" — take Y
+        const range = plainTurn.match(/omr\s*[\d,]+\s*to\s*omr\s*([\d,]+)/i);
+        const single = plainTurn.match(/(?:max(?:imum)?|up\s+to)\s+omr\s*([\d,]+)/i);
+        const raw = range || single;
+        if (raw) { const v = parseInt(raw[1].replace(/,/g,'')); if (v >= 10000) { aiDraftConfig.max_amount = v; fieldSeeded = true; } }
+      }
+
+      // min_amount: "OMR X to OMR Y" — take X
+      if (!aiDraftConfig.min_amount) {
+        const m = plainTurn.match(/omr\s*([\d,]+)\s*to\s*omr\s*[\d,]+/i);
+        if (m) { const v = parseInt(m[1].replace(/,/g,'')); if (v >= 1000 && v <= 200000) { aiDraftConfig.min_amount = v; fieldSeeded = true; } }
+      }
+
+      // max_term: "25 years" / "term.*25" / "up to 25 years"
+      if (!aiDraftConfig.max_term) {
+        const m = plainTurn.match(/(?:term|year)[^0-9]*(\d{1,2})\s*years?/i)
+          || plainTurn.match(/(\d{1,2})\s*years?[^,]*(?:max|term|range)/i);
+        if (m) { const v = parseInt(m[1]); if (v >= 5 && v <= 35) { aiDraftConfig.max_term = v; fieldSeeded = true; } }
+      }
+
+      // min_term: "5 to 25" / "term range of 5"
+      if (!aiDraftConfig.min_term) {
+        const m = plainTurn.match(/(?:term\s+range\s+of|from)\s*(\d{1,2})\s*(?:to|–|-)/i);
+        if (m) { const v = parseInt(m[1]); if (v >= 1 && v <= 15) { aiDraftConfig.min_term = v; fieldSeeded = true; } }
+        else if (aiDraftConfig.max_term) { aiDraftConfig.min_term = 3; } // default
+      }
+
+      if (fieldSeeded) setTimeout(() => updateAiDraftCard(), 300);
+    }
+
     // ── Build reply HTML ──────────────────────────────────────────────────
     let replyHtml = markdownToHtml(d.reply || d.message || 'Done.');
 
