@@ -1569,12 +1569,55 @@ async function sendAiChat(productId) {
     if (thinkEl && thinkEl.parentNode) thinkEl.parentNode.removeChild(thinkEl);
 
     if (d.thread_id) aiThreadId = d.thread_id;
-    // Monotonic stage guard — stage can only advance, never go back
-    // This prevents GPT returning an earlier stage number from resetting the UI
-    const newStage = Math.max(d.current_stage || 0, aiCurrentStage);
 
-    // ── Roadmap: render when show_roadmap=true OR when stage advances ──────
-    if (d.show_roadmap || (newStage > 0 && newStage !== aiCurrentStage)) {
+    // ── Infer stage from message text as a client-side safety net ─────────
+    // GPT sometimes returns current_stage:1 even for Stage 2/3 sub-questions.
+    // Use a layered approach: start from d.current_stage, then improve it from
+    // message content, then apply the monotonic guard.
+    const msgText = (d.reply || d.message || '').toLowerCase();
+    let inferredStage = d.current_stage || 0;
+
+    // 1. Explicit "Stage N" markers — "stage 2 —", "stage 3:", etc.
+    const stageMatch = msgText.match(/stage\s+([2-6])[\s\u2014:–\-]/g);
+    if (stageMatch) {
+      stageMatch.forEach(m => {
+        const n = parseInt(m.replace(/\D/g, ''));
+        if (n > inferredStage) inferredStage = n;
+      });
+    }
+
+    // 2. "Stage N complete" → next stage is starting; bump inferred to N+1
+    const completeMatch = msgText.match(/stage\s+(\d+)\s+complete/i);
+    if (completeMatch) {
+      const completedN = parseInt(completeMatch[1]);
+      if (completedN + 1 > inferredStage) inferredStage = completedN + 1;
+    }
+
+    // 3. Stage 2 keyword fingerprints — if any Stage 2-specific terms appear
+    //    in the message, it's at least Stage 2 (even if GPT said current_stage:1)
+    const stage2Keywords = ['base rate', '5.25%', 'ltv', 'dbr', 'debt burden', 'green discount',
+      'gsas score band', 'arrangement fee', 'early settlement', 'term range', 'amount range',
+      'discount tier', 'loan-to-value', 'pricing structure'];
+    if (inferredStage < 2 && stage2Keywords.some(kw => msgText.includes(kw))) inferredStage = 2;
+
+    // 4. Stage 3 fingerprints
+    const stage3Keywords = ['eligibility rules', 'add_rule', 'credit score ≥', 'dbr ≤', 'gsas minimum',
+      'collateral rules', 'esg rules', 'income/employment', 'credit rules', 'r1:', 'r2:'];
+    if (inferredStage < 3 && stage3Keywords.some(kw => msgText.includes(kw))) inferredStage = 3;
+
+    // 5. Stage 4 fingerprints
+    if (inferredStage < 4 && (msgText.includes('approval workflow') || msgText.includes('set_workflow') ||
+        msgText.includes('ekyc') || (msgText.includes('workflow') && msgText.includes('steps')))) inferredStage = 4;
+
+    // 6. Stage 5 fingerprints
+    if (inferredStage < 5 && (msgText.includes('compliance') && (msgText.includes('basel iii') ||
+        msgText.includes('ifrs') || msgText.includes('aml risk')))) inferredStage = 5;
+
+    // Monotonic guard — stage can only advance, never go back
+    const newStage = Math.max(inferredStage, aiCurrentStage);
+
+    // ── Roadmap: always render when we have a stage, so strip stays in sync ─
+    if (newStage > 0) {
       renderRoadmap(newStage);
     }
 
