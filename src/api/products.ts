@@ -15,8 +15,11 @@ app.get('/:id', async (c) => {
   const id = c.req.param('id')
   const product = await c.env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(id).first() as any
   if (!product) return c.json({ error: 'Not found' }, 404)
+  // Product-specific rules only — global CBO rules (product_id IS NULL) are managed
+  // via the Rules Engine page and should NOT appear in the product detail panel,
+  // which already has its own "CBO Global Rules" section that inflates the displayed count.
   const { results: rules } = await c.env.DB.prepare(
-    'SELECT * FROM rules WHERE product_id = ? OR product_id IS NULL ORDER BY category, name'
+    'SELECT * FROM rules WHERE product_id = ? ORDER BY category, name'
   ).bind(id).all()
 
   // If product has no workflow_nodes of its own but has a template assigned,

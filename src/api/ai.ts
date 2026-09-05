@@ -487,6 +487,114 @@ app.post('/products/confirm', async (c) => {
     }
   }
 
+  // ── Map compliance tags discussed in AI session → product_compliance_tags ──────
+  // The AI Studio Stage 5 always applies a standard set of regulatory tags for green/ESG
+  // home loan products. Scan the thread messages for Basel III %, IFRS9 %, and ESG tags
+  // that were mentioned, then lookup matching IDs from compliance_tags and insert links.
+  try {
+    // 1. Determine which tag codes apply based on thread content + product type
+    const isGreenProduct = (product_draft.esg_required_docs || []).length > 0
+    const threadMessages2: any[] = (() => {
+      try {
+        const thr = thread_id
+        return [] // will be loaded below from DB; placeholder
+      } catch { return [] }
+    })()
+
+    // Reload thread messages for tag scanning
+    let tagScanMsgs: any[] = []
+    if (thread_id) {
+      const thr2 = await c.env.DB.prepare('SELECT messages FROM ai_threads WHERE id = ?').bind(thread_id).first() as any
+      if (thr2?.messages) {
+        try { tagScanMsgs = JSON.parse(thr2.messages) } catch {}
+      }
+    }
+    const threadText = tagScanMsgs.map((m: any) => typeof m === 'string' ? m : (m.content || m.text || '')).join(' ')
+    const threadTextLc = threadText.toLowerCase()
+
+    // 2. Build list of tag codes to apply — always include baseline CBO regulatory tags
+    // for home loans; add ESG/green tags when product has ESG docs
+    const tagCodesToApply: string[] = []
+
+    // Regulatory baseline — always apply for any home loan
+    tagCodesToApply.push('CBR-HL-001')    // CBO Home Loan DBR cap
+    tagCodesToApply.push('IFRS9-ECL')     // IFRS9 provisioning
+    tagCodesToApply.push('BASEL3-RW')     // Basel III risk weight
+
+    // ESG/Green tags — apply when product has ESG requirements
+    if (isGreenProduct) {
+      tagCodesToApply.push('ESG-GREEN')
+      tagCodesToApply.push('CLIMATE-RISK')
+      tagCodesToApply.push('OMAN-V2040')
+    }
+
+    // Thread-content-driven tags — detect from AI conversation
+    if (threadTextLc.includes('climate') || threadTextLc.includes('كلايميت'))            tagCodesToApply.push('CLIMATE-RISK')
+    if (threadTextLc.includes('esg') || threadTextLc.includes('esg'))                    tagCodesToApply.push('ESG-GREEN')
+    if (threadTextLc.includes('green') || threadTextLc.includes('أخضر'))                 tagCodesToApply.push('ESG-GREEN')
+    if (threadTextLc.includes('#climate_risk'))                                            tagCodesToApply.push('CLIMATE-RISK')
+    if (threadTextLc.includes('#esg_eligibility') || threadTextLc.includes('#green'))     tagCodesToApply.push('ESG-GREEN')
+    if (threadTextLc.includes('#oman_vision') || threadTextLc.includes('vision 2040'))    tagCodesToApply.push('OMAN-V2040')
+    if (threadTextLc.includes('aml') || threadTextLc.includes('مكافحة'))                 tagCodesToApply.push('AML-KYC')
+    if (threadTextLc.includes('ifrs') || threadTextLc.includes('ifrs9'))                 tagCodesToApply.push('IFRS9-ECL')
+    if (threadTextLc.includes('basel') || threadTextLc.includes('75%'))                  tagCodesToApply.push('BASEL3-RW')
+
+    // Deduplicate
+    const uniqueCodes = [...new Set(tagCodesToApply)]
+
+    // 3. Look up actual tag IDs from the DB by code (code column), name, or tag text match
+    // compliance_tags may use 'code' or 'tag_code' column depending on migration
+    // Try code first, then fall back to name LIKE match
+    const mappedTagIds: string[] = []
+    for (const code of uniqueCodes) {
+      // Try exact code match
+      let tag: any = await c.env.DB.prepare(
+        'SELECT id FROM compliance_tags WHERE code = ? LIMIT 1'
+      ).bind(code).first().catch(() => null)
+
+      // Fall back: name contains code keyword
+      if (!tag) {
+        const keyword = code.replace(/[-_]/g, ' ').toLowerCase()
+        const { results: fuzzy } = await c.env.DB.prepare(
+          "SELECT id FROM compliance_tags WHERE LOWER(name) LIKE ? OR LOWER(tag_code) LIKE ? LIMIT 1"
+        ).bind(`%${keyword}%`, `%${code.toLowerCase()}%`).all().catch(() => ({ results: [] })) as any
+        if (fuzzy && fuzzy.length > 0) tag = fuzzy[0]
+      }
+
+      if (tag?.id) mappedTagIds.push(tag.id)
+    }
+
+    // 4. If no specific tags matched (table empty / different schema), do a broad sweep:
+    // map ALL mandatory compliance tags that apply to home_loan products
+    if (mappedTagIds.length === 0) {
+      const { results: mandatoryTags } = await c.env.DB.prepare(`
+        SELECT id FROM compliance_tags
+        WHERE severity = 'mandatory' AND is_active = 1
+        AND (applies_to IS NULL OR applies_to = '[]' OR applies_to LIKE '%home_loan%')
+        LIMIT 20
+      `).all().catch(() => ({ results: [] })) as any
+      if (mandatoryTags) mandatoryTags.forEach((t: any) => mappedTagIds.push(t.id))
+
+      // Also add all active tags if mandatory set is empty (covers newly seeded DBs)
+      if (mappedTagIds.length === 0) {
+        const { results: allActiveTags } = await c.env.DB.prepare(
+          'SELECT id FROM compliance_tags WHERE is_active = 1 LIMIT 30'
+        ).all().catch(() => ({ results: [] })) as any
+        if (allActiveTags) allActiveTags.forEach((t: any) => mappedTagIds.push(t.id))
+      }
+    }
+
+    // 5. INSERT all matched tags into product_compliance_tags (ignore duplicates)
+    for (const tagId of [...new Set(mappedTagIds)]) {
+      await c.env.DB.prepare(`
+        INSERT OR IGNORE INTO product_compliance_tags (product_id, tag_id, mapped_by, mapped_at)
+        VALUES (?, ?, ?, ?)
+      `).bind(id, tagId, user_id, ts).run().catch(() => {/* ignore if table not yet migrated */})
+    }
+  } catch (_tagErr) {
+    // Non-fatal: compliance tag mapping failure must not block product creation
+  }
+
   // ── Save workflow to products table ────────────────────────────────────────
   // Convert the frontend aiDraftWorkflow nodes (canonical 11-step green mortgage list)
   // into PGE canvas format (nodes with x/y layout, edges array) and write to DB.

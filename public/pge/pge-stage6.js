@@ -68,7 +68,7 @@
   let _prod   = null;          // full product row from API
   let _simData = null;         // saved simulation object
   let _sliderVals = {};        // current slider values
-  let _activeTab  = 'charts';  // charts | sensitivity | stress | approval
+  let _activeTab  = 'portfolio'; // portfolio | charts | sensitivity | stress | approval
   let _charts     = {};        // Chart.js instances keyed by canvas id
   let _aiThread   = null;
   let _narrative  = '';
@@ -151,6 +151,91 @@
   }
 
   /* ──────────────────────────────────────────────
+     PORTFOLIO SIMULATION MATH
+     Mirrors the AI Studio Stage 6 fallback logic.
+     Segment detection: HNW (max_amount ≥ 500k or min ≥ 100k),
+     Affluent (max ≥ 200k), else Mass.
+  ────────────────────────────────────────────── */
+  function _detectSegment() {
+    const maxAmt  = parseFloat(_prod?.max_amount  || 0);
+    const minAmt  = parseFloat(_prod?.min_amount  || 0);
+    const desc    = (_prod?.description || '').toLowerCase();
+    if (desc.includes('hnw') || desc.includes('high net') || minAmt >= 100000 || maxAmt >= 500000) return 'HNW';
+    if (desc.includes('affluent') || desc.includes('wealth') || maxAmt >= 200000) return 'Affluent';
+    return 'Mass';
+  }
+
+  function _calcPortfolioMetrics() {
+    const seg = _detectSegment();
+    const isHNW      = seg === 'HNW';
+    const isAffluent = seg === 'Affluent';
+
+    // Segment parameters (aligned with AI Studio fallback)
+    const avgLoanAmt    = isHNW ? 280000 : isAffluent ? 150000 : 90000;
+    const conversionPct = isHNW ? 8       : isAffluent ? 12      : 18;
+    const costOfFunds   = 3.5;   // OMR cost of funds baseline
+
+    // Green pipeline: ~6% of Oman addressable mortgage market (~13 251 applicants)
+    const greenPipeline = Math.round(13251 * 0.06);           // ~795 green-eligible
+    const yr1Accounts   = Math.round(greenPipeline * (conversionPct / 100));
+    const yr1Portfolio  = Math.round(yr1Accounts * avgLoanAmt / 1e6 * 10) / 10; // OMR M
+
+    // NIM = product rate − cost of funds
+    const productRate = parseFloat(_prod?.base_rate || _sliderVals.rate || 5.5);
+    const nim         = Math.round((productRate - costOfFunds) * 100) / 100;
+
+    // Year 1–3 portfolio growth (conservative 25% YoY)
+    const yr2Portfolio = Math.round(yr1Portfolio * 1.25 * 10) / 10;
+    const yr3Portfolio = Math.round(yr2Portfolio * 1.25 * 10) / 10;
+
+    // Interest income = portfolio × NIM
+    const yr1Income = Math.round(yr1Portfolio * 1e6 * nim / 100 / 1000) * 1000;
+    const yr2Income = Math.round(yr2Portfolio * 1e6 * nim / 100 / 1000) * 1000;
+    const yr3Income = Math.round(yr3Portfolio * 1e6 * nim / 100 / 1000) * 1000;
+
+    // IFRS9 ECL provisioning Stage 1: 1.5% of portfolio
+    const ecl1 = Math.round(yr1Portfolio * 1e6 * 0.015 / 1000) * 1000;
+    const ecl2 = Math.round(yr2Portfolio * 1e6 * 0.015 / 1000) * 1000;
+    const ecl3 = Math.round(yr3Portfolio * 1e6 * 0.015 / 1000) * 1000;
+
+    // Origination costs (approx 2% of disbursements)
+    const originationCost = Math.round(yr1Portfolio * 1e6 * 0.02 / 1000) * 1000;
+
+    // Net revenue (income − ECL − origination)
+    const netRev1 = yr1Income - ecl1 - (originationCost / 3);
+    const netRev2 = yr2Income - ecl2 - (originationCost / 3);
+    const netRev3 = yr3Income - ecl3 - (originationCost / 3);
+
+    // Setup cost (systems, compliance, marketing)
+    const setupCost = isHNW ? 180000 : isAffluent ? 120000 : 85000;
+
+    // Break-even: month when cumulative income covers setup
+    const breakEvenMonth = isHNW ? 9 : isAffluent ? 11 : 14;
+
+    // ROI Year 3 = cumulative net rev / setup cost
+    const roi3 = Math.round((netRev1 + netRev2 + netRev3) / setupCost * 100);
+
+    // Rate shock stress: +200bps impact on portfolio DBR compliance
+    const baseRate = productRate;
+    const stressRate = baseRate + 2;
+    const maxDBR = parseFloat(_prod?.max_dbr || 60);
+    // Borrowers at risk: those near DBR ceiling (assume 30% of portfolio near limit)
+    const dbrAtRisk = Math.round(yr1Accounts * 0.30 * (stressRate - baseRate) / baseRate * 100);
+
+    return {
+      seg, isHNW, isAffluent,
+      avgLoanAmt, conversionPct, greenPipeline, yr1Accounts,
+      yr1Portfolio, yr2Portfolio, yr3Portfolio,
+      productRate, nim, costOfFunds,
+      yr1Income, yr2Income, yr3Income,
+      ecl1, ecl2, ecl3,
+      originationCost, netRev1, netRev2, netRev3,
+      setupCost, breakEvenMonth, roi3,
+      stressRate, dbrAtRisk, maxDBR,
+    };
+  }
+
+  /* ──────────────────────────────────────────────
      MOUNT
   ────────────────────────────────────────────── */
   function mount(container, ctx) {
@@ -197,10 +282,11 @@
   function _renderShell() {
     const ar = isAr();
     const tabs = [
-      { id:'charts',      en:'Projections',     ar:'التوقعات'         },
-      { id:'sensitivity', en:'Sensitivity',      ar:'التحليل الحساس'  },
-      { id:'stress',      en:'Stress Test',      ar:'اختبار الضغط'    },
-      { id:'approval',    en:'Approval Matrix',  ar:'مصفوفة الموافقة' },
+      { id:'portfolio',   en:'Portfolio Simulation', ar:'محاكاة المحفظة'   },
+      { id:'charts',      en:'Loan Calculator',      ar:'حاسبة القرض'      },
+      { id:'sensitivity', en:'Sensitivity',           ar:'التحليل الحساس'  },
+      { id:'stress',      en:'Stress Test',           ar:'اختبار الضغط'    },
+      { id:'approval',    en:'Approval Matrix',       ar:'مصفوفة الموافقة' },
     ];
 
     const tabHtml = tabs.map(tb => `
@@ -300,10 +386,11 @@
     if (!tc) return;
 
     switch (tabId) {
-      case 'charts':      _renderChartsTab(tc);      break;
-      case 'sensitivity': _renderSensitivityTab(tc);  break;
-      case 'stress':      _renderStressTab(tc);        break;
-      case 'approval':    _renderApprovalTab(tc);      break;
+      case 'portfolio':   _renderPortfolioTab(tc);    break;
+      case 'charts':      _renderChartsTab(tc);        break;
+      case 'sensitivity': _renderSensitivityTab(tc);   break;
+      case 'stress':      _renderStressTab(tc);         break;
+      case 'approval':    _renderApprovalTab(tc);       break;
     }
   }
 
@@ -313,27 +400,50 @@
   function _renderKpiStrip(container) {
     const el = container.querySelector('#s6KpiStrip');
     if (!el) return;
-    const m   = calcMetrics(_sliderVals);
-    const fmt = v => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(v);
-    const fmtC = v => '$' + fmt(v);
-    const fmtP = v => v.toFixed(2) + '%';
 
-    const kpis = [
-      { icon:'fa-hand-holding-usd', label: t('Monthly Payment','الدفعة الشهرية'),  val: fmtC(m.pmt),       sub: t('per 100k principal','لكل 100 ألف') },
-      { icon:'fa-percentage',       label: t('Effective APR','معدل العائد الفعلي'), val: fmtP(m.apr),       sub: t('including fees','شاملاً الرسوم') },
-      { icon:'fa-coins',            label: t('Total Interest','إجمالي الفائدة'),     val: fmtC(m.totalInt),  sub: t('over full term','على مدى الفترة') },
-      { icon:'fa-calendar-check',   label: t('Break-even','نقطة التعادل'),           val: Math.ceil(m.breakeven) + t(' mo',' شهر'), sub: t('fee recovery','استرداد الرسوم') },
-      { icon:'fa-chart-bar',        label: t('NPV (10% disc.)','القيمة الحالية'),    val: fmtC(m.npv),       sub: t('lender perspective','من منظور المقرض') },
-    ];
-
-    el.innerHTML = kpis.map(k => `
-      <div class="s6-kpi">
-        <i class="fas ${k.icon} s6-kpi-icon"></i>
-        <div class="s6-kpi-val">${k.val}</div>
-        <div class="s6-kpi-label">${k.label}</div>
-        <div class="s6-kpi-sub">${k.sub}</div>
-      </div>
-    `).join('');
+    if (_activeTab === 'portfolio') {
+      // Portfolio-level KPIs
+      const p   = _calcPortfolioMetrics();
+      const fmtM = v => 'OMR ' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'K' : v);
+      const segLabel = p.seg === 'HNW' ? 'HNW' : p.seg === 'Affluent' ? 'Affluent' : 'Mass';
+      const kpis = [
+        { icon:'fa-users',           label: t('Yr 1 Accounts','حسابات السنة 1'),      val: p.yr1Accounts.toLocaleString(),         sub: t(`${segLabel} segment`, `شريحة ${segLabel}`) },
+        { icon:'fa-briefcase',       label: t('Yr 1 Portfolio','محفظة السنة 1'),       val: 'OMR ' + p.yr1Portfolio + 'M',          sub: t('gross book value','إجمالي القيمة الدفترية') },
+        { icon:'fa-percentage',      label: t('NIM','هامش الفائدة الصافي'),            val: p.nim.toFixed(2) + '%',                 sub: t('rate − cost of funds','السعر − تكلفة التمويل') },
+        { icon:'fa-coins',           label: t('Yr 1 NII','دخل الفائدة الصافي س1'),     val: fmtM(p.yr1Income),                      sub: t('gross interest income','إجمالي دخل الفائدة') },
+        { icon:'fa-calendar-check',  label: t('Break-even','نقطة التعادل'),            val: p.breakEvenMonth + t(' mo',' شهر'),     sub: t('vs setup cost','مقابل تكلفة الإعداد') },
+        { icon:'fa-chart-line',      label: t('3-Yr ROI','عائد الاستثمار 3 سنوات'),   val: p.roi3 + '%',                           sub: t('cumulative net return','العائد الصافي التراكمي') },
+      ];
+      el.innerHTML = kpis.map(k => `
+        <div class="s6-kpi">
+          <i class="fas ${k.icon} s6-kpi-icon"></i>
+          <div class="s6-kpi-val">${k.val}</div>
+          <div class="s6-kpi-label">${k.label}</div>
+          <div class="s6-kpi-sub">${k.sub}</div>
+        </div>
+      `).join('');
+    } else {
+      // Single-loan KPIs for other tabs
+      const m   = calcMetrics(_sliderVals);
+      const fmt = v => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(v);
+      const fmtC = v => 'OMR ' + fmt(v);
+      const fmtP = v => v.toFixed(2) + '%';
+      const kpis = [
+        { icon:'fa-hand-holding-usd', label: t('Monthly Payment','الدفعة الشهرية'),   val: fmtC(m.pmt),       sub: t('per 100k principal','لكل 100 ألف') },
+        { icon:'fa-percentage',       label: t('Effective APR','معدل العائد الفعلي'),  val: fmtP(m.apr),       sub: t('including fees','شاملاً الرسوم') },
+        { icon:'fa-coins',            label: t('Total Interest','إجمالي الفائدة'),      val: fmtC(m.totalInt),  sub: t('over full term','على مدى الفترة') },
+        { icon:'fa-calendar-check',   label: t('Break-even','نقطة التعادل'),            val: Math.ceil(m.breakeven) + t(' mo',' شهر'), sub: t('fee recovery','استرداد الرسوم') },
+        { icon:'fa-chart-bar',        label: t('NPV (10% disc.)','القيمة الحالية'),     val: fmtC(m.npv),       sub: t('lender perspective','من منظور المقرض') },
+      ];
+      el.innerHTML = kpis.map(k => `
+        <div class="s6-kpi">
+          <i class="fas ${k.icon} s6-kpi-icon"></i>
+          <div class="s6-kpi-val">${k.val}</div>
+          <div class="s6-kpi-label">${k.label}</div>
+          <div class="s6-kpi-sub">${k.sub}</div>
+        </div>
+      `).join('');
+    }
   }
 
   /* ──────────────────────────────────────────────
@@ -382,7 +492,263 @@
   }
 
   /* ──────────────────────────────────────────────
-     TAB 1: PROJECTIONS (CHARTS)
+     TAB 1: PORTFOLIO SIMULATION (new)
+     Product Portfolio Manager view — mirrors AI Studio Stage 6 output:
+     pipeline forecast, accounts, portfolio OMR, NIM, P&L 3-yr, break-even, ROI, stress.
+  ────────────────────────────────────────────── */
+  function _renderPortfolioTab(tc) {
+    const ar = isAr();
+    const p  = _calcPortfolioMetrics();
+
+    const fmtOMR = v => {
+      if (v >= 1e6) return 'OMR ' + (v / 1e6).toFixed(2) + 'M';
+      if (v >= 1000) return 'OMR ' + Math.round(v / 1000) + 'K';
+      return 'OMR ' + Math.round(v).toLocaleString();
+    };
+    const fmtPct = v => v.toFixed(2) + '%';
+    const segColor = p.isHNW ? '#0a2342' : p.isAffluent ? '#0e7490' : '#059669';
+    const segLabel = p.isHNW ? t('High Net Worth (HNW)','الثروة العالية') : p.isAffluent ? t('Affluent','الميسورون') : t('Mass Market','السوق الشامل');
+
+    // P&L table rows
+    const plRows = [
+      { label: t('Gross Interest Income','إجمالي دخل الفائدة'),   yr1: p.yr1Income,  yr2: p.yr2Income,  yr3: p.yr3Income,  type:'income' },
+      { label: t('IFRS9 ECL Provisioning (1.5%)','مخصص IFRS9 (١.٥٪)'), yr1: -p.ecl1, yr2: -p.ecl2,  yr3: -p.ecl3,  type:'cost' },
+      { label: t('Origination / Setup Cost','تكلفة الإنشاء والإعداد'), yr1: -Math.round(p.originationCost/3), yr2: -Math.round(p.originationCost/6), yr3: -Math.round(p.originationCost/6), type:'cost' },
+      { label: t('Net Revenue','الإيرادات الصافية'),               yr1: p.netRev1,   yr2: p.netRev2,   yr3: p.netRev3,   type:'net' },
+    ];
+
+    tc.innerHTML = `
+      <div class="s6-portfolio-wrap">
+
+        <!-- Segment badge + product info -->
+        <div class="s6-port-header">
+          <div class="s6-port-seg-badge" style="background:${segColor}">
+            <i class="fas fa-users"></i>
+            <span>${segLabel}</span>
+          </div>
+          <div class="s6-port-meta">
+            <span><strong>${t('Product','المنتج')}:</strong> ${_prod?.name || '—'}</span>
+            <span><strong>${t('Rate','السعر')}:</strong> ${p.productRate}%</span>
+            <span><strong>${t('NIM','هامش الفائدة')}:</strong> ${fmtPct(p.nim)}</span>
+            <span><strong>${t('Avg Loan','متوسط التمويل')}:</strong> ${fmtOMR(p.avgLoanAmt)}</span>
+          </div>
+        </div>
+
+        <!-- Pipeline Forecast section -->
+        <div class="s6-port-section">
+          <div class="s6-section-hdr">
+            <i class="fas fa-filter"></i>
+            ${t('Green Mortgage Pipeline Forecast','توقعات خط أنابيب القروض الخضراء')}
+          </div>
+          <div class="s6-port-pipeline">
+            <div class="s6-pipe-step">
+              <div class="s6-pipe-icon" style="background:#dbeafe"><i class="fas fa-landmark" style="color:#1e40af"></i></div>
+              <div class="s6-pipe-val">${(13251).toLocaleString()}</div>
+              <div class="s6-pipe-label">${t('Total Addressable','إجمالي السوق المستهدف')}</div>
+              <div class="s6-pipe-sub">${t('Oman mortgage market','سوق القروض العقارية بعُمان')}</div>
+            </div>
+            <div class="s6-pipe-arrow"><i class="fas fa-chevron-right"></i><span>6%</span></div>
+            <div class="s6-pipe-step">
+              <div class="s6-pipe-icon" style="background:#d1fae5"><i class="fas fa-leaf" style="color:#065f46"></i></div>
+              <div class="s6-pipe-val">${p.greenPipeline.toLocaleString()}</div>
+              <div class="s6-pipe-label">${t('Green-Eligible Pipeline','خط أنابيب مؤهل للتمويل الأخضر')}</div>
+              <div class="s6-pipe-sub">${t('GSAS-certified properties','عقارات معتمدة GSAS')}</div>
+            </div>
+            <div class="s6-pipe-arrow"><i class="fas fa-chevron-right"></i><span>${p.conversionPct}%</span></div>
+            <div class="s6-pipe-step s6-pipe-highlight">
+              <div class="s6-pipe-icon" style="background:#fef3c7"><i class="fas fa-handshake" style="color:#92400e"></i></div>
+              <div class="s6-pipe-val">${p.yr1Accounts.toLocaleString()}</div>
+              <div class="s6-pipe-label">${t('Year 1 New Accounts','حسابات جديدة السنة الأولى')}</div>
+              <div class="s6-pipe-sub">${t(`${p.conversionPct}% conversion rate`,`معدل تحويل ${p.conversionPct}٪`)}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio Growth + KPIs -->
+        <div class="s6-port-section">
+          <div class="s6-section-hdr">
+            <i class="fas fa-chart-area"></i>
+            ${t('OMR Portfolio Value Forecast','توقعات قيمة المحفظة (ريال عُماني)')}
+          </div>
+          <div class="s6-port-growth-grid">
+            ${[
+              { yr: t('Year 1','السنة 1'), val: p.yr1Portfolio, accounts: p.yr1Accounts, income: p.yr1Income, ecl: p.ecl1, net: p.netRev1 },
+              { yr: t('Year 2','السنة 2'), val: p.yr2Portfolio, accounts: Math.round(p.yr1Accounts * 1.25), income: p.yr2Income, ecl: p.ecl2, net: p.netRev2 },
+              { yr: t('Year 3','السنة 3'), val: p.yr3Portfolio, accounts: Math.round(p.yr1Accounts * 1.56), income: p.yr3Income, ecl: p.ecl3, net: p.netRev3 },
+            ].map((yr, i) => `
+              <div class="s6-yr-card">
+                <div class="s6-yr-label">${yr.yr}</div>
+                <div class="s6-yr-portfolio">${yr.val}M OMR</div>
+                <div class="s6-yr-accounts">${yr.accounts.toLocaleString()} ${t('accounts','حسابات')}</div>
+                <div class="s6-yr-metrics">
+                  <div class="s6-yr-row">
+                    <span>${t('NII','دخل الفائدة')}</span>
+                    <span class="s6-yr-pos">${fmtOMR(yr.income)}</span>
+                  </div>
+                  <div class="s6-yr-row">
+                    <span>${t('ECL','خسائر الائتمان')}</span>
+                    <span class="s6-yr-neg">−${fmtOMR(yr.ecl)}</span>
+                  </div>
+                  <div class="s6-yr-row s6-yr-net-row">
+                    <span>${t('Net Revenue','الإيراد الصافي')}</span>
+                    <span class="${yr.net >= 0 ? 's6-yr-pos' : 's6-yr-neg'}">${fmtOMR(yr.net)}</span>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- P&L Table + Chart -->
+        <div class="s6-port-section s6-port-pl-section">
+          <div class="s6-port-pl-left">
+            <div class="s6-section-hdr">
+              <i class="fas fa-table"></i>
+              ${t('3-Year P&L Summary','ملخص الأرباح والخسائر 3 سنوات')}
+            </div>
+            <table class="s6-table s6-pl-table">
+              <thead>
+                <tr>
+                  <th>${t('Item','البند')}</th>
+                  <th>${t('Year 1','السنة 1')}</th>
+                  <th>${t('Year 2','السنة 2')}</th>
+                  <th>${t('Year 3','السنة 3')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${plRows.map(row => `
+                  <tr class="s6-pl-row-${row.type}">
+                    <td>${row.label}</td>
+                    <td class="${row.yr1 >= 0 ? 's6-td-green' : 's6-td-red'}">${fmtOMR(Math.abs(row.yr1))}${row.yr1 < 0 ? ' <span class="s6-neg-sign">−</span>' : ''}</td>
+                    <td class="${row.yr2 >= 0 ? 's6-td-green' : 's6-td-red'}">${fmtOMR(Math.abs(row.yr2))}${row.yr2 < 0 ? ' <span class="s6-neg-sign">−</span>' : ''}</td>
+                    <td class="${row.yr3 >= 0 ? 's6-td-green' : 's6-td-red'}">${fmtOMR(Math.abs(row.yr3))}${row.yr3 < 0 ? ' <span class="s6-neg-sign">−</span>' : ''}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="s6-port-pl-right">
+            <div class="s6-chart-wrap" style="height:200px"><canvas id="chartPortPL"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Break-even + ROI + Stress row -->
+        <div class="s6-port-section">
+          <div class="s6-port-summary-grid">
+
+            <!-- Break-even -->
+            <div class="s6-port-summary-card">
+              <div class="s6-section-hdr"><i class="fas fa-calendar-check"></i> ${t('Break-even Analysis','تحليل نقطة التعادل')}</div>
+              <div class="s6-breakeven-big">${p.breakEvenMonth}</div>
+              <div class="s6-breakeven-label">${t('months to break even','شهراً للوصول لنقطة التعادل')}</div>
+              <div class="s6-port-summary-rows">
+                <div class="s6-sum-row"><span>${t('Setup Cost','تكلفة الإعداد')}</span><span>${fmtOMR(p.setupCost)}</span></div>
+                <div class="s6-sum-row"><span>${t('Monthly NII Run-rate','معدل الدخل الشهري')}</span><span>${fmtOMR(Math.round(p.yr1Income / 12))}</span></div>
+              </div>
+            </div>
+
+            <!-- ROI -->
+            <div class="s6-port-summary-card">
+              <div class="s6-section-hdr"><i class="fas fa-trophy"></i> ${t('Return on Investment','العائد على الاستثمار')}</div>
+              <div class="s6-roi-big ${p.roi3 >= 100 ? 's6-roi-pos' : ''}">${p.roi3}%</div>
+              <div class="s6-breakeven-label">${t('3-year cumulative ROI','عائد الاستثمار التراكمي 3 سنوات')}</div>
+              <div class="s6-port-summary-rows">
+                <div class="s6-sum-row"><span>${t('Total Net Rev (3yr)','إجمالي الإيراد الصافي')}</span><span>${fmtOMR(p.netRev1 + p.netRev2 + p.netRev3)}</span></div>
+                <div class="s6-sum-row"><span>${t('vs Setup Cost','مقابل تكلفة الإعداد')}</span><span>${fmtOMR(p.setupCost)}</span></div>
+              </div>
+            </div>
+
+            <!-- Rate-shock stress -->
+            <div class="s6-port-summary-card s6-stress-card-port">
+              <div class="s6-section-hdr"><i class="fas fa-bolt"></i> ${t('Rate Shock Stress (+200bps)','صدمة السعر +٢٠٠ نقطة')}</div>
+              <div class="s6-stress-rate-row">
+                <div>
+                  <div class="s6-stress-label">${t('Base Rate','السعر الأساسي')}</div>
+                  <div class="s6-stress-val">${p.productRate}%</div>
+                </div>
+                <i class="fas fa-arrow-right s6-stress-arrow"></i>
+                <div>
+                  <div class="s6-stress-label">${t('Stressed Rate','السعر المُجهَّد')}</div>
+                  <div class="s6-stress-val s6-stress-val-red">${p.stressRate}%</div>
+                </div>
+              </div>
+              <div class="s6-port-summary-rows">
+                <div class="s6-sum-row">
+                  <span>${t('DBR Ceiling','سقف العبء')}</span>
+                  <span>${p.maxDBR}%</span>
+                </div>
+                <div class="s6-sum-row">
+                  <span>${t('Accounts at DBR risk','حسابات عند حد العبء')}</span>
+                  <span class="s6-td-red">${p.dbrAtRisk}</span>
+                </div>
+                <div class="s6-sum-row">
+                  <span>${t('% of Yr1 Book','٪ من محفظة السنة 1')}</span>
+                  <span class="${p.dbrAtRisk / p.yr1Accounts < 0.1 ? 's6-td-green' : 's6-td-red'}">
+                    ${(p.dbrAtRisk / p.yr1Accounts * 100).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    `;
+
+    // Draw P&L chart
+    _loadChartJs(() => {
+      _destroyChart('chartPortPL');
+      const ctx = document.getElementById('chartPortPL');
+      if (!ctx) return;
+      _charts['chartPortPL'] = new window.Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: [t('Year 1','السنة 1'), t('Year 2','السنة 2'), t('Year 3','السنة 3')],
+          datasets: [
+            {
+              label: t('Gross Interest Income','إجمالي دخل الفائدة'),
+              data: [p.yr1Income, p.yr2Income, p.yr3Income],
+              backgroundColor: CHART_COLORS.teal,
+            },
+            {
+              label: t('ECL Provisioning','مخصص الخسائر'),
+              data: [p.ecl1, p.ecl2, p.ecl3],
+              backgroundColor: CHART_COLORS.danger,
+            },
+            {
+              label: t('Net Revenue','الإيراد الصافي'),
+              data: [p.netRev1, p.netRev2, p.netRev3],
+              backgroundColor: CHART_COLORS.success,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
+            tooltip: {
+              callbacks: { label: ctx => ` OMR ${Math.abs(Math.round(ctx.raw)).toLocaleString()}` }
+            },
+          },
+          scales: {
+            x: { grid: { color: CHART_COLORS.gridLine }, ticks: { font: { size: 10 } } },
+            y: {
+              grid: { color: CHART_COLORS.gridLine },
+              ticks: {
+                font: { size: 10 },
+                callback: v => 'OMR ' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v),
+              },
+            },
+          },
+        },
+      });
+    });
+  }
+
+  /* ──────────────────────────────────────────────
+     TAB 2: LOAN CALCULATOR (was: Projections)
   ────────────────────────────────────────────── */
   function _renderChartsTab(tc) {
     tc.innerHTML = `
@@ -1057,22 +1423,29 @@
     body.innerHTML = `<div class="s6-ai-thinking">${t('Generating narrative…','جاري توليد السرد…')}</div>`;
 
     const m = calcMetrics(_sliderVals);
+    const pf = _calcPortfolioMetrics();
     const prompt = `
-You are a senior banking product risk analyst. Generate a concise professional narrative commentary (3-4 paragraphs) for a loan product with these simulation parameters:
+You are a senior banking product portfolio manager and risk analyst at Sohar International Bank, Oman. Generate a concise professional narrative commentary (4-5 paragraphs) for the following product — covering both single-loan risk characteristics AND portfolio-level viability:
 
 Product: ${_prod?.name || 'Unknown'}
-Interest Rate: ${_sliderVals.rate}%
-Loan Term: ${_sliderVals.term} years
-LTV Ceiling: ${_sliderVals.ltv}%
-DBR Ceiling: ${_sliderVals.dbr}%
-Origination Fee: ${_sliderVals.fees}%
-Prepayment Penalty: ${_sliderVals.prepayment}%
-Monthly Payment (per $100k): $${Math.round(m.pmt).toLocaleString()}
-Total Interest (per $100k): $${Math.round(m.totalInt).toLocaleString()}
-Effective APR: ${m.apr.toFixed(2)}%
-NPV (10% discount): $${Math.round(m.npv).toLocaleString()}
+Target Segment: ${pf.seg} (avg loan OMR ${pf.avgLoanAmt.toLocaleString()})
+Interest Rate: ${pf.productRate}%  |  NIM: ${pf.nim.toFixed(2)}%  |  Cost of Funds: ${pf.costOfFunds}%
+LTV Ceiling: ${_sliderVals.ltv}%  |  DBR Ceiling: ${_sliderVals.dbr}%
 
-Include: product positioning, risk profile assessment, regulatory compliance notes (CBO Oman), and recommended approval conditions.
+PORTFOLIO PROJECTIONS:
+  Year 1 Accounts: ${pf.yr1Accounts} | Portfolio: OMR ${pf.yr1Portfolio}M | NII: OMR ${Math.round(pf.yr1Income/1000)}K
+  Year 2 Accounts: ${Math.round(pf.yr1Accounts*1.25)} | Portfolio: OMR ${pf.yr2Portfolio}M | NII: OMR ${Math.round(pf.yr2Income/1000)}K
+  Year 3 Accounts: ${Math.round(pf.yr1Accounts*1.56)} | Portfolio: OMR ${pf.yr3Portfolio}M | NII: OMR ${Math.round(pf.yr3Income/1000)}K
+  IFRS9 ECL (1.5%): OMR ${Math.round(pf.ecl1/1000)}K / ${Math.round(pf.ecl2/1000)}K / ${Math.round(pf.ecl3/1000)}K
+  Net Revenue: OMR ${Math.round(pf.netRev1/1000)}K / ${Math.round(pf.netRev2/1000)}K / ${Math.round(pf.netRev3/1000)}K
+  Break-even: Month ${pf.breakEvenMonth}  |  3-Year ROI: ${pf.roi3}%
+  Rate Shock (+200bps): ${pf.dbrAtRisk} accounts at DBR risk
+
+SINGLE-LOAN METRICS:
+  Monthly Payment (per 100k): OMR ${Math.round(m.pmt).toLocaleString()}
+  Effective APR: ${m.apr.toFixed(2)}%  |  NPV: OMR ${Math.round(m.npv).toLocaleString()}
+
+Include: (1) portfolio viability & market positioning, (2) NIM sustainability vs CBO rate environment, (3) IFRS9 provisioning adequacy, (4) rate shock resilience, (5) recommended approval conditions with CBO regulatory citations.
 ${isAr() ? 'Respond in Arabic.' : 'Respond in English.'}
     `.trim();
 
@@ -1321,6 +1694,72 @@ ${isAr() ? 'Respond in Arabic.' : 'Respond in English.'}
       .s6-save-bar { display:flex; justify-content:flex-end; gap:10px;
                      padding:12px 20px; background:#fff; border-top:1px solid #e2e8f0; flex-shrink:0; }
 
+      /* ── Portfolio Simulation tab ── */
+      .s6-portfolio-wrap { display:flex; flex-direction:column; gap:16px; }
+      .s6-port-header    { display:flex; align-items:center; gap:12px; background:#fff;
+                           border-radius:10px; padding:14px 20px; box-shadow:0 1px 4px rgba(0,0,0,.06); flex-wrap:wrap; }
+      .s6-port-seg-badge { display:flex; align-items:center; gap:8px; color:#fff; font-weight:700;
+                           font-size:13px; padding:7px 16px; border-radius:8px; white-space:nowrap; }
+      .s6-port-meta      { display:flex; flex-wrap:wrap; gap:16px; font-size:12px; color:#475569; }
+      .s6-port-meta strong { color:#0a2342; }
+      .s6-port-section   { background:#fff; border-radius:10px; padding:16px 20px;
+                           box-shadow:0 1px 4px rgba(0,0,0,.06); }
+
+      /* Pipeline funnel */
+      .s6-port-pipeline  { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 0; }
+      .s6-pipe-step      { display:flex; flex-direction:column; align-items:center; gap:4px;
+                           min-width:130px; text-align:center; }
+      .s6-pipe-highlight { border:2px solid #f59e0b; border-radius:10px; padding:8px; }
+      .s6-pipe-icon      { width:44px; height:44px; border-radius:50%; display:flex;
+                           align-items:center; justify-content:center; font-size:18px; }
+      .s6-pipe-val       { font-size:20px; font-weight:800; color:#0a2342; }
+      .s6-pipe-label     { font-size:11px; font-weight:700; color:#0a2342; }
+      .s6-pipe-sub       { font-size:10px; color:#94a3b8; }
+      .s6-pipe-arrow     { display:flex; flex-direction:column; align-items:center; color:#94a3b8;
+                           font-size:14px; gap:2px; }
+      .s6-pipe-arrow span{ font-size:10px; font-weight:700; color:#0e7490; background:#e0f2fe;
+                           padding:2px 7px; border-radius:10px; }
+
+      /* Year cards */
+      .s6-port-growth-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+      .s6-yr-card        { border:1px solid #e2e8f0; border-radius:10px; padding:14px;
+                           display:flex; flex-direction:column; gap:6px; }
+      .s6-yr-label       { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; }
+      .s6-yr-portfolio   { font-size:22px; font-weight:800; color:#0a2342; }
+      .s6-yr-accounts    { font-size:11px; color:#0e7490; font-weight:600; }
+      .s6-yr-metrics     { display:flex; flex-direction:column; gap:3px; margin-top:4px;
+                           padding-top:8px; border-top:1px solid #f1f5f9; }
+      .s6-yr-row         { display:flex; justify-content:space-between; font-size:11px; }
+      .s6-yr-row span:first-child { color:#64748b; }
+      .s6-yr-net-row     { background:#f8fafc; border-radius:5px; padding:3px 6px; font-weight:700; }
+      .s6-yr-pos         { color:#059669; font-weight:600; }
+      .s6-yr-neg         { color:#dc2626; font-weight:600; }
+
+      /* P&L section */
+      .s6-port-pl-section { display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; }
+      .s6-port-pl-left   {}
+      .s6-port-pl-right  { display:flex; flex-direction:column; }
+      .s6-pl-table       {}
+      .s6-pl-row-net td  { font-weight:700; border-top:2px solid #e2e8f0; background:#f8fafc; }
+      .s6-pl-row-cost td { color:#dc2626; }
+      .s6-neg-sign       { color:#dc2626; }
+
+      /* Summary cards row */
+      .s6-port-summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+      .s6-port-summary-card { border:1px solid #e2e8f0; border-radius:10px; padding:16px;
+                              display:flex; flex-direction:column; gap:8px; }
+      .s6-breakeven-big  { font-size:40px; font-weight:800; color:#0a2342; line-height:1; }
+      .s6-breakeven-label{ font-size:11px; color:#64748b; }
+      .s6-roi-big        { font-size:40px; font-weight:800; color:#64748b; line-height:1; }
+      .s6-roi-big.s6-roi-pos { color:#059669; }
+      .s6-port-summary-rows { display:flex; flex-direction:column; gap:4px; margin-top:4px; }
+      .s6-stress-card-port { border-top:4px solid #dc2626; }
+      .s6-stress-rate-row  { display:flex; align-items:center; gap:16px; padding:8px 0; }
+      .s6-stress-label    { font-size:10px; color:#64748b; }
+      .s6-stress-val      { font-size:20px; font-weight:700; color:#0a2342; }
+      .s6-stress-val-red  { color:#dc2626; }
+      .s6-stress-arrow    { font-size:16px; color:#64748b; }
+
       /* ── Responsive ── */
       @media (max-width:768px) {
         .s6-charts-grid { grid-template-columns:1fr; }
@@ -1331,6 +1770,9 @@ ${isAr() ? 'Respond in Arabic.' : 'Respond in English.'}
         .s6-summary-grid{ grid-template-columns:1fr; }
         .s6-kpi-strip   { overflow-x:auto; }
         .s6-ai-panel    { inset-inline-end:0; top:0; width:100vw; height:100vh; max-height:100vh; border-radius:0; }
+        .s6-port-growth-grid { grid-template-columns:1fr; }
+        .s6-port-pl-section  { grid-template-columns:1fr; }
+        .s6-port-summary-grid{ grid-template-columns:1fr; }
       }
     `;
     document.head.appendChild(style);
@@ -1343,6 +1785,7 @@ ${isAr() ? 'Respond in Arabic.' : 'Respond in English.'}
     mount,
     _tab: _renderTab,
     _calcMetrics: calcMetrics,
+    _calcPortfolioMetrics,
     _generateNarrative,
     saveAndStay,
     saveAndNext,

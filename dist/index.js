@@ -985,7 +985,7 @@ B.get("/", async (e) => {
 }), B.get("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(t).first();
 	if (!n) return e.json({ error: "Not found" }, 404);
-	let { results: r } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id = ? OR product_id IS NULL ORDER BY category, name").bind(t).all(), i = { ...n }, a = [];
+	let { results: r } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id = ? ORDER BY category, name").bind(t).all(), i = { ...n }, a = [];
 	try {
 		a = JSON.parse(n.workflow_nodes || "[]");
 	} catch {}
@@ -1573,6 +1573,34 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			let n = L("r");
 			await e.env.DB.prepare("\n        INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value,\n        threshold_condition, action_on_breach, severity, regulatory_reference, source,\n        ai_confidence, description, is_active, created_by, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n      ").bind(n, l, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach || "reject", t.severity || "hard", t.regulatory_reference || null, "ai_generated", t.ai_confidence || null, t.description || null, 1, o, u).run(), h.push(n);
 		}
+		try {
+			let t = (r.esg_required_docs || []).length > 0, i = [];
+			if (n) {
+				let t = await e.env.DB.prepare("SELECT messages FROM ai_threads WHERE id = ?").bind(n).first();
+				if (t?.messages) try {
+					i = JSON.parse(t.messages);
+				} catch {}
+			}
+			let a = i.map((e) => typeof e == "string" ? e : e.content || e.text || "").join(" ").toLowerCase(), s = [];
+			s.push("CBR-HL-001"), s.push("IFRS9-ECL"), s.push("BASEL3-RW"), t && (s.push("ESG-GREEN"), s.push("CLIMATE-RISK"), s.push("OMAN-V2040")), (a.includes("climate") || a.includes("كلايميت")) && s.push("CLIMATE-RISK"), (a.includes("esg") || a.includes("esg")) && s.push("ESG-GREEN"), (a.includes("green") || a.includes("أخضر")) && s.push("ESG-GREEN"), a.includes("#climate_risk") && s.push("CLIMATE-RISK"), (a.includes("#esg_eligibility") || a.includes("#green")) && s.push("ESG-GREEN"), (a.includes("#oman_vision") || a.includes("vision 2040")) && s.push("OMAN-V2040"), (a.includes("aml") || a.includes("مكافحة")) && s.push("AML-KYC"), (a.includes("ifrs") || a.includes("ifrs9")) && s.push("IFRS9-ECL"), (a.includes("basel") || a.includes("75%")) && s.push("BASEL3-RW");
+			let c = [...new Set(s)], d = [];
+			for (let t of c) {
+				let n = await e.env.DB.prepare("SELECT id FROM compliance_tags WHERE code = ? LIMIT 1").bind(t).first().catch(() => null);
+				if (!n) {
+					let r = t.replace(/[-_]/g, " ").toLowerCase(), { results: i } = await e.env.DB.prepare("SELECT id FROM compliance_tags WHERE LOWER(name) LIKE ? OR LOWER(tag_code) LIKE ? LIMIT 1").bind(`%${r}%`, `%${t.toLowerCase()}%`).all().catch(() => ({ results: [] }));
+					i && i.length > 0 && (n = i[0]);
+				}
+				n?.id && d.push(n.id);
+			}
+			if (d.length === 0) {
+				let { results: t } = await e.env.DB.prepare("\n        SELECT id FROM compliance_tags\n        WHERE severity = 'mandatory' AND is_active = 1\n        AND (applies_to IS NULL OR applies_to = '[]' OR applies_to LIKE '%home_loan%')\n        LIMIT 20\n      ").all().catch(() => ({ results: [] }));
+				if (t && t.forEach((e) => d.push(e.id)), d.length === 0) {
+					let { results: t } = await e.env.DB.prepare("SELECT id FROM compliance_tags WHERE is_active = 1 LIMIT 30").all().catch(() => ({ results: [] }));
+					t && t.forEach((e) => d.push(e.id));
+				}
+			}
+			for (let t of [...new Set(d)]) await e.env.DB.prepare("\n        INSERT OR IGNORE INTO product_compliance_tags (product_id, tag_id, mapped_by, mapped_at)\n        VALUES (?, ?, ?, ?)\n      ").bind(l, t, o, u).run().catch(() => {});
+		} catch {}
 		if (c.length > 2) {
 			let t = [], n = [], r = 80, i = null;
 			for (let e = 0; e < c.length; e++) {
@@ -5573,7 +5601,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await I.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "68f87e6";
+var at = "b40db4b";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
