@@ -1249,9 +1249,15 @@ V.get("/:id", async (e) => {
 //#region src/api/ai.ts
 var H = new N();
 H.post("/products/chat", async (e) => {
-	let { thread_id: t, message: n, context: r = {}, user_id: i = "u001", user_name: a = "Fatima Al-Rashdi" } = await e.req.json(), o = e.env.OPENAI_API_KEY, s = null, c = [], l = t;
-	l && (s = await e.env.DB.prepare("SELECT * FROM ai_threads WHERE id = ?").bind(l).first(), s && (c = JSON.parse(s.messages || "[]"))), (!l || !s) && (l = L("thr"), c = []);
-	let { results: u } = await e.env.DB.prepare("SELECT title, content, source FROM knowledge_base ORDER BY category").all(), d = u.map((e) => `[${e.source}] ${e.title}: ${e.content}`).join("\n\n"), { results: f } = await e.env.DB.prepare("SELECT id, name, code, base_rate, max_ltv, max_dbr, max_term FROM products WHERE status = 'active' ORDER BY name").all(), p = `You are a Senior Banking Product Architect at Sohar International Bank, Oman.
+	try {
+		let { thread_id: t, message: n, context: r = {}, user_id: i = "u001", user_name: a = "Fatima Al-Rashdi" } = await e.req.json(), o = e.env.OPENAI_API_KEY, s = null, c = [], l = t;
+		if (l && (s = await e.env.DB.prepare("SELECT * FROM ai_threads WHERE id = ?").bind(l).first(), s)) try {
+			c = JSON.parse(s.messages || "[]");
+		} catch {
+			c = [];
+		}
+		(!l || !s) && (l = L("thr"), c = []);
+		let { results: u } = await e.env.DB.prepare("SELECT title, content, source FROM knowledge_base ORDER BY category").all(), d = u.map((e) => `[${e.source}] ${e.title}: ${e.content}`).join("\n\n"), { results: f } = await e.env.DB.prepare("SELECT id, name, code, base_rate, max_ltv, max_dbr, max_term FROM products WHERE status = 'active' ORDER BY name").all(), p = `You are a Senior Banking Product Architect at Sohar International Bank, Oman.
 You have 20+ years of experience in Islamic and conventional banking product design, CBO regulatory compliance, ESG/green finance, credit risk modelling, and digital banking workflow design.
 You are NOT a generic assistant. You are a domain expert who knows exactly what questions to ask, what parameters matter, and what regulators require.
 System: jurisdiction Oman, currency OMR, regulator Central Bank of Oman (CBO), rating agency: CBUAE Credit Bureau (Oman), ESG standard: OS GSO 3000:2025.
@@ -1389,207 +1395,229 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
   "rules_draft": null,
   "schema_draft": null
 }`, m = {
-		role: "user",
-		content: n,
-		timestamp: R()
-	};
-	c.push(m);
-	let h = {
-		message: "I'll help you configure this product.",
-		current_stage: 1,
-		show_roadmap: !1,
-		action: "none",
-		ui_events: [],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	};
-	if (o) try {
-		let e = [{
-			role: "system",
-			content: p
-		}, ...c.map((e) => ({
-			role: e.role,
-			content: e.content
-		}))], t = await fetch("https://api.openai.com/v1/chat/completions", {
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${o}`,
-				"Content-Type": "application/json"
-			},
-			body: JSON.stringify({
-				model: "gpt-4o",
-				messages: e,
-				temperature: .3,
-				max_tokens: 1500
-			})
-		}), r = await t.json();
-		if (t.ok) {
-			let e = r.choices[0].message.content, t = e.match(/\{[\s\S]*\}/);
-			if (t) {
-				if (h = JSON.parse(t[0]), h.current_stage < 6 && (h.product_draft = null), h.current_stage >= 6 && !h.product_draft) {
-					let e = U(n, c.length, c);
-					e.product_draft && (h.product_draft = e.product_draft), e.schema_draft && !h.schema_draft && (h.schema_draft = e.schema_draft);
-				}
-				h.current_stage < 3 && (h.rules_draft = null), h.current_stage >= 6 && (h.rules_draft = null), h.current_stage > 1 && (h.show_roadmap = !1);
-				let e = h.message || "", r = /how would you like to proceed\?/i.test(e), i = h.current_stage || 1, a = {
-					1: "Type <strong>yes</strong> to confirm this product model, or let me know what to adjust.",
-					2: "Type <strong>yes</strong> to confirm these parameters, or tell me which values to change.",
-					3: "Type <strong>yes</strong> to generate the eligibility rules, or adjust the GSAS threshold.",
-					4: "Type <strong>yes</strong> to confirm the workflow, or tell me if you want more human touchpoints.",
-					5: "Type <strong>yes</strong> to apply these compliance parameters, or request adjustments.",
-					6: "Click <strong>Confirm &amp; Publish</strong> above to save and publish the product."
-				};
-				r && (h.message = e.replace(/how would you like to proceed\?/i, "").replace(/\s+$/, "") + (e.replace(/how would you like to proceed\?/i, "").trim() ? "<br><br>" : "") + "<em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">" + (a[i] || "Reply to continue.") + "</em>");
-				let o = h.message || "", s = o.includes("?"), l = !s && (/stage \d+ complete/i.test(o) || /let'?s (proceed|move on|move to|configure|set up)/i.test(o) || /we('ll| will) (proceed|move|configure|set)/i.test(o) || /moving (on|to) stage/i.test(o) || /^(great|noted|understood|confirmed|perfect)\b.{0,120}$/i.test(o.replace(/<[^>]+>/g, "")));
-				!s && !r && h.action !== "ready_to_confirm" && (l ? h.message = o + "<br><br><em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">Reply to continue.</em>" : h.message = o + "<br><br><em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">" + (a[i] || "Reply to continue.") + "</em>");
-			} else h.message = e;
+			role: "user",
+			content: n,
+			timestamp: R()
+		};
+		c.push(m);
+		let h = {
+			message: "I'll help you configure this product.",
+			current_stage: 1,
+			show_roadmap: !1,
+			action: "none",
+			ui_events: [],
+			product_draft: null,
+			rules_draft: null,
+			schema_draft: null
+		};
+		if (o) try {
+			let e = [{
+				role: "system",
+				content: p
+			}, ...c.map((e) => ({
+				role: e.role,
+				content: e.content
+			}))], t = await fetch("https://api.openai.com/v1/chat/completions", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${o}`,
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					model: "gpt-4o",
+					messages: e,
+					temperature: .3,
+					max_tokens: 1500
+				})
+			}), r = await t.json();
+			if (t.ok) {
+				let e = r.choices[0].message.content, t = e.match(/\{[\s\S]*\}/);
+				if (t) {
+					if (h = JSON.parse(t[0]), h.current_stage < 6 && (h.product_draft = null), h.current_stage >= 6 && !h.product_draft) {
+						let e = U(n, c.length, c);
+						e.product_draft && (h.product_draft = e.product_draft), e.schema_draft && !h.schema_draft && (h.schema_draft = e.schema_draft);
+					}
+					h.current_stage < 3 && (h.rules_draft = null), h.current_stage >= 6 && (h.rules_draft = null), h.current_stage > 1 && (h.show_roadmap = !1);
+					let e = h.message || "", r = /how would you like to proceed\?/i.test(e), i = h.current_stage || 1, a = {
+						1: "Type <strong>yes</strong> to confirm this product model, or let me know what to adjust.",
+						2: "Type <strong>yes</strong> to confirm these parameters, or tell me which values to change.",
+						3: "Type <strong>yes</strong> to generate the eligibility rules, or adjust the GSAS threshold.",
+						4: "Type <strong>yes</strong> to confirm the workflow, or tell me if you want more human touchpoints.",
+						5: "Type <strong>yes</strong> to apply these compliance parameters, or request adjustments.",
+						6: "Click <strong>Confirm &amp; Publish</strong> above to save and publish the product."
+					};
+					r && (h.message = e.replace(/how would you like to proceed\?/i, "").replace(/\s+$/, "") + (e.replace(/how would you like to proceed\?/i, "").trim() ? "<br><br>" : "") + "<em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">" + (a[i] || "Reply to continue.") + "</em>");
+					let o = h.message || "", s = o.includes("?"), l = !s && (/stage \d+ complete/i.test(o) || /let'?s (proceed|move on|move to|configure|set up)/i.test(o) || /we('ll| will) (proceed|move|configure|set)/i.test(o) || /moving (on|to) stage/i.test(o) || /^(great|noted|understood|confirmed|perfect)\b.{0,120}$/i.test(o.replace(/<[^>]+>/g, "")));
+					!s && !r && h.action !== "ready_to_confirm" && (l ? h.message = o + "<br><br><em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">Reply to continue.</em>" : h.message = o + "<br><br><em style=\"font-size:.8rem;color:rgba(255,255,255,.55)\">" + (a[i] || "Reply to continue.") + "</em>");
+				} else h.message = e;
+			}
+		} catch {
+			h = U(n, c.length, c);
 		}
-	} catch {
-		h = U(n, c.length, c);
+		else h = U(n, c.length, c);
+		let g = {
+			role: "assistant",
+			content: h.message,
+			timestamp: R(),
+			metadata: { action: h.action }
+		};
+		c.push(g);
+		let _ = R(), v = {};
+		if (s?.result) try {
+			v = JSON.parse(s.result);
+		} catch {
+			v = {};
+		}
+		return h.product_draft && (v.product_draft = h.product_draft), h.rules_draft && (v.rules_draft = h.rules_draft), h.schema_draft && (v.schema_draft = h.schema_draft), await e.env.DB.prepare("\n    INSERT INTO ai_threads (id, user_id, purpose, messages, context, status, result, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?)\n    ON CONFLICT(id) DO UPDATE SET messages=excluded.messages, result=excluded.result, updated_at=excluded.updated_at\n  ").bind(l, i, r.purpose || "product_creation", JSON.stringify(c), JSON.stringify(r), "active", JSON.stringify(v), _, _).run(), e.json({
+			thread_id: l,
+			reply: h.message,
+			current_stage: h.current_stage || 1,
+			show_roadmap: h.show_roadmap || !1,
+			action: h.action || "none",
+			ui_events: h.ui_events || [],
+			product_draft: h.product_draft || null,
+			rules_draft: h.rules_draft || null,
+			schema_draft: h.schema_draft || null
+		});
+	} catch (t) {
+		return e.json({
+			thread_id: null,
+			reply: "I'm sorry, I encountered a technical issue. Please try again — your conversation progress is saved.",
+			current_stage: 1,
+			show_roadmap: !1,
+			action: "none",
+			ui_events: [],
+			product_draft: null,
+			rules_draft: null,
+			schema_draft: null,
+			_error: t?.message || "unknown"
+		}, 200);
 	}
-	else h = U(n, c.length, c);
-	let g = {
-		role: "assistant",
-		content: h.message,
-		timestamp: R(),
-		metadata: { action: h.action }
-	};
-	c.push(g);
-	let _ = R(), v = {};
-	if (s?.result) try {
-		v = JSON.parse(s.result);
-	} catch {
-		v = {};
-	}
-	return h.product_draft && (v.product_draft = h.product_draft), h.rules_draft && (v.rules_draft = h.rules_draft), h.schema_draft && (v.schema_draft = h.schema_draft), await e.env.DB.prepare("\n    INSERT INTO ai_threads (id, user_id, purpose, messages, context, status, result, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?)\n    ON CONFLICT(id) DO UPDATE SET messages=excluded.messages, result=excluded.result, updated_at=excluded.updated_at\n  ").bind(l, i, r.purpose || "product_creation", JSON.stringify(c), JSON.stringify(r), "active", JSON.stringify(v), _, _).run(), e.json({
-		thread_id: l,
-		reply: h.message,
-		current_stage: h.current_stage || 1,
-		show_roadmap: h.show_roadmap || !1,
-		action: h.action || "none",
-		ui_events: h.ui_events || [],
-		product_draft: h.product_draft || null,
-		rules_draft: h.rules_draft || null,
-		schema_draft: h.schema_draft || null
-	});
 }), H.post("/products/confirm", async (e) => {
-	let { thread_id: t, product_draft: n, rules_draft: r, schema_draft: i, user_id: a = "u001", user_name: o = "Fatima Al-Rashdi" } = await e.req.json();
-	if (t) {
-		let a = await e.env.DB.prepare("SELECT result FROM ai_threads WHERE id = ?").bind(t).first();
-		if (a?.result) try {
-			let e = JSON.parse(a.result);
-			!n && e.product_draft && (n = e.product_draft), !r && e.rules_draft && (r = e.rules_draft), !i && e.schema_draft && (i = e.schema_draft);
-		} catch {}
-	}
-	if (!n && t) {
-		let a = await e.env.DB.prepare("SELECT messages FROM ai_threads WHERE id = ?").bind(t).first();
-		if (a?.messages) try {
-			let e = JSON.parse(a.messages), t = U("confirm", e.length, e);
-			t.product_draft && (n = t.product_draft, !r && t.rules_draft && (r = t.rules_draft), !i && t.schema_draft && (i = t.schema_draft));
-		} catch {}
-	}
-	if (!n) return e.json({
-		success: !1,
-		error: "No product draft found. Please complete the AI conversation first."
-	}, 400);
-	let s = L("p"), c = R(), l = {};
-	i && (l.gsas_schema = i);
-	let u = n.clone_from_id ? await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(n.clone_from_id).first() : null, d = n.name || "Green Home Loan – ESG", f = `GHL-${Date.now().toString(36).toUpperCase()}`;
-	await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,\n    green_dbr, min_term, max_term, min_amount, max_amount,\n    gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n    ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors,\n    configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(s, d, f, n.description || u?.description || "", n.category || "home_loan", "draft", n.base_rate || u?.base_rate || 5.5, n.max_ltv || u?.max_ltv || 90, n.max_dbr || u?.max_dbr || 60, n.green_dbr || 55, n.min_term || u?.min_term || 5, n.max_term || u?.max_term || 25, n.min_amount || u?.min_amount || 1e4, n.max_amount || u?.max_amount || 5e5, n.gsas_min_score || 70, n.gsas_premium_score || 85, n.green_discount_premium || .75, n.green_discount_standard || .5, 90, 1, 1, JSON.stringify(n.required_docs || (u ? JSON.parse(u.required_docs || "[]") : [
-		"salary_cert",
-		"civil_id",
-		"property_deed",
-		"valuation_report",
-		"utility_bill"
-	])), JSON.stringify(n.esg_required_docs || [
-		"gsas_cert",
-		"epc_report",
-		"eia_approval"
-	]), JSON.stringify(n.approved_materials || [
-		"Green Concrete",
-		"Thermal Insulation",
-		"Solar Panels",
-		"Energy-Efficient Appliances",
-		"Low-E Glass",
-		"Recycled Steel"
-	]), JSON.stringify(n.approved_vendors || [
-		"Oman Readymix LLC",
-		"Gulf Insulation Group",
-		"SunTech Oman",
-		"Green Build Oman",
-		"EcoMaterials Oman"
-	]), JSON.stringify(l), 0, 0, 1, a, c, c).run();
-	let p = [];
-	if (r && Array.isArray(r)) for (let t of r) {
-		let n = L("r");
-		await e.env.DB.prepare("\n        INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value,\n        threshold_condition, action_on_breach, severity, regulatory_reference, source,\n        ai_confidence, description, is_active, created_by, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n      ").bind(n, s, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach || "reject", t.severity || "hard", t.regulatory_reference || null, "ai_generated", t.ai_confidence || null, t.description || null, 1, a, c).run(), p.push(n);
-	}
-	let m = e.env.OPENAI_API_KEY, h = d, g = [], _ = "", v = (n.esg_required_docs || []).length > 0;
-	if (m) try {
-		let e = `Generate marketing content for a bank loan product. Return JSON only, no markdown:
+	try {
+		let { thread_id: t, product_draft: n, rules_draft: r, schema_draft: i, user_id: a = "u001", user_name: o = "Fatima Al-Rashdi" } = await e.req.json();
+		if (t) {
+			let a = await e.env.DB.prepare("SELECT result FROM ai_threads WHERE id = ?").bind(t).first();
+			if (a?.result) try {
+				let e = JSON.parse(a.result);
+				!n && e.product_draft && (n = e.product_draft), !r && e.rules_draft && (r = e.rules_draft), !i && e.schema_draft && (i = e.schema_draft);
+			} catch {}
+		}
+		if (!n && t) {
+			let a = await e.env.DB.prepare("SELECT messages FROM ai_threads WHERE id = ?").bind(t).first();
+			if (a?.messages) try {
+				let e = JSON.parse(a.messages), t = U("confirm", e.length, e);
+				t.product_draft && (n = t.product_draft, !r && t.rules_draft && (r = t.rules_draft), !i && t.schema_draft && (i = t.schema_draft));
+			} catch {}
+		}
+		if (!n) return e.json({
+			success: !1,
+			error: "No product draft found. Please complete the AI conversation first."
+		}, 400);
+		let s = L("p"), c = R(), l = {};
+		i && (l.gsas_schema = i);
+		let u = n.clone_from_id ? await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(n.clone_from_id).first() : null, d = n.name || "Green Home Loan – ESG", f = `GHL-${Date.now().toString(36).toUpperCase()}`;
+		await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,\n    green_dbr, min_term, max_term, min_amount, max_amount,\n    gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n    ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors,\n    configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(s, d, f, n.description || u?.description || "", n.category || "home_loan", "draft", n.base_rate || u?.base_rate || 5.5, n.max_ltv || u?.max_ltv || 90, n.max_dbr || u?.max_dbr || 60, n.green_dbr || 55, n.min_term || u?.min_term || 5, n.max_term || u?.max_term || 25, n.min_amount || u?.min_amount || 1e4, n.max_amount || u?.max_amount || 5e5, n.gsas_min_score || 70, n.gsas_premium_score || 85, n.green_discount_premium || .75, n.green_discount_standard || .5, 90, 1, 1, JSON.stringify(n.required_docs || (u ? JSON.parse(u.required_docs || "[]") : [
+			"salary_cert",
+			"civil_id",
+			"property_deed",
+			"valuation_report",
+			"utility_bill"
+		])), JSON.stringify(n.esg_required_docs || [
+			"gsas_cert",
+			"epc_report",
+			"eia_approval"
+		]), JSON.stringify(n.approved_materials || [
+			"Green Concrete",
+			"Thermal Insulation",
+			"Solar Panels",
+			"Energy-Efficient Appliances",
+			"Low-E Glass",
+			"Recycled Steel"
+		]), JSON.stringify(n.approved_vendors || [
+			"Oman Readymix LLC",
+			"Gulf Insulation Group",
+			"SunTech Oman",
+			"Green Build Oman",
+			"EcoMaterials Oman"
+		]), JSON.stringify(l), 0, 0, 1, a, c, c).run();
+		let p = [];
+		if (r && Array.isArray(r)) for (let t of r) {
+			let n = L("r");
+			await e.env.DB.prepare("\n        INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value,\n        threshold_condition, action_on_breach, severity, regulatory_reference, source,\n        ai_confidence, description, is_active, created_by, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n      ").bind(n, s, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach || "reject", t.severity || "hard", t.regulatory_reference || null, "ai_generated", t.ai_confidence || null, t.description || null, 1, a, c).run(), p.push(n);
+		}
+		let m = e.env.OPENAI_API_KEY, h = d, g = [], _ = "", v = (n.esg_required_docs || []).length > 0;
+		if (m) try {
+			let e = `Generate marketing content for a bank loan product. Return JSON only, no markdown:
 {"hero_title":"short compelling tagline (max 6 words)","hero_subtitle":"one sentence benefit statement","card_badge":"2-3 word category badge","highlights":["benefit 1","benefit 2","benefit 3","benefit 4"]}
 Product: ${d}. Description: ${n.description || ""}. Base rate: ${n.base_rate || 5.5}%.${v ? ` Green discount: up to ${n.green_discount_premium || .75}% for GSAS score ≥${n.gsas_premium_score || 85}. ESG/green product.` : ""}`, t = await fetch("https://api.openai.com/v1/chat/completions", {
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${m}`,
-				"Content-Type": "application/json"
-			},
-			body: JSON.stringify({
-				model: "gpt-4o-mini",
-				messages: [{
-					role: "user",
-					content: e
-				}],
-				temperature: .6,
-				max_tokens: 300
-			})
-		}), r = await t.json();
-		if (t.ok) {
-			let e = r.choices[0].message.content.match(/\{[\s\S]*\}/);
-			if (e) {
-				let t = JSON.parse(e[0]);
-				h = t.hero_title || h, g = t.highlights || [], _ = t.card_badge || "";
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${m}`,
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					model: "gpt-4o-mini",
+					messages: [{
+						role: "user",
+						content: e
+					}],
+					temperature: .6,
+					max_tokens: 300
+				})
+			}), r = await t.json();
+			if (t.ok) {
+				let e = r.choices[0].message.content.match(/\{[\s\S]*\}/);
+				if (e) {
+					let t = JSON.parse(e[0]);
+					h = t.hero_title || h, g = t.highlights || [], _ = t.card_badge || "";
+				}
 			}
-		}
-	} catch {}
-	g.length || (v ? (g = [
-		`Up to ${n.green_discount_premium || .75}% rate discount`,
-		"GSAS-certified properties only",
-		"Supports Oman Vision 2040",
-		"Maker-checker ESG approval"
-	], _ = "ESG Premium") : g = [
-		`From ${n.base_rate || 5.5}% per annum`,
-		`Terms up to ${n.max_term || 25} years`,
-		`Up to OMR ${Math.round((n.max_amount || 5e5) / 1e3)}K financing`
-	]);
-	let y = p.length > 0 ? 6 : 1;
-	return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, pge_stage=?, updated_at=? WHERE id=?").bind(+!!v, h, JSON.stringify(g), _, c, y, c, s).run(), t && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(s, JSON.stringify({
-		product_id: s,
-		rule_ids: p
-	}), c, t).run(), await z(e.env.DB, {
-		userId: a,
-		userName: o,
-		userRole: "product_manager",
-		action: "PRODUCT_CREATED_BY_AI",
-		entityType: "product",
-		entityId: s,
-		details: {
-			name: d,
-			rules_created: p.length,
-			cloned_from: n.clone_from_id || null,
-			thread_id: t,
+		} catch {}
+		g.length || (v ? (g = [
+			`Up to ${n.green_discount_premium || .75}% rate discount`,
+			"GSAS-certified properties only",
+			"Supports Oman Vision 2040",
+			"Maker-checker ESG approval"
+		], _ = "ESG Premium") : g = [
+			`From ${n.base_rate || 5.5}% per annum`,
+			`Terms up to ${n.max_term || 25} years`,
+			`Up to OMR ${Math.round((n.max_amount || 5e5) / 1e3)}K financing`
+		]);
+		let y = p.length > 0 ? 6 : 1;
+		return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, pge_stage=?, updated_at=? WHERE id=?").bind(+!!v, h, JSON.stringify(g), _, c, y, c, s).run(), t && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(s, JSON.stringify({
+			product_id: s,
+			rule_ids: p
+		}), c, t).run(), await z(e.env.DB, {
+			userId: a,
+			userName: o,
+			userRole: "product_manager",
+			action: "PRODUCT_CREATED_BY_AI",
+			entityType: "product",
+			entityId: s,
+			details: {
+				name: d,
+				rules_created: p.length,
+				cloned_from: n.clone_from_id || null,
+				thread_id: t,
+				portal_visible: !0
+			},
+			source: "ai_generated"
+		}), e.json({
+			success: !0,
+			product_id: s,
+			product_name: d,
+			rule_ids: p,
+			portal_hero_title: h,
 			portal_visible: !0
-		},
-		source: "ai_generated"
-	}), e.json({
-		success: !0,
-		product_id: s,
-		product_name: d,
-		rule_ids: p,
-		portal_hero_title: h,
-		portal_visible: !0
-	});
+		});
+	} catch (t) {
+		return e.json({
+			success: !1,
+			error: "Server error during product save. Please try again.",
+			_error: t?.message || "unknown"
+		}, 200);
+	}
 }), H.post("/rules/generate", async (e) => {
 	let { text: t, product_id: n, user_id: r = "u001", user_name: i = "Fatima Al-Rashdi" } = await e.req.json(), a = e.env.OPENAI_API_KEY;
 	try {
@@ -5268,7 +5296,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await I.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "ea8c974";
+var at = "c1da887";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

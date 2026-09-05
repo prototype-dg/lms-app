@@ -1646,7 +1646,17 @@ async function sendAiChat(productId) {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(chatBody)
     });
-    const d = await r.json();
+    let d;
+    try {
+      d = await r.json();
+    } catch (_parseErr) {
+      // Backend returned non-JSON (e.g. plain-text 500 "Internal Server Error")
+      // Show a friendly retry message instead of crashing the whole chat
+      if (thinkEl && thinkEl.parentNode) thinkEl.parentNode.removeChild(thinkEl);
+      appendChatBubble('assistant', '<span style="color:#f87171"><i class="fas fa-exclamation-circle" style="margin-right:5px"></i>Server error — please try sending your message again.</span>');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>'; }
+      return;
+    }
 
     // Remove thinking bubble
     if (thinkEl && thinkEl.parentNode) thinkEl.parentNode.removeChild(thinkEl);
