@@ -112,14 +112,45 @@
   const GRID = 20;
   const W = 160, H = 60, R = 28, DH = 50;  // node dims
 
+  const CANVAS_PAD = 60; // padding around node bounding box
+
   const Renderer = {
     svgEl: null,
     selectedId: null,
-    panX: 0, panY: 0, zoom: 1,
 
     init(svgEl) {
       this.svgEl = svgEl;
       this.render();
+    },
+
+    // Compute tight bounding box around all nodes and resize SVG to fit,
+    // then scroll the container to show the leftmost content.
+    _fitCanvas() {
+      const nodes = Model.nodes;
+      if (!nodes.length || !this.svgEl) return;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const n of nodes) {
+        const hw = (n.type === 'start' || n.type === 'end') ? R
+          : (n.type === 'gateway_ex' || n.type === 'gateway_par') ? DH * 1.3
+          : W / 2;
+        const hh = (n.type === 'start' || n.type === 'end') ? R
+          : (n.type === 'gateway_ex' || n.type === 'gateway_par') ? DH
+          : H / 2;
+        minX = Math.min(minX, n.x - hw);
+        minY = Math.min(minY, n.y - hh);
+        maxX = Math.max(maxX, n.x + hw);
+        maxY = Math.max(maxY, n.y + hh);
+      }
+      const vbX = minX - CANVAS_PAD;
+      const vbY = minY - CANVAS_PAD;
+      const vbW = (maxX - minX) + CANVAS_PAD * 2;
+      const vbH = (maxY - minY) + CANVAS_PAD * 2;
+      // SVG intrinsic size = viewBox size (1:1 px, scrollable)
+      this.svgEl.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
+      this.svgEl.style.width  = vbW + 'px';
+      this.svgEl.style.height = vbH + 'px';
+      this.svgEl.style.minWidth  = '100%';   // never smaller than the container
+      this.svgEl.style.minHeight = '100%';
     },
 
     render() {
@@ -142,6 +173,7 @@
         <g id="wfEdges">${edges.map(e => this.renderEdge(e, nodes)).join('')}</g>
         <!-- Nodes -->
         <g id="wfNodes">${nodes.map(n => this.renderNode(n)).join('')}</g>`;
+      this._fitCanvas();
     },
 
     renderNode(n) {
@@ -249,6 +281,15 @@
     },
 
     _svgPoint(e) {
+      // Use SVG coordinate system so drag works correctly with viewBox scaling
+      const pt = this.svgEl.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      const ctm = this.svgEl.getScreenCTM();
+      if (ctm) {
+        const svgPt = pt.matrixTransform(ctm.inverse());
+        return { x: svgPt.x, y: svgPt.y };
+      }
       const rect = this.svgEl.getBoundingClientRect();
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     },
@@ -439,6 +480,9 @@
     bus.on('wf:modelChanged', () => { Renderer.render(); bus.emit('dirty', {}); });
     bus.on('requestSave', doSave);
     bus.on('langChanged', () => { renderShell(); });
+
+    // Auto-fit on first load — run after the browser has laid out the container
+    requestAnimationFrame(() => requestAnimationFrame(() => _fitView()));
   }
 
   function renderShell() {
@@ -463,6 +507,9 @@
                 <option value="">${t('Load template…','تحميل قالب…')}</option>
                 ${_templates.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}
               </select>` : ''}
+              <button class="pge-btn pge-btn-ghost pge-btn-sm" onclick="PGEStage4._fitView()" title="${t('Fit entire workflow into view','ملاءمة سير العمل في العرض')}">
+                <i class="fas fa-expand"></i> ${t('Fit','ملاءمة')}
+              </button>
               <button class="pge-btn pge-btn-ghost pge-btn-sm" onclick="PGEStage4._validate()">
                 <i class="fas fa-circle-check"></i> ${t('Validate','التحقق')}
               </button>
@@ -493,14 +540,15 @@
             ).join('')}
           </div>
 
-          <!-- SVG Canvas -->
-          <div style="flex:1;position:relative;overflow:hidden;background:#f8f9fa"
+          <!-- SVG Canvas — scrollable in both axes -->
+          <div id="wfCanvasScroll" style="flex:1;position:relative;overflow:auto;background:#f8f9fa"
               ondragover="event.preventDefault()"
               ondrop="PGEStage4._canvasDrop(event)">
-            <svg id="wfSvg" width="100%" height="100%"
+            <svg id="wfSvg"
               style="display:block;cursor:default;user-select:none"></svg>
-            <div style="position:absolute;bottom:.5rem;right:.5rem;font-size:.68rem;color:#aaa">
-              ${t('Drag to move · Ctrl+click port to connect · Double-click to edit','اسحب للتحريك · انقر المنفذ للاتصال · انقر مرتين للتعديل')}
+            <div style="position:sticky;bottom:.5rem;right:.5rem;float:right;
+                font-size:.68rem;color:#aaa;pointer-events:none;padding-right:.5rem">
+              ${t('Scroll to pan · Drag nodes · Click port to connect · Double-click to edit','مرر للتنقل · اسحب العقد · انقر المنفذ للاتصال · انقر مرتين للتعديل')}
             </div>
           </div>
 
@@ -574,19 +622,37 @@
   function _canvasDrop(e) {
     e.preventDefault();
     if (!_dragType) return;
-    const rect = document.getElementById('wfSvg').getBoundingClientRect();
-    const x = Math.round((e.clientX - rect.left) / GRID) * GRID;
-    const y = Math.round((e.clientY - rect.top)  / GRID) * GRID;
+    // Convert drop coords through SVG viewBox
+    const svg = document.getElementById('wfSvg');
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const ctm = svg.getScreenCTM();
+    let x, y;
+    if (ctm) {
+      const sp = pt.matrixTransform(ctm.inverse());
+      x = Math.round(sp.x / GRID) * GRID;
+      y = Math.round(sp.y / GRID) * GRID;
+    } else {
+      const rect = svg.getBoundingClientRect();
+      x = Math.round((e.clientX - rect.left) / GRID) * GRID;
+      y = Math.round((e.clientY - rect.top)  / GRID) * GRID;
+    }
     Model.addNode(_dragType, x, y);
     Renderer.render();
     _dragType = null;
   }
 
   function _addNodeCenter(type) {
+    // Place new node in the viewBox centre so it's always visible
     const svg = document.getElementById('wfSvg');
-    const x = svg ? Math.round(svg.clientWidth  / 2 / GRID) * GRID : 400;
-    const y = svg ? Math.round(svg.clientHeight / 2 / GRID) * GRID : 200;
-    Model.addNode(type, x + Math.round(Math.random()*40-20)*GRID, y);
+    let cx = 400, cy = 260;
+    if (svg) {
+      const vb = svg.viewBox.baseVal;
+      cx = vb.width  > 0 ? vb.x + vb.width  / 2 : cx;
+      cy = vb.height > 0 ? vb.y + vb.height / 2 : cy;
+    }
+    Model.addNode(type, Math.round((cx + (Math.random()*80-40)) / GRID) * GRID,
+                        Math.round(cy / GRID) * GRID);
     Renderer.render();
   }
 
@@ -686,6 +752,41 @@
   async function saveAndStay() { await doSave(); }
   async function saveAndNext() { const ok = await doSave(); if (ok) PGEShell.goToStage(5); }
 
+  /* ══════════════════════════════════════════════
+     FIT VIEW
+     Scales the SVG to make the entire workflow
+     visible inside the scroll container without
+     horizontal or vertical clipping.
+  ══════════════════════════════════════════════ */
+  function _fitView() {
+    const svg       = document.getElementById('wfSvg');
+    const container = document.getElementById('wfCanvasScroll');
+    if (!svg || !container || !Model.nodes.length) return;
+
+    // Re-run the bounding-box fit (already done after render, but call again
+    // in case the container was resized since last render)
+    Renderer._fitCanvas();
+
+    const vb = svg.viewBox.baseVal;
+    if (!vb || vb.width <= 0 || vb.height <= 0) return;
+
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+
+    // Scale so the full workflow fits inside the container with a small margin
+    const scaleX = (cw - 24) / vb.width;
+    const scaleY = (ch - 24) / vb.height;
+    const scale  = Math.min(scaleX, scaleY, 1); // never zoom in past 100%
+
+    svg.style.width  = Math.round(vb.width  * scale) + 'px';
+    svg.style.height = Math.round(vb.height * scale) + 'px';
+    svg.style.minWidth  = '';
+    svg.style.minHeight = '';
+
+    // Scroll to top-left
+    container.scrollTo({ top: 0, left: 0 });
+  }
+
   function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
@@ -695,6 +796,7 @@
     _propUpdate, _edgeLabel, _deleteNode,
     _paletteDrag, _canvasDrop, _addNodeCenter,
     _loadTemplate, _resetCanvas, _validate,
+    _fitView,
     saveAndStay, saveAndNext,
   };
 })();
