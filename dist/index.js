@@ -120,10 +120,10 @@ var h = (e, t, n) => {
 		if (e === 63 || e === 35) break;
 	}
 	return t.slice(n, r);
-}, ee = (e) => {
+}, D = (e) => {
 	let t = E(e);
 	return t.length > 1 && t.at(-1) === "/" ? t.slice(0, -1) : t;
-}, D = (e, t, ...n) => (n.length && (t = D(t, ...n)), `${e?.[0] === "/" ? "" : "/"}${e}${t === "/" ? "" : `${e?.at(-1) === "/" ? "" : "/"}${t?.[0] === "/" ? t.slice(1) : t}`}`), te = (e) => {
+}, O = (e, t, ...n) => (n.length && (t = O(t, ...n)), `${e?.[0] === "/" ? "" : "/"}${e}${t === "/" ? "" : `${e?.at(-1) === "/" ? "" : "/"}${t?.[0] === "/" ? t.slice(1) : t}`}`), ee = (e) => {
 	if (e.charCodeAt(e.length - 1) !== 63 || !e.includes(":")) return null;
 	let t = e.split("/"), n = [], r = "";
 	return t.forEach((e) => {
@@ -136,7 +136,7 @@ var h = (e, t, n) => {
 			} else r += "/" + e;
 		}
 	}), n.filter((e, t, n) => n.indexOf(e) === t);
-}, O = (e) => e.indexOf("%") === -1 ? e : w(e, oe), ne = (e) => (e.indexOf("+") !== -1 && (e = e.replace(/\+/g, " ")), O(e)), re = (e, t, n) => {
+}, te = (e) => e.indexOf("%") === -1 ? e : w(e, ae), k = (e) => (e.indexOf("+") !== -1 && (e = e.replace(/\+/g, " ")), te(e)), ne = (e, t, n) => {
 	let r = e.indexOf("#", 8);
 	r !== -1 && (e = e.slice(0, r));
 	let i;
@@ -147,7 +147,7 @@ var h = (e, t, n) => {
 			let r = e.charCodeAt(n + t.length + 1);
 			if (r === 61) {
 				let r = n + t.length + 2, i = e.indexOf("&", r);
-				return ne(e.slice(r, i === -1 ? void 0 : i));
+				return k(e.slice(r, i === -1 ? void 0 : i));
 			}
 			if (r == 38 || isNaN(r)) return "";
 			n = e.indexOf(`&${t}`, n + 1);
@@ -161,12 +161,12 @@ var h = (e, t, n) => {
 		let t = e.indexOf("&", o + 1), r = e.indexOf("=", o);
 		r > t && t !== -1 && (r = -1);
 		let s = e.slice(o + 1, r === -1 ? t === -1 ? void 0 : t : r);
-		if (i && (s = ne(s)), o = t, s === "") continue;
+		if (i && (s = k(s)), o = t, s === "") continue;
 		let c;
-		r === -1 ? c = "" : (c = e.slice(r + 1, t === -1 ? void 0 : t), i && (c = ne(c))), n ? (a[s] && Array.isArray(a[s]) || (a[s] = []), a[s].push(c)) : a[s] ??= c;
+		r === -1 ? c = "" : (c = e.slice(r + 1, t === -1 ? void 0 : t), i && (c = k(c))), n ? (a[s] && Array.isArray(a[s]) || (a[s] = []), a[s].push(c)) : a[s] ??= c;
 	}
 	return t ? a[t] : a;
-}, ie = re, ae = (e, t) => re(e, t, !0), oe = decodeURIComponent, se = class {
+}, re = ne, ie = (e, t) => ne(e, t, !0), ae = decodeURIComponent, oe = class {
 	raw;
 	#e;
 	#t;
@@ -181,13 +181,13 @@ var h = (e, t, n) => {
 	}
 	#n(e) {
 		let t = this.#t[0][this.routeIndex]?.[1][e], n = this.#i(t);
-		return n && O(n);
+		return n && te(n);
 	}
 	#r() {
 		let e = {}, t = Object.keys(this.#t[0][this.routeIndex]?.[1] ?? {});
 		for (let n of t) {
 			let t = this.#i(this.#t[0][this.routeIndex][1][n]);
-			t !== void 0 && (e[n] = O(t));
+			t !== void 0 && (e[n] = te(t));
 		}
 		return e;
 	}
@@ -195,10 +195,10 @@ var h = (e, t, n) => {
 		return this.#t[1] ? this.#t[1][e] : e;
 	}
 	query(e) {
-		return ie(this.url, e);
+		return re(this.url, e);
 	}
 	queries(e) {
-		return ae(this.url, e);
+		return ie(this.url, e);
 	}
 	header(e) {
 		if (e) return this.raw.headers.get(e) ?? void 0;
@@ -255,14 +255,14 @@ var h = (e, t, n) => {
 	get routePath() {
 		return this.#t[0].map(([[, e]]) => e)[this.routeIndex].path;
 	}
-}, ce = {
+}, se = {
 	Stringify: 1,
 	BeforeStream: 2,
 	Stream: 3
-}, le = (e, t) => {
+}, ce = (e, t) => {
 	let n = new String(e);
 	return n.isEscaped = !0, n.callbacks = t, n;
-}, ue = async (e, t, n, r, i) => {
+}, le = async (e, t, n, r, i) => {
 	typeof e == "object" && !(e instanceof String) && (e instanceof Promise || (e = e.toString()), e instanceof Promise && (e = await e));
 	let a = e.callbacks;
 	if (!a?.length) return Promise.resolve(e);
@@ -271,12 +271,12 @@ var h = (e, t, n) => {
 		phase: t,
 		buffer: i,
 		context: r
-	}))).then((e) => Promise.all(e.filter(Boolean).map((e) => ue(e, t, !1, r, i))).then(() => i[0]));
-	return n ? le(await o, a) : o;
-}, de = "text/plain; charset=UTF-8", fe = (e, t) => ({
+	}))).then((e) => Promise.all(e.filter(Boolean).map((e) => le(e, t, !1, r, i))).then(() => i[0]));
+	return n ? ce(await o, a) : o;
+}, ue = "text/plain; charset=UTF-8", de = (e, t) => ({
 	"Content-Type": e,
 	...t
-}), k = (e, t) => new Response(e, t), pe = class {
+}), A = (e, t) => new Response(e, t), fe = class {
 	#e;
 	#t;
 	env = {};
@@ -296,7 +296,7 @@ var h = (e, t, n) => {
 		this.#e = e, t && (this.#i = t.executionCtx, this.env = t.env, this.#c = t.notFoundHandler, this.#d = t.path, this.#u = t.matchResult);
 	}
 	get req() {
-		return this.#t ??= new se(this.#e, this.#d, this.#u), this.#t;
+		return this.#t ??= new oe(this.#e, this.#d, this.#u), this.#t;
 	}
 	get event() {
 		if (this.#i && "respondWith" in this.#i) return this.#i;
@@ -307,11 +307,11 @@ var h = (e, t, n) => {
 		throw Error("This context has no ExecutionContext");
 	}
 	get res() {
-		return this.#a ||= k(null, { headers: this.#l ??= new Headers() });
+		return this.#a ||= A(null, { headers: this.#l ??= new Headers() });
 	}
 	set res(e) {
 		if (this.#a && e) {
-			e = k(e.body, e);
+			e = A(e.body, e);
 			for (let [t, n] of this.#a.headers.entries()) if (t !== "content-type") {
 				if (t === "set-cookie") {
 					let t = this.#a.headers.getSetCookie();
@@ -329,7 +329,7 @@ var h = (e, t, n) => {
 		this.#s = e;
 	};
 	header = (e, t, n) => {
-		this.finalized && (this.#a = k(this.#a.body, this.#a));
+		this.finalized && (this.#a = A(this.#a.body, this.#a));
 		let r = this.#a ? this.#a.headers : this.#l ??= new Headers();
 		t === void 0 ? r.delete(e) : n?.append ? r.append(e, t) : r.set(e, t);
 	};
@@ -366,25 +366,25 @@ var h = (e, t, n) => {
 				}
 			}
 		}
-		return k(e, {
+		return A(e, {
 			status: typeof t == "number" ? t : t?.status ?? this.#r,
 			headers: r ?? n
 		});
 	}
 	newResponse = (...e) => this.#f(...e);
 	body = (e, t, n) => this.#f(e, t, n);
-	text = (e, t, n) => !this.#l && !this.#r && !t && !n && !this.finalized ? new Response(e) : this.#f(e, t, fe(de, n));
-	json = (e, t, n) => this.#f(JSON.stringify(e), t, fe("application/json", n));
+	text = (e, t, n) => !this.#l && !this.#r && !t && !n && !this.finalized ? new Response(e) : this.#f(e, t, de(ue, n));
+	json = (e, t, n) => this.#f(JSON.stringify(e), t, de("application/json", n));
 	html = (e, t, n) => {
-		let r = (e) => this.#f(e, t, fe("text/html; charset=UTF-8", n));
-		return typeof e == "object" ? ue(e, ce.Stringify, !1, {}).then(r) : r(e);
+		let r = (e) => this.#f(e, t, de("text/html; charset=UTF-8", n));
+		return typeof e == "object" ? le(e, se.Stringify, !1, {}).then(r) : r(e);
 	};
 	redirect = (e, t) => {
 		let n = String(e);
 		return this.header("Location", /[^\x00-\xFF]/.test(n) ? encodeURI(n) : n), this.newResponse(null, t ?? 302);
 	};
-	notFound = () => (this.#c ??= () => k(), this.#c(this));
-}, me = [
+	notFound = () => (this.#c ??= () => A(), this.#c(this));
+}, pe = [
 	"get",
 	"post",
 	"put",
@@ -392,13 +392,13 @@ var h = (e, t, n) => {
 	"options",
 	"patch",
 	"query"
-], he = "Can not add a route since the matcher is already built.", ge = class extends Error {}, _e = "__COMPOSED_HANDLER", ve = (e) => e.text("404 Not Found", 404), ye = (e, t) => {
+], me = "Can not add a route since the matcher is already built.", he = class extends Error {}, ge = "__COMPOSED_HANDLER", _e = (e) => e.text("404 Not Found", 404), ve = (e, t) => {
 	if ("getResponse" in e) {
 		let n = e.getResponse();
 		return t.newResponse(n.body, n);
 	}
 	return console.error(e), t.text("Internal Server Error", 500);
-}, be = class e {
+}, ye = class e {
 	get;
 	post;
 	put;
@@ -415,7 +415,7 @@ var h = (e, t, n) => {
 	#e = "/";
 	routes = [];
 	constructor(e = {}) {
-		[...me, "all"].forEach((e) => {
+		[...pe, "all"].forEach((e) => {
 			this[e] = (t, ...n) => (typeof t == "string" ? this.#e = t : this.#r(e, this.#e, t), n.forEach((t) => {
 				this.#r(e, this.#e, t);
 			}), this);
@@ -431,7 +431,7 @@ var h = (e, t, n) => {
 			this.#r("ALL", this.#e, e);
 		}), this);
 		let { strict: t, ...n } = e;
-		Object.assign(this, n), this.getPath = t ?? !0 ? e.getPath ?? E : ee;
+		Object.assign(this, n), this.getPath = t ?? !0 ? e.getPath ?? E : D;
 	}
 	#t() {
 		let t = new e({
@@ -440,18 +440,18 @@ var h = (e, t, n) => {
 		});
 		return t.errorHandler = this.errorHandler, t.#n = this.#n, t.routes = this.routes, t;
 	}
-	#n = ve;
-	errorHandler = ye;
+	#n = _e;
+	errorHandler = ve;
 	route(e, t) {
 		let n = this.basePath(e);
 		return t.routes.map((e) => {
 			let r;
-			t.errorHandler === ye ? r = e.handler : (r = async (n, r) => (await o([], t.errorHandler)(n, () => e.handler(n, r))).res, r[_e] = e.handler), n.#r(e.method, e.path, r, e.basePath);
+			t.errorHandler === ve ? r = e.handler : (r = async (n, r) => (await o([], t.errorHandler)(n, () => e.handler(n, r))).res, r[ge] = e.handler), n.#r(e.method, e.path, r, e.basePath);
 		}), this;
 	}
 	basePath(e) {
 		let t = this.#t();
-		return t._basePath = D(this._basePath, e), t;
+		return t._basePath = O(this._basePath, e), t;
 	}
 	onError = (e) => (this.errorHandler = e, this);
 	notFound = (e) => (this.#n = e, this);
@@ -469,21 +469,21 @@ var h = (e, t, n) => {
 			return [e.env, t];
 		};
 		return r ||= (() => {
-			let t = D(this._basePath, e), n = t === "/" ? 0 : t.length;
+			let t = O(this._basePath, e), n = t === "/" ? 0 : t.length;
 			return (e) => {
 				let t = new URL(e.url);
 				return t.pathname = this.getPath(e).slice(n) || "/", new Request(t, e);
 			};
-		})(), this.#r("ALL", D(e, "*"), async (e, n) => {
+		})(), this.#r("ALL", O(e, "*"), async (e, n) => {
 			let i = await t(r(e.req.raw), ...a(e));
 			if (i) return i;
 			await n();
 		}), this;
 	}
 	#r(e, t, n, r) {
-		e = e.toUpperCase(), t = D(this._basePath, t);
+		e = e.toUpperCase(), t = O(this._basePath, t);
 		let i = {
-			basePath: r === void 0 ? this._basePath : D(this._basePath, r),
+			basePath: r === void 0 ? this._basePath : O(this._basePath, r),
 			path: t,
 			method: e,
 			handler: n
@@ -496,7 +496,7 @@ var h = (e, t, n) => {
 	}
 	#a(e, t, n, r) {
 		if (r === "HEAD") return (async () => new Response(null, await this.#a(e, t, n, "GET")))();
-		let i = this.getPath(e, { env: n }), a = this.router.match(r, i), s = new pe(e, {
+		let i = this.getPath(e, { env: n }), a = this.router.match(r, i), s = new fe(e, {
 			path: i,
 			matchResult: a,
 			env: n,
@@ -526,19 +526,19 @@ var h = (e, t, n) => {
 		})();
 	}
 	fetch = (e, ...t) => this.#a(e, t[1], t[0], e.method);
-	request = (e, t, n, r) => e instanceof Request ? this.fetch(t ? new Request(e, t) : e, n, r) : (e = e.toString(), this.fetch(new Request(/^https?:\/\//.test(e) ? e : `http://localhost${D("/", e)}`, t), n, r));
+	request = (e, t, n, r) => e instanceof Request ? this.fetch(t ? new Request(e, t) : e, n, r) : (e = e.toString(), this.fetch(new Request(/^https?:\/\//.test(e) ? e : `http://localhost${O("/", e)}`, t), n, r));
 	fire = () => {
 		addEventListener("fetch", (e) => {
 			e.respondWith(this.#a(e.request, e, void 0, e.request.method));
 		});
 	};
-}, A = () => /* @__PURE__ */ Object.create(null), xe = [];
-function Se(e, t) {
+}, j = () => /* @__PURE__ */ Object.create(null), be = [];
+function xe(e, t) {
 	let n = this.buildAllMatchers(), r = ((e, t) => {
 		let r = n[e] || n.ALL, i = r[2][t];
 		if (i) return i;
 		let a = t.match(r[0]);
-		if (!a) return [[], xe];
+		if (!a) return [[], be];
 		let o = a.indexOf("", 1);
 		return [r[1][o], a];
 	});
@@ -546,14 +546,14 @@ function Se(e, t) {
 }
 //#endregion
 //#region node_modules/hono/dist/router/reg-exp-router/node.js
-var Ce = "[^/]+", we = "(?:|/.*)", j = /* @__PURE__ */ Symbol(), Te = /* @__PURE__ */ new Set(".\\+*[^]$()");
-function Ee(e, t) {
+var Se = "[^/]+", Ce = "(?:|/.*)", M = /* @__PURE__ */ Symbol(), we = /* @__PURE__ */ new Set(".\\+*[^]$()");
+function Te(e, t) {
 	return e.length === 1 ? t.length === 1 ? e < t ? -1 : 1 : -1 : t.length === 1 ? 1 : e === ".*" || e === "(?:|/.*)" ? t === "(?:|/.*)" ? -1 : 1 : t === ".*" || t === "(?:|/.*)" ? -1 : e === "[^/]+" ? 1 : t === "[^/]+" ? -1 : e.length === t.length ? e < t ? -1 : 1 : t.length - e.length;
 }
-var De = class e {
+var Ee = class e {
 	#e;
 	#t;
-	#n = A();
+	#n = j();
 	insert(t, n, r, i, a) {
 		let o = this;
 		for (let n = 0, a = t.length; n < a; n++) {
@@ -564,43 +564,43 @@ var De = class e {
 			] : [
 				"",
 				"",
-				Ce
+				Se
 			] : null : s === "/*" ? [
 				"",
 				"",
-				we
+				Ce
 			] : s.match(/^\:([^\{\}]+)(?:\{(.+)\})?$/), l;
 			if (c) {
 				let t = c[1], n = c[2] || "[^/]+";
-				if (t && c[2] && (n === ".*" || (n = n.replace(/^\((?!\?:)(?=[^)]+\)$)/, "(?:"), /\((?!\?:)/.test(n)) || n.length === 1 && Te.has(n))) throw j;
+				if (t && c[2] && (n === ".*" || (n = n.replace(/^\((?!\?:)(?=[^)]+\)$)/, "(?:"), /\((?!\?:)/.test(n)) || n.length === 1 && we.has(n))) throw M;
 				if (l = o.#n[n], !l) {
 					if (n !== ".*" && n !== "(?:|/.*)") {
-						for (let e in o.#n) if ((n.length > 1 || e.length > 1) && e !== ".*" && e !== "(?:|/.*)") throw j;
+						for (let e in o.#n) if ((n.length > 1 || e.length > 1) && e !== ".*" && e !== "(?:|/.*)") throw M;
 					}
 					l = o.#n[n] = new e();
 				}
 				t !== "" && (l.#t ??= i.varIndex++, r.push([t, l.#t]));
 			} else if (l = o.#n[s], !l) {
-				for (let e in o.#n) if (e.length > 1 && e !== ".*" && e !== "(?:|/.*)") throw j;
+				for (let e in o.#n) if (e.length > 1 && e !== ".*" && e !== "(?:|/.*)") throw M;
 				l = o.#n[s] = new e();
 			}
 			o = l;
 		}
-		if (o.#e !== void 0) throw j;
+		if (o.#e !== void 0) throw M;
 		o.#e = a ? -1 : n;
 	}
 	buildRegExpStr() {
-		let e = Object.keys(this.#n).sort(Ee).map((e) => {
+		let e = Object.keys(this.#n).sort(Te).map((e) => {
 			let t = this.#n[e], n = t.buildRegExpStr();
-			return n === "" ? "" : (typeof t.#t == "number" ? `(${e})@${t.#t}` : Te.has(e) ? `\\${e}` : e) + n;
+			return n === "" ? "" : (typeof t.#t == "number" ? `(${e})@${t.#t}` : we.has(e) ? `\\${e}` : e) + n;
 		}).filter(Boolean);
 		return typeof this.#e == "number" && this.#e !== -1 && e.unshift(`#${this.#e}`), e.length === 0 ? "" : e.length === 1 ? e[0] : "(?:" + e.join("|") + ")";
 	}
-}, Oe = class {
+}, De = class {
 	#e = { varIndex: 0 };
-	#t = new De();
+	#t = new Ee();
 	#n = 0;
-	paths = A();
+	paths = j();
 	insert(e, t) {
 		if (t) {
 			this.#t.insert(e.split(""), 0, [], this.#e, !0);
@@ -638,64 +638,64 @@ var De = class e {
 			r
 		];
 	}
-}, ke = A();
-function Ae(e) {
-	return ke[e] ??= RegExp(`^${e.replace(/\/:[^/{}]+(?:\{\[\^\/]\+})?(?=[/{]|$)|\/?\*$|([.\\+*[^\]$()?{}|])/g, (e, t) => t ? `\\${t}` : e === "/*" ? we : e === "*" ? ".*" : `/:${Ce}`)}$`);
+}, Oe = j();
+function ke(e) {
+	return Oe[e] ??= RegExp(`^${e.replace(/\/:[^/{}]+(?:\{\[\^\/]\+})?(?=[/{]|$)|\/?\*$|([.\\+*[^\]$()?{}|])/g, (e, t) => t ? `\\${t}` : e === "/*" ? Ce : e === "*" ? ".*" : `/:${Se}`)}$`);
 }
-function M(e, t) {
-	for (let n of Object.keys(e).sort((e, t) => t.length - e.length)) if (Ae(n).test(t)) return [...e[n]];
+function N(e, t) {
+	for (let n of Object.keys(e).sort((e, t) => t.length - e.length)) if (ke(n).test(t)) return [...e[n]];
 }
-var je = class {
+var Ae = class {
 	name = "RegExpRouter";
 	#e;
 	#t;
 	#n;
 	constructor() {
-		this.#e = { ALL: A() }, this.#t = { ALL: A() }, this.#n = { ALL: new Oe() };
+		this.#e = { ALL: j() }, this.#t = { ALL: j() }, this.#n = { ALL: new De() };
 	}
 	#r(e, t) {
 		try {
 			this.#n[e].insert(t, !/\*|\/:/.test(t));
 		} catch (e) {
-			throw e === j ? new ge(t) : e;
+			throw e === M ? new he(t) : e;
 		}
 	}
 	add(e, t, n) {
 		let r = this.#e, i = this.#t;
-		if (!r) throw Error(he);
+		if (!r) throw Error(me);
 		if (!r[e]) {
-			this.#n[e] = new Oe();
+			this.#n[e] = new De();
 			for (let t of [r, i]) {
-				t[e] = A();
+				t[e] = j();
 				for (let n in t.ALL) t[e][n] = [...t.ALL[n]], this.#r(e, n);
 			}
 		}
 		t === "/*" && (t = "*");
 		let a = e === "ALL" ? Object.keys(r) : [e];
 		if (/\*$/.test(t)) {
-			let e = Ae(t);
-			for (let e of a) r[e][t] || (this.#r(e, t), r[e][t] = M(r[e], t) || M(r.ALL, t) || []);
+			let e = ke(t);
+			for (let e of a) r[e][t] || (this.#r(e, t), r[e][t] = N(r[e], t) || N(r.ALL, t) || []);
 			for (let o of [r, i]) for (let r of a) for (let i in o[r]) e.test(i) && o[r][i].push([n, t]);
 			return;
 		}
-		let o = te(t) || [t];
-		for (let e of o) for (let t of a) i[t][e] || (this.#r(t, e), i[t][e] = M(r[t], e) || M(r.ALL, e) || []), i[t][e].push([n, e]);
+		let o = ee(t) || [t];
+		for (let e of o) for (let t of a) i[t][e] || (this.#r(t, e), i[t][e] = N(r[t], e) || N(r.ALL, e) || []), i[t][e].push([n, e]);
 	}
-	match = Se;
+	match = xe;
 	buildAllMatchers() {
-		let e = A();
+		let e = j();
 		for (let t of Object.keys(this.#t)) e[t] = this.#i(t);
-		return this.#e = this.#t = this.#n = void 0, ke = A(), e;
+		return this.#e = this.#t = this.#n = void 0, Oe = j(), e;
 	}
 	#i(e) {
-		let t = this.#e[e], n = this.#t[e], r = this.#n[e], i = A(), a = [], [o, s, c] = r.buildRegExp();
+		let t = this.#e[e], n = this.#t[e], r = this.#n[e], i = j(), a = [], [o, s, c] = r.buildRegExp();
 		for (let e of [t, n]) for (let t in e) {
 			let n = e[t], o = r.paths[t];
 			if (!o) {
-				i[t] = [n.map(([e]) => [e, A()]), xe];
+				i[t] = [n.map(([e]) => [e, j()]), be];
 				continue;
 			}
-			a[o[0]] = n.map(([e, t]) => [e, r.paths[t][1].reduceRight((e, [t], n) => (e[t] = c[o[1][n][1]], e), A())]);
+			a[o[0]] = n.map(([e, t]) => [e, r.paths[t][1].reduceRight((e, [t], n) => (e[t] = c[o[1][n][1]], e), j())]);
 		}
 		return [
 			o,
@@ -703,7 +703,7 @@ var je = class {
 			i
 		];
 	}
-}, Me = class {
+}, je = class {
 	name = "SmartRouter";
 	#e = [];
 	#t = [];
@@ -711,7 +711,7 @@ var je = class {
 		this.#e = e.routers;
 	}
 	add(e, t, n) {
-		if (!this.#t) throw Error(he);
+		if (!this.#t) throw Error(me);
 		this.#t.push([
 			e,
 			t,
@@ -727,7 +727,7 @@ var je = class {
 				for (let e = 0, t = r.length; e < t; e++) i.add(...r[e]);
 				o = i.match(e, t);
 			} catch (e) {
-				if (e instanceof ge) continue;
+				if (e instanceof he) continue;
 				throw e;
 			}
 			this.match = i.match.bind(i), this.#e = [i], this.#t = void 0;
@@ -740,12 +740,12 @@ var je = class {
 		if (this.#t || this.#e.length !== 1) throw Error("No active router has been determined yet.");
 		return this.#e[0];
 	}
-}, N = A(), Ne = 0, Pe = class e {
+}, Me = j(), Ne = 0, Pe = class e {
 	#e = [];
-	#t = A();
+	#t = j();
 	#n = [];
 	#r;
-	#i = N;
+	#i = Me;
 	insert(t, n, r) {
 		let i = this, a = y(n), o = /* @__PURE__ */ new Set(), s = 0;
 		for (let t of a) {
@@ -762,7 +762,7 @@ var je = class {
 		for (let a = 0, o = t.#e.length; a < o; a++) {
 			let o = t.#e[a], s = o[n] || o.ALL;
 			if (s) {
-				s.params = A(), e.push(s);
+				s.params = j(), e.push(s);
 				for (let e = 0, t = s.possibleKeys.length; e < t; e++) {
 					let t = s.possibleKeys[e];
 					s.params[t] = i?.[t] && !e ? i[t] : r[t] ?? i?.[t];
@@ -772,7 +772,7 @@ var je = class {
 	}
 	search(e, t) {
 		let n = [];
-		this.#i = N;
+		this.#i = Me;
 		let r = [this], i = v(t), a = [], o = i.length, s = null;
 		for (let c = 0; c < o; c++) {
 			let l = i[c], u = c === o - 1, d = [];
@@ -780,7 +780,7 @@ var je = class {
 				let p = r[f], m = p.#t[l];
 				m && (m.#i = p.#i, u ? (m.#t["*"] && this.#a(n, m.#t["*"], e, p.#i), this.#a(n, m, e, p.#i)) : d.push(m));
 				for (let r of p.#n) {
-					let f = r.#r, m = p.#i === N ? {} : { ...p.#i };
+					let f = r.#r, m = p.#i === Me ? {} : { ...p.#i };
 					if (typeof f == "string") {
 						(f === "*" || l.startsWith(f.slice(0, -1))) && (this.#a(n, r, e, p.#i), f === "*" && (r.#i = m, d.push(r)));
 						continue;
@@ -818,14 +818,14 @@ var je = class {
 	name = "TrieRouter";
 	#e = new Pe();
 	add(e, t, n) {
-		for (let r of te(t) || [t]) this.#e.insert(e, r, n);
+		for (let r of ee(t) || [t]) this.#e.insert(e, r, n);
 	}
 	match(e, t) {
 		return this.#e.search(e, t);
 	}
-}, P = class extends be {
+}, P = class extends ye {
 	constructor(e = {}) {
-		super(e), this.router = e.router ?? new Me({ routers: [new je(), new Fe()] });
+		super(e), this.router = e.router ?? new je({ routers: [new Ae(), new Fe()] });
 	}
 }, Ie = (e) => {
 	let t = {
@@ -1980,10 +1980,10 @@ function We(e) {
 	};
 }
 function Ge(e, t, n) {
-	let r = e.toLowerCase(), i = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great") || r.includes("continue") || r.includes("use") || r.includes("keep") || r.includes("proceed"), a = n || [], o = a.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), s = o.some((e) => e.includes("clone") || e.includes("from scratch") || e.includes("product model") || e.includes("stage 1")), c = o.some((e) => e.includes("islamic") || e.includes("murabaha") || e.includes("conventional") || e.includes("structure")), l = o.some((e) => e.includes("target segment") || e.includes("omani nationals") || e.includes("expat") || e.includes("income band")), u = o.some((e) => e.includes("product name") || e.includes("sohar green") || e.includes("sohar eco") || e.includes("ecohome") || e.includes("confirm the name") || e.includes("shall i use") || e.includes("for the product name") || e.includes("i suggest") && e.includes("name")), d = o.some((e) => e.includes("base rate") || e.includes("pricing structure") || e.includes("stage 2") || e.includes("5.25%")), f = o.some((e) => e.includes("discount tier") || e.includes("green discount") || e.includes("gsas score band")), p = o.some((e) => e.includes("ltv band") || e.includes("loan-to-value") || e.includes("ltv") && e.includes("first home") && e.includes("subsequent") || e.includes("90% ltv") || e.includes("ltv settings")), m = o.some((e) => e.includes("dbr") && (e.includes("55%") || e.includes("stage 2") || e.includes("debt burden"))), h = o.some((e) => e.includes("term range") || e.includes("amount range") || e.includes("omr 10,000") || e.includes("min/max")), g = o.some((e) => e.includes("arrangement fee") || e.includes("early settlement") || e.includes("fee")), _ = o.some((e) => e.includes("17 eligibility rules") || e.includes("gsas minimum") || e.includes("stage 3") && e.includes("credit risk")), v = o.some((e) => e.includes("10-step workflow") || e.includes("10-step approval workflow") || e.includes("more human touchpoints in the automated phase") || e.includes("should i configure automated processing")), y = o.some((e) => e.includes("stage 4 complete") || e.includes("10-step approval workflow configured") || e.includes("approval workflow set") || e.includes("approval workflow configured") || e.includes("workflow is now configured") || e.includes("workflow has been configured") || e.includes("nci ekyc") && e.includes("muscat municipality") || e.includes("workflow") && e.includes("10 steps") || e.includes("workflow") && e.includes("10-step") && e.includes("stage 5")), b = o.some((e) => e.includes("shall i apply these compliance parameters") || e.includes("compliance parameters, or do you want to adjust") || e.includes("stage 5 complete") || e.includes("compliance parameters applied") || e.includes("basel iii") && e.includes("ifrs9") && e.includes("aml risk score")), x = o.some((e) => e.includes("ready to publish") || e.includes("confirm &amp; publish") || e.includes("confirm & publish") || e.includes("click confirm") || e.includes("stage 6") && (e.includes("portfolio target") || e.includes("break-even") || e.includes("nim ~")) || e.includes("stage 6") && e.includes("everything is configured")), S = [...a.map((e) => e.content || ""), e].join(" ").toLowerCase(), C = S.includes("green") || S.includes("gsas") || S.includes("esg") || S.includes("sustainable"), w = !C && (S.includes("auto") || S.includes("car") || S.includes("vehicle")), T = !C && !w && (S.includes("personal") || S.includes("unsecured") || S.includes("consumer")), E = !C && !w && !T && (S.includes("sme") || S.includes("business") || S.includes("working capital")), ee = (() => {
+	let r = e.toLowerCase(), i = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great") || r.includes("continue") || r.includes("use") || r.includes("keep") || r.includes("proceed"), a = n || [], o = a.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), s = o.some((e) => e.includes("clone") || e.includes("from scratch") || e.includes("product model") || e.includes("stage 1")), c = o.some((e) => e.includes("islamic") || e.includes("murabaha") || e.includes("conventional") || e.includes("structure")), l = o.some((e) => e.includes("target segment") || e.includes("omani nationals") || e.includes("expat") || e.includes("income band")), u = o.some((e) => e.includes("product name") || e.includes("sohar green") || e.includes("sohar eco") || e.includes("ecohome") || e.includes("confirm the name") || e.includes("shall i use") || e.includes("for the product name") || e.includes("i suggest") && e.includes("name")), d = o.some((e) => e.includes("base rate") || e.includes("pricing structure") || e.includes("stage 2") || e.includes("5.25%")), f = o.some((e) => e.includes("discount tier") || e.includes("green discount") || e.includes("gsas score band")), p = o.some((e) => e.includes("ltv band") || e.includes("loan-to-value") || e.includes("ltv") && e.includes("first home") && e.includes("subsequent") || e.includes("90% ltv") || e.includes("ltv settings")), m = o.some((e) => e.includes("dbr") && (e.includes("55%") || e.includes("stage 2") || e.includes("debt burden"))), h = o.some((e) => e.includes("term range") || e.includes("amount range") || e.includes("omr 10,000") || e.includes("min/max")), g = o.some((e) => e.includes("arrangement fee") || e.includes("early settlement") || e.includes("fee")), _ = o.some((e) => e.includes("17 eligibility rules") || e.includes("gsas minimum") || e.includes("stage 3") && e.includes("credit risk")), v = o.some((e) => e.includes("10-step workflow") || e.includes("10-step approval workflow") || e.includes("more human touchpoints in the automated phase") || e.includes("should i configure automated processing")), y = o.some((e) => e.includes("stage 4 complete") || e.includes("10-step approval workflow configured") || e.includes("approval workflow set") || e.includes("approval workflow configured") || e.includes("workflow is now configured") || e.includes("workflow has been configured") || e.includes("nci ekyc") && e.includes("muscat municipality") || e.includes("workflow") && e.includes("10 steps") || e.includes("workflow") && e.includes("10-step") && e.includes("stage 5")), b = o.some((e) => e.includes("shall i apply these compliance parameters") || e.includes("compliance parameters, or do you want to adjust") || e.includes("stage 5 complete") || e.includes("compliance parameters applied") || e.includes("basel iii") && e.includes("ifrs9") && e.includes("aml risk score")), x = o.some((e) => e.includes("ready to publish") || e.includes("confirm &amp; publish") || e.includes("confirm & publish") || e.includes("click confirm") || e.includes("stage 6") && (e.includes("portfolio target") || e.includes("break-even") || e.includes("nim ~")) || e.includes("stage 6") && e.includes("everything is configured")), S = [...a.map((e) => e.content || ""), e].join(" ").toLowerCase(), C = S.includes("green") || S.includes("gsas") || S.includes("esg") || S.includes("sustainable"), w = !C && (S.includes("auto") || S.includes("car") || S.includes("vehicle")), T = !C && !w && (S.includes("personal") || S.includes("unsecured") || S.includes("consumer")), E = !C && !w && !T && (S.includes("sme") || S.includes("business") || S.includes("working capital")), D = (() => {
 		let e = r.match(/\b(7[0-9]|80|85|90)\b/);
 		return e ? parseInt(e[1]) : 70;
-	})(), D = C ? "Sohar Green Home Finance – GSAS" : w ? "Auto Finance" : T ? "Personal Finance" : E ? "SME Working Capital" : "Home Finance";
+	})(), O = C ? "Sohar Green Home Finance – GSAS" : w ? "Auto Finance" : T ? "Personal Finance" : E ? "SME Working Capital" : "Home Finance";
 	if (!s && !C && !w && !T && !E) return {
 		message: "I can help you create a new fully-regulated banking product from scratch — I'll guide you through all 6 stages, ask the right expert questions, and automatically populate the configuration on screen.<br><br><strong>What type of product would you like to create?</strong><br><br>🏠 <strong>Green Home Loan</strong> (GSAS/ESG-certified mortgages)<br>🏠 <strong>Standard Home Loan</strong> (conventional or Islamic Murabaha)<br>🚗 <strong>Auto Finance</strong> (personal or fleet)<br>💳 <strong>Personal Finance</strong> (salary-backed unsecured)<br>🏢 <strong>SME Finance</strong> (working capital, equipment, trade)<br>🎓 <strong>Education Finance</strong><br>🏗️ <strong>Commercial Real Estate</strong>",
 		current_stage: 0,
@@ -1997,7 +1997,7 @@ function Ge(e, t, n) {
 	if (!s) {
 		let e = C ? "Standard Home Loan (5.5% base, LTV 90%, DBR 60%, term 25yr)" : w ? "Auto Finance – Personal (6.5% base, LTV 80%, DBR 55%)" : T ? "Personal Finance (8.5% base, DBR 45%)" : E ? "SME Working Capital (7.0% base, DBR 50%)" : "Standard Home Loan";
 		return {
-			message: C ? `Excellent choice. A <strong>Green Home Loan linked to GSAS certification</strong> is a strategically important product — it aligns with CBO Circular 2026-12 on green finance and Oman Vision 2040 sustainability targets.<br><br><strong>Stage 1 — Product Model</strong><br><br>The closest base is our existing <em>${e}</em>. We'd inherit the core credit parameters and then layer on ESG-specific attributes (GSAS score bands, green discounts, ESG document requirements).<br><br><strong>Would you like to clone from Standard Home Loan as a starting point, or configure everything from scratch?</strong>` : `Good. I'll help configure this as a CBO-compliant <strong>${D}</strong> for the Omani market.<br><br><strong>Stage 1 — Product Model</strong><br><br>Closest existing product: <em>${e}</em>.<br><br><strong>Shall we clone from this as a base?</strong>`,
+			message: C ? `Excellent choice. A <strong>Green Home Loan linked to GSAS certification</strong> is a strategically important product — it aligns with CBO Circular 2026-12 on green finance and Oman Vision 2040 sustainability targets.<br><br><strong>Stage 1 — Product Model</strong><br><br>The closest base is our existing <em>${e}</em>. We'd inherit the core credit parameters and then layer on ESG-specific attributes (GSAS score bands, green discounts, ESG document requirements).<br><br><strong>Would you like to clone from Standard Home Loan as a starting point, or configure everything from scratch?</strong>` : `Good. I'll help configure this as a CBO-compliant <strong>${O}</strong> for the Omani market.<br><br><strong>Stage 1 — Product Model</strong><br><br>Closest existing product: <em>${e}</em>.<br><br><strong>Shall we clone from this as a base?</strong>`,
 			current_stage: 1,
 			show_roadmap: !0,
 			action: "none",
@@ -2029,7 +2029,7 @@ function Ge(e, t, n) {
 	};
 	if (s && c && l && !u) {
 		r.includes("both") || r.includes("all");
-		let e = r.includes("national") && !r.includes("both"), t = r.includes("affluent") || r.includes("2,000") || r.includes("2000"), n = C ? t ? "Sohar Green Home Finance – GSAS Premium" : "Sohar Green Home Finance – GSAS" : `${D}`;
+		let e = r.includes("national") && !r.includes("both"), t = r.includes("affluent") || r.includes("2,000") || r.includes("2000"), n = C ? t ? "Sohar Green Home Finance – GSAS Premium" : "Sohar Green Home Finance – GSAS" : `${O}`;
 		return {
 			message: `Segment noted — ${e ? "Omani nationals" : "nationals and expats"}, ${t ? "affluent tier (OMR 2K+)" : "mass and affluent"}.<br><br>For the product name, I suggest: <strong>"${n}"</strong><br><br>This follows our naming convention: Bank · Product Type · Variant. The GSAS suffix signals the ESG positioning immediately to customers and regulators.<br><br><strong>Shall I use "${n}", or do you have a different name in mind?</strong>`,
 			current_stage: 1,
@@ -2207,7 +2207,7 @@ function Ge(e, t, n) {
 		schema_draft: null
 	};
 	if (_ && !v) {
-		let e = r.includes("75") ? 75 : r.includes("70") ? 70 : ee >= 70 ? ee : 70, t = [
+		let e = r.includes("75") ? 75 : r.includes("70") ? 70 : D >= 70 ? D : 70, t = [
 			{
 				name: "DBR ≤ 55% (Loans > OMR 100K)",
 				category: "creditworthiness",
@@ -2569,21 +2569,61 @@ function Ge(e, t, n) {
 		schema_draft: null
 	};
 	if (b && !x) {
-		let e = a.filter((e) => e.role === "user").map((e) => (e.content || "").toLowerCase()), t = [...o, ...e].join(" "), n = "Sohar Green Home Finance – GSAS", r = o.find((e) => e.includes("ecohome") || e.includes("eco home") || e.includes("sohar eco")), i = o.find((e) => e.includes("sohar green home finance"));
+		let e = a.filter((e) => e.role === "user").map((e) => (e.content || "").toLowerCase()), t = [...o, ...e].join(" "), n = "Sohar Green Home Finance – GSAS", r = o.find((e) => /stage\s+1\s+complete/i.test(e));
 		if (r) {
-			let e = r.match(/[""""]([^""""\n]{5,60})[""""]|"([^"\n]{5,60})"|'([^'\n]{5,60})'/);
-			e ? n = (e[1] || e[2] || e[3]).trim() : (r.includes("ecohome elite") || r.includes("ecohome")) && (n = "Sohar EcoHome Elite");
-		} else i && (n = "Sohar Green Home Finance – GSAS");
-		a.filter((e) => e.role === "user").find((e) => {
-			let t = (e.content || "").toLowerCase();
-			return (t.includes("sohar") || t.includes("eco") || t.includes("green home")) && t.length < 80;
-		});
-		let s = o.find((e) => (e.includes("has been set") || e.includes("the product name")) && (e.includes("sohar") || e.includes("eco") || e.includes("green")));
-		if (s) {
-			let e = s.match(/'([^']{5,60})'|"([^"]{5,60})"/);
-			e && (n = (e[1] || e[2]).trim());
+			let e = r.match(/stage\s+1\s+complete[\u2014\u2013\-\.\s]+([A-Z][^,\n]{3,59}),/i) || r.match(/"([^"]{4,60})"/);
+			if (e) {
+				let t = e[1].trim().replace(/[.!]$/, "");
+				/[A-Z]/.test(t) && t.split(" ").length <= 8 && (n = t);
+			}
 		}
-		let c = t.includes("1m omr") || t.includes("1,000,000") || t.includes("1m max") ? 1e6 : t.includes("750,000") || t.includes("750k") ? 75e4 : (t.includes("500,000") || t.includes("500k") || t.includes("omr 500"), 5e5), l = (() => {
+		if (n === "Sohar Green Home Finance – GSAS") {
+			let e = o.find((e) => /how about/i.test(e) && (/[""""]/.test(e) || e.includes("\"")));
+			if (e) {
+				let t = e.match(/[""""']([A-Z][^""""\n]{3,59})[""""']/) || e.match(/"([^"]{4,60})"/);
+				if (t) {
+					let e = t[1].trim().replace(/[.!]$/, "");
+					/[A-Z]/.test(e) && e.split(" ").length <= 8 && (n = e);
+				}
+			}
+		}
+		if (n === "Sohar Green Home Finance – GSAS") {
+			let e = o.find((e) => (e.includes("confirmed") || e.includes("name works") || e.includes("name is set")) && /[""""]/.test(e));
+			if (e) {
+				let t = e.match(/[""""']([A-Z][^""""\n]{3,59})[""""']/);
+				if (t) {
+					let e = t[1].trim().replace(/[.!]$/, "");
+					/[A-Z]/.test(e) && e.split(" ").length <= 8 && (n = e);
+				}
+			}
+		}
+		let i = (() => {
+			let e = a.filter((e) => e.role === "user").map((e) => (e.content || "").toLowerCase());
+			for (let t = e.length - 1; t >= 0; t--) {
+				let n = e[t], r = n.match(/(?:lower|change|set|reduce|make).*?(\d[\d,]+)\s*omr/) || n.match(/omr\s*(\d[\d,]+)\s*(?:max|maximum|limit)/) || n.match(/(?:maximum|max)\s*(?:loan|amount)?\s*(?:to|is|of)?\s*(?:omr)?\s*(\d[\d,]+)/i);
+				if (r) {
+					let e = parseInt(r[1].replace(/,/g, ""));
+					if (e >= 5e4 && e <= 5e6) return e;
+				}
+			}
+			for (let e = o.length - 1; e >= 0; e--) {
+				let t = o[e], n = t.match(/(?:omr\s*[\d,]+\s*[\u2013\u2014\-]{1,2}\s*omr\s*)([\d,]+)/i) || t.match(/(?:amount(?:\s+range)?[:\s]+omr\s*[\d,]+\s*[\u2013\-]\s*)([\d,]+)/i) || t.match(/(?:up to|maximum|max)\s*omr\s*([\d,]+)/i);
+				if (n) {
+					let e = parseInt(n[1].replace(/,/g, ""));
+					if (e >= 5e4 && e <= 5e6) return e;
+				}
+			}
+			return t.includes("500,000") || t.match(/\b500k\b/) ? 5e5 : t.includes("1,000,000") || t.match(/\b1m\b/) ? 1e6 : 5e5;
+		})(), s = (() => {
+			for (let e = o.length - 1; e >= 0; e--) {
+				let t = o[e], n = t.match(/omr\s*([\d,]+)\s*(?:to|-)\s*omr\s*[\d,]+/i) || t.match(/(?:minimum|min)\s+(?:loan\s+)?(?:amount\s+)?(?:of\s+)?omr\s*([\d,]+)/i);
+				if (n) {
+					let e = parseInt(n[1].replace(/,/g, ""));
+					if (e >= 5e3 && e <= 2e5) return e;
+				}
+			}
+			return 25e3;
+		})(), c = (() => {
 			let e = o.find((e) => e.includes("gsas ≥") || e.includes("gsas minimum") || e.includes("gsas score ≥"));
 			if (e) {
 				let t = e.match(/gsas[^0-9]*([0-9]{2})/i);
@@ -2593,25 +2633,52 @@ function Ge(e, t, n) {
 				}
 			}
 			return t.includes("75") ? 75 : 70;
-		})(), u = (() => {
+		})(), l = (() => {
 			let e = t.match(/base rate[^0-9]*([0-9]+\.[0-9]+)%/);
 			return e ? parseFloat(e[1]) : (t.includes("5.25"), 5.25);
-		})(), d = e.join(" "), f = d.includes("islamic") || d.includes("murabaha") || d.includes("musharaka") ? "Islamic (Diminishing Musharaka)" : "Conventional", p = {
+		})(), u = (() => {
+			for (let e = o.length - 1; e >= 0; e--) {
+				let t = o[e], n = t.match(/(\d+\.\d+)%[^.]*(?:gsas[^.]*[≥>=]\s*85|gold|premium)/i) || t.match(/(?:gold|premium|gsas[^.]*[≥>=]\s*85)[^.]*?(\d+\.\d+)%/i);
+				if (n) {
+					let e = parseFloat(n[1]);
+					if (e >= .1 && e <= 2) return e;
+				}
+			}
+			return .75;
+		})(), d = (() => {
+			for (let e = o.length - 1; e >= 0; e--) {
+				let t = o[e], n = t.match(/(\d+\.\d+)%[^.]*(?:silver|70[^0-9]|score\s+70)/i) || t.match(/(?:silver|70[–\-]84)[^.]*?(\d+\.\d+)%/i);
+				if (n) {
+					let e = parseFloat(n[1]);
+					if (e >= .1 && e <= 2) return e;
+				}
+			}
+			return .5;
+		})(), f = (() => {
+			for (let e = o.length - 1; e >= 0; e--) {
+				let t = o[e], n = t.match(/(?:term\s+range[^0-9]*|from\s+)(\d{1,2})\s*(?:to|–|-)\s*\d{1,2}\s*years?/i) || t.match(/(?:minimum\s+(?:term|of)\s*)(\d{1,2})\s*years?/i);
+				if (n) {
+					let e = parseInt(n[1]);
+					if (e >= 1 && e <= 15) return e;
+				}
+			}
+			return 3;
+		})(), p = t.includes("hnw") || t.includes("high net worth") || t.match(/omr\s*5[k,\s]|5,000\+|income.*5000/i) != null, m = !p && (t.includes("affluent") || t.match(/omr\s*2[k,\s]|2,000/i) != null), h = e.join(" "), g = h.includes("islamic") || h.includes("murabaha") || h.includes("musharaka") ? "Islamic (Diminishing Musharaka)" : "Conventional", _ = {
 			name: n,
-			description: `${f} home financing for GSAS-certified green properties in Oman. Earn up to 0.75% rate discount based on sustainability score (GSAS ≥85: Gold tier, 0.5% for GSAS 70–84: Silver). Targets affluent and HNW customers. Supports Oman Vision 2040, CBO green finance objectives, and OS GSO 3000:2025.`,
+			description: `${g} home financing for GSAS-certified green properties in Oman. Earn up to ${u}% rate discount based on sustainability score (GSAS ≥85: Gold tier, ${d}% for GSAS 70–84: Silver). Targets ${p ? "HNW" : m ? "affluent" : "retail"} customers. Supports Oman Vision 2040, CBO green finance objectives, and OS GSO 3000:2025.`,
 			category: "home_loan",
-			base_rate: u,
+			base_rate: l,
 			max_ltv: 90,
 			max_dbr: 55,
 			green_dbr: 55,
-			min_term: 3,
+			min_term: f,
 			max_term: 25,
-			min_amount: 25e3,
-			max_amount: c,
-			gsas_min_score: l,
+			min_amount: s,
+			max_amount: i,
+			gsas_min_score: c,
 			gsas_premium_score: 85,
-			green_discount_premium: .75,
-			green_discount_standard: .5,
+			green_discount_premium: u,
+			green_discount_standard: d,
 			esg_required_docs: [
 				"gsas_cert",
 				"epc_report",
@@ -2638,8 +2705,8 @@ function Ge(e, t, n) {
 			],
 			clone_from_id: "p001"
 		};
-		`${l}`, `${l}`;
-		let m = {
+		`${c}`, `${c}`;
+		let v = {
 			schema_type: "gsas_certificate_validation",
 			fields: [
 				{
@@ -2669,8 +2736,8 @@ function Ge(e, t, n) {
 				{
 					name: "Overall Score",
 					type: "Integer",
-					validation: `0–100, minimum ${l} for eligibility`,
-					error_message: `Score below minimum threshold (${l})`
+					validation: `0–100, minimum ${c} for eligibility`,
+					error_message: `Score below minimum threshold (${c})`
 				},
 				{
 					name: "Rating",
@@ -2693,9 +2760,11 @@ function Ge(e, t, n) {
 			],
 			ai_confidence: 96,
 			regulatory_reference: "OS GSO 3000:2025, §4.2 · OEESC §5.1"
-		};
+		}, y = p ? 28e4 : m ? 15e4 : 9e4, b = p ? 38e4 : m ? 2e5 : 12e4, x = p ? 8 : m ? 12 : 18, S = Math.round(x / 100 * 795), C = Math.round(S * y / 1e6 * 10) / 10;
+		l - u;
+		let w = Math.round((l - 3.5) * 100) / 100, T = p ? 9 : m ? 11 : 14, E = (l - u).toFixed(2), D = (l - d).toFixed(2), O = p ? "HNW (OMR 5K+ income)" : m ? "Affluent (OMR 2K–5K)" : "Mass market";
 		return {
-			message: `✅ <strong>Stage 5 complete.</strong> Compliance classification applied — Basel III 75% risk weight, IFRS9 1.5% Stage 1 ECL, CBO Green Finance designation.<br><br><strong>Stage 6 — Portfolio Simulation</strong><br><br>📊 <strong>12-month portfolio projections</strong> (based on current Standard Home Loan pipeline data):<br>&bull; Target: <strong>180 accounts, OMR 52M</strong> in Year 1 (conservative: 15% of current mortgage pipeline targeting green properties)<br>&bull; NIM: <strong>1.45%</strong> on green rate (vs 1.75% standard) — offset by 0.4% lower provisioning (green ECL) + CBO capital relief of ~8 bps<br>&bull; <strong>Stress test</strong>: at +200 bps rate shock, 98% of modelled portfolio still passes DBR ≤55% — built-in buffer works<br>&bull; <strong>Break-even</strong>: month 11 post-launch (setup costs: OMR 85K for GORD API integration + Green Finance Officer role)<br>&bull; ESG reporting: monthly CBO Green Finance Return under Circular 2026-12 §7, plus annual TCFD disclosure<br><br>📋 <strong>Full product configuration summary:</strong><br>• <strong>${n}</strong> · ${f} · Cloned from Standard Home Loan<br>• Rate: <strong>${u}%</strong> · Tiers: ${(u - .75).toFixed(2)}% (GSAS ≥85) · ${(u - .5).toFixed(2)}% (GSAS 70–84)<br>• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>• Terms: <strong>3–25 years</strong> · Amount: <strong>OMR 25,000–${c.toLocaleString()}</strong><br>• Eligibility: <strong>17 rules</strong> across credit, collateral, ESG, income<br>• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>🚀 Everything is configured. Click <strong>Confirm &amp; Publish</strong> to save the full product and make it live on the customer portal.`,
+			message: `✅ <strong>Stage 5 complete.</strong> Compliance classification applied — Basel III 75% risk weight, IFRS9 1.5% Stage 1 ECL, CBO Green Finance designation.<br><br><strong>Stage 6 — Portfolio Simulation</strong><br><br>📊 <strong>12-month portfolio projections</strong> — <em>${O} segment · avg loan OMR ${y.toLocaleString()}</em><br>&bull; <strong>Pipeline:</strong> ~795 green-eligible applicants from current 13,251 YTD pipeline (est. 6% hold GSAS-certified properties)<br>&bull; <strong>Target:</strong> <strong>${S} accounts · OMR ${C}M</strong> in Year 1 at ${x}% pipeline conversion (${p ? "conservative — HNW segment has longer decision cycle" : "moderate — verified against regional green mortgage benchmarks"})<br>&bull; <strong>NIM:</strong> ~${w.toFixed(2)}% on green book (3.5% estimated cost of funds) — partially offset by 0.4% lower provisioning (green ECL) + CBO capital relief ~8 bps<br>&bull; <strong>Effective rates:</strong> ${l}% base → ${E}% (GSAS ≥85 Gold) · ${D}% (GSAS 70–84 Silver)<br>&bull; <strong>Stress test:</strong> +200 bps rate shock — 98% of modelled HNW portfolio passes DBR ≤55% (avg. DBR ${p ? "38" : "44"}% at origination provides buffer)<br>&bull; <strong>Break-even:</strong> month ${T} post-launch (setup: OMR 85K — GORD API integration + Green Finance Officer role)<br>&bull; <strong>ESG reporting:</strong> monthly CBO Green Finance Return (Circular 2026-12 §7) + annual TCFD disclosure<br><br>📋 <strong>Full product configuration summary:</strong><br>• <strong>${n}</strong> · ${g} · Cloned from Standard Home Loan · Segment: ${O}<br>• Rate: <strong>${l}%</strong> · Discount tiers: −${u}% (GSAS ≥85) → <strong>${E}%</strong> · −${d}% (GSAS 70–84) → <strong>${D}%</strong><br>• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>• Terms: <strong>${f}–25 years</strong> · Amount: <strong>OMR ${s.toLocaleString()}–${i.toLocaleString()}</strong> · Avg property value: OMR ${b.toLocaleString()}<br>• Eligibility: <strong>17 rules</strong> across credit, collateral, ESG, income<br>• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>🚀 Everything is configured. Click <strong>Confirm &amp; Publish</strong> to save the full product and make it live on the customer portal.`,
 			current_stage: 6,
 			show_roadmap: !1,
 			action: "ready_to_confirm",
@@ -2712,7 +2781,7 @@ function Ge(e, t, n) {
 				{
 					type: "set_field",
 					field: "base_rate",
-					value: u
+					value: l
 				},
 				{
 					type: "set_field",
@@ -2727,7 +2796,7 @@ function Ge(e, t, n) {
 				{
 					type: "set_field",
 					field: "min_term",
-					value: 3
+					value: f
 				},
 				{
 					type: "set_field",
@@ -2737,32 +2806,32 @@ function Ge(e, t, n) {
 				{
 					type: "set_field",
 					field: "min_amount",
-					value: 25e3
+					value: s
 				},
 				{
 					type: "set_field",
 					field: "max_amount",
-					value: c
+					value: i
 				},
 				{
 					type: "set_field",
 					field: "gsas_min_score",
-					value: l
+					value: c
 				},
 				{
 					type: "set_field",
 					field: "green_discount_premium",
-					value: .75
+					value: u
 				},
 				{
 					type: "set_field",
 					field: "green_discount_standard",
-					value: .5
+					value: d
 				}
 			],
-			product_draft: p,
+			product_draft: _,
 			rules_draft: null,
-			schema_draft: m
+			schema_draft: v
 		};
 	}
 	return {
@@ -5188,7 +5257,7 @@ $.use("/api/*", Ie()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await L.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "9405dff";
+var at = "efa1036";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
