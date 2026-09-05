@@ -8,6 +8,10 @@ const app = new Hono<{ Bindings: NodeBindings }>()
 // Handles the full product creation conversation: understand requirements,
 // suggest configurations, generate rules, generate GSAS schema, confirm.
 app.post('/products/chat', async (c) => {
+  // Outer try/catch: any unhandled error must return JSON, never plain-text 500.
+  // The frontend calls r.json() unconditionally — a non-JSON body causes the
+  // "Unexpected token 'I'" SyntaxError that surfaces as a client-side crash.
+  try {
   const body = await c.req.json()
   const { thread_id, message, context = {}, user_id = 'u001', user_name = 'Fatima Al-Rashdi' } = body as any
   const apiKey = c.env.OPENAI_API_KEY
@@ -19,7 +23,9 @@ app.post('/products/chat', async (c) => {
 
   if (threadId) {
     thread = await c.env.DB.prepare('SELECT * FROM ai_threads WHERE id = ?').bind(threadId).first() as any
-    if (thread) messages = JSON.parse(thread.messages || '[]')
+    if (thread) {
+      try { messages = JSON.parse(thread.messages || '[]') } catch { messages = [] }
+    }
   }
 
   if (!threadId || !thread) {
@@ -315,10 +321,26 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
     rules_draft: aiReply.rules_draft || null,
     schema_draft: aiReply.schema_draft || null,
   })
+  } catch (outerErr: any) {
+    // Always return JSON — never let a plain-text 500 reach the frontend
+    return c.json({
+      thread_id: null,
+      reply: "I'm sorry, I encountered a technical issue. Please try again — your conversation progress is saved.",
+      current_stage: 1,
+      show_roadmap: false,
+      action: 'none',
+      ui_events: [],
+      product_draft: null,
+      rules_draft: null,
+      schema_draft: null,
+      _error: outerErr?.message || 'unknown',
+    }, 200)  // 200 so frontend processes normally and shows the message
+  }
 })
 
 // ── Confirm product draft — saves to DB ──────────────────────────────────
 app.post('/products/confirm', async (c) => {
+  try {
   const body = await c.req.json() as any
   let { thread_id, product_draft, rules_draft, schema_draft, user_id = 'u001', user_name = 'Fatima Al-Rashdi' } = body
 
@@ -494,6 +516,9 @@ Product: ${name}. Description: ${product_draft.description || ''}. Base rate: ${
   })
 
   return c.json({ success: true, product_id: id, product_name: name, rule_ids: ruleIds, portal_hero_title: portalHeroTitle, portal_visible: true })
+  } catch (outerErr: any) {
+    return c.json({ success: false, error: 'Server error during product save. Please try again.', _error: outerErr?.message || 'unknown' }, 200)
+  }
 })
 
 // ── AI-powered regulatory rule generation ───────────────────────────────
