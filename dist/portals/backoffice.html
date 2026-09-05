@@ -1213,6 +1213,7 @@ function resetAiChat(productId) {
   // Clear live draft state
   Object.keys(aiDraftConfig).forEach(k => delete aiDraftConfig[k]);
   aiDraftRules = []; aiDraftWorkflow = [];
+  _lastDraftSnapshot = { _rCount: 0, _wCount: 0 };   // reset highlight tracker
   const log = document.getElementById('ai-chat-log');
   if (log) log.innerHTML = '';
   const bar = document.getElementById('ai-confirm-bar');
@@ -1311,6 +1312,35 @@ const aiDraftConfig = {};
 let aiDraftRules = [];
 let aiDraftWorkflow = [];
 
+/* ── Draft card highlight tracking ──────────────────────────────────────── *
+ * _lastDraftSnapshot: shallow copy of aiDraftConfig + rule/wf counts from  *
+ * the last render; used to detect which fields actually changed so we can   *
+ * flash only those spans in the summary bar.                                *
+ * ─────────────────────────────────────────────────────────────────────────*/
+let _lastDraftSnapshot = { _rCount: 0, _wCount: 0 };
+
+/* Apply draftFlash animation to every [data-flash] element inside `card`. */
+function _flashDraftFields(card) {
+  if (!card) return;
+  card.querySelectorAll('[data-flash]').forEach(el => {
+    el.style.animation = 'none';
+    // Force reflow so the animation restarts cleanly
+    void el.offsetWidth;
+    el.style.animation = 'draftFlash .95s ease forwards';
+    el.removeAttribute('data-flash');
+  });
+}
+
+/* Pulse the card border for ~1.1 s (stage-completion signal). */
+function _pulseDraftBorder() {
+  const card = document.getElementById('ai-draft-card');
+  if (!card) return;
+  card.style.animation = 'none';
+  void card.offsetWidth;
+  card.style.animation = 'draftBorderPulse 1.1s ease';
+  setTimeout(() => { card.style.animation = ''; }, 1200);
+}
+
 /* ── updateAiDraftCard ───────────────────────────────────────────────────── *
  * Renders / updates the live configuration card at bottom of AI chat.
  * Supports collapsed summary view (default) and expanded full view.
@@ -1354,6 +1384,24 @@ function updateAiDraftCard() {
     ? 'OMR\u00a0' + Number(cfg.max_amount).toLocaleString()
     : null;
 
+  // ── Diff against last snapshot to know which values are NEW / changed ────
+  const snap = _lastDraftSnapshot;
+  const nameChanged   = cfg.name       != null && cfg.name       !== snap.name;
+  const rateChanged   = rateStr        != null && rateStr        !== snap._rateStr;
+  const termChanged   = termStr        != null && termStr        !== snap._termStr;
+  const amountChanged = amountStr      != null && amountStr      !== snap._amountStr;
+  const rCountChanged = rCount > (snap._rCount || 0);
+  const wCountChanged = wCount > (snap._wCount || 0);
+
+  // Helper: wrap a value in a flash-marked span when it changed
+  const maybeFlash = (changed, inner) => changed
+    ? `<span data-flash="1" style="display:inline">${inner}</span>`
+    : inner;
+
+  // Badge animation style strings (applied inline so they self-remove cleanly)
+  const ruleBadgeAnim  = rCountChanged ? 'animation:draftBadgeFlash .95s ease forwards'   : '';
+  const wfBadgeAnim    = wCountChanged ? 'animation:draftWfBadgeFlash .95s ease forwards' : '';
+
   const summaryHtml =
     `<div style="padding:.5rem .85rem .35rem;flex-shrink:0">` +
     `<div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem">` +
@@ -1362,15 +1410,15 @@ function updateAiDraftCard() {
       `<span style="font-size:.58rem;color:rgba(255,255,255,.28);margin-left:.1rem">live preview</span>` +
       (rCount > 0 || wCount > 0 ? `<button onclick="aiDraftCardExpanded=!aiDraftCardExpanded;updateAiDraftCard()" style="margin-left:auto;background:rgba(53,198,196,.12);border:1px solid rgba(53,198,196,.25);color:var(--sea-glass);border-radius:5px;padding:.1rem .45rem;font-size:.62rem;cursor:pointer;white-space:nowrap"><i class="fas fa-${exp ? 'compress-alt' : 'expand-alt'}" style="margin-right:.18rem"></i>${exp ? 'Collapse' : 'Expand'}</button>` : '') +
     `</div>` +
-    (cfg.name ? `<div style="font-size:.75rem;font-weight:600;color:var(--sea-glass);margin-bottom:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cfg.name}</div>` : '') +
+    (cfg.name ? `<div style="font-size:.75rem;font-weight:600;color:var(--sea-glass);margin-bottom:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${maybeFlash(nameChanged, cfg.name)}</div>` : '') +
     `<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">` +
-      (rateStr ? `<span style="font-size:.72rem;color:rgba(255,255,255,.85);font-weight:600">${rateStr}</span>` : '') +
-      (termStr ? `<span style="font-size:.68rem;color:rgba(255,255,255,.45)">&middot; ${termStr}</span>` : '') +
-      (amountStr ? `<span style="font-size:.68rem;color:rgba(255,255,255,.45)">up to ${amountStr}</span>` : '') +
+      (rateStr   ? `<span style="font-size:.72rem;color:rgba(255,255,255,.85);font-weight:600">${maybeFlash(rateChanged,   rateStr)}</span>`                  : '') +
+      (termStr   ? `<span style="font-size:.68rem;color:rgba(255,255,255,.45)">&middot; ${maybeFlash(termChanged,   termStr)}</span>`                         : '') +
+      (amountStr ? `<span style="font-size:.68rem;color:rgba(255,255,255,.45)">up to ${maybeFlash(amountChanged, amountStr)}</span>`                          : '') +
     `</div>` +
     `<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.28rem">` +
-      (rCount > 0 ? `<span style="font-size:.64rem;background:rgba(53,198,196,.1);color:var(--sea-glass);padding:.08rem .4rem;border-radius:8px;border:1px solid rgba(53,198,196,.2)"><i class="fas fa-list-check" style="margin-right:.2rem"></i>${rCount} rules</span>` : '') +
-      (wCount > 0 ? `<span style="font-size:.64rem;background:rgba(244,179,91,.1);color:#fbbf24;padding:.08rem .4rem;border-radius:8px;border:1px solid rgba(244,179,91,.2)"><i class="fas fa-sitemap" style="margin-right:.2rem"></i>${wCount} steps</span>` : '') +
+      (rCount > 0 ? `<span style="font-size:.64rem;background:rgba(53,198,196,.1);color:var(--sea-glass);padding:.08rem .4rem;border-radius:8px;border:1px solid rgba(53,198,196,.2);${ruleBadgeAnim}"><i class="fas fa-list-check" style="margin-right:.2rem"></i>${rCount} rules</span>` : '') +
+      (wCount > 0 ? `<span style="font-size:.64rem;background:rgba(244,179,91,.1);color:#fbbf24;padding:.08rem .4rem;border-radius:8px;border:1px solid rgba(244,179,91,.2);${wfBadgeAnim}"><i class="fas fa-sitemap" style="margin-right:.2rem"></i>${wCount} steps</span>` : '') +
     `</div>` +
     `</div>`;
 
@@ -1439,6 +1487,18 @@ function updateAiDraftCard() {
   } else {
     card.innerHTML = summaryHtml + expandedHtml;
   }
+
+  // ── Apply flash animations to [data-flash] spans post-render ─────────────
+  _flashDraftFields(card);
+
+  // ── Update snapshot so next render only flashes truly new changes ─────────
+  _lastDraftSnapshot = Object.assign({}, cfg, {
+    _rateStr:   rateStr,
+    _termStr:   termStr,
+    _amountStr: amountStr,
+    _rCount:    rCount,
+    _wCount:    wCount,
+  });
 }
 
 /* ── dispatchUiEvents ─────────────────────────────────────────────────────
@@ -1591,6 +1651,8 @@ async function sendAiChat(productId) {
     if (completeMatch) {
       const completedN = parseInt(completeMatch[1]);
       if (completedN + 1 > inferredStage) inferredStage = completedN + 1;
+      // Pulse draft card border to signal stage completion to the user
+      setTimeout(_pulseDraftBorder, 600);
     }
 
     // 3. Stage 2 keyword fingerprints — if any Stage 2-specific terms appear
@@ -2771,6 +2833,10 @@ function logAuditEntry(action, entityType, entityId, detail) {
 .spinner-lg { width:32px; height:32px; border:3px solid var(--grey-200); border-top-color:var(--teal); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 1rem; }
 @keyframes spin { to{transform:rotate(360deg);} }
 @keyframes fadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+@keyframes draftFlash { 0%{background:rgba(253,224,71,.45);border-radius:4px} 60%{background:rgba(253,224,71,.18)} 100%{background:transparent} }
+@keyframes draftBadgeFlash { 0%{background:rgba(53,198,196,.45);border-color:rgba(53,198,196,.7)} 70%{background:rgba(53,198,196,.22);border-color:rgba(53,198,196,.45)} 100%{background:rgba(53,198,196,.1);border-color:rgba(53,198,196,.2)} }
+@keyframes draftWfBadgeFlash { 0%{background:rgba(251,191,36,.45);border-color:rgba(251,191,36,.7)} 70%{background:rgba(251,191,36,.22);border-color:rgba(251,191,36,.45)} 100%{background:rgba(244,179,91,.1);border-color:rgba(244,179,91,.2)} }
+@keyframes draftBorderPulse { 0%,100%{border-color:rgba(53,198,196,.32)} 40%{border-color:rgba(53,198,196,.95);box-shadow:0 0 12px rgba(53,198,196,.35)} }
 </style>
 </body>
 </html>
