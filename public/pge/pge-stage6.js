@@ -173,63 +173,85 @@
     // Segment parameters (aligned with AI Studio fallback)
     const avgLoanAmt    = isHNW ? 280000 : isAffluent ? 150000 : 90000;
     const conversionPct = isHNW ? 8       : isAffluent ? 12      : 18;
-    const costOfFunds   = 3.5;   // OMR cost of funds baseline
+    const costOfFunds   = 3.5;   // OMR wholesale/deposit funding rate baseline
 
     // Green pipeline: ~6% of Oman addressable mortgage market (~13 251 applicants)
     const greenPipeline = Math.round(13251 * 0.06);           // ~795 green-eligible
     const yr1Accounts   = Math.round(greenPipeline * (conversionPct / 100));
     const yr1Portfolio  = Math.round(yr1Accounts * avgLoanAmt / 1e6 * 10) / 10; // OMR M
 
-    // NIM = product rate − cost of funds
+    // Gross lending rate (what borrowers pay)
     const productRate = parseFloat(_prod?.base_rate || _sliderVals.rate || 5.5);
-    const nim         = Math.round((productRate - costOfFunds) * 100) / 100;
 
-    // Year 1–3 portfolio growth (conservative 25% YoY)
+    // NIM = gross rate − cost of funds (the spread retained by the bank)
+    const nim = Math.round((productRate - costOfFunds) * 100) / 100;
+
+    // Year 1–3 portfolio growth (conservative 25% YoY new disbursements added)
     const yr2Portfolio = Math.round(yr1Portfolio * 1.25 * 10) / 10;
     const yr3Portfolio = Math.round(yr2Portfolio * 1.25 * 10) / 10;
 
-    // Interest income = portfolio × NIM
-    const yr1Income = Math.round(yr1Portfolio * 1e6 * nim / 100 / 1000) * 1000;
-    const yr2Income = Math.round(yr2Portfolio * 1e6 * nim / 100 / 1000) * 1000;
-    const yr3Income = Math.round(yr3Portfolio * 1e6 * nim / 100 / 1000) * 1000;
+    // ── P&L model (correct banking income statement) ──────────────────────────
+    // Gross interest income = portfolio × gross lending rate
+    // (what the bank collects from mortgage borrowers each year)
+    const r = v => Math.round(v / 1000) * 1000; // round to nearest 1K OMR
+    const yr1GrossIncome = r(yr1Portfolio * 1e6 * productRate / 100);
+    const yr2GrossIncome = r(yr2Portfolio * 1e6 * productRate / 100);
+    const yr3GrossIncome = r(yr3Portfolio * 1e6 * productRate / 100);
 
-    // IFRS9 ECL provisioning Stage 1: 1.5% of portfolio
-    const ecl1 = Math.round(yr1Portfolio * 1e6 * 0.015 / 1000) * 1000;
-    const ecl2 = Math.round(yr2Portfolio * 1e6 * 0.015 / 1000) * 1000;
-    const ecl3 = Math.round(yr3Portfolio * 1e6 * 0.015 / 1000) * 1000;
+    // Cost of funds = what the bank pays to fund these loans
+    const yr1FundingCost = r(yr1Portfolio * 1e6 * costOfFunds / 100);
+    const yr2FundingCost = r(yr2Portfolio * 1e6 * costOfFunds / 100);
+    const yr3FundingCost = r(yr3Portfolio * 1e6 * costOfFunds / 100);
 
-    // Origination costs (approx 2% of disbursements)
-    const originationCost = Math.round(yr1Portfolio * 1e6 * 0.02 / 1000) * 1000;
+    // Net Interest Income (NII) = gross income − funding cost = portfolio × NIM
+    const yr1Income = yr1GrossIncome - yr1FundingCost;
+    const yr2Income = yr2GrossIncome - yr2FundingCost;
+    const yr3Income = yr3GrossIncome - yr3FundingCost;
 
-    // Net revenue (income − ECL − origination)
-    const netRev1 = yr1Income - ecl1 - (originationCost / 3);
-    const netRev2 = yr2Income - ecl2 - (originationCost / 3);
-    const netRev3 = yr3Income - ecl3 - (originationCost / 3);
+    // IFRS9 ECL Stage 1 provisioning: 1.5% of outstanding portfolio per year
+    const ecl1 = r(yr1Portfolio * 1e6 * 0.015);
+    const ecl2 = r(yr2Portfolio * 1e6 * 0.015);
+    const ecl3 = r(yr3Portfolio * 1e6 * 0.015);
 
-    // Setup cost (systems, compliance, marketing)
+    // Fixed product setup cost (systems, compliance, marketing, staff) — one-time
     const setupCost = isHNW ? 180000 : isAffluent ? 120000 : 85000;
 
-    // Break-even: month when cumulative income covers setup
-    const breakEvenMonth = isHNW ? 9 : isAffluent ? 11 : 14;
+    // Ongoing operating expense: ~15% of setup per year (maintenance, compliance run-rate)
+    const ongoingOpex = Math.round(setupCost * 0.15 / 1000) * 1000;
 
-    // ROI Year 3 = cumulative net rev / setup cost
+    // Net revenue = NII − ECL − ongoing opex
+    const netRev1 = yr1Income - ecl1 - ongoingOpex;
+    const netRev2 = yr2Income - ecl2 - ongoingOpex;
+    const netRev3 = yr3Income - ecl3 - ongoingOpex;
+
+    // Break-even: month when cumulative NII covers setup cost
+    // monthly NII = yr1Income / 12; months = setupCost / (yr1Income/12)
+    const monthlyNII = yr1Income / 12;
+    const breakEvenMonth = monthlyNII > 0
+      ? Math.max(1, Math.round(setupCost / monthlyNII))
+      : (isHNW ? 9 : isAffluent ? 11 : 14);
+
+    // 3-year ROI = cumulative net revenue / setup cost
     const roi3 = Math.round((netRev1 + netRev2 + netRev3) / setupCost * 100);
 
     // Rate shock stress: +200bps impact on portfolio DBR compliance
-    const baseRate = productRate;
-    const stressRate = baseRate + 2;
+    const stressRate = productRate + 2;
     const maxDBR = parseFloat(_prod?.max_dbr || 60);
-    // Borrowers at risk: those near DBR ceiling (assume 30% of portfolio near limit)
-    const dbrAtRisk = Math.round(yr1Accounts * 0.30 * (stressRate - baseRate) / baseRate * 100);
+    // Borrowers at risk: approx 30% of accounts are near DBR ceiling;
+    // of those, the monthly payment increase from +200bps pushes them over.
+    // Payment increase ≈ 200bps / 12 months × average loan duration factor (~0.6)
+    const dbrAtRisk = Math.round(yr1Accounts * 0.30 * 0.60);
 
     return {
       seg, isHNW, isAffluent,
       avgLoanAmt, conversionPct, greenPipeline, yr1Accounts,
       yr1Portfolio, yr2Portfolio, yr3Portfolio,
       productRate, nim, costOfFunds,
+      yr1GrossIncome, yr2GrossIncome, yr3GrossIncome,
+      yr1FundingCost, yr2FundingCost, yr3FundingCost,
       yr1Income, yr2Income, yr3Income,
       ecl1, ecl2, ecl3,
-      originationCost, netRev1, netRev2, netRev3,
+      ongoingOpex, netRev1, netRev2, netRev3,
       setupCost, breakEvenMonth, roi3,
       stressRate, dbrAtRisk, maxDBR,
     };
@@ -509,12 +531,14 @@
     const segColor = p.isHNW ? '#0a2342' : p.isAffluent ? '#0e7490' : '#059669';
     const segLabel = p.isHNW ? t('High Net Worth (HNW)','الثروة العالية') : p.isAffluent ? t('Affluent','الميسورون') : t('Mass Market','السوق الشامل');
 
-    // P&L table rows
+    // P&L table rows — correct banking income statement
     const plRows = [
-      { label: t('Gross Interest Income','إجمالي دخل الفائدة'),   yr1: p.yr1Income,  yr2: p.yr2Income,  yr3: p.yr3Income,  type:'income' },
-      { label: t('IFRS9 ECL Provisioning (1.5%)','مخصص IFRS9 (١.٥٪)'), yr1: -p.ecl1, yr2: -p.ecl2,  yr3: -p.ecl3,  type:'cost' },
-      { label: t('Origination / Setup Cost','تكلفة الإنشاء والإعداد'), yr1: -Math.round(p.originationCost/3), yr2: -Math.round(p.originationCost/6), yr3: -Math.round(p.originationCost/6), type:'cost' },
-      { label: t('Net Revenue','الإيرادات الصافية'),               yr1: p.netRev1,   yr2: p.netRev2,   yr3: p.netRev3,   type:'net' },
+      { label: t('Gross Interest Income','إجمالي دخل الفائدة'),         yr1: p.yr1GrossIncome,  yr2: p.yr2GrossIncome,  yr3: p.yr3GrossIncome,  type:'income' },
+      { label: t('Cost of Funds ('+p.costOfFunds+'%)','تكلفة التمويل ('+p.costOfFunds+'٪)'), yr1: -p.yr1FundingCost, yr2: -p.yr2FundingCost, yr3: -p.yr3FundingCost, type:'cost' },
+      { label: t('Net Interest Income (NII)','صافي دخل الفائدة (NII)'), yr1: p.yr1Income,        yr2: p.yr2Income,        yr3: p.yr3Income,        type:'nim' },
+      { label: t('IFRS9 ECL Provision (1.5%)','مخصص IFRS9 (١.٥٪)'),    yr1: -p.ecl1,           yr2: -p.ecl2,           yr3: -p.ecl3,           type:'cost' },
+      { label: t('Ongoing Opex','المصاريف التشغيلية الجارية'),           yr1: -p.ongoingOpex,    yr2: -p.ongoingOpex,    yr3: -p.ongoingOpex,    type:'cost' },
+      { label: t('Net Revenue','الإيرادات الصافية'),                      yr1: p.netRev1,         yr2: p.netRev2,         yr3: p.netRev3,         type:'net' },
     ];
 
     tc.innerHTML = `
@@ -572,9 +596,9 @@
           </div>
           <div class="s6-port-growth-grid">
             ${[
-              { yr: t('Year 1','السنة 1'), val: p.yr1Portfolio, accounts: p.yr1Accounts, income: p.yr1Income, ecl: p.ecl1, net: p.netRev1 },
-              { yr: t('Year 2','السنة 2'), val: p.yr2Portfolio, accounts: Math.round(p.yr1Accounts * 1.25), income: p.yr2Income, ecl: p.ecl2, net: p.netRev2 },
-              { yr: t('Year 3','السنة 3'), val: p.yr3Portfolio, accounts: Math.round(p.yr1Accounts * 1.56), income: p.yr3Income, ecl: p.ecl3, net: p.netRev3 },
+              { yr: t('Year 1','السنة 1'), val: p.yr1Portfolio, accounts: p.yr1Accounts,                  gross: p.yr1GrossIncome, nii: p.yr1Income, ecl: p.ecl1, net: p.netRev1 },
+              { yr: t('Year 2','السنة 2'), val: p.yr2Portfolio, accounts: Math.round(p.yr1Accounts*1.25), gross: p.yr2GrossIncome, nii: p.yr2Income, ecl: p.ecl2, net: p.netRev2 },
+              { yr: t('Year 3','السنة 3'), val: p.yr3Portfolio, accounts: Math.round(p.yr1Accounts*1.56), gross: p.yr3GrossIncome, nii: p.yr3Income, ecl: p.ecl3, net: p.netRev3 },
             ].map((yr, i) => `
               <div class="s6-yr-card">
                 <div class="s6-yr-label">${yr.yr}</div>
@@ -582,11 +606,15 @@
                 <div class="s6-yr-accounts">${yr.accounts.toLocaleString()} ${t('accounts','حسابات')}</div>
                 <div class="s6-yr-metrics">
                   <div class="s6-yr-row">
-                    <span>${t('NII','دخل الفائدة')}</span>
-                    <span class="s6-yr-pos">${fmtOMR(yr.income)}</span>
+                    <span>${t('Gross Interest','إجمالي الفائدة')}</span>
+                    <span class="s6-yr-pos">${fmtOMR(yr.gross)}</span>
                   </div>
                   <div class="s6-yr-row">
-                    <span>${t('ECL','خسائر الائتمان')}</span>
+                    <span>${t('NII (after CoF)','NII بعد تكلفة التمويل')}</span>
+                    <span class="s6-yr-pos">${fmtOMR(yr.nii)}</span>
+                  </div>
+                  <div class="s6-yr-row">
+                    <span>${t('ECL Provision','مخصص الخسائر')}</span>
                     <span class="s6-yr-neg">−${fmtOMR(yr.ecl)}</span>
                   </div>
                   <div class="s6-yr-row s6-yr-net-row">
@@ -642,8 +670,8 @@
               <div class="s6-breakeven-big">${p.breakEvenMonth}</div>
               <div class="s6-breakeven-label">${t('months to break even','شهراً للوصول لنقطة التعادل')}</div>
               <div class="s6-port-summary-rows">
-                <div class="s6-sum-row"><span>${t('Setup Cost','تكلفة الإعداد')}</span><span>${fmtOMR(p.setupCost)}</span></div>
-                <div class="s6-sum-row"><span>${t('Monthly NII Run-rate','معدل الدخل الشهري')}</span><span>${fmtOMR(Math.round(p.yr1Income / 12))}</span></div>
+                <div class="s6-sum-row"><span>${t('Setup Cost (one-time)','تكلفة الإعداد (مرة واحدة)')}</span><span>${fmtOMR(p.setupCost)}</span></div>
+                <div class="s6-sum-row"><span>${t('Monthly NII Run-rate','معدل دخل الفائدة الشهري')}</span><span>${fmtOMR(Math.round(p.yr1Income / 12))}</span></div>
               </div>
             </div>
 
@@ -1741,6 +1769,7 @@ ${isAr() ? 'Respond in Arabic.' : 'Respond in English.'}
       .s6-port-pl-right  { display:flex; flex-direction:column; }
       .s6-pl-table       {}
       .s6-pl-row-net td  { font-weight:700; border-top:2px solid #e2e8f0; background:#f8fafc; }
+      .s6-pl-row-nim td  { font-weight:600; border-top:1px solid #e2e8f0; background:#f0f9ff; color:#0369a1; }
       .s6-pl-row-cost td { color:#dc2626; }
       .s6-neg-sign       { color:#dc2626; }
 
