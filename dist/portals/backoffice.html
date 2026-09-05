@@ -1669,7 +1669,10 @@ async function sendAiChat(productId) {
         // Strip HTML tags so <strong>Stage 1 complete.</strong> becomes plain text
         const plainMsg = rawMsg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
         // Pattern 1: "Stage 1 complete — ProductName, conventional..."
-        const nameMatch = plainMsg.match(/[Ss]tage\s+1\s+complete[^—–\-]*[—–\-]\s*([^,\n]{4,60?}),/i)
+        //   Use \u2014 (em-dash) \u2013 (en-dash) unicode escapes — literal dash chars
+        //   inside [] are corrupted by some editors/encodings and silently fail.
+        //   Also allow period or plain space as separator (GPT varies the punctuation).
+        const nameMatch = plainMsg.match(/stage\s+1\s+complete[\u2014\u2013\-\.\s]+([A-Z][^,\n]{3,59}),/i)
           // Pattern 2: quoted name anywhere in message  "ProductName"
           || plainMsg.match(/"([^"]{4,60})"/);
         if (nameMatch) {
