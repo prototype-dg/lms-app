@@ -1997,7 +1997,9 @@ async function sendAiChat(productId) {
 }
 
 async function confirmAiProduct(productId) {
-  if (!aiThreadId && !aiProductDraft) { toast('No product draft to confirm','error'); return; }
+  if (!aiThreadId && !aiProductDraft && Object.keys(aiDraftConfig).length === 0) {
+    toast('No product draft to confirm','error'); return;
+  }
   const btn = document.querySelector('#ai-confirm-bar .btn-success');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving…'; }
   try {
@@ -2006,7 +2008,22 @@ async function confirmAiProduct(productId) {
     // if the thread result is missing (e.g. if a prior turn wiped it).
     const body = { thread_id: aiThreadId, user_id: currentUserId() };
     if (productId) body.product_id = productId;
+    // Priority 1: aiProductDraft — set from d.product_draft in the Stage 6 response
     if (aiProductDraft) body.product_draft = aiProductDraft;
+    // Priority 2: synthesize from aiDraftConfig if aiProductDraft is null.
+    // aiDraftConfig is populated by per-turn extraction across all 6 stages,
+    // so it always has current values even when GPT skips the product_draft field.
+    else if (Object.keys(aiDraftConfig).length >= 3) {
+      body.product_draft = Object.assign({
+        category: 'home_loan',
+        clone_from_id: 'p001',
+        max_ltv: 90, max_dbr: 55, min_term: 3, max_term: 25,
+        min_amount: 25000, max_amount: 500000,
+        green_discount_premium: 0.75, green_discount_standard: 0.5,
+        gsas_min_score: 70, gsas_premium_score: 85,
+        esg_required_docs: ['gsas_cert','epc_report','eia_approval'],
+      }, aiDraftConfig);
+    }
     // Also send locally-accumulated rules and schema as a fallback —
     // backend prefers thread result but uses these if thread is missing them.
     if (aiDraftRules && aiDraftRules.length) body.rules_draft = aiDraftRules;

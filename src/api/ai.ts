@@ -204,7 +204,16 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
           // ── Safety guards: prevent GPT from skipping the conversation ──
           // 1. Never emit product_draft before stage 6
           if (aiReply.current_stage < 6) aiReply.product_draft = null
-          // 2. Never emit rules_draft before stage 3, or AT stage 6 (prevents overwriting Stage 3's 17-rule set)
+          // 2. At stage 6: if GPT returned no product_draft (or a minimal one), synthesize
+          //    it from the fallback state machine which has full conversation context.
+          //    This is the primary fix for "No product draft found" — real GPT at stage 6
+          //    often emits product_draft: null or an incomplete object.
+          if (aiReply.current_stage >= 6 && !aiReply.product_draft) {
+            const fallback = getFallbackChatResponse(message, messages.length, messages)
+            if (fallback.product_draft) aiReply.product_draft = fallback.product_draft
+            if (fallback.schema_draft && !aiReply.schema_draft) aiReply.schema_draft = fallback.schema_draft
+          }
+          // 3. Never emit rules_draft before stage 3, or AT stage 6 (prevents overwriting Stage 3's 17-rule set)
           if (aiReply.current_stage < 3) aiReply.rules_draft = null
           if (aiReply.current_stage >= 6) aiReply.rules_draft = null
           // 3. show_roadmap only allowed on stage 1 (first identification)
@@ -325,6 +334,24 @@ app.post('/products/confirm', async (c) => {
         if (!product_draft && saved.product_draft) product_draft = saved.product_draft
         if (!rules_draft  && saved.rules_draft)   rules_draft  = saved.rules_draft
         if (!schema_draft && saved.schema_draft)  schema_draft = saved.schema_draft
+      } catch {}
+    }
+  }
+
+  // Last-resort synthesis: if product_draft still missing, rebuild from thread messages.
+  // This handles the case where real GPT never emitted a product_draft (e.g. stage 6
+  // response had product_draft: null, or the thread was saved before Stage 6 fired).
+  if (!product_draft && thread_id) {
+    const thread2 = await c.env.DB.prepare('SELECT messages FROM ai_threads WHERE id = ?').bind(thread_id).first() as any
+    if (thread2?.messages) {
+      try {
+        const msgs = JSON.parse(thread2.messages)
+        const fallback = getFallbackChatResponse('confirm', msgs.length, msgs)
+        if (fallback.product_draft) {
+          product_draft = fallback.product_draft
+          if (!rules_draft && fallback.rules_draft) rules_draft = fallback.rules_draft
+          if (!schema_draft && fallback.schema_draft) schema_draft = fallback.schema_draft
+        }
       } catch {}
     }
   }
