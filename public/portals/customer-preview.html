@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sohar International — Customer Portal Preview</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --navy:#0a2342; --teal:#0e7490; --green:#059669; --amber:#d97706; }
+  body { font-family: 'Segoe UI', sans-serif; background:#f1f5f9; }
+  .nav-sohar { background: var(--navy); }
+  .btn-teal  { background: var(--teal); color:#fff; }
+  .btn-green { background: var(--green); color:#fff; }
+  .badge-amber { background:#fef3c7; color: var(--amber); border:1px solid #fcd34d; }
+  .badge-green { background:#d1fae5; color: var(--green); border:1px solid #6ee7b7; }
+  .badge-navy  { background:#e0e7ef; color: var(--navy); }
+  .step-active { background: var(--teal); color:#fff; }
+  .step-done   { background: var(--green); color:#fff; }
+  .step-idle   { background:#e2e8f0; color:#64748b; }
+  .track-active{ border-left:4px solid var(--teal); }
+  .track-done  { border-left:4px solid var(--green); }
+  .track-idle  { border-left:4px solid #e2e8f0; }
+  .screen-label{ position:sticky;top:0;z-index:50;background:#1e293b;color:#94a3b8;
+                 font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:6px 16px; }
+  .card { background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  .hero { background: linear-gradient(135deg, var(--navy) 60%, var(--teal)); }
+  [dir=rtl] { font-family: 'Segoe UI', Tahoma, sans-serif; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  GLOBAL NAV (shared across all screens)                    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<nav class="nav-sohar px-6 py-3 flex items-center justify-between sticky top-0 z-40">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm">SI</div>
+    <span class="text-white font-semibold text-sm">Sohar International</span>
+  </div>
+  <div class="flex items-center gap-4 text-sm">
+    <button class="text-white/70 hover:text-white transition" onclick="setLang('en')">EN</button>
+    <span class="text-white/30">|</span>
+    <button class="text-white/70 hover:text-white transition" onclick="setLang('ar')">AR</button>
+    <div class="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white text-xs font-bold ml-2">AH</div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SCREEN 1 — DISCOVERY / HOMEPAGE
+══════════════════════════════════════════════════════════════ -->
+<div class="screen-label">Screen 1 — Discovery / Homepage</div>
+
+<div class="hero px-6 py-10 text-white">
+  <p class="text-xs text-teal-300 mb-1">Good morning, Ahmed</p>
+  <h1 class="text-2xl font-bold mb-1">Your Home Finance Hub</h1>
+  <p class="text-sm text-white/70 mb-6">Explore, apply, and track — all in one place.</p>
+
+  <!-- Action Hub -->
+  <div class="grid grid-cols-3 gap-3 mb-2">
+    <button class="bg-white/10 hover:bg-white/20 rounded-xl p-3 text-center transition">
+      <div class="text-xl mb-1">🏠</div>
+      <div class="text-xs font-medium">New Application</div>
+    </button>
+    <button class="bg-white/10 hover:bg-white/20 rounded-xl p-3 text-center transition">
+      <div class="text-xl mb-1">📋</div>
+      <div class="text-xs font-medium">Track Status</div>
+    </button>
+    <button class="bg-white/10 hover:bg-white/20 rounded-xl p-3 text-center transition">
+      <div class="text-xl mb-1">💬</div>
+      <div class="text-xs font-medium">Ask Advisor</div>
+    </button>
+  </div>
+</div>
+
+<!-- Featured Product -->
+<div class="px-4 -mt-4">
+  <div class="card p-4 mb-4 border-l-4" style="border-color:var(--teal)">
+    <div class="flex justify-between items-start mb-2">
+      <div>
+        <span class="badge-green text-xs px-2 py-0.5 rounded-full font-medium">⭐ Featured</span>
+        <h3 class="font-bold text-slate-800 mt-1">Al Bait Al Akhdar</h3>
+        <p class="text-xs text-slate-500">Green Home Finance · Up to OMR 500,000</p>
+      </div>
+      <div class="text-right">
+        <div class="text-xl font-bold" style="color:var(--teal)">3.75%</div>
+        <div class="text-xs text-slate-500">per annum</div>
+      </div>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <span class="badge-green text-xs px-2 py-0.5 rounded-full">🌿 GSAS Gold</span>
+      <span class="badge-navy text-xs px-2 py-0.5 rounded-full">#ESG_ELIGIBILITY</span>
+      <span class="badge-navy text-xs px-2 py-0.5 rounded-full">#CLIMATE_RISK</span>
+    </div>
+    <button class="btn-teal w-full mt-3 py-2 rounded-lg text-sm font-semibold">Apply Now →</button>
+  </div>
+
+  <!-- Product Grid (2 cards) -->
+  <div class="grid grid-cols-2 gap-3 mb-6">
+    <div class="card p-3">
+      <div class="text-xs font-semibold text-slate-500 mb-1">Al Bait Al Muntaj</div>
+      <div class="font-bold" style="color:var(--navy)">4.25%</div>
+      <div class="text-xs text-slate-400">Up to OMR 250K</div>
+      <button class="btn-teal w-full mt-2 py-1.5 rounded-lg text-xs font-semibold">Explore</button>
+    </div>
+    <div class="card p-3">
+      <div class="text-xs font-semibold text-slate-500 mb-1">HNW Premier</div>
+      <div class="font-bold" style="color:var(--navy)">3.50%</div>
+      <div class="text-xs text-slate-400">Up to OMR 2M</div>
+      <button class="btn-teal w-full mt-2 py-1.5 rounded-lg text-xs font-semibold">Explore</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SCREEN 2 — WIZARD STEP 2: Property & Contractor Details
+══════════════════════════════════════════════════════════════ -->
+<div class="screen-label">Screen 2 — Application Wizard · Step 2: Property &amp; Contractor</div>
+
+<div class="px-4 py-4">
+  <!-- Step progress bar -->
+  <div class="card p-3 mb-4">
+    <div class="flex items-center gap-1 mb-1">
+      <div class="step-done w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">✓</div>
+      <div class="h-1 flex-1 rounded" style="background:var(--green)"></div>
+      <div class="step-active w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">2</div>
+      <div class="h-1 flex-1 rounded bg-slate-200"></div>
+      <div class="step-idle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">3</div>
+      <div class="h-1 flex-1 rounded bg-slate-200"></div>
+      <div class="step-idle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">4</div>
+      <div class="h-1 flex-1 rounded bg-slate-200"></div>
+      <div class="step-idle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">5+</div>
+    </div>
+    <p class="text-xs text-slate-500 text-center">Step 2 of 8 — Property &amp; Contractor Details</p>
+  </div>
+
+  <!-- Property Section -->
+  <div class="card p-4 mb-3">
+    <h3 class="font-semibold text-slate-700 mb-3 text-sm">🏗️ Property Details</h3>
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">Property Type</label>
+        <select class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">
+          <option>Villa — Under Construction</option>
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Governorate</label>
+          <select class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-slate-50">
+            <option>Muscat</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Plot Area (m²)</label>
+          <input type="number" value="450" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">Estimated Value (OMR)</label>
+        <input type="number" value="185000" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50">
+      </div>
+    </div>
+  </div>
+
+  <!-- Contractor Section — amber badge highlight -->
+  <div class="card p-4 mb-4 border border-amber-200">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold text-slate-700 text-sm">🔨 Contractor Details</h3>
+      <span class="badge-amber text-xs px-2 py-0.5 rounded-full font-medium">⚠ Required for Tranche Release</span>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">Contractor Name <span class="text-red-400">*</span></label>
+        <input type="text" placeholder="e.g. Al Noor Construction LLC" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-amber-50/30">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">CR Number <span class="text-red-400">*</span></label>
+          <input type="text" placeholder="1234567" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm bg-amber-50/30">
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Contact Number</label>
+          <input type="text" placeholder="+968 XXXX XXXX" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">Construction Contract <span class="text-red-400">*</span></label>
+        <div class="border-2 border-dashed border-amber-300 rounded-lg p-3 text-center bg-amber-50/20">
+          <div class="text-amber-600 text-xs">📎 Upload PDF / JPG</div>
+          <div class="text-slate-400 text-xs mt-0.5">Signed contract required for disbursement approval</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-3">
+    <button class="flex-1 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-600 font-medium">← Back</button>
+    <button class="flex-1 py-2.5 btn-teal rounded-xl text-sm font-semibold">Continue →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SCREEN 3 — WIZARD STEP 4: Identity Verification
+══════════════════════════════════════════════════════════════ -->
+<div class="screen-label">Screen 3 — Application Wizard · Step 4: Identity Verification</div>
+
+<div class="px-4 py-4">
+  <div class="card p-3 mb-4">
+    <div class="flex items-center gap-1 mb-1">
+      <div class="step-done w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">✓</div>
+      <div class="h-1 flex-1 rounded" style="background:var(--green)"></div>
+      <div class="step-done w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">✓</div>
+      <div class="h-1 flex-1 rounded" style="background:var(--green)"></div>
+      <div class="step-done w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">✓</div>
+      <div class="h-1 flex-1 rounded" style="background:var(--green)"></div>
+      <div class="step-active w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">4</div>
+      <div class="h-1 flex-1 rounded bg-slate-200"></div>
+      <div class="step-idle w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">5+</div>
+    </div>
+    <p class="text-xs text-slate-500 text-center">Step 4 of 8 — Identity Verification</p>
+  </div>
+
+  <div class="card p-4 mb-3">
+    <h3 class="font-semibold text-slate-700 mb-3 text-sm">🪪 National ID / Residency Card</h3>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center">
+        <div class="text-2xl mb-1">📷</div>
+        <div class="text-xs text-slate-500 font-medium">Front Side</div>
+        <div class="text-xs text-slate-400">Tap to upload</div>
+      </div>
+      <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center">
+        <div class="text-2xl mb-1">📷</div>
+        <div class="text-xs text-slate-500 font-medium">Back Side</div>
+        <div class="text-xs text-slate-400">Tap to upload</div>
+      </div>
+    </div>
+    <div class="bg-slate-50 rounded-lg p-3 text-xs text-slate-500">
+      ℹ️ Files must be clear, unedited, and less than 5MB (JPG / PDF)
+    </div>
+  </div>
+
+  <!-- Liveness check -->
+  <div class="card p-4 mb-4">
+    <h3 class="font-semibold text-slate-700 mb-2 text-sm">🤳 Liveness Check</h3>
+    <p class="text-xs text-slate-500 mb-3">A quick selfie to confirm your identity matches your ID document.</p>
+    <button class="btn-teal w-full py-2.5 rounded-xl text-sm font-semibold">Start Liveness Check →</button>
+  </div>
+
+  <!-- Consent -->
+  <div class="card p-4 mb-4">
+    <div class="flex items-start gap-2">
+      <input type="checkbox" class="mt-0.5 accent-teal-600">
+      <p class="text-xs text-slate-600">I consent to Sohar International verifying my identity with the Royal Oman Police National Database under the CMA Digital Onboarding Guidelines.</p>
+    </div>
+  </div>
+
+  <div class="flex gap-3">
+    <button class="flex-1 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-600 font-medium">← Back</button>
+    <button class="flex-1 py-2.5 btn-teal rounded-xl text-sm font-semibold">Continue →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SCREEN 4 — APPLICATION TRACKER
+══════════════════════════════════════════════════════════════ -->
+<div class="screen-label">Screen 4 — Application Tracker</div>
+
+<div class="px-4 py-4">
+  <!-- App summary card -->
+  <div class="card p-4 mb-4 flex justify-between items-center">
+    <div>
+      <p class="text-xs text-slate-500">Application Ref</p>
+      <p class="font-bold text-slate-800">APP-2025-00412</p>
+      <p class="text-xs text-slate-500 mt-0.5">Al Bait Al Akhdar · OMR 185,000</p>
+    </div>
+    <span class="badge-amber text-xs px-2 py-1 rounded-full font-semibold">In Review</span>
+  </div>
+
+  <!-- 5-Stage Tracker -->
+  <div class="card p-4 mb-4 space-y-0">
+    <!-- Stage 1 done -->
+    <div class="track-done pl-4 pb-4">
+      <div class="flex items-center gap-2 mb-0.5">
+        <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style="background:var(--green);color:#fff">✓</div>
+        <span class="text-sm font-semibold text-slate-700">Document Validation</span>
+        <span class="ml-auto text-xs text-slate-400">14 Jun</span>
+      </div>
+      <p class="text-xs text-slate-400 ml-7">All documents received and verified.</p>
+    </div>
+    <!-- Stage 2 active -->
+    <div class="track-active pl-4 pb-4">
+      <div class="flex items-center gap-2 mb-0.5">
+        <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style="background:var(--teal);color:#fff">2</div>
+        <span class="text-sm font-semibold" style="color:var(--teal)">Credit Assessment</span>
+        <span class="ml-auto text-xs badge-amber px-2 py-0.5 rounded-full">Active</span>
+      </div>
+      <p class="text-xs text-slate-500 ml-7">DBR analysis in progress. Est. 2 business days.</p>
+    </div>
+    <!-- Stage 3 idle -->
+    <div class="track-idle pl-4 pb-4">
+      <div class="flex items-center gap-2 mb-0.5">
+        <div class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-400">3</div>
+        <span class="text-sm font-semibold text-slate-400">Property Valuation</span>
+      </div>
+      <p class="text-xs text-slate-300 ml-7">Pending credit clearance.</p>
+    </div>
+    <!-- Stage 4 idle -->
+    <div class="track-idle pl-4 pb-4">
+      <div class="flex items-center gap-2 mb-0.5">
+        <div class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-400">4</div>
+        <span class="text-sm font-semibold text-slate-400">Offer &amp; Acceptance</span>
+      </div>
+      <p class="text-xs text-slate-300 ml-7">Final offer letter and customer sign-off.</p>
+    </div>
+    <!-- Stage 5 — Tranche Disbursement -->
+    <div class="track-idle pl-4">
+      <div class="flex items-center gap-2 mb-0.5">
+        <div class="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-400">5</div>
+        <span class="text-sm font-semibold text-slate-400">Tranche Disbursement</span>
+      </div>
+      <!-- Tranche cards (greyed/future) -->
+      <div class="ml-7 mt-2 space-y-2">
+        <div class="border border-dashed border-slate-200 rounded-xl p-3 flex justify-between items-center opacity-50">
+          <div>
+            <p class="text-xs font-semibold text-slate-500">Tranche 1 — Foundation</p>
+            <p class="text-xs text-slate-400">OMR 55,500 · ~30% completion</p>
+          </div>
+          <span class="text-xs badge-navy px-2 py-0.5 rounded-full">Pending</span>
+        </div>
+        <div class="border border-dashed border-slate-200 rounded-xl p-3 flex justify-between items-center opacity-50">
+          <div>
+            <p class="text-xs font-semibold text-slate-500">Tranche 2 — Structure</p>
+            <p class="text-xs text-slate-400">OMR 74,000 · ~60% completion</p>
+          </div>
+          <span class="text-xs badge-navy px-2 py-0.5 rounded-full">Pending</span>
+        </div>
+        <div class="border border-dashed border-slate-200 rounded-xl p-3 flex justify-between items-center opacity-50">
+          <div>
+            <p class="text-xs font-semibold text-slate-500">Tranche 3 — Handover</p>
+            <p class="text-xs text-slate-400">OMR 55,500 · 100% completion</p>
+          </div>
+          <span class="text-xs badge-navy px-2 py-0.5 rounded-full">Pending</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <button class="w-full py-2.5 border border-slate-300 rounded-xl text-sm text-slate-600 font-medium">💬 Message My Advisor</button>
+</div>
+
+<div class="h-8 bg-slate-100"></div>
+
+<script>
+function setLang(lang) {
+  if (lang === 'ar') {
+    document.documentElement.setAttribute('dir','rtl');
+    document.documentElement.setAttribute('lang','ar');
+  } else {
+    document.documentElement.setAttribute('dir','ltr');
+    document.documentElement.setAttribute('lang','en');
+  }
+}
+</script>
+</body>
+</html>
