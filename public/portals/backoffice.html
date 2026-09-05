@@ -1651,6 +1651,28 @@ async function sendAiChat(productId) {
     if (completeMatch) {
       const completedN = parseInt(completeMatch[1]);
       if (completedN + 1 > inferredStage) inferredStage = completedN + 1;
+
+      // ── Stage 1 complete: seed draft card with product name from message ──
+      // GPT sometimes skips set_field on the Stage 1→2 transition message.
+      // Extract the confirmed name from the message text (original case) as a
+      // fallback so the draft card appears immediately rather than waiting for
+      // the first explicit set_field event.
+      if (completedN === 1 && !aiDraftConfig.name) {
+        const rawMsg = d.reply || d.message || '';
+        // Pattern 1: "Stage 1 complete — ProductName, conventional..."
+        const nameMatch = rawMsg.match(/[Ss]tage\s+1\s+complete\s*[—–\-]\s*([^,<\n]{4,60?}),/i)
+          // Pattern 2: quoted name anywhere in message
+          || rawMsg.match(/"([^"]{4,60})"/);
+        if (nameMatch) {
+          const extracted = nameMatch[1].trim().replace(/[.!]$/, '');
+          // Sanity check: looks like a product name (title-case word, ≤8 words, has uppercase)
+          if (/[A-Z]/.test(extracted) && extracted.split(' ').length <= 8) {
+            aiDraftConfig.name = extracted;
+            setTimeout(() => updateAiDraftCard(), 200);
+          }
+        }
+      }
+
       // Pulse draft card border to signal stage completion to the user
       setTimeout(_pulseDraftBorder, 600);
     }
@@ -1681,6 +1703,14 @@ async function sendAiChat(productId) {
     // ── Roadmap: always render when we have a stage, so strip stays in sync ─
     if (newStage > 0) {
       renderRoadmap(newStage);
+    }
+
+    // ── Proactive draft card creation ─────────────────────────────────────
+    // Ensure the draft card shell exists as soon as Stage 2+ is reached,
+    // even if GPT hasn't emitted a set_field yet. This makes the card
+    // visible immediately on the Stage 1→2 transition turn.
+    if (newStage >= 2 && !document.getElementById('ai-draft-card')) {
+      setTimeout(() => updateAiDraftCard(), 100);
     }
 
     // ── Build reply HTML ──────────────────────────────────────────────────
