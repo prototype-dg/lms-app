@@ -1232,42 +1232,93 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
     const userMsgs = history.filter((m: any) => m.role === 'user').map((m: any) => (m.content || '').toLowerCase())
     const fullConvText = [...assistantMsgs, ...userMsgs].join(' ')
 
-    // Extract product name: look for "sohar [word]" pattern in assistant messages (suggestion)
-    // or just use what the name-confirmation turn shows
+    // Extract product name from conversation — priority order:
+    // 1. "Stage 1 complete — [Name]" assistant message (most reliable: GPT confirms the exact name)
+    // 2. "How about [Name]?" suggestion confirmed by user "yes"
+    // 3. Any assistant message quoting a product name after user approval
+    // 4. Fall back to default
     let derivedName = 'Sohar Green Home Finance – GSAS'
-    const nameMatch = assistantMsgs.find(m => m.includes('ecohome') || m.includes('eco home') || m.includes('sohar eco'))
-    const nameSuggestMatch = assistantMsgs.find(m => m.includes('sohar green home finance'))
-    if (nameMatch) {
-      // Extract name from the suggestion text
-      const m = nameMatch.match(/[""""]([^""""\n]{5,60})[""""]|"([^"\n]{5,60})"|'([^'\n]{5,60})'/)
-      if (m) derivedName = (m[1] || m[2] || m[3]).trim()
-      else if (nameMatch.includes('ecohome elite')) derivedName = 'Sohar EcoHome Elite'
-      else if (nameMatch.includes('ecohome')) derivedName = 'Sohar EcoHome Elite'
-    } else if (nameSuggestMatch) {
-      derivedName = 'Sohar Green Home Finance – GSAS'
-    }
-    // Also check user messages for a custom name they typed
-    const userNameMsg = history.filter((m: any) => m.role === 'user').find((m: any) => {
-      const c = (m.content || '').toLowerCase()
-      return (c.includes('sohar') || c.includes('eco') || c.includes('green home')) && c.length < 80
-    })
-    // Check if assistant confirmed a specific user-proposed name
-    const confirmNameAssistant = assistantMsgs.find(m =>
-      (m.includes('has been set') || m.includes('the product name')) &&
-      (m.includes('sohar') || m.includes('eco') || m.includes('green'))
-    )
-    if (confirmNameAssistant) {
-      // Extract quoted name from confirmation message
-      const qm = confirmNameAssistant.match(/'([^']{5,60})'|"([^"]{5,60})"/)
-      if (qm) derivedName = (qm[1] || qm[2]).trim()
+
+    // Strategy 1: look for Stage 1 complete message with confirmed name
+    const stage1CompleteMsg = assistantMsgs.find(m => /stage\s+1\s+complete/i.test(m))
+    if (stage1CompleteMsg) {
+      // "Stage 1 complete — EcoElite Home Finance, conventional..."
+      const cm = stage1CompleteMsg.match(/stage\s+1\s+complete[\u2014\u2013\-\.\s]+([A-Z][^,\n]{3,59}),/i)
+        || stage1CompleteMsg.match(/"([^"]{4,60})"/)
+      if (cm) {
+        const candidate = cm[1].trim().replace(/[.!]$/, '')
+        if (/[A-Z]/.test(candidate) && candidate.split(' ').length <= 8) derivedName = candidate
+      }
     }
 
-    // Extract max_amount: look for '1m' or '1,000,000' or '500,000' in full conversation
+    // Strategy 2: look for "How about [Name]?" suggestion that was accepted
+    // GPT says: "How about \"EcoElite Home Finance\"?" and user says "yes"
+    if (derivedName === 'Sohar Green Home Finance – GSAS') {
+      const suggestionMsg = assistantMsgs.find(m =>
+        /how about/i.test(m) && (/[""""]/.test(m) || m.includes('"'))
+      )
+      if (suggestionMsg) {
+        const sm = suggestionMsg.match(/[""""']([A-Z][^""""\n]{3,59})[""""']/)
+          || suggestionMsg.match(/"([^"]{4,60})"/)
+        if (sm) {
+          const candidate = sm[1].trim().replace(/[.!]$/, '')
+          if (/[A-Z]/.test(candidate) && candidate.split(' ').length <= 8) derivedName = candidate
+        }
+      }
+    }
+
+    // Strategy 3: look for assistant quoting a name after confirmation
+    if (derivedName === 'Sohar Green Home Finance – GSAS') {
+      const confirmMsg = assistantMsgs.find(m =>
+        (m.includes('confirmed') || m.includes('name works') || m.includes('name is set')) &&
+        /[""""]/.test(m)
+      )
+      if (confirmMsg) {
+        const qm = confirmMsg.match(/[""""']([A-Z][^""""\n]{3,59})[""""']/)
+        if (qm) {
+          const candidate = qm[1].trim().replace(/[.!]$/, '')
+          if (/[A-Z]/.test(candidate) && candidate.split(' ').length <= 8) derivedName = candidate
+        }
+      }
+    }
+
+    // Extract max_amount: scan user messages for explicit "lower/change/set to X" instructions
+    // then fall back to the last confirmed value in assistant messages.
+    // Priority: user override (e.g. "lower to 500,000") > assistant confirmed value > default.
     const maxAmountFromCtx = (() => {
-      if (fullConvText.includes('1m omr') || fullConvText.includes('1,000,000') || fullConvText.includes('1m max')) return 1000000
-      if (fullConvText.includes('750,000') || fullConvText.includes('750k')) return 750000
-      if (fullConvText.includes('500,000') || fullConvText.includes('500k') || fullConvText.includes('omr 500')) return 500000
+      // Check user messages for explicit amount adjustments (latest wins)
+      const userAmountMsgs = history.filter((m: any) => m.role === 'user')
+        .map((m: any) => (m.content || '').toLowerCase())
+      for (let i = userAmountMsgs.length - 1; i >= 0; i--) {
+        const um = userAmountMsgs[i]
+        const m = um.match(/(?:lower|change|set|reduce|make).*?(\d[\d,]+)\s*omr/)
+          || um.match(/omr\s*(\d[\d,]+)\s*(?:max|maximum|limit)/)
+          || um.match(/(?:maximum|max)\s*(?:loan|amount)?\s*(?:to|is|of)?\s*(?:omr)?\s*(\d[\d,]+)/i)
+        if (m) { const v = parseInt(m[1].replace(/,/g,'')); if (v >= 50000 && v <= 5000000) return v }
+      }
+      // Check assistant confirmation messages for the last confirmed amount
+      for (let i = assistantMsgs.length - 1; i >= 0; i--) {
+        const am = assistantMsgs[i]
+        const m = am.match(/(?:omr\s*[\d,]+\s*[\u2013\u2014\-]{1,2}\s*omr\s*)([\d,]+)/i)
+          || am.match(/(?:amount(?:\s+range)?[:\s]+omr\s*[\d,]+\s*[\u2013\-]\s*)([\d,]+)/i)
+          || am.match(/(?:up to|maximum|max)\s*omr\s*([\d,]+)/i)
+        if (m) { const v = parseInt(m[1].replace(/,/g,'')); if (v >= 50000 && v <= 5000000) return v }
+      }
+      // Final fallback: scan full context for any 500k or 1M mention
+      if (fullConvText.includes('500,000') || fullConvText.match(/\b500k\b/)) return 500000
+      if (fullConvText.includes('1,000,000') || fullConvText.match(/\b1m\b/)) return 1000000
       return 500000
+    })()
+
+    // Extract min_amount similarly
+    const minAmountFromCtx = (() => {
+      for (let i = assistantMsgs.length - 1; i >= 0; i--) {
+        const am = assistantMsgs[i]
+        const m = am.match(/omr\s*([\d,]+)\s*(?:to|-)\s*omr\s*[\d,]+/i)
+          || am.match(/(?:minimum|min)\s+(?:loan\s+)?(?:amount\s+)?(?:of\s+)?omr\s*([\d,]+)/i)
+        if (m) { const v = parseInt(m[1].replace(/,/g,'')); if (v >= 5000 && v <= 200000) return v }
+      }
+      return 25000
     })()
 
     // Extract GSAS min from stage 3 context
@@ -1289,6 +1340,44 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
       return 5.25
     })()
 
+    // Extract discount tiers from conversation — user may have approved non-default values
+    const discountPremiumFromCtx = (() => {
+      // Look for confirmed discount tier messages (latest assistant confirmation wins)
+      for (let i = assistantMsgs.length - 1; i >= 0; i--) {
+        const am = assistantMsgs[i]
+        // "0.5% for GSAS ≥85 (Gold)" — first percentage mentioned alongside Gold/≥85
+        const m = am.match(/(\d+\.\d+)%[^.]*(?:gsas[^.]*[≥>=]\s*85|gold|premium)/i)
+          || am.match(/(?:gold|premium|gsas[^.]*[≥>=]\s*85)[^.]*?(\d+\.\d+)%/i)
+        if (m) { const v = parseFloat(m[1]); if (v >= 0.1 && v <= 2.0) return v }
+      }
+      return 0.75
+    })()
+    const discountStandardFromCtx = (() => {
+      for (let i = assistantMsgs.length - 1; i >= 0; i--) {
+        const am = assistantMsgs[i]
+        // "0.25% for GSAS 70–84 (Silver)" — percentage alongside Silver/70-84
+        const m = am.match(/(\d+\.\d+)%[^.]*(?:silver|70[^0-9]|score\s+70)/i)
+          || am.match(/(?:silver|70[–\-]84)[^.]*?(\d+\.\d+)%/i)
+        if (m) { const v = parseFloat(m[1]); if (v >= 0.1 && v <= 2.0) return v }
+      }
+      return 0.5
+    })()
+
+    // Extract min_term from conversation (user may have set 5yr minimum, not 3)
+    const minTermFromCtx = (() => {
+      for (let i = assistantMsgs.length - 1; i >= 0; i--) {
+        const am = assistantMsgs[i]
+        const m = am.match(/(?:term\s+range[^0-9]*|from\s+)(\d{1,2})\s*(?:to|–|-)\s*\d{1,2}\s*years?/i)
+          || am.match(/(?:minimum\s+(?:term|of)\s*)(\d{1,2})\s*years?/i)
+        if (m) { const v = parseInt(m[1]); if (v >= 1 && v <= 15) return v }
+      }
+      return 3
+    })()
+
+    // Customer segment detection — drives simulation math
+    const isHNW = fullConvText.includes('hnw') || fullConvText.includes('high net worth') || fullConvText.match(/omr\s*5[k,\s]|5,000\+|income.*5000/i) != null
+    const isAffluent = !isHNW && (fullConvText.includes('affluent') || fullConvText.match(/omr\s*2[k,\s]|2,000/i) != null)
+
     // Derive structure — check USER messages only (not assistant, which lists Islamic as an option)
     // The Stage 1b assistant message contains 'Islamic', 'Murabaha', 'Musharaka' as examples,
     // so checking fullConvText gives false positives for Conventional products.
@@ -1298,18 +1387,18 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
 
     const productDraft = {
       name: derivedName,
-      description: `${structureLabel} home financing for GSAS-certified green properties in Oman. Earn up to 0.75% rate discount based on sustainability score (GSAS ≥85: Gold tier, 0.5% for GSAS 70–84: Silver). Targets affluent and HNW customers. Supports Oman Vision 2040, CBO green finance objectives, and OS GSO 3000:2025.`,
+      description: `${structureLabel} home financing for GSAS-certified green properties in Oman. Earn up to ${discountPremiumFromCtx}% rate discount based on sustainability score (GSAS ≥85: Gold tier, ${discountStandardFromCtx}% for GSAS 70–84: Silver). Targets ${isHNW ? 'HNW' : isAffluent ? 'affluent' : 'retail'} customers. Supports Oman Vision 2040, CBO green finance objectives, and OS GSO 3000:2025.`,
       category: 'home_loan',
       base_rate: baseRateFromCtx,
       max_ltv: 90,
       max_dbr: 55,
       green_dbr: 55,
-      min_term: 3, max_term: 25,
-      min_amount: 25000, max_amount: maxAmountFromCtx,
+      min_term: minTermFromCtx, max_term: 25,
+      min_amount: minAmountFromCtx, max_amount: maxAmountFromCtx,
       gsas_min_score: gsasMin,
       gsas_premium_score: 85,
-      green_discount_premium: 0.75,
-      green_discount_standard: 0.5,
+      green_discount_premium: discountPremiumFromCtx,
+      green_discount_standard: discountStandardFromCtx,
       esg_required_docs: ['gsas_cert', 'epc_report', 'eia_approval'],
       approved_materials: ['Green Concrete (GSAS-rated)', 'Low-E Double Glazing', 'Thermal Insulation (R-value ≥ 2.5)', 'Solar PV Panels (SASO-certified)', 'LED Lighting Systems', 'High-Efficiency HVAC (EER ≥ 3.5)', 'Recycled Steel Reinforcement', 'Rainwater Harvesting System'],
       approved_vendors: ['Oman Readymix LLC', 'Gulf Insulation Group', 'SunTech Oman', 'Green Build Oman', 'EcoMaterials Oman', 'HVAC Oman LLC', 'Voltec Solar Oman'],
@@ -1343,20 +1432,44 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
       ],
       ai_confidence: 96, regulatory_reference: 'OS GSO 3000:2025, §4.2 · OEESC §5.1',
     }
+    // ── Portfolio simulation math — segment-aware ────────────────────────────
+    // HNW: avg property OMR 400K, avg loan OMR 300K (75% LTV on 400K), conversion 8%
+    // Affluent: avg property OMR 200K, avg loan OMR 150K, conversion 12%
+    // Mass: avg property OMR 120K, avg loan OMR 90K, conversion 18%
+    const avgLoanAmt   = isHNW ? 280000 : isAffluent ? 150000 : 90000
+    const avgPropVal   = isHNW ? 380000 : isAffluent ? 200000 : 120000
+    const conversionPct = isHNW ? 8 : isAffluent ? 12 : 18
+    // Total green-eligible pipeline: 13,251 applications YTD × est. 6% green-certified properties
+    const greenPipeline = Math.round(13251 * 0.06)
+    const yr1Accounts  = Math.round(greenPipeline * (conversionPct / 100))
+    const yr1Portfolio = Math.round(yr1Accounts * avgLoanAmt / 1e6 * 10) / 10  // OMR M, 1dp
+    const effectiveRate = baseRateFromCtx - discountPremiumFromCtx  // best-tier effective rate
+    const nim = Math.round((baseRateFromCtx - 3.5) * 100) / 100  // rough NIM vs 3.5% CoF
+    const provisionSaving = 0.4  // green ECL saves vs standard
+    const breakEvenMonth  = isHNW ? 9 : isAffluent ? 11 : 14  // HNW = higher avg, faster BEP
+    const setupCost       = 85  // OMR K
+
+    // Effective rate tiers for display
+    const rateGold   = (baseRateFromCtx - discountPremiumFromCtx).toFixed(2)
+    const rateSilver = (baseRateFromCtx - discountStandardFromCtx).toFixed(2)
+    const segmentLabel = isHNW ? 'HNW (OMR 5K+ income)' : isAffluent ? 'Affluent (OMR 2K–5K)' : 'Mass market'
+
     return {
       message: `✅ <strong>Stage 5 complete.</strong> Compliance classification applied — Basel III 75% risk weight, IFRS9 1.5% Stage 1 ECL, CBO Green Finance designation.<br><br>` +
         `<strong>Stage 6 — Portfolio Simulation</strong><br><br>` +
-        `📊 <strong>12-month portfolio projections</strong> (based on current Standard Home Loan pipeline data):<br>` +
-        `&bull; Target: <strong>180 accounts, OMR 52M</strong> in Year 1 (conservative: 15% of current mortgage pipeline targeting green properties)<br>` +
-        `&bull; NIM: <strong>1.45%</strong> on green rate (vs 1.75% standard) — offset by 0.4% lower provisioning (green ECL) + CBO capital relief of ~8 bps<br>` +
-        `&bull; <strong>Stress test</strong>: at +200 bps rate shock, 98% of modelled portfolio still passes DBR ≤55% — built-in buffer works<br>` +
-        `&bull; <strong>Break-even</strong>: month 11 post-launch (setup costs: OMR 85K for GORD API integration + Green Finance Officer role)<br>` +
-        `&bull; ESG reporting: monthly CBO Green Finance Return under Circular 2026-12 §7, plus annual TCFD disclosure<br><br>` +
+        `📊 <strong>12-month portfolio projections</strong> — <em>${segmentLabel} segment · avg loan OMR ${avgLoanAmt.toLocaleString()}</em><br>` +
+        `&bull; <strong>Pipeline:</strong> ~${greenPipeline} green-eligible applicants from current 13,251 YTD pipeline (est. 6% hold GSAS-certified properties)<br>` +
+        `&bull; <strong>Target:</strong> <strong>${yr1Accounts} accounts · OMR ${yr1Portfolio}M</strong> in Year 1 at ${conversionPct}% pipeline conversion (${isHNW ? 'conservative — HNW segment has longer decision cycle' : 'moderate — verified against regional green mortgage benchmarks'})<br>` +
+        `&bull; <strong>NIM:</strong> ~${nim.toFixed(2)}% on green book (3.5% estimated cost of funds) — partially offset by ${provisionSaving}% lower provisioning (green ECL) + CBO capital relief ~8 bps<br>` +
+        `&bull; <strong>Effective rates:</strong> ${baseRateFromCtx}% base → ${rateGold}% (GSAS ≥85 Gold) · ${rateSilver}% (GSAS 70–84 Silver)<br>` +
+        `&bull; <strong>Stress test:</strong> +200 bps rate shock — 98% of modelled HNW portfolio passes DBR ≤55% (avg. DBR ${isHNW ? '38' : '44'}% at origination provides buffer)<br>` +
+        `&bull; <strong>Break-even:</strong> month ${breakEvenMonth} post-launch (setup: OMR ${setupCost}K — GORD API integration + Green Finance Officer role)<br>` +
+        `&bull; <strong>ESG reporting:</strong> monthly CBO Green Finance Return (Circular 2026-12 §7) + annual TCFD disclosure<br><br>` +
         `📋 <strong>Full product configuration summary:</strong><br>` +
-        `• <strong>${derivedName}</strong> · ${structureLabel} · Cloned from Standard Home Loan<br>` +
-        `• Rate: <strong>${baseRateFromCtx}%</strong> · Tiers: ${(baseRateFromCtx-0.75).toFixed(2)}% (GSAS ≥85) · ${(baseRateFromCtx-0.5).toFixed(2)}% (GSAS 70–84)<br>` +
+        `• <strong>${derivedName}</strong> · ${structureLabel} · Cloned from Standard Home Loan · Segment: ${segmentLabel}<br>` +
+        `• Rate: <strong>${baseRateFromCtx}%</strong> · Discount tiers: −${discountPremiumFromCtx}% (GSAS ≥85) → <strong>${rateGold}%</strong> · −${discountStandardFromCtx}% (GSAS 70–84) → <strong>${rateSilver}%</strong><br>` +
         `• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>` +
-        `• Terms: <strong>3–25 years</strong> · Amount: <strong>OMR 25,000–${maxAmountFromCtx.toLocaleString()}</strong><br>` +
+        `• Terms: <strong>${minTermFromCtx}–25 years</strong> · Amount: <strong>OMR ${minAmountFromCtx.toLocaleString()}–${maxAmountFromCtx.toLocaleString()}</strong> · Avg property value: OMR ${avgPropVal.toLocaleString()}<br>` +
         `• Eligibility: <strong>17 rules</strong> across credit, collateral, ESG, income<br>` +
         `• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>` +
         `• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>` +
@@ -1364,19 +1477,20 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
       current_stage: 6, show_roadmap: false, action: 'ready_to_confirm',
       ui_events: [
         { type: 'set_tab', tab: 'ai_config' },
-        // Seed all config fields into the draft card via set_field events so the
-        // live preview card shows the complete product configuration at Stage 6.
+        // set_field events to seed draft card at Stage 6 — the frontend set_field handler
+        // guards protected fields (name/rate/etc.) that were already confirmed in Stages 1–5,
+        // so these only fill in any gaps that per-turn extraction missed.
         { type: 'set_field', field: 'name', value: derivedName },
         { type: 'set_field', field: 'base_rate', value: baseRateFromCtx },
         { type: 'set_field', field: 'max_ltv', value: 90 },
         { type: 'set_field', field: 'max_dbr', value: 55 },
-        { type: 'set_field', field: 'min_term', value: 3 },
+        { type: 'set_field', field: 'min_term', value: minTermFromCtx },
         { type: 'set_field', field: 'max_term', value: 25 },
-        { type: 'set_field', field: 'min_amount', value: 25000 },
+        { type: 'set_field', field: 'min_amount', value: minAmountFromCtx },
         { type: 'set_field', field: 'max_amount', value: maxAmountFromCtx },
         { type: 'set_field', field: 'gsas_min_score', value: gsasMin },
-        { type: 'set_field', field: 'green_discount_premium', value: 0.75 },
-        { type: 'set_field', field: 'green_discount_standard', value: 0.5 },
+        { type: 'set_field', field: 'green_discount_premium', value: discountPremiumFromCtx },
+        { type: 'set_field', field: 'green_discount_standard', value: discountStandardFromCtx },
       ],
       // rules_draft intentionally null here — Stage 3 already saved the full 17-rule set
       // to the thread result. Returning rules_draft here would overwrite with this 12-rule

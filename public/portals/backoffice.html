@@ -1536,7 +1536,23 @@ async function dispatchUiEvents(events, productId) {
       continue;
     }
     /* set_field — always update live draft card; also update product panel if open */
+    // GUARD: Stage 6 emits set_field for every field as a "snapshot", but the
+    // user may have already confirmed a custom value in earlier stages (e.g.
+    // name='EcoElite Home Finance', min_term=5, min_amount=50000, discounts=0.5/0.25).
+    // Only overwrite if the field isn't already set, EXCEPT for fields that
+    // genuinely belong to Stage 6 and couldn't have been set earlier.
     if (ev.type === 'set_field' && ev.field != null && ev.value != null) {
+      const alreadySet = aiDraftConfig[ev.field] != null;
+      // Fields that Stage 6 should never overwrite if already confirmed in Stage 1-5
+      const protectedFields = ['name','base_rate','max_ltv','max_dbr','min_term','max_term',
+        'min_amount','max_amount','green_discount_premium','green_discount_standard'];
+      if (alreadySet && protectedFields.includes(ev.field)) {
+        // Still flash the DOM field to show it's been reviewed, but keep the value
+        const domId = FIELD_MAP[ev.field];
+        if (domId) { const el = document.getElementById(domId); if (el) flashField(el); }
+        updateAiDraftCard();
+        continue;
+      }
       aiDraftConfig[ev.field] = ev.value;
       updateAiDraftCard();
       const domId = FIELD_MAP[ev.field];
@@ -1872,6 +1888,47 @@ async function sendAiChat(productId) {
       }
 
       if (fieldSeeded) setTimeout(() => updateAiDraftCard(), 300);
+    }
+
+    // ── Per-turn Stage 4 workflow extraction ───────────────────────────────
+    // GPT sometimes returns workflow steps in message text but skips set_workflow.
+    // Detect a Stage 4 response confirming a multi-step workflow and seed
+    // aiDraftWorkflow with a synthetic node list so the draft card shows a
+    // workflow badge and the Workflow tab shows at least a step count.
+    if ((newStage === 4 || newStage === 5) && aiDraftWorkflow.length === 0) {
+      const rawWf = d.reply || d.message || '';
+      const plainWf = rawWf.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      // GPT confirms "10-step" or "10 steps" in Stage 4 completion message
+      const hasWfConfirm = /10[- ]step|10\s*steps/i.test(plainWf) ||
+        /approval workflow configured/i.test(plainWf) ||
+        /stage 4 complete/i.test(plainWf) ||
+        (/workflow/i.test(plainWf) && /automated/i.test(plainWf) && /human/i.test(plainWf));
+      if (hasWfConfirm && !(d.ui_events && d.ui_events.some(e => e.type === 'set_workflow'))) {
+        // Extract step labels from the GPT message if possible, else use canonical list
+        const stepMatches = [...plainWf.matchAll(/(?:step\s*\d+[:\-–]?\s*|[\u2022\-]\s*)([A-Z][^,.\n]{5,60})/g)];
+        if (stepMatches.length >= 5) {
+          aiDraftWorkflow = stepMatches.slice(0, 11).map((m, i) => ({
+            id: 'n' + (i + 1), type: i === 0 ? 'start' : i === stepMatches.length - 1 ? 'end' : i < 6 ? 'task' : 'approval',
+            label: m[1].trim(), auto: i < 6, role: i < 6 ? 'system' : 'analyst',
+          }));
+        } else {
+          // Fallback canonical 10-step green mortgage workflow
+          aiDraftWorkflow = [
+            { id:'n1', type:'start', label:'Application Submitted', auto:false, role:null },
+            { id:'n2', type:'task', label:'eKYC & AML Screening', auto:true, role:'system', sla_hours:1 },
+            { id:'n3', type:'task', label:'Credit Bureau Check', auto:true, role:'system', sla_hours:4 },
+            { id:'n4', type:'task', label:'Document OCR & Validation', auto:true, role:'system', sla_hours:2 },
+            { id:'n5', type:'task', label:'GSAS Registry Verification', auto:true, role:'system', sla_hours:4 },
+            { id:'n6', type:'task', label:'Property Valuation & Title', auto:true, role:'system', sla_hours:8 },
+            { id:'n7', type:'approval', label:'Credit Underwriting', auto:false, role:'credit_analyst', sla_hours:24 },
+            { id:'n8', type:'approval', label:'Green Finance ESG Review', auto:false, role:'green_finance_officer', sla_hours:24 },
+            { id:'n9', type:'approval', label:'Risk & Compliance Sign-off', auto:false, role:'risk_officer', sla_hours:48 },
+            { id:'n10', type:'approval', label:'PM Final Approval', auto:false, role:'product_manager', sla_hours:24 },
+            { id:'n11', type:'end', label:'Decision & Letter of Offer', auto:false, role:null },
+          ];
+        }
+        setTimeout(() => updateAiDraftCard(), 400);
+      }
     }
 
     // ── Build reply HTML ──────────────────────────────────────────────────
