@@ -1980,7 +1980,7 @@ function We(e) {
 	};
 }
 function Ge(e, t, n) {
-	let r = e.toLowerCase(), i = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great") || r.includes("continue") || r.includes("use") || r.includes("keep") || r.includes("proceed"), a = n || [], o = a.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), s = o.some((e) => e.includes("clone") || e.includes("from scratch") || e.includes("product model") || e.includes("stage 1")), c = o.some((e) => e.includes("islamic") || e.includes("murabaha") || e.includes("conventional") || e.includes("structure")), l = o.some((e) => e.includes("target segment") || e.includes("omani nationals") || e.includes("expat") || e.includes("income band")), u = o.some((e) => e.includes("product name") || e.includes("sohar green") || e.includes("sohar eco") || e.includes("ecohome") || e.includes("confirm the name") || e.includes("shall i use") || e.includes("for the product name") || e.includes("i suggest") && e.includes("name")), d = o.some((e) => e.includes("base rate") || e.includes("pricing structure") || e.includes("stage 2") || e.includes("5.25%")), f = o.some((e) => e.includes("discount tier") || e.includes("green discount") || e.includes("gsas score band")), p = o.some((e) => e.includes("ltv band") || e.includes("loan-to-value") || e.includes("ltv") && e.includes("first home") && e.includes("subsequent") || e.includes("90% ltv") || e.includes("ltv settings")), m = o.some((e) => e.includes("dbr") && (e.includes("55%") || e.includes("stage 2") || e.includes("debt burden"))), h = o.some((e) => e.includes("term range") || e.includes("amount range") || e.includes("omr 10,000") || e.includes("min/max")), g = o.some((e) => e.includes("arrangement fee") || e.includes("early settlement") || e.includes("fee")), _ = o.some((e) => e.includes("17 eligibility rules") || e.includes("gsas minimum") || e.includes("stage 3") && e.includes("credit risk")), v = o.some((e) => e.includes("10-step workflow") || e.includes("10-step approval workflow") || e.includes("more human touchpoints in the automated phase") || e.includes("should i configure automated processing")), y = o.some((e) => e.includes("stage 4 complete.") || e.includes("10-step approval workflow configured") || e.includes("nci ekyc · oman credit bureau") && e.includes("muscat municipality")), b = o.some((e) => e.includes("shall i apply these compliance parameters") || e.includes("compliance parameters, or do you want to adjust") || e.includes("stage 5 complete")), x = o.some((e) => e.includes("ready to publish") || e.includes("confirm &amp; publish") || e.includes("confirm & publish") || e.includes("stage 6") || e.includes("click confirm")), S = [...a.map((e) => e.content || ""), e].join(" ").toLowerCase(), C = S.includes("green") || S.includes("gsas") || S.includes("esg") || S.includes("sustainable"), w = !C && (S.includes("auto") || S.includes("car") || S.includes("vehicle")), T = !C && !w && (S.includes("personal") || S.includes("unsecured") || S.includes("consumer")), E = !C && !w && !T && (S.includes("sme") || S.includes("business") || S.includes("working capital")), ee = (() => {
+	let r = e.toLowerCase(), i = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great") || r.includes("continue") || r.includes("use") || r.includes("keep") || r.includes("proceed"), a = n || [], o = a.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), s = o.some((e) => e.includes("clone") || e.includes("from scratch") || e.includes("product model") || e.includes("stage 1")), c = o.some((e) => e.includes("islamic") || e.includes("murabaha") || e.includes("conventional") || e.includes("structure")), l = o.some((e) => e.includes("target segment") || e.includes("omani nationals") || e.includes("expat") || e.includes("income band")), u = o.some((e) => e.includes("product name") || e.includes("sohar green") || e.includes("sohar eco") || e.includes("ecohome") || e.includes("confirm the name") || e.includes("shall i use") || e.includes("for the product name") || e.includes("i suggest") && e.includes("name")), d = o.some((e) => e.includes("base rate") || e.includes("pricing structure") || e.includes("stage 2") || e.includes("5.25%")), f = o.some((e) => e.includes("discount tier") || e.includes("green discount") || e.includes("gsas score band")), p = o.some((e) => e.includes("ltv band") || e.includes("loan-to-value") || e.includes("ltv") && e.includes("first home") && e.includes("subsequent") || e.includes("90% ltv") || e.includes("ltv settings")), m = o.some((e) => e.includes("dbr") && (e.includes("55%") || e.includes("stage 2") || e.includes("debt burden"))), h = o.some((e) => e.includes("term range") || e.includes("amount range") || e.includes("omr 10,000") || e.includes("min/max")), g = o.some((e) => e.includes("arrangement fee") || e.includes("early settlement") || e.includes("fee")), _ = o.some((e) => e.includes("17 eligibility rules") || e.includes("gsas minimum") || e.includes("stage 3") && e.includes("credit risk")), v = o.some((e) => e.includes("10-step workflow") || e.includes("10-step approval workflow") || e.includes("more human touchpoints in the automated phase") || e.includes("should i configure automated processing")), y = o.some((e) => e.includes("stage 4 complete") || e.includes("10-step approval workflow configured") || e.includes("approval workflow set") || e.includes("approval workflow configured") || e.includes("workflow is now configured") || e.includes("workflow has been configured") || e.includes("nci ekyc") && e.includes("muscat municipality") || e.includes("workflow") && e.includes("10 steps") || e.includes("workflow") && e.includes("10-step") && e.includes("stage 5")), b = o.some((e) => e.includes("shall i apply these compliance parameters") || e.includes("compliance parameters, or do you want to adjust") || e.includes("stage 5 complete") || e.includes("compliance parameters applied") || e.includes("basel iii") && e.includes("ifrs9") && e.includes("aml risk score")), x = o.some((e) => e.includes("ready to publish") || e.includes("confirm &amp; publish") || e.includes("confirm & publish") || e.includes("click confirm") || e.includes("stage 6") && (e.includes("portfolio target") || e.includes("break-even") || e.includes("nim ~")) || e.includes("stage 6") && e.includes("everything is configured")), S = [...a.map((e) => e.content || ""), e].join(" ").toLowerCase(), C = S.includes("green") || S.includes("gsas") || S.includes("esg") || S.includes("sustainable"), w = !C && (S.includes("auto") || S.includes("car") || S.includes("vehicle")), T = !C && !w && (S.includes("personal") || S.includes("unsecured") || S.includes("consumer")), E = !C && !w && !T && (S.includes("sme") || S.includes("business") || S.includes("working capital")), ee = (() => {
 		let e = r.match(/\b(7[0-9]|80|85|90)\b/);
 		return e ? parseInt(e[1]) : 70;
 	})(), D = C ? "Sohar Green Home Finance – GSAS" : w ? "Auto Finance" : T ? "Personal Finance" : E ? "SME Working Capital" : "Home Finance";
@@ -2699,10 +2699,67 @@ function Ge(e, t, n) {
 			current_stage: 6,
 			show_roadmap: !1,
 			action: "ready_to_confirm",
-			ui_events: [{
-				type: "set_tab",
-				tab: "ai_config"
-			}],
+			ui_events: [
+				{
+					type: "set_tab",
+					tab: "ai_config"
+				},
+				{
+					type: "set_field",
+					field: "name",
+					value: n
+				},
+				{
+					type: "set_field",
+					field: "base_rate",
+					value: u
+				},
+				{
+					type: "set_field",
+					field: "max_ltv",
+					value: 90
+				},
+				{
+					type: "set_field",
+					field: "max_dbr",
+					value: 55
+				},
+				{
+					type: "set_field",
+					field: "min_term",
+					value: 3
+				},
+				{
+					type: "set_field",
+					field: "max_term",
+					value: 25
+				},
+				{
+					type: "set_field",
+					field: "min_amount",
+					value: 25e3
+				},
+				{
+					type: "set_field",
+					field: "max_amount",
+					value: c
+				},
+				{
+					type: "set_field",
+					field: "gsas_min_score",
+					value: l
+				},
+				{
+					type: "set_field",
+					field: "green_discount_premium",
+					value: .75
+				},
+				{
+					type: "set_field",
+					field: "green_discount_standard",
+					value: .5
+				}
+			],
 			product_draft: p,
 			rules_draft: null,
 			schema_draft: m
@@ -5131,7 +5188,7 @@ $.use("/api/*", Ie()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await L.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "bf4f978";
+var at = "1ac0f45";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

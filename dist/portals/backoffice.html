@@ -1384,14 +1384,17 @@ function updateAiDraftCard() {
     ? 'OMR\u00a0' + Number(cfg.max_amount).toLocaleString()
     : null;
 
+  const compliance = cfg._compliance || null;
+
   // ── Diff against last snapshot to know which values are NEW / changed ────
   const snap = _lastDraftSnapshot;
-  const nameChanged   = cfg.name       != null && cfg.name       !== snap.name;
-  const rateChanged   = rateStr        != null && rateStr        !== snap._rateStr;
-  const termChanged   = termStr        != null && termStr        !== snap._termStr;
-  const amountChanged = amountStr      != null && amountStr      !== snap._amountStr;
-  const rCountChanged = rCount > (snap._rCount || 0);
-  const wCountChanged = wCount > (snap._wCount || 0);
+  const nameChanged       = cfg.name       != null && cfg.name       !== snap.name;
+  const rateChanged       = rateStr        != null && rateStr        !== snap._rateStr;
+  const termChanged       = termStr        != null && termStr        !== snap._termStr;
+  const amountChanged     = amountStr      != null && amountStr      !== snap._amountStr;
+  const rCountChanged     = rCount > (snap._rCount || 0);
+  const wCountChanged     = wCount > (snap._wCount || 0);
+  const complianceChanged = compliance != null && JSON.stringify(compliance) !== snap._compliance;
 
   // Helper: wrap a value in a flash-marked span when it changed
   const maybeFlash = (changed, inner) => changed
@@ -1419,6 +1422,9 @@ function updateAiDraftCard() {
     `<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.28rem">` +
       (rCount > 0 ? `<span style="font-size:.64rem;background:rgba(53,198,196,.1);color:var(--sea-glass);padding:.08rem .4rem;border-radius:8px;border:1px solid rgba(53,198,196,.2);${ruleBadgeAnim}"><i class="fas fa-list-check" style="margin-right:.2rem"></i>${rCount} rules</span>` : '') +
       (wCount > 0 ? `<span style="font-size:.64rem;background:rgba(244,179,91,.1);color:#fbbf24;padding:.08rem .4rem;border-radius:8px;border:1px solid rgba(244,179,91,.2);${wfBadgeAnim}"><i class="fas fa-sitemap" style="margin-right:.2rem"></i>${wCount} steps</span>` : '') +
+      (compliance ? maybeFlash(complianceChanged,
+        `<span style="font-size:.64rem;background:rgba(248,113,113,.1);color:#f87171;padding:.08rem .4rem;border-radius:8px;border:1px solid rgba(248,113,113,.2)"><i class="fas fa-shield-halved" style="margin-right:.2rem"></i>Basel ${compliance.risk_weight} · IFRS9 ${compliance.provisioning} · AML ${compliance.aml}</span>`
+      ) : '') +
     `</div>` +
     `</div>`;
 
@@ -1493,11 +1499,12 @@ function updateAiDraftCard() {
 
   // ── Update snapshot so next render only flashes truly new changes ─────────
   _lastDraftSnapshot = Object.assign({}, cfg, {
-    _rateStr:   rateStr,
-    _termStr:   termStr,
-    _amountStr: amountStr,
-    _rCount:    rCount,
-    _wCount:    wCount,
+    _rateStr:    rateStr,
+    _termStr:    termStr,
+    _amountStr:  amountStr,
+    _rCount:     rCount,
+    _wCount:     wCount,
+    _compliance: compliance ? JSON.stringify(compliance) : null,
   });
 }
 
@@ -1659,17 +1666,87 @@ async function sendAiChat(productId) {
       // the first explicit set_field event.
       if (completedN === 1 && !aiDraftConfig.name) {
         const rawMsg = d.reply || d.message || '';
+        // Strip HTML tags so <strong>Stage 1 complete.</strong> becomes plain text
+        const plainMsg = rawMsg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
         // Pattern 1: "Stage 1 complete — ProductName, conventional..."
-        const nameMatch = rawMsg.match(/[Ss]tage\s+1\s+complete\s*[—–\-]\s*([^,<\n]{4,60?}),/i)
-          // Pattern 2: quoted name anywhere in message
-          || rawMsg.match(/"([^"]{4,60})"/);
+        const nameMatch = plainMsg.match(/[Ss]tage\s+1\s+complete[^—–\-]*[—–\-]\s*([^,\n]{4,60?}),/i)
+          // Pattern 2: quoted name anywhere in message  "ProductName"
+          || plainMsg.match(/"([^"]{4,60})"/);
         if (nameMatch) {
           const extracted = nameMatch[1].trim().replace(/[.!]$/, '');
-          // Sanity check: looks like a product name (title-case word, ≤8 words, has uppercase)
+          // Sanity check: has uppercase, ≤8 words (product name, not a sentence)
           if (/[A-Z]/.test(extracted) && extracted.split(' ').length <= 8) {
             aiDraftConfig.name = extracted;
             setTimeout(() => updateAiDraftCard(), 200);
           }
+        }
+      }
+
+      // ── Stage 2 complete: seed missing config fields from message text ──
+      // GPT sometimes skips individual set_field events across Stage 2 sub-questions.
+      // When Stage 2 complete fires, the message text contains the full summary:
+      // "Rate 5.25% · Green discount 0.75%/0.5% · LTV 90/80% · DBR 55% · OMR 25K–500K · Term 25yr max"
+      // Extract and seed any fields still missing from aiDraftConfig.
+      if (completedN === 2) {
+        const rawMsg = d.reply || d.message || '';
+        const plain2 = rawMsg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        // base_rate
+        if (!aiDraftConfig.base_rate) {
+          const m = plain2.match(/rate\s*[\:·]?\s*(\d+\.\d+)%/i) || plain2.match(/(\d+\.\d+)%\s*·/);
+          if (m) aiDraftConfig.base_rate = parseFloat(m[1]);
+        }
+        // green_discount_premium (first % after "discount")
+        if (!aiDraftConfig.green_discount_premium) {
+          const m = plain2.match(/discount[^0-9]*(\d+\.\d+)%/i);
+          if (m) aiDraftConfig.green_discount_premium = parseFloat(m[1]);
+        }
+        // max_ltv
+        if (!aiDraftConfig.max_ltv) {
+          const m = plain2.match(/ltv\s*[\:·]?\s*(\d+)%/i);
+          if (m) aiDraftConfig.max_ltv = parseInt(m[1]);
+        }
+        // max_dbr
+        if (!aiDraftConfig.max_dbr) {
+          const m = plain2.match(/dbr\s*[\:·]?\s*(\d+)%/i);
+          if (m) aiDraftConfig.max_dbr = parseInt(m[1]);
+        }
+        // max_amount (look for OMR 25K–500K or OMR 25,000–500,000)
+        if (!aiDraftConfig.max_amount) {
+          const m = plain2.match(/omr\s*[\d,]+[\s–\-]+(\d[\d,]+)/i) || plain2.match(/–\s*omr\s*([\d,]+)/i) || plain2.match(/(\d{3},\d{3})/);
+          if (m) { const v = parseInt(m[1].replace(/,/g,'')); if (v >= 10000) aiDraftConfig.max_amount = v; }
+        }
+        // min_amount
+        if (!aiDraftConfig.min_amount) {
+          const m = plain2.match(/omr\s*([\d,]+)\s*[–\-]/i);
+          if (m) { const v = parseInt(m[1].replace(/,/g,'')); if (v >= 1000 && v <= 100000) aiDraftConfig.min_amount = v; }
+        }
+        // max_term (look for "25yr" or "25 years" or "Term 25")
+        if (!aiDraftConfig.max_term) {
+          const m = plain2.match(/(?:term|terms?)\s*(?:max|:)?\s*(\d+)\s*yr/i) || plain2.match(/(\d+)\s*yr\s*max/i);
+          if (m) { const v = parseInt(m[1]); if (v >= 5 && v <= 35) aiDraftConfig.max_term = v; }
+        }
+        if (!aiDraftConfig.min_term) aiDraftConfig.min_term = 3;
+        setTimeout(() => updateAiDraftCard(), 250);
+      }
+
+      // ── Stage 5 complete: seed compliance summary fields ──────────────────
+      if (completedN === 5) {
+        const rawMsg = d.reply || d.message || '';
+        const plain5 = rawMsg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+        if (!aiDraftConfig._compliance) {
+          // Extract risk weight
+          const rw = plain5.match(/(\d+)%\s*(?:risk weight|capital)/i);
+          // Extract provisioning / IFRS9
+          const prov = plain5.match(/(\d+\.\d+)%\s*(?:stage 1|provisioning|ecl)/i);
+          // Extract AML
+          const aml = /aml\s*(?:risk|score)?\s*(?:is|=|:)?\s*(low|medium|high)/i.exec(plain5);
+          aiDraftConfig._compliance = {
+            risk_weight: rw ? rw[1] + '%' : '75%',
+            provisioning: prov ? prov[1] + '%' : '1.5%',
+            aml: aml ? aml[1].toUpperCase() : 'LOW',
+            classification: plain5.toLowerCase().includes('green finance') ? 'Green Finance' : 'Standard',
+          };
+          setTimeout(() => updateAiDraftCard(), 250);
         }
       }
 
