@@ -860,22 +860,39 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
   // Use 'stage 4 complete.' (unique — only in the Stage 4 response message).
   // Must NOT use 'nci ekyc' alone — that string also appears in Stage 4 ask.
   const hasAskedStage4Complete = assistantMsgs.some(m =>
-    m.includes('stage 4 complete.') ||
+    m.includes('stage 4 complete') ||
     m.includes('10-step approval workflow configured') ||
-    (m.includes('nci ekyc · oman credit bureau') && m.includes('muscat municipality'))  // only in stage 4 response
+    m.includes('approval workflow set') ||
+    m.includes('approval workflow configured') ||
+    m.includes('workflow is now configured') ||
+    m.includes('workflow has been configured') ||
+    (m.includes('nci ekyc') && m.includes('muscat municipality')) ||  // only in stage 4 response
+    (m.includes('workflow') && m.includes('10 steps')) ||
+    (m.includes('workflow') && m.includes('10-step') && m.includes('stage 5'))
   )
   // Stage 5 QUESTION marker: Stage 5 compliance ask was shown to user.
   // Use 'shall i apply these compliance parameters' — unique to stage 5 ask message.
   // Do NOT use 'aml risk score' or 'basel iii' — those are in stage 4 response too.
+  // hasAskedStage5 = the Stage 5 compliance question WAS shown to the user.
+  // Also true if the Stage 5 compliance ANSWER was returned (which means user replied yes).
+  // 'stage 5 complete' is in the Stage 5 answer message (compliance applied) → user said yes.
+  // 'compliance parameters applied' / 'basel iii risk weight 75%' also only in Stage 5 answer.
   const hasAskedStage5  = assistantMsgs.some(m =>
     m.includes('shall i apply these compliance parameters') ||
     m.includes('compliance parameters, or do you want to adjust') ||
-    m.includes('stage 5 complete')
+    m.includes('stage 5 complete') ||
+    (m.includes('compliance parameters applied') || (m.includes('basel iii') && m.includes('ifrs9') && m.includes('aml risk score')))
   )
+  // hasAskedConfirm = the STAGE 6 SIMULATION response was already delivered.
+  // Must NOT fire on the Stage 5→6 transition text ("Stage 6 — Simulation. Are you ready...")
+  // because that message does not contain the product_draft or simulation data yet.
+  // Only the actual Stage 6 response contains 'ready to publish' / 'confirm & publish'.
   const hasAskedConfirm = assistantMsgs.some(m =>
     m.includes('ready to publish') || m.includes('confirm &amp; publish') ||
-    m.includes('confirm & publish') || m.includes('stage 6') ||
-    m.includes('click confirm')
+    m.includes('confirm & publish') || m.includes('click confirm') ||
+    // Portfolio projection text appears ONLY in the actual Stage 6 simulation message
+    (m.includes('stage 6') && (m.includes('portfolio target') || m.includes('break-even') || m.includes('nim ~'))) ||
+    (m.includes('stage 6') && m.includes('everything is configured'))
   )
 
   // Product type detection from full conversation context
@@ -1345,7 +1362,22 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         `• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>` +
         `🚀 Everything is configured. Click <strong>Confirm &amp; Publish</strong> to save the full product and make it live on the customer portal.`,
       current_stage: 6, show_roadmap: false, action: 'ready_to_confirm',
-      ui_events: [{ type: 'set_tab', tab: 'ai_config' }],
+      ui_events: [
+        { type: 'set_tab', tab: 'ai_config' },
+        // Seed all config fields into the draft card via set_field events so the
+        // live preview card shows the complete product configuration at Stage 6.
+        { type: 'set_field', field: 'name', value: derivedName },
+        { type: 'set_field', field: 'base_rate', value: baseRateFromCtx },
+        { type: 'set_field', field: 'max_ltv', value: 90 },
+        { type: 'set_field', field: 'max_dbr', value: 55 },
+        { type: 'set_field', field: 'min_term', value: 3 },
+        { type: 'set_field', field: 'max_term', value: 25 },
+        { type: 'set_field', field: 'min_amount', value: 25000 },
+        { type: 'set_field', field: 'max_amount', value: maxAmountFromCtx },
+        { type: 'set_field', field: 'gsas_min_score', value: gsasMin },
+        { type: 'set_field', field: 'green_discount_premium', value: 0.75 },
+        { type: 'set_field', field: 'green_discount_standard', value: 0.5 },
+      ],
       // rules_draft intentionally null here — Stage 3 already saved the full 17-rule set
       // to the thread result. Returning rules_draft here would overwrite with this 12-rule
       // subset. Confirm endpoint loads rules from thread result (Stage 3 saved version).
