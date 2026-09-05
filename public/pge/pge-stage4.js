@@ -416,7 +416,19 @@
 
     try { const d = await API.getTemplates(); _templates = d.templates || []; } catch(_) {}
 
+    // Load workflow: prefer product-specific nodes, fall back to assigned template
+    let loadedFromTemplate = false;
     Model.load(_product);
+    if (Model.nodes.length <= 2 && _product.workflow_template_id) {
+      // Product has no custom nodes but has a template — load that template
+      try {
+        const tplRes = await fetch(`/api/v1/workflow-templates/${_product.workflow_template_id}`).then(r => r.json());
+        if (tplRes.template && tplRes.template.nodes) {
+          Model.applyTemplate(tplRes.template);
+          loadedFromTemplate = true;
+        }
+      } catch(_) {}
+    }
     renderShell();
 
     const svgEl = document.getElementById('wfSvg');

@@ -985,9 +985,16 @@ B.get("/", async (e) => {
 }), B.get("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(t).first();
 	if (!n) return e.json({ error: "Not found" }, 404);
-	let { results: r } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id = ? OR product_id IS NULL ORDER BY category, name").bind(t).all();
+	let { results: r } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id = ? OR product_id IS NULL ORDER BY category, name").bind(t).all(), i = { ...n }, a = [];
+	try {
+		a = JSON.parse(n.workflow_nodes || "[]");
+	} catch {}
+	if (a.length === 0 && n.workflow_template_id) try {
+		let t = await e.env.DB.prepare("SELECT nodes, edges FROM workflow_templates WHERE id = ?").bind(n.workflow_template_id).first();
+		t && (i.workflow_nodes = t.nodes || "[]", i.workflow_edges = t.edges || "[]", i._workflow_from_template = !0);
+	} catch {}
 	return e.json({
-		product: n,
+		product: i,
 		rules: r
 	});
 }), B.post("/", async (e) => {
@@ -1495,65 +1502,310 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 	}
 }), H.post("/products/confirm", async (e) => {
 	try {
-		let { thread_id: t, product_draft: n, rules_draft: r, schema_draft: i, user_id: a = "u001", user_name: o = "Fatima Al-Rashdi" } = await e.req.json();
-		if (t) {
-			let a = await e.env.DB.prepare("SELECT result FROM ai_threads WHERE id = ?").bind(t).first();
-			if (a?.result) try {
-				let e = JSON.parse(a.result);
-				!n && e.product_draft && (n = e.product_draft), !r && e.rules_draft && (r = e.rules_draft), !i && e.schema_draft && (i = e.schema_draft);
+		let t = await e.req.json(), { thread_id: n, product_draft: r, rules_draft: i, schema_draft: a, user_id: o = "u001", user_name: s = "Fatima Al-Rashdi" } = t, c = Array.isArray(t.workflow_nodes) ? t.workflow_nodes : [];
+		if (n) {
+			let t = await e.env.DB.prepare("SELECT result, messages FROM ai_threads WHERE id = ?").bind(n).first();
+			if (t?.result) try {
+				let e = JSON.parse(t.result);
+				!r && e.product_draft && (r = e.product_draft), !i && e.rules_draft && (i = e.rules_draft), !a && e.schema_draft && (a = e.schema_draft);
+			} catch {}
+			if (t?.messages) try {
+				let e = JSON.parse(t.messages).filter((e) => e.role === "assistant").map((e) => typeof e.content == "string" ? e.content : ""), n = e.find((e) => /stage\s+1\s+complete/i.test(e));
+				if (n) {
+					let e = n.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "), t = e.match(/stage\s+1\s+complete[\u2014\u2013\-\.\s]+([A-Z][^,\n]{3,59}),/i) || e.match(/"([^"]{4,60})"/);
+					if (t) {
+						let e = t[1].trim().replace(/[.!]$/, "");
+						/[A-Z]/.test(e) && e.split(" ").length <= 8 && (r ||= {}, r.name = e);
+					}
+				}
+				if (!r?.name || r.name === "Sohar Green Home Finance – GSAS" || r.name === "Green Home Loan – ESG") {
+					let t = e.find((e) => /how about/i.test(e) && /[""""]/.test(e));
+					if (t) {
+						let e = t.match(/[""""']([A-Z][^""""\n]{3,59})[""""']/) || t.match(/"([^"]{4,60})"/);
+						if (e) {
+							let t = e[1].trim().replace(/[.!]$/, "");
+							/[A-Z]/.test(t) && t.split(" ").length <= 8 && r && (r.name = t);
+						}
+					}
+				}
 			} catch {}
 		}
-		if (!n && t) {
-			let a = await e.env.DB.prepare("SELECT messages FROM ai_threads WHERE id = ?").bind(t).first();
-			if (a?.messages) try {
-				let e = JSON.parse(a.messages), t = U("confirm", e.length, e);
-				t.product_draft && (n = t.product_draft, !r && t.rules_draft && (r = t.rules_draft), !i && t.schema_draft && (i = t.schema_draft));
+		if (!r && n) {
+			let t = await e.env.DB.prepare("SELECT messages FROM ai_threads WHERE id = ?").bind(n).first();
+			if (t?.messages) try {
+				let e = JSON.parse(t.messages), n = U("confirm", e.length, e);
+				n.product_draft && (r = n.product_draft, !i && n.rules_draft && (i = n.rules_draft), !a && n.schema_draft && (a = n.schema_draft));
 			} catch {}
 		}
-		if (!n) return e.json({
+		if (!r) return e.json({
 			success: !1,
 			error: "No product draft found. Please complete the AI conversation first."
 		}, 400);
-		let s = L("p"), c = R(), l = {};
-		i && (l.gsas_schema = i);
-		let u = n.clone_from_id ? await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(n.clone_from_id).first() : null, d = n.name || "Green Home Loan – ESG", f = `GHL-${Date.now().toString(36).toUpperCase()}`;
-		await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,\n    green_dbr, min_term, max_term, min_amount, max_amount,\n    gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n    ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors,\n    configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(s, d, f, n.description || u?.description || "", n.category || "home_loan", "draft", n.base_rate || u?.base_rate || 5.5, n.max_ltv || u?.max_ltv || 90, n.max_dbr || u?.max_dbr || 60, n.green_dbr || 55, n.min_term || u?.min_term || 5, n.max_term || u?.max_term || 25, n.min_amount || u?.min_amount || 1e4, n.max_amount || u?.max_amount || 5e5, n.gsas_min_score || 70, n.gsas_premium_score || 85, n.green_discount_premium || .75, n.green_discount_standard || .5, 90, 1, 1, JSON.stringify(n.required_docs || (u ? JSON.parse(u.required_docs || "[]") : [
+		let l = L("p"), u = R(), d = {};
+		a && (d.gsas_schema = a);
+		let f = r.clone_from_id ? await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(r.clone_from_id).first() : null, p = r.name || "Green Home Loan – ESG", m = `GHL-${Date.now().toString(36).toUpperCase()}`;
+		await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,\n    green_dbr, min_term, max_term, min_amount, max_amount,\n    gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n    ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors,\n    configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(l, p, m, r.description || f?.description || "", r.category || "home_loan", "draft", r.base_rate || f?.base_rate || 5.5, r.max_ltv || f?.max_ltv || 90, r.max_dbr || f?.max_dbr || 60, r.green_dbr || 55, r.min_term || f?.min_term || 5, r.max_term || f?.max_term || 25, r.min_amount || f?.min_amount || 1e4, r.max_amount || f?.max_amount || 5e5, r.gsas_min_score || 70, r.gsas_premium_score || 85, r.green_discount_premium || .75, r.green_discount_standard || .5, 90, 1, 1, JSON.stringify(r.required_docs || (f ? JSON.parse(f.required_docs || "[]") : [
 			"salary_cert",
 			"civil_id",
 			"property_deed",
 			"valuation_report",
 			"utility_bill"
-		])), JSON.stringify(n.esg_required_docs || [
+		])), JSON.stringify(r.esg_required_docs || [
 			"gsas_cert",
 			"epc_report",
 			"eia_approval"
-		]), JSON.stringify(n.approved_materials || [
+		]), JSON.stringify(r.approved_materials || [
 			"Green Concrete",
 			"Thermal Insulation",
 			"Solar Panels",
 			"Energy-Efficient Appliances",
 			"Low-E Glass",
 			"Recycled Steel"
-		]), JSON.stringify(n.approved_vendors || [
+		]), JSON.stringify(r.approved_vendors || [
 			"Oman Readymix LLC",
 			"Gulf Insulation Group",
 			"SunTech Oman",
 			"Green Build Oman",
 			"EcoMaterials Oman"
-		]), JSON.stringify(l), 0, 0, 1, a, c, c).run();
-		let p = [];
-		if (r && Array.isArray(r)) for (let t of r) {
+		]), JSON.stringify(d), 0, 0, 1, o, u, u).run();
+		let h = [];
+		if (i && Array.isArray(i)) for (let t of i) {
 			let n = L("r");
-			await e.env.DB.prepare("\n        INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value,\n        threshold_condition, action_on_breach, severity, regulatory_reference, source,\n        ai_confidence, description, is_active, created_by, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n      ").bind(n, s, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach || "reject", t.severity || "hard", t.regulatory_reference || null, "ai_generated", t.ai_confidence || null, t.description || null, 1, a, c).run(), p.push(n);
+			await e.env.DB.prepare("\n        INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value,\n        threshold_condition, action_on_breach, severity, regulatory_reference, source,\n        ai_confidence, description, is_active, created_by, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n      ").bind(n, l, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach || "reject", t.severity || "hard", t.regulatory_reference || null, "ai_generated", t.ai_confidence || null, t.description || null, 1, o, u).run(), h.push(n);
 		}
-		let m = e.env.OPENAI_API_KEY, h = d, g = [], _ = "", v = (n.esg_required_docs || []).length > 0;
-		if (m) try {
+		if (c.length > 2) {
+			let t = [], n = [], r = 80, i = null;
+			for (let e = 0; e < c.length; e++) {
+				let a = c[e], o = a.type === "start" ? "start" : a.type === "end" ? "end" : a.type === "gateway" || a.type === "gateway_ex" ? "gateway_ex" : a.type === "gateway_par" ? "gateway_par" : "task";
+				t.push({
+					id: a.id || `n${e + 1}`,
+					type: o,
+					x: r,
+					y: 260,
+					label: a.label || a.name || `Step ${e + 1}`,
+					label_ar: a.label_ar || a.name_ar || "",
+					role: a.role || (o === "task" ? "any" : null),
+					sla_hours: a.sla_hours || (o === "task" ? 24 : null),
+					description: a.description || a.api_integration || "",
+					department: a.department || "",
+					auto: a.auto || !1
+				}), i && n.push({
+					id: `e${e}`,
+					from: i,
+					to: a.id || `n${e + 1}`,
+					label: a.edge_label || ""
+				}), i = a.id || `n${e + 1}`, r += 220;
+			}
+			await e.env.DB.prepare("UPDATE products SET workflow_nodes = ?, workflow_edges = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(t), JSON.stringify(n), u, l).run();
+		} else await e.env.DB.prepare("UPDATE products SET workflow_nodes = ?, workflow_edges = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify([
+			{
+				id: "wn1",
+				type: "start",
+				x: 80,
+				y: 260,
+				label: "Application Submitted",
+				label_ar: "تقديم الطلب",
+				role: null,
+				sla_hours: null,
+				description: "Customer submits green mortgage application via portal",
+				auto: !0
+			},
+			{
+				id: "wn2",
+				type: "task",
+				x: 300,
+				y: 260,
+				label: "eKYC & AML Screening",
+				label_ar: "فحص الهوية ومكافحة الغسيل",
+				role: "system",
+				sla_hours: 1,
+				description: "Automated identity verification and AML/sanctions screening",
+				auto: !0
+			},
+			{
+				id: "wn3",
+				type: "task",
+				x: 520,
+				y: 260,
+				label: "GSAS Score Verification",
+				label_ar: "التحقق من تقييم GSAS",
+				role: "system",
+				sla_hours: 4,
+				description: "API call to GSAS authority to verify green building score",
+				auto: !0
+			},
+			{
+				id: "wn4",
+				type: "task",
+				x: 740,
+				y: 260,
+				label: "Credit Bureau Check",
+				label_ar: "فحص مكتب الائتمان",
+				role: "system",
+				sla_hours: 1,
+				description: "Automated DBR and credit score check via Al Etihad Credit Bureau",
+				auto: !0
+			},
+			{
+				id: "wn5",
+				type: "gateway_ex",
+				x: 960,
+				y: 260,
+				label: "Eligibility Gate",
+				label_ar: "بوابة الأهلية",
+				role: null,
+				sla_hours: null,
+				description: "DBR ≤ 55%, credit score ≥ 650, GSAS ≥ 70",
+				auto: !1
+			},
+			{
+				id: "wn6",
+				type: "task",
+				x: 1180,
+				y: 160,
+				label: "Risk Officer Review",
+				label_ar: "مراجعة مسؤول المخاطر",
+				role: "risk_officer",
+				sla_hours: 24,
+				description: "Manual review of borderline cases by Risk team",
+				auto: !1
+			},
+			{
+				id: "wn7",
+				type: "task",
+				x: 1180,
+				y: 360,
+				label: "Property Valuation",
+				label_ar: "تقييم العقار",
+				role: "operations",
+				sla_hours: 48,
+				description: "Independent property valuation and LTV confirmation",
+				auto: !1
+			},
+			{
+				id: "wn8",
+				type: "task",
+				x: 1400,
+				y: 260,
+				label: "Compliance Sign-Off",
+				label_ar: "موافقة الامتثال",
+				role: "compliance_officer",
+				sla_hours: 24,
+				description: "Regulatory compliance review and ESG documentation check",
+				auto: !1
+			},
+			{
+				id: "wn9",
+				type: "task",
+				x: 1620,
+				y: 260,
+				label: "Credit Committee Approval",
+				label_ar: "موافقة لجنة الائتمان",
+				role: "product_manager",
+				sla_hours: 48,
+				description: "Final credit committee decision for amounts > OMR 200K",
+				auto: !1
+			},
+			{
+				id: "wn10",
+				type: "task",
+				x: 1840,
+				y: 260,
+				label: "Disbursement & Docs",
+				label_ar: "الصرف والوثائق",
+				role: "operations",
+				sla_hours: 24,
+				description: "Final loan disbursement and documentation signing",
+				auto: !1
+			},
+			{
+				id: "wn11",
+				type: "end",
+				x: 2060,
+				y: 260,
+				label: "Completed",
+				label_ar: "مكتمل",
+				role: null,
+				sla_hours: null,
+				description: "",
+				auto: !1
+			}
+		]), JSON.stringify([
+			{
+				id: "we1",
+				from: "wn1",
+				to: "wn2",
+				label: ""
+			},
+			{
+				id: "we2",
+				from: "wn2",
+				to: "wn3",
+				label: "Identity Verified"
+			},
+			{
+				id: "we3",
+				from: "wn3",
+				to: "wn4",
+				label: "GSAS ≥ 70"
+			},
+			{
+				id: "we4",
+				from: "wn4",
+				to: "wn5",
+				label: ""
+			},
+			{
+				id: "we5",
+				from: "wn5",
+				to: "wn6",
+				label: "Borderline / Exception"
+			},
+			{
+				id: "we6",
+				from: "wn5",
+				to: "wn7",
+				label: "Pre-approved"
+			},
+			{
+				id: "we7",
+				from: "wn6",
+				to: "wn8",
+				label: "Risk Approved"
+			},
+			{
+				id: "we8",
+				from: "wn7",
+				to: "wn8",
+				label: "Valuation Complete"
+			},
+			{
+				id: "we9",
+				from: "wn8",
+				to: "wn9",
+				label: "Compliant"
+			},
+			{
+				id: "we10",
+				from: "wn9",
+				to: "wn10",
+				label: "Approved"
+			},
+			{
+				id: "we11",
+				from: "wn10",
+				to: "wn11",
+				label: ""
+			}
+		]), u, l).run();
+		let g = e.env.OPENAI_API_KEY, _ = p, v = [], y = "", b = (r.esg_required_docs || []).length > 0;
+		if (g) try {
 			let e = `Generate marketing content for a bank loan product. Return JSON only, no markdown:
 {"hero_title":"short compelling tagline (max 6 words)","hero_subtitle":"one sentence benefit statement","card_badge":"2-3 word category badge","highlights":["benefit 1","benefit 2","benefit 3","benefit 4"]}
-Product: ${d}. Description: ${n.description || ""}. Base rate: ${n.base_rate || 5.5}%.${v ? ` Green discount: up to ${n.green_discount_premium || .75}% for GSAS score ≥${n.gsas_premium_score || 85}. ESG/green product.` : ""}`, t = await fetch("https://api.openai.com/v1/chat/completions", {
+Product: ${p}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 5.5}%.${b ? ` Green discount: up to ${r.green_discount_premium || .75}% for GSAS score ≥${r.gsas_premium_score || 85}. ESG/green product.` : ""}`, t = await fetch("https://api.openai.com/v1/chat/completions", {
 				method: "POST",
 				headers: {
-					Authorization: `Bearer ${m}`,
+					Authorization: `Bearer ${g}`,
 					"Content-Type": "application/json"
 				},
 				body: JSON.stringify({
@@ -1565,50 +1817,50 @@ Product: ${d}. Description: ${n.description || ""}. Base rate: ${n.base_rate || 
 					temperature: .6,
 					max_tokens: 300
 				})
-			}), r = await t.json();
+			}), n = await t.json();
 			if (t.ok) {
-				let e = r.choices[0].message.content.match(/\{[\s\S]*\}/);
+				let e = n.choices[0].message.content.match(/\{[\s\S]*\}/);
 				if (e) {
 					let t = JSON.parse(e[0]);
-					h = t.hero_title || h, g = t.highlights || [], _ = t.card_badge || "";
+					_ = t.hero_title || _, v = t.highlights || [], y = t.card_badge || "";
 				}
 			}
 		} catch {}
-		g.length || (v ? (g = [
-			`Up to ${n.green_discount_premium || .75}% rate discount`,
+		v.length || (b ? (v = [
+			`Up to ${r.green_discount_premium || .75}% rate discount`,
 			"GSAS-certified properties only",
 			"Supports Oman Vision 2040",
 			"Maker-checker ESG approval"
-		], _ = "ESG Premium") : g = [
-			`From ${n.base_rate || 5.5}% per annum`,
-			`Terms up to ${n.max_term || 25} years`,
-			`Up to OMR ${Math.round((n.max_amount || 5e5) / 1e3)}K financing`
+		], y = "ESG Premium") : v = [
+			`From ${r.base_rate || 5.5}% per annum`,
+			`Terms up to ${r.max_term || 25} years`,
+			`Up to OMR ${Math.round((r.max_amount || 5e5) / 1e3)}K financing`
 		]);
-		let y = p.length > 0 ? 6 : 1;
-		return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, pge_stage=?, updated_at=? WHERE id=?").bind(+!!v, h, JSON.stringify(g), _, c, y, c, s).run(), t && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(s, JSON.stringify({
-			product_id: s,
-			rule_ids: p
-		}), c, t).run(), await z(e.env.DB, {
-			userId: a,
-			userName: o,
+		let x = h.length > 0 ? 6 : 1;
+		return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, pge_stage=?, updated_at=? WHERE id=?").bind(+!!b, _, JSON.stringify(v), y, u, x, u, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({
+			product_id: l,
+			rule_ids: h
+		}), u, n).run(), await z(e.env.DB, {
+			userId: o,
+			userName: s,
 			userRole: "product_manager",
 			action: "PRODUCT_CREATED_BY_AI",
 			entityType: "product",
-			entityId: s,
+			entityId: l,
 			details: {
-				name: d,
-				rules_created: p.length,
-				cloned_from: n.clone_from_id || null,
-				thread_id: t,
+				name: p,
+				rules_created: h.length,
+				cloned_from: r.clone_from_id || null,
+				thread_id: n,
 				portal_visible: !0
 			},
 			source: "ai_generated"
 		}), e.json({
 			success: !0,
-			product_id: s,
-			product_name: d,
-			rule_ids: p,
-			portal_hero_title: h,
+			product_id: l,
+			product_name: p,
+			rule_ids: h,
+			portal_hero_title: _,
 			portal_visible: !0
 		});
 	} catch (t) {
@@ -2633,6 +2885,31 @@ function U(e, t, n) {
 				if (t) {
 					let e = t[1].trim().replace(/[.!]$/, "");
 					/[A-Z]/.test(e) && e.split(" ").length <= 8 && (n = e);
+				}
+			}
+		}
+		if (n === "Sohar Green Home Finance – GSAS") for (let e of o) {
+			if (!/name|call|title|call it|how about|suggest/i.test(e)) continue;
+			let t = [...e.matchAll(/[""""']([A-Z][^""""\n]{3,59})[""""']/g)];
+			for (let e of t) {
+				let t = e[1].trim().replace(/[.!]$/, "");
+				if (/[A-Z]/.test(t) && t.split(" ").length >= 2 && t.split(" ").length <= 7) {
+					n = t;
+					break;
+				}
+			}
+			if (n !== "Sohar Green Home Finance – GSAS") break;
+		}
+		if (n === "Sohar Green Home Finance – GSAS") {
+			let e = a.filter((e) => e.role === "user").map((e) => e.content || "");
+			for (let t of e) {
+				let e = t.match(/(?:call(?:\s+it)?|name(?:\s+it)?|let'?s\s+(?:go\s+with|call\s+it)|use)\s+[""]?([A-Z][A-Za-z\s\-–&]{3,59})[""]?/i) || t.match(/^[""]([A-Z][A-Za-z\s\-–&]{3,59})[""]$/);
+				if (e) {
+					let t = e[1].trim().replace(/[.!",]$/, "");
+					if (t.split(" ").length >= 2 && t.split(" ").length <= 8) {
+						n = t;
+						break;
+					}
 				}
 			}
 		}
@@ -5296,7 +5573,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await I.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "c1da887";
+var at = "dc737ef";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

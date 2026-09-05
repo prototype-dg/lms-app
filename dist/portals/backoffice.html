@@ -2034,6 +2034,17 @@ async function confirmAiProduct(productId) {
         esg_required_docs: ['gsas_cert','epc_report','eia_approval'],
       }, aiDraftConfig);
     }
+    // ALWAYS overlay aiDraftConfig.name — it's the user-confirmed name extracted from
+    // the Stage 1 completion message (e.g. "Stage 1 complete — EcoElite Home Finance").
+    // aiProductDraft.name may be the GPT-generated default; aiDraftConfig.name is always
+    // the exact name the user approved during the conversation.
+    if (body.product_draft && aiDraftConfig.name) {
+      body.product_draft.name = aiDraftConfig.name;
+    }
+    // Also send the workflow nodes accumulated during Stage 4 so the backend can persist them.
+    if (aiDraftWorkflow && aiDraftWorkflow.length > 2) {
+      body.workflow_nodes = aiDraftWorkflow;
+    }
     // Also send locally-accumulated rules and schema as a fallback —
     // backend prefers thread result but uses these if thread is missing them.
     if (aiDraftRules && aiDraftRules.length) body.rules_draft = aiDraftRules;

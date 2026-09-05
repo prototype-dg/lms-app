@@ -338,24 +338,64 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
   }
 })
 
-// ── Confirm product draft — saves to DB ──────────────────────────────────
+  // ── Confirm product draft — saves to DB ──────────────────────────────────
 app.post('/products/confirm', async (c) => {
   try {
   const body = await c.req.json() as any
   let { thread_id, product_draft, rules_draft, schema_draft, user_id = 'u001', user_name = 'Fatima Al-Rashdi' } = body
+  // workflow_nodes may be sent from the frontend (aiDraftWorkflow accumulated during Stage 4)
+  let frontendWorkflowNodes: any[] = Array.isArray(body.workflow_nodes) ? body.workflow_nodes : []
 
   // Always load thread result to fill in any missing drafts.
   // product_draft may be passed in body (from aiProductDraft client state),
   // but rules_draft and schema_draft are usually NOT sent from the client —
   // they must be loaded from the thread's saved result.
   if (thread_id) {
-    const thread = await c.env.DB.prepare('SELECT result FROM ai_threads WHERE id = ?').bind(thread_id).first() as any
+    const thread = await c.env.DB.prepare('SELECT result, messages FROM ai_threads WHERE id = ?').bind(thread_id).first() as any
     if (thread?.result) {
       try {
         const saved = JSON.parse(thread.result)
         if (!product_draft && saved.product_draft) product_draft = saved.product_draft
         if (!rules_draft  && saved.rules_draft)   rules_draft  = saved.rules_draft
         if (!schema_draft && saved.schema_draft)  schema_draft = saved.schema_draft
+      } catch {}
+    }
+    // Try to extract confirmed product name directly from thread messages — more reliable
+    // than what GPT emitted in product_draft.name (which defaults to the demo name).
+    // Scan assistant messages for "Stage 1 complete — [Name]" pattern.
+    if (thread?.messages) {
+      try {
+        const msgs = JSON.parse(thread.messages)
+        const assistantMsgs: string[] = msgs
+          .filter((m: any) => m.role === 'assistant')
+          .map((m: any) => typeof m.content === 'string' ? m.content : '')
+        const stage1Msg = assistantMsgs.find((m: string) => /stage\s+1\s+complete/i.test(m))
+        if (stage1Msg) {
+          const plain = stage1Msg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+          const cm = plain.match(/stage\s+1\s+complete[\u2014\u2013\-\.\s]+([A-Z][^,\n]{3,59}),/i)
+            || plain.match(/"([^"]{4,60})"/)
+          if (cm) {
+            const candidate = cm[1].trim().replace(/[.!]$/, '')
+            if (/[A-Z]/.test(candidate) && candidate.split(' ').length <= 8) {
+              // This is the confirmed name — always use it over any product_draft.name
+              if (!product_draft) product_draft = {}
+              product_draft.name = candidate
+            }
+          }
+        }
+        // Strategy 2: "How about X?" suggestion that user confirmed
+        if (!product_draft?.name || product_draft.name === 'Sohar Green Home Finance – GSAS' || product_draft.name === 'Green Home Loan – ESG') {
+          const suggMsg = assistantMsgs.find((m: string) => /how about/i.test(m) && /[""""]/.test(m))
+          if (suggMsg) {
+            const sm = suggMsg.match(/[""""']([A-Z][^""""\n]{3,59})[""""']/) || suggMsg.match(/"([^"]{4,60})"/)
+            if (sm) {
+              const candidate = sm[1].trim().replace(/[.!]$/, '')
+              if (/[A-Z]/.test(candidate) && candidate.split(' ').length <= 8) {
+                if (product_draft) product_draft.name = candidate
+              }
+            }
+          }
+        }
       } catch {}
     }
   }
@@ -445,6 +485,82 @@ app.post('/products/confirm', async (c) => {
       ).run()
       ruleIds.push(ruleId)
     }
+  }
+
+  // ── Save workflow to products table ────────────────────────────────────────
+  // Convert the frontend aiDraftWorkflow nodes (canonical 11-step green mortgage list)
+  // into PGE canvas format (nodes with x/y layout, edges array) and write to DB.
+  // The PGE Workflow Canvas reads workflow_nodes + workflow_edges from this product row.
+  if (frontendWorkflowNodes.length > 2) {
+    // Lay out nodes in a horizontal chain with vertical offsets for branching.
+    // Each node object from the frontend has: { id, type, label, role, sla_hours, api_integration, department, description }
+    const canvasNodes: any[] = []
+    const canvasEdges: any[] = []
+    const xStep = 220
+    const baseY = 260
+    let xCur = 80
+    let prevId: string | null = null
+    for (let i = 0; i < frontendWorkflowNodes.length; i++) {
+      const fn = frontendWorkflowNodes[i]
+      const nodeType = fn.type === 'start' ? 'start'
+        : fn.type === 'end' ? 'end'
+        : (fn.type === 'gateway' || fn.type === 'gateway_ex') ? 'gateway_ex'
+        : fn.type === 'gateway_par' ? 'gateway_par'
+        : 'task'
+      canvasNodes.push({
+        id: fn.id || `n${i + 1}`,
+        type: nodeType,
+        x: xCur,
+        y: baseY,
+        label: fn.label || fn.name || `Step ${i + 1}`,
+        label_ar: fn.label_ar || fn.name_ar || '',
+        role: fn.role || (nodeType === 'task' ? 'any' : null),
+        sla_hours: fn.sla_hours || (nodeType === 'task' ? 24 : null),
+        description: fn.description || fn.api_integration || '',
+        department: fn.department || '',
+        auto: fn.auto || false,
+      })
+      if (prevId) {
+        canvasEdges.push({ id: `e${i}`, from: prevId, to: fn.id || `n${i + 1}`, label: fn.edge_label || '' })
+      }
+      prevId = fn.id || `n${i + 1}`
+      xCur += xStep
+    }
+    await c.env.DB.prepare(
+      `UPDATE products SET workflow_nodes = ?, workflow_edges = ?, updated_at = ? WHERE id = ?`
+    ).bind(JSON.stringify(canvasNodes), JSON.stringify(canvasEdges), ts, id).run()
+  } else {
+    // No frontend workflow nodes — seed the canonical 10-step Green Mortgage Approval workflow
+    // so the PGE canvas is not blank when the product manager opens it after AI creation.
+    const defaultNodes = [
+      { id:'wn1', type:'start',     x:80,   y:260, label:'Application Submitted',    label_ar:'تقديم الطلب',            role:null,                   sla_hours:null, description:'Customer submits green mortgage application via portal', auto:true },
+      { id:'wn2', type:'task',      x:300,  y:260, label:'eKYC & AML Screening',     label_ar:'فحص الهوية ومكافحة الغسيل', role:'system',             sla_hours:1,   description:'Automated identity verification and AML/sanctions screening', auto:true },
+      { id:'wn3', type:'task',      x:520,  y:260, label:'GSAS Score Verification',  label_ar:'التحقق من تقييم GSAS',   role:'system',               sla_hours:4,   description:'API call to GSAS authority to verify green building score', auto:true },
+      { id:'wn4', type:'task',      x:740,  y:260, label:'Credit Bureau Check',      label_ar:'فحص مكتب الائتمان',      role:'system',               sla_hours:1,   description:'Automated DBR and credit score check via Al Etihad Credit Bureau', auto:true },
+      { id:'wn5', type:'gateway_ex',x:960,  y:260, label:'Eligibility Gate',         label_ar:'بوابة الأهلية',          role:null,                   sla_hours:null, description:'DBR ≤ 55%, credit score ≥ 650, GSAS ≥ 70', auto:false },
+      { id:'wn6', type:'task',      x:1180, y:160, label:'Risk Officer Review',      label_ar:'مراجعة مسؤول المخاطر',   role:'risk_officer',          sla_hours:24,  description:'Manual review of borderline cases by Risk team', auto:false },
+      { id:'wn7', type:'task',      x:1180, y:360, label:'Property Valuation',       label_ar:'تقييم العقار',           role:'operations',            sla_hours:48,  description:'Independent property valuation and LTV confirmation', auto:false },
+      { id:'wn8', type:'task',      x:1400, y:260, label:'Compliance Sign-Off',      label_ar:'موافقة الامتثال',        role:'compliance_officer',    sla_hours:24,  description:'Regulatory compliance review and ESG documentation check', auto:false },
+      { id:'wn9', type:'task',      x:1620, y:260, label:'Credit Committee Approval',label_ar:'موافقة لجنة الائتمان',   role:'product_manager',       sla_hours:48,  description:'Final credit committee decision for amounts > OMR 200K', auto:false },
+      { id:'wn10',type:'task',      x:1840, y:260, label:'Disbursement & Docs',      label_ar:'الصرف والوثائق',         role:'operations',            sla_hours:24,  description:'Final loan disbursement and documentation signing', auto:false },
+      { id:'wn11',type:'end',       x:2060, y:260, label:'Completed',                label_ar:'مكتمل',                  role:null,                   sla_hours:null, description:'', auto:false },
+    ]
+    const defaultEdges = [
+      { id:'we1', from:'wn1', to:'wn2', label:'' },
+      { id:'we2', from:'wn2', to:'wn3', label:'Identity Verified' },
+      { id:'we3', from:'wn3', to:'wn4', label:'GSAS ≥ 70' },
+      { id:'we4', from:'wn4', to:'wn5', label:'' },
+      { id:'we5', from:'wn5', to:'wn6', label:'Borderline / Exception' },
+      { id:'we6', from:'wn5', to:'wn7', label:'Pre-approved' },
+      { id:'we7', from:'wn6', to:'wn8', label:'Risk Approved' },
+      { id:'we8', from:'wn7', to:'wn8', label:'Valuation Complete' },
+      { id:'we9', from:'wn8', to:'wn9', label:'Compliant' },
+      { id:'we10',from:'wn9', to:'wn10',label:'Approved' },
+      { id:'we11',from:'wn10',to:'wn11',label:'' },
+    ]
+    await c.env.DB.prepare(
+      `UPDATE products SET workflow_nodes = ?, workflow_edges = ?, updated_at = ? WHERE id = ?`
+    ).bind(JSON.stringify(defaultNodes), JSON.stringify(defaultEdges), ts, id).run()
   }
 
   // Auto-publish: generate portal marketing content and set portal_visible=1
@@ -1330,6 +1446,41 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         if (qm) {
           const candidate = qm[1].trim().replace(/[.!]$/, '')
           if (/[A-Z]/.test(candidate) && candidate.split(' ').length <= 8) derivedName = candidate
+        }
+      }
+    }
+
+    // Strategy 4: scan assistant messages for any quoted name that starts with an uppercase
+    // word and appears in a naming/suggestion context (broader fallback)
+    if (derivedName === 'Sohar Green Home Finance – GSAS') {
+      for (const am of assistantMsgs) {
+        if (!/name|call|title|call it|how about|suggest/i.test(am)) continue
+        const matches = [...am.matchAll(/[""""']([A-Z][^""""\n]{3,59})[""""']/g)]
+        for (const mm of matches) {
+          const candidate = mm[1].trim().replace(/[.!]$/, '')
+          // Must look like a product name: 2–7 words, title-case start, no sentence enders
+          if (/[A-Z]/.test(candidate) && candidate.split(' ').length >= 2 && candidate.split(' ').length <= 7) {
+            derivedName = candidate
+            break
+          }
+        }
+        if (derivedName !== 'Sohar Green Home Finance – GSAS') break
+      }
+    }
+
+    // Strategy 5: scan user messages — user may have typed the name directly
+    // e.g. "call it EcoElite Home Finance" or "name it Sohar Green Horizon"
+    if (derivedName === 'Sohar Green Home Finance – GSAS') {
+      const rawUserMsgs = history.filter((m: any) => m.role === 'user').map((m: any) => m.content || '')
+      for (const um of rawUserMsgs) {
+        const mm = um.match(/(?:call(?:\s+it)?|name(?:\s+it)?|let'?s\s+(?:go\s+with|call\s+it)|use)\s+[""]?([A-Z][A-Za-z\s\-–&]{3,59})[""]?/i)
+          || um.match(/^[""]([A-Z][A-Za-z\s\-–&]{3,59})[""]$/)
+        if (mm) {
+          const candidate = mm[1].trim().replace(/[.!",]$/, '')
+          if (candidate.split(' ').length >= 2 && candidate.split(' ').length <= 8) {
+            derivedName = candidate
+            break
+          }
         }
       }
     }

@@ -13,12 +13,33 @@ app.get('/', async (c) => {
 
 app.get('/:id', async (c) => {
   const id = c.req.param('id')
-  const product = await c.env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(id).first()
+  const product = await c.env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(id).first() as any
   if (!product) return c.json({ error: 'Not found' }, 404)
   const { results: rules } = await c.env.DB.prepare(
     'SELECT * FROM rules WHERE product_id = ? OR product_id IS NULL ORDER BY category, name'
   ).bind(id).all()
-  return c.json({ product, rules })
+
+  // If product has no workflow_nodes of its own but has a template assigned,
+  // inline the template nodes/edges so the PGE canvas can render without an
+  // extra round-trip (pge-stage4.js still fetches the template as a fallback,
+  // but this avoids a flash of the blank Start→End canvas on load).
+  const productData: any = { ...product }
+  let wfNodes: any[] = []
+  try { wfNodes = JSON.parse(product.workflow_nodes || '[]') } catch(_) {}
+  if (wfNodes.length === 0 && product.workflow_template_id) {
+    try {
+      const tpl = await c.env.DB.prepare(
+        'SELECT nodes, edges FROM workflow_templates WHERE id = ?'
+      ).bind(product.workflow_template_id).first() as any
+      if (tpl) {
+        productData.workflow_nodes = tpl.nodes || '[]'
+        productData.workflow_edges = tpl.edges || '[]'
+        productData._workflow_from_template = true
+      }
+    } catch(_) {}
+  }
+
+  return c.json({ product: productData, rules })
 })
 
 app.post('/', async (c) => {
