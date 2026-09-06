@@ -1401,33 +1401,28 @@ function renderProjectList(){
       const gsas = p.gsas_overall_score||p.gsas_score||0;
       const rate = gsas>=85?'4.75':gsas>=70?'5.00':'5.25';
       const isDemo = p.is_demo_project===1||p.is_demo_project===true;
-      const hasImg = !!(p.hero_image_url);
-      const isBase64 = hasImg && p.hero_image_url.startsWith('data:');
-      const imgBg = hasImg && !isBase64
-        ?`background:url('${p.hero_image_url}') center/cover no-repeat`
-        :`background:${GRADS[i%GRADS.length]}`;
       const priceFrom = p.price_from?'OMR '+Number(p.price_from).toLocaleString():'Price TBC';
+      const priceTo   = p.price_to  ?'OMR '+Number(p.price_to).toLocaleString():'';
+      const headerBg  = isDemo?'linear-gradient(135deg,#0d4a26,#0a7c4e)':'linear-gradient(135deg,#002b4a,#007F86)';
       return `<div class="prop-card${isDemo?' esg-product':''}" onclick="openProjectPanel('${p.id}')">
         ${isDemo?'<div class="esg-hot-ribbon">🌿 GSAS Demo · Green Finance</div>':''}
-        <div class="prop-img" style="${imgBg};height:190px">
-          ${isBase64?`<img src="${p.hero_image_url}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" loading="lazy"/>`:
-            !hasImg?'<div style="font-size:48px">🏡</div>':''}
-          <div class="prop-ribbon" style="background:${isDemo?'#16845B':'var(--sea)'};color:#fff">
-            ${isDemo?'Eco Project':p.type||'Green'}
+        <div style="background:${headerBg};padding:18px 20px 14px;position:relative;flex-shrink:0">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:4px">${isDemo?'ECO PROJECT':(p.type||'green').toUpperCase()}</div>
+          <div style="font-size:17px;font-weight:800;color:#fff;line-height:1.25;margin-bottom:6px">${p.name}</div>
+          <div style="font-size:14px;font-weight:700;color:#35C6C4">${priceFrom}${priceTo?' – '+priceTo:''}</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">
+            <span style="font-size:11px;color:rgba(255,255,255,.7)">🏠 ${p.total_units||0} units</span>
+            ${gsas?`<span style="font-size:11px;color:#6ee7b7">✦ GSAS ${gsas}</span>`:''}
+            ${p.epc_rating?`<span style="font-size:11px;color:rgba(255,255,255,.7)">EPC ${p.epc_rating}</span>`:''}
+            <span style="font-size:11px;color:#fbbf24">${rate}% p.a.</span>
           </div>
+          <div style="position:absolute;top:10px;right:14px;font-size:32px;opacity:.15">${isDemo?'🌿':'🏡'}</div>
         </div>
         <div class="prop-body">
-          ${isDemo?'<span class="esg-card-badge">✦ GSAS Certified</span>':''}
-          <div class="prop-price">${priceFrom}${p.price_to?' – OMR '+Number(p.price_to).toLocaleString():''}</div>
-          <div class="prop-name">${p.name}</div>
-          <div class="prop-loc">📍 ${p.location||'Muscat, Oman'}</div>
-          <div class="prop-tags">
-            <span class="tag">${p.total_units||0} units</span>
-            ${gsas?`<span class="tag">GSAS ${gsas}</span>`:''}
-            ${p.epc_rating?`<span class="tag">EPC ${p.epc_rating}</span>`:''}
-          </div>
+          <div class="prop-loc" style="margin-bottom:10px">📍 ${p.location||'Muscat, Oman'}</div>
+          ${p.marketing_tagline?`<div style="font-size:11px;color:var(--g500);line-height:1.5;margin-bottom:10px">${p.marketing_tagline}</div>`:''}
           <div class="prop-foot">
-            <span class="gsas-badge">${isDemo?'🏆 Demo':'GSAS '+gsas}</span>
+            <span class="gsas-badge">${isDemo?'🏆 Demo':'GSAS '+(gsas||'—')}</span>
             <span class="rate-badge" style="${isDemo?'background:rgba(22,132,91,.12);color:#16845B':''}">${rate}% p.a.</span>
           </div>
           <div style="display:flex;gap:6px;margin-top:10px">
@@ -1908,9 +1903,12 @@ function renderWiz(){
 }
 
 function wizNext(){
-  // Collect fields before advancing
   collectStepData(wizStep);
-  if(wizStep===4) return; // step 4 handled by liveness
+  // Step 4 (Identity): require both ID upload and liveness check
+  if(wizStep===4){
+    if(!wizState.idVerified)  { toast('⚠️ Please upload and verify your Civil ID to continue','warn'); return; }
+    if(!wizState.livenessPassed){ toast('⚠️ Please complete the liveness check to continue','warn'); return; }
+  }
   if(wizStep<7){ wizStep++; renderWiz(); }
   else submitApp();
 }
