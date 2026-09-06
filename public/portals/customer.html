@@ -1463,13 +1463,6 @@ async function initPropMap(){
     attribution:'© OpenStreetMap contributors', maxZoom:19
   }).addTo(propMap);
 
-  // Custom pane for project name labels — z:650 sits above markerPane (z:600)
-  // so label divs always receive clicks before unit dot markers beneath them.
-  // The pane wrapper itself is pointer-events:none; each label div opts back in.
-  propMap.createPane('labelPane');
-  propMap.getPane('labelPane').style.zIndex = 650;
-  propMap.getPane('labelPane').style.pointerEvents = 'none';
-
   try{
     const r = await fetch('/api/v1/portal/projects');
     const d = await r.json();
@@ -1513,30 +1506,18 @@ async function initPropMap(){
         ).addTo(propMap);
         rect.on('click', flyToProj);
 
-        // Label marker at rectangle centre — always clickable, no tooltip pointer-event issues
-        const centre = projBounds.getCenter();
-        const labelIcon = L.divIcon({
-          className: '',
-          html: `<div onclick="event.stopPropagation();(function(){var b=propMapProjectBounds['${proj.id}'];if(b&&propMap)propMap.flyToBounds(b,{padding:[30,30],maxZoom:19,duration:0.75});})()" style="
-            transform:translate(-50%,-50%);
-            background:#fff;
-            border:1.5px solid ${pcol};
-            border-radius:6px;
-            padding:4px 10px;
-            font-size:12px;
-            font-weight:700;
-            color:#003B5C;
-            white-space:nowrap;
-            cursor:pointer;
-            box-shadow:0 2px 6px rgba(0,0,0,.18);
-            user-select:none;
-            pointer-events:auto;
-          ">${isDemo?'🌿 ':''}${proj.name}<br><span style="font-size:10px;font-weight:400;color:#007F86">Click to zoom in</span></div>`,
-          iconSize:   [0, 0],
-          iconAnchor: [0, 0],
-        });
-        const labelMarker = L.marker(centre, {icon:labelIcon, interactive:true, pane:'labelPane'}).addTo(propMap);
-        labelMarker.on('click', (e)=>{ L.DomEvent.stopPropagation(e); flyToProj(); });
+        // Plain-HTML zoom button added to the overlay panel (z:1000, above all Leaflet panes)
+        const btnPanel = document.getElementById('map-proj-btns');
+        if(btnPanel){
+          const btn = document.createElement('button');
+          btn.title = `Zoom to ${proj.name}`;
+          btn.style.cssText = `display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid ${pcol};border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#003B5C;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.18);transition:background .15s,color .15s`;
+          btn.innerHTML = `<span style="font-size:14px">🔍</span>${isDemo?'🌿 ':''}${proj.name}`;
+          btn.onmouseenter = ()=>{ btn.style.background=pcol; btn.style.color='#fff'; };
+          btn.onmouseleave = ()=>{ btn.style.background='#fff'; btn.style.color='#003B5C'; };
+          btn.onclick = flyToProj;
+          btnPanel.appendChild(btn);
+        }
       }
 
       units.forEach(u=>{
