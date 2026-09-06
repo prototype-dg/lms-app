@@ -2729,58 +2729,81 @@ function stepFinancing(){
   </div>`;
 
   // ── Savings comparison vs standard (shown when green product selected) ──
-  let comparePanel = '';
-  if(sIsDemo && homeProds.length >= 2){
-    // Find the standard (non-demo) product to compare against
-    const stdProd = homeProds.find(p => !(p.is_demo_product === 1 || p.is_demo_product === true));
-    if(stdProd){
-      const loanAmt  = propVal - defaultDp;
-      const ten      = tenure;
-      const gRate    = effRate;
-      const sRate    = prodEffRate(stdProd, gsas);
-      const gMthly   = pmt(loanAmt, gRate, ten*12);
-      const sMthly   = pmt(loanAmt, sRate, ten*12);
-      const gTotal   = gMthly * ten * 12;
-      const sTotal   = sMthly * ten * 12;
-      const lifeSave = Math.max(0, sTotal - gTotal);
-      const mthSave  = Math.max(0, sMthly - gMthly);
+  // Static product-property rows are rendered at template time.
+  // Loan-amount-dependent rows (monthly payment, total interest, lifetime saving)
+  // are left as "—" placeholders and filled in by wizCalcFinance() on every slider move.
+  const stdProdForCompare = sIsDemo
+    ? (homeProds.find(p => !(p.is_demo_product === 1 || p.is_demo_product === true)) || null)
+    : null;
 
-      if(lifeSave > 0){
-        comparePanel = `
-        <div class="saving-hero" style="margin-bottom:16px">
-          <div style="font-size:12px;opacity:.8;margin-bottom:8px">💰 ${selProd.name} vs. ${stdProd.name} over ${ten} years</div>
-          <div class="saving-hero-amt">${fmtOMR(lifeSave)}</div>
-          <div class="saving-hero-lbl">estimated lifetime saving (all rates from DB)</div>
-          <div style="font-size:11px;opacity:.75;margin-top:8px">${fmtOMR(mthSave)} less per month · ${gRate.toFixed(2)}% vs ${sRate.toFixed(2)}%</div>
-        </div>
+  const comparePanel = (sIsDemo && stdProdForCompare) ? (() => {
+    const sRate0   = prodEffRate(stdProdForCompare, gsas);
+    const sDisc0   = parseFloat(stdProdForCompare.base_rate) - sRate0;
+    return `
+    <!-- Saving hero — numbers filled by wizCalcFinance() on every slider move -->
+    <div id="wa-saving-hero" class="saving-hero" style="margin-bottom:16px">
+      <div id="wa-saving-hero-label" style="font-size:12px;opacity:.8;margin-bottom:8px">💰 ${selProd.name} vs. ${stdProdForCompare.name}</div>
+      <div class="saving-hero-amt" id="wa-saving-hero-amt">—</div>
+      <div class="saving-hero-lbl">estimated lifetime saving (adjusts with loan amount &amp; tenure)</div>
+      <div id="wa-saving-hero-sub" style="font-size:11px;opacity:.75;margin-top:8px">—</div>
+    </div>
 
-        <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">📊 vs. Standard Offering</div>
-        <div class="prod-compare">
-          <div class="prod-compare-head">
-            <div></div>
-            <div class="col-sel">🌿 ${selProd.name}</div>
-            <div>${stdProd.name}</div>
-          </div>
-          ${[
-            ['Effective APR',    gRate.toFixed(2)+'%',                          sRate.toFixed(2)+'%',                          gRate < sRate],
-            ['Base Rate',        parseFloat(selProd.base_rate).toFixed(2)+'%',  parseFloat(stdProd.base_rate).toFixed(2)+'%',  parseFloat(selProd.base_rate)<=parseFloat(stdProd.base_rate)],
-            ['Green Discount',   discApplied>0?'−'+discApplied.toFixed(2)+'%':'None', prodEffRate(stdProd,gsas)<parseFloat(stdProd.base_rate)?'−'+(parseFloat(stdProd.base_rate)-prodEffRate(stdProd,gsas)).toFixed(2)+'%':'None', discApplied>0],
-            ['Max LTV',          selProd.max_ltv+'%',                           stdProd.max_ltv+'%',                           parseFloat(selProd.max_ltv)>=parseFloat(stdProd.max_ltv)],
-            ['Max DBR',          selProd.max_dbr+'%',                           stdProd.max_dbr+'%',                           parseFloat(selProd.max_dbr)>=parseFloat(stdProd.max_dbr)],
-            ['Max Tenure',       selProd.max_term+' yrs',                       stdProd.max_term+' yrs',                       parseInt(selProd.max_term)>=parseInt(stdProd.max_term)],
-            ['Monthly Payment',  fmtOMR(gMthly),                                fmtOMR(sMthly),                                gMthly < sMthly],
-            ['Total Interest',   fmtOMR(gTotal - loanAmt),                      fmtOMR(sTotal - loanAmt),                      gTotal < sTotal],
-            ['Lifetime Saving',  fmtOMR(lifeSave)+' 🌿',                        '—',                                           true],
-          ].map(([lbl, v1, v2, c1Better]) => `
-          <div class="prod-compare-row">
-            <div class="row-lbl">${lbl}</div>
-            <div class="col-sel ${c1Better?'val-better':''}">${v1}</div>
-            <div class="${c1Better?'val-worse':''}">${v2}</div>
-          </div>`).join('')}
-        </div>`;
-      }
-    }
-  }
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">📊 vs. Standard Offering</div>
+    <div class="prod-compare" data-std-id="${stdProdForCompare.id}">
+      <div class="prod-compare-head">
+        <div></div>
+        <div class="col-sel">🌿 ${selProd.name}</div>
+        <div>${stdProdForCompare.name}</div>
+      </div>
+      <!-- Rate/limit rows: static product properties -->
+      <div class="prod-compare-row">
+        <div class="row-lbl">Effective APR</div>
+        <div class="col-sel ${effRate < sRate0 ? 'val-better' : ''}">${effRate.toFixed(2)}%</div>
+        <div class="${effRate < sRate0 ? 'val-worse' : ''}">${sRate0.toFixed(2)}%</div>
+      </div>
+      <div class="prod-compare-row">
+        <div class="row-lbl">Base Rate</div>
+        <div class="col-sel ${parseFloat(selProd.base_rate)<=parseFloat(stdProdForCompare.base_rate)?'val-better':''}">${parseFloat(selProd.base_rate).toFixed(2)}%</div>
+        <div class="${parseFloat(selProd.base_rate)<=parseFloat(stdProdForCompare.base_rate)?'val-worse':''}">${parseFloat(stdProdForCompare.base_rate).toFixed(2)}%</div>
+      </div>
+      <div class="prod-compare-row">
+        <div class="row-lbl">Green Discount</div>
+        <div class="col-sel ${discApplied>0?'val-better':''}">${discApplied>0?'−'+discApplied.toFixed(2)+'%':'None'}</div>
+        <div class="${sDisc0>0?'val-better':''}">${sDisc0>0?'−'+sDisc0.toFixed(2)+'%':'None'}</div>
+      </div>
+      <div class="prod-compare-row">
+        <div class="row-lbl">Max LTV</div>
+        <div class="col-sel ${parseFloat(selProd.max_ltv)>=parseFloat(stdProdForCompare.max_ltv)?'val-better':''}">${selProd.max_ltv}%</div>
+        <div>${stdProdForCompare.max_ltv}%</div>
+      </div>
+      <div class="prod-compare-row">
+        <div class="row-lbl">Max DBR</div>
+        <div class="col-sel ${parseFloat(selProd.max_dbr)>=parseFloat(stdProdForCompare.max_dbr)?'val-better':''}">${selProd.max_dbr}%</div>
+        <div>${stdProdForCompare.max_dbr}%</div>
+      </div>
+      <div class="prod-compare-row">
+        <div class="row-lbl">Max Tenure</div>
+        <div class="col-sel ${parseInt(selProd.max_term)>=parseInt(stdProdForCompare.max_term)?'val-better':''}">${selProd.max_term} yrs</div>
+        <div>${stdProdForCompare.max_term} yrs</div>
+      </div>
+      <!-- Loan-amount-dependent rows — updated live by wizCalcFinance() -->
+      <div class="prod-compare-row">
+        <div class="row-lbl">Monthly Payment</div>
+        <div class="col-sel val-better" id="wa-cmp-mth-g">—</div>
+        <div class="val-worse" id="wa-cmp-mth-s">—</div>
+      </div>
+      <div class="prod-compare-row">
+        <div class="row-lbl">Total Interest</div>
+        <div class="col-sel val-better" id="wa-cmp-int-g">—</div>
+        <div class="val-worse" id="wa-cmp-int-s">—</div>
+      </div>
+      <div class="prod-compare-row">
+        <div class="row-lbl">Lifetime Saving</div>
+        <div class="col-sel val-better" id="wa-cmp-save">—</div>
+        <div class="val-worse">—</div>
+      </div>
+    </div>`;
+  })() : '';
 
   return `
     <div class="step-title">Select Product &amp; Calculate</div>
@@ -2867,8 +2890,35 @@ function wizCalcFinance(){
   const m       = pmt(amt,rate,ten*12);
   const dbr     = salary>0?(m/salary)*100:0;
   const ltv     = propVal>0?(amt/propVal)*100:0;
-  // Lifetime saving vs standard (undiscounted) rate
+  // Lifetime saving vs standard (undiscounted base rate — same product without green discount)
   const sv      = Math.max(0, pmt(amt,baseRate,ten*12)*ten*12 - m*ten*12);
+
+  // ── Live comparison panel update (green product selected) ──
+  // Finds the standard product via data-std-id on the .prod-compare table;
+  // recalculates every time down-payment or tenure slider moves.
+  const cmpTable = document.querySelector('.prod-compare[data-std-id]');
+  if(cmpTable && selProd){
+    const stdId   = cmpTable.getAttribute('data-std-id');
+    const stdPrd  = allProducts.find(p => p.id === stdId);
+    if(stdPrd){
+      const sRate2   = prodEffRate(stdPrd, gsas);
+      const sMthly2  = pmt(amt, sRate2, ten*12);
+      const gTotal2  = m * ten * 12;
+      const sTotal2  = sMthly2 * ten * 12;
+      const save2    = Math.max(0, sTotal2 - gTotal2);
+      const mSave2   = Math.max(0, sMthly2 - m);
+      if(el('wa-saving-hero-label')) el('wa-saving-hero-label').textContent =
+        `💰 ${selProd.name} vs. ${stdPrd.name} over ${ten} years`;
+      if(el('wa-saving-hero-amt'))   el('wa-saving-hero-amt').textContent   = fmtOMR(save2);
+      if(el('wa-saving-hero-sub'))   el('wa-saving-hero-sub').textContent   =
+        `${fmtOMR(mSave2)} less per month · ${rate.toFixed(2)}% vs ${sRate2.toFixed(2)}%`;
+      if(el('wa-cmp-mth-g'))  el('wa-cmp-mth-g').textContent  = fmtOMR(m);
+      if(el('wa-cmp-mth-s'))  el('wa-cmp-mth-s').textContent  = fmtOMR(sMthly2);
+      if(el('wa-cmp-int-g'))  el('wa-cmp-int-g').textContent  = fmtOMR(gTotal2 - amt);
+      if(el('wa-cmp-int-s'))  el('wa-cmp-int-s').textContent  = fmtOMR(sTotal2 - amt);
+      if(el('wa-cmp-save'))   el('wa-cmp-save').textContent   = fmtOMR(save2) + ' 🌿';
+    }
+  }
 
   const isPrem  = gsas>=premGs && discP>0;
   const isGreen = gsas>=minGs  && (discP>0||discS>0);
