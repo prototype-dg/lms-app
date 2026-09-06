@@ -2032,7 +2032,16 @@ function renderWiz(){
   // Post-render hooks
   if(wizStep===2 && wizProjectId) setTimeout(()=>loadUnitPicker(wizProjectId), 80);
   if(wizStep===2) setTimeout(updateGsasCheck, 0);   // restore live status after re-render
-  if(wizStep===3) setTimeout(wizCalcFinance,80);
+  if(wizStep===3){
+    // If products haven't loaded yet (async fetch still in flight), wait for them then re-render
+    if(!allProducts.length){
+      const body3 = document.getElementById('wiz-body');
+      if(body3) body3.innerHTML = '<div style="padding:40px;text-align:center;color:var(--g500)"><span style="font-size:22px">⏳</span><br><br>Loading products…</div>';
+      loadProducts().then(()=>{ wizStep===3 && renderWiz(); }).catch(()=>{ wizStep===3 && renderWiz(); });
+    } else {
+      setTimeout(wizCalcFinance, 80);
+    }
+  }
   if(wizStep===5) setTimeout(prefillIncome,80);
 }
 
@@ -2545,8 +2554,15 @@ function stepFinancing(){
     .filter(p => p.category === 'home_loan' && p.status === 'active')
     .sort((a,b) => (b.is_demo_product||0) - (a.is_demo_product||0));
 
-  if(!homeProds.length)
-    return `<div class="step-title">Financing</div><div class="step-sub">No home loan products available.</div>`;
+  if(!homeProds.length){
+    // Products may still be loading — show spinner; renderWiz() hook will retry once fetch resolves
+    return `<div class="step-title">Select Product &amp; Calculate</div>
+      <div style="padding:32px;text-align:center;color:var(--g500)">
+        <div style="font-size:28px;margin-bottom:12px">⏳</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">Loading home loan products…</div>
+        <div style="font-size:12px">Please wait a moment.</div>
+      </div>`;
+  }
 
   // Auto-select on first entry: pick lowest effective rate for user's GSAS score
   if(!wizProductId){
