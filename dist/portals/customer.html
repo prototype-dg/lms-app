@@ -346,19 +346,75 @@ body.rtl .ps-badge{margin-left:0;margin-right:auto}
 .fs-val{font-size:20px;font-weight:800;color:var(--sea)}
 .fs-note{text-align:center;font-size:10px;opacity:.5;margin-top:10px}
 
-/* LIVENESS */
-.liveness-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:700;flex-direction:column;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)}
+/* LIVENESS — Apple Face ID style redesign */
+.liveness-overlay{display:none;position:fixed;inset:0;z-index:700;flex-direction:column;align-items:center;justify-content:center;padding:20px}
 .liveness-overlay.open{display:flex}
-.liveness-box{background:#0d1117;border-radius:24px;padding:24px;width:100%;max-width:460px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.6)}
-.liveness-video-wrap{position:relative;width:100%;aspect-ratio:4/3;border-radius:16px;overflow:hidden;margin-bottom:16px;background:#000}
-.liveness-video-wrap video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
-.liveness-oval{position:absolute;inset:0;pointer-events:none}
-.liveness-oval svg{width:100%;height:100%}
-.liveness-instruction{font-size:14px;font-weight:600;color:#fff;margin-bottom:8px;min-height:22px}
-.liveness-progress{width:100%;height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;margin-bottom:16px}
-.liveness-bar{height:100%;background:linear-gradient(90deg,var(--sea),var(--ok));border-radius:3px;transition:width .3s ease}
-.liveness-status{font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px}
-.liveness-result{font-size:18px;font-weight:700;color:#6ee7b7;display:none;margin-bottom:16px}
+
+/* Animated particle background */
+.liveness-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 30% 20%,#0a1628 0%,#050d1a 40%,#000913 100%);overflow:hidden}
+.liveness-bg::before{content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 15% 35%,rgba(0,127,134,.18) 0%,transparent 50%),
+    radial-gradient(circle at 85% 20%,rgba(53,198,196,.12) 0%,transparent 45%),
+    radial-gradient(circle at 70% 80%,rgba(0,59,92,.25) 0%,transparent 55%),
+    radial-gradient(circle at 20% 80%,rgba(46,204,113,.08) 0%,transparent 40%);
+}
+.liveness-bg-grid{position:absolute;inset:0;background-image:
+  linear-gradient(rgba(53,198,196,.04) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(53,198,196,.04) 1px,transparent 1px);
+  background-size:40px 40px;animation:gridFade 8s ease-in-out infinite alternate}
+@keyframes gridFade{0%{opacity:.4}100%{opacity:1}}
+.liveness-orb{position:absolute;border-radius:50%;filter:blur(60px);animation:orbFloat 12s ease-in-out infinite}
+.liveness-orb.o1{width:300px;height:300px;background:rgba(0,127,134,.15);top:-80px;left:-60px;animation-delay:0s}
+.liveness-orb.o2{width:200px;height:200px;background:rgba(53,198,196,.1);bottom:-40px;right:-40px;animation-delay:-4s}
+.liveness-orb.o3{width:160px;height:160px;background:rgba(46,204,113,.08);bottom:30%;left:5%;animation-delay:-7s}
+@keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-30px) scale(1.08)}}
+
+/* Modal card */
+.liveness-modal{position:relative;z-index:1;background:rgba(10,18,35,.92);border:1px solid rgba(53,198,196,.2);border-radius:28px;padding:0;width:100%;max-width:390px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.9),0 0 0 1px rgba(53,198,196,.08),inset 0 1px 0 rgba(255,255,255,.06);margin:auto;backdrop-filter:blur(20px)}
+
+/* Header */
+.liveness-header{padding:18px 22px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.07)}
+.liveness-header-text{display:flex;flex-direction:column;gap:3px}
+.liveness-brand{display:flex;align-items:center;gap:8px}
+.liveness-brand-dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#35C6C4,#2ECC71);box-shadow:0 0 8px rgba(53,198,196,.6);animation:pulseDot 2s ease-in-out infinite}
+@keyframes pulseDot{0%,100%{box-shadow:0 0 8px rgba(53,198,196,.6)}50%{box-shadow:0 0 16px rgba(53,198,196,.9),0 0 24px rgba(53,198,196,.4)}}
+
+/* Camera viewport */
+.liveness-camera-wrap{position:relative;width:100%;aspect-ratio:3/4;max-height:44vh;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#000}
+.liveness-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
+
+/* SVG overlay takes full viewport */
+.liveness-oval-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* Instruction pill at bottom of camera */
+.liveness-instruction{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
+  background:rgba(5,15,30,.82);backdrop-filter:blur(12px);
+  color:#fff;font-size:13px;font-weight:600;
+  padding:9px 22px;border-radius:100px;
+  white-space:nowrap;text-align:center;max-width:92%;
+  border:1px solid rgba(53,198,196,.3);
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+  transition:all .4s ease}
+
+/* Progress section */
+.liveness-progress-wrap{padding:14px 22px 8px;background:transparent}
+.liveness-bar-track{width:100%;height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.liveness-bar-fill{height:100%;background:linear-gradient(90deg,#35C6C4,#2ECC71);border-radius:2px;transition:width .35s cubic-bezier(.4,0,.2,1)}
+.liveness-progress-label{font-size:10px;color:rgba(255,255,255,.35);text-align:center;margin-top:5px;letter-spacing:.5px;text-transform:uppercase}
+
+/* Step indicators — icon row */
+.liveness-steps-row{display:flex;justify-content:center;gap:6px;padding:10px 22px 14px}
+.lv-step{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;padding:8px 4px;border-radius:12px;opacity:.3;transition:all .4s ease;border:1px solid transparent}
+.lv-step-icon{font-size:16px;line-height:1}
+.lv-step span{font-size:8px;color:rgba(255,255,255,.4);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.lv-step.active{opacity:1;background:rgba(53,198,196,.1);border-color:rgba(53,198,196,.25)}
+.lv-step.active span{color:#35C6C4}
+.lv-step.done{opacity:.7;background:rgba(46,204,113,.08);border-color:rgba(46,204,113,.2)}
+.lv-step.done span{color:#2ECC71}
+
+/* Footer */
+.liveness-footer{display:flex;align-items:center;gap:12px;padding:10px 22px 16px;border-top:1px solid rgba(255,255,255,.07)}
 
 /* OCR PROGRESS */
 .ocr-progress-wrap{background:rgba(0,127,134,.06);border:1px solid rgba(0,127,134,.2);border-radius:var(--r12);padding:16px;margin-bottom:14px}
@@ -1047,52 +1103,119 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 <!-- LIVENESS OVERLAY — camera facial guidance           -->
 <!-- ════════════════════════════════════════════════════ -->
 <div id="liveness-overlay" class="liveness-overlay">
+  <!-- Animated scene background -->
+  <div class="liveness-bg">
+    <div class="liveness-bg-grid"></div>
+    <div class="liveness-orb o1"></div>
+    <div class="liveness-orb o2"></div>
+    <div class="liveness-orb o3"></div>
+  </div>
+
   <div class="liveness-modal">
+    <!-- Header -->
     <div class="liveness-header">
-      <div class="liveness-header-text">
-        <div style="font-size:15px;font-weight:700;color:#e6edf3;line-height:1.2">Identity Liveness Check</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.45)">Follow the on-screen instructions</div>
+      <div class="liveness-brand">
+        <div class="liveness-brand-dot"></div>
+        <div class="liveness-header-text">
+          <div style="font-size:14px;font-weight:700;color:#e6edf3;line-height:1.2;letter-spacing:-.2px">Identity Verification</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.38);letter-spacing:.3px;text-transform:uppercase">Liveness Check · Secure</div>
+        </div>
       </div>
-      <div style="width:32px;height:32px;border-radius:50%;background:rgba(53,198,196,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🔐</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:9px;color:rgba(53,198,196,.8);background:rgba(53,198,196,.1);border:1px solid rgba(53,198,196,.25);padding:3px 9px;border-radius:100px;font-weight:700;letter-spacing:.5px;text-transform:uppercase">LIVE</div>
+        <button onclick="cancelLiveness()" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">&times;</button>
+      </div>
     </div>
+
+    <!-- Camera viewport with Apple-style SVG ring -->
     <div class="liveness-camera-wrap">
       <video id="liveness-video" class="liveness-video" autoplay muted playsinline></video>
-      <!-- SVG oval guide overlay -->
-      <svg class="liveness-oval-svg" viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+
+      <!-- Full-viewport SVG: gradient background + oval cutout + clock-tick ring + scan line -->
+      <svg id="liveness-ring-svg" class="liveness-oval-svg" viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <mask id="oval-mask">
+          <!-- Oval cutout mask -->
+          <mask id="liveness-oval-mask">
             <rect width="360" height="480" fill="white"/>
-            <ellipse cx="180" cy="220" rx="115" ry="148" fill="black"/>
+            <ellipse cx="180" cy="228" rx="118" ry="152" fill="black"/>
           </mask>
+          <!-- Soft vignette gradient for edges -->
+          <radialGradient id="liveness-vignette" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" stop-color="transparent"/>
+            <stop offset="100%" stop-color="rgba(5,15,30,.6)"/>
+          </radialGradient>
+          <!-- Glow filter for active ticks -->
+          <filter id="tickGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
         </defs>
-        <rect width="360" height="480" fill="rgba(0,0,0,0.55)" mask="url(#oval-mask)"/>
-        <ellipse cx="180" cy="220" rx="115" ry="148" fill="none" stroke-width="3" id="liveness-oval-ring" stroke="#35C6C4"/>
+
+        <!-- Dark overlay with oval cutout (shows camera through oval) -->
+        <rect width="360" height="480" fill="rgba(5,12,25,.82)" mask="url(#liveness-oval-mask)"/>
+
+        <!-- Vignette on top of everything for depth -->
+        <rect width="360" height="480" fill="url(#liveness-vignette)" mask="url(#liveness-oval-mask)"/>
+
+        <!-- Subtle inner glow on oval edge (always visible) -->
+        <ellipse cx="180" cy="228" rx="118" ry="152" fill="none" stroke="rgba(53,198,196,.15)" stroke-width="8"/>
+
+        <!-- Base oval ring (thin, dim) -->
+        <ellipse cx="180" cy="228" rx="118" ry="152" fill="none" stroke="rgba(53,198,196,.25)" stroke-width="2"/>
+
+        <!-- Clock-tick marks around the oval — 48 ticks, animated via JS -->
+        <g id="liveness-ticks"></g>
+
+        <!-- Animated face scan line (horizontal sweep) -->
+        <g id="liveness-scanline-group" opacity="0">
+          <line id="liveness-scanline" x1="62" y1="228" x2="298" y2="228" stroke="rgba(53,198,196,.6)" stroke-width="1"/>
+          <rect x="62" y="224" width="236" height="8" fill="url(#scanGrad)" opacity=".3"/>
+        </g>
+        <defs>
+          <linearGradient id="scanGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#35C6C4" stop-opacity=".0"/>
+            <stop offset="50%" stop-color="#35C6C4" stop-opacity=".8"/>
+            <stop offset="100%" stop-color="#35C6C4" stop-opacity=".0"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Corner bracket marks at oval quadrants for targeting feel -->
+        <g stroke="#35C6C4" stroke-width="2.5" stroke-linecap="round" opacity=".7">
+          <!-- Top -->
+          <line x1="174" y1="74" x2="186" y2="74"/>
+          <!-- Bottom -->
+          <line x1="174" y1="382" x2="186" y2="382"/>
+          <!-- Left -->
+          <line x1="62" y1="222" x2="62" y2="234"/>
+          <!-- Right -->
+          <line x1="298" y1="222" x2="298" y2="234"/>
+        </g>
       </svg>
-      <!-- Instruction text over camera -->
-      <div class="liveness-instruction" id="liveness-instr">Center your face in the oval</div>
-      <!-- Corner tick marks -->
-      <div class="liveness-corner tl"></div>
-      <div class="liveness-corner tr"></div>
-      <div class="liveness-corner bl"></div>
-      <div class="liveness-corner br"></div>
+
+      <!-- Instruction pill -->
+      <div class="liveness-instruction" id="liveness-instr">Position your face in the oval</div>
     </div>
-    <!-- Progress bar -->
+
+    <!-- Thin progress bar -->
     <div class="liveness-progress-wrap">
       <div class="liveness-bar-track">
         <div class="liveness-bar-fill" id="liveness-bar-fill" style="width:0%"></div>
       </div>
-      <div class="liveness-progress-label" id="liveness-progress-label">0% Complete</div>
+      <div class="liveness-progress-label" id="liveness-progress-label">READY TO SCAN</div>
     </div>
-    <!-- Step indicator dots -->
+
+    <!-- Step indicator row -->
     <div class="liveness-steps-row" id="liveness-steps-row">
-      <div class="lv-step active" id="lvs-0">😐<span>Center</span></div>
-      <div class="lv-step" id="lvs-1">👈<span>Look Left</span></div>
-      <div class="lv-step" id="lvs-2">👉<span>Look Right</span></div>
-      <div class="lv-step" id="lvs-3">😊<span>Smile</span></div>
+      <div class="lv-step active" id="lvs-0"><div class="lv-step-icon">🎯</div><span>Center</span></div>
+      <div class="lv-step" id="lvs-1"><div class="lv-step-icon">↩️</div><span>Turn Left</span></div>
+      <div class="lv-step" id="lvs-2"><div class="lv-step-icon">↪️</div><span>Turn Right</span></div>
+      <div class="lv-step" id="lvs-3"><div class="lv-step-icon">✅</div><span>Complete</span></div>
     </div>
+
+    <!-- Footer -->
     <div class="liveness-footer">
-      <button class="btn btn-outline btn-sm" onclick="cancelLiveness()">Cancel</button>
-      <div style="font-size:11px;color:var(--g500);text-align:center;flex:1">Data processed locally · Not stored</div>
+      <button class="btn btn-outline btn-sm" onclick="cancelLiveness()" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:rgba(255,255,255,.6);font-size:11px;padding:6px 14px">Cancel</button>
+      <div style="font-size:10px;color:rgba(255,255,255,.28);text-align:center;flex:1;letter-spacing:.3px">🔒 Processed locally · Never stored</div>
     </div>
   </div>
 </div>
@@ -2696,92 +2819,207 @@ function triggerIdValidation(){
 /* ══════════════════════════════════════════════════════
    LIVENESS CHECK ENGINE
 ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   LIVENESS — Apple Face ID style with clock-tick ring
+══════════════════════════════════════════════════════ */
 const LIVENESS_STEPS = [
-  { instr:'Center your face in the oval', duration:4000 },
-  { instr:'Slowly turn your head LEFT',   duration:4000 },
-  { instr:'Slowly turn your head RIGHT',  duration:4000 },
-  { instr:'Look straight ahead and SMILE',duration:4000 },
+  { instr:'Position your face in the oval',    duration:3500, color:'#35C6C4' },
+  { instr:'Slowly turn your head to the LEFT', duration:4500, color:'#F4B35B' },
+  { instr:'Now turn your head to the RIGHT',   duration:4500, color:'#F4B35B' },
+  { instr:'Look straight ahead — hold still',  duration:3500, color:'#2ECC71' },
 ];
 
+// Build the 48 clock-tick SVG marks around the oval at startup
+const TICK_COUNT = 48;
+// Oval params matching SVG viewBox (cx=180 cy=228 rx=118 ry=152)
+const LV_OX=180, LV_OY=228, LV_RX=130, LV_RY=166; // slightly outside the oval
+let livenessTicksFilled = 0; // how many ticks are currently "lit"
+let livenessTickRaf = null;
+let livenessScanRaf = null;
+let livenessScanY   = 76; // scan line Y start (top of oval)
+let livenessScanDir = 1;
+
+function buildLivenessTicks(){
+  const g = document.getElementById('liveness-ticks');
+  if(!g) return;
+  g.innerHTML='';
+  for(let k=0;k<TICK_COUNT;k++){
+    // Parametric point on oval, start from top (−π/2), go clockwise
+    const angle = (k/TICK_COUNT)*Math.PI*2 - Math.PI/2;
+    const cos=Math.cos(angle), sin=Math.sin(angle);
+    // Tick outer point (on ring)
+    const ox = LV_OX + LV_RX*cos;
+    const oy = LV_OY + LV_RY*sin;
+    // Tick inner point (slightly inward)
+    const len = (k%4===0)?10:6; // longer every 4th tick (like a clock hour mark)
+    const ix = LV_OX + (LV_RX-len)*cos;
+    const iy = LV_OY + (LV_RY-len)*sin;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',ox.toFixed(1));
+    line.setAttribute('y1',oy.toFixed(1));
+    line.setAttribute('x2',ix.toFixed(1));
+    line.setAttribute('y2',iy.toFixed(1));
+    line.setAttribute('stroke','rgba(53,198,196,.18)');
+    line.setAttribute('stroke-width', k%4===0?'2.5':'1.5');
+    line.setAttribute('stroke-linecap','round');
+    line.setAttribute('id','lvtick-'+k);
+    g.appendChild(line);
+  }
+}
+
+function setLivenessTicks(filled, color='#35C6C4'){
+  for(let k=0;k<TICK_COUNT;k++){
+    const el=document.getElementById('lvtick-'+k);
+    if(!el) continue;
+    if(k<filled){
+      el.setAttribute('stroke',color);
+      el.setAttribute('filter','url(#tickGlow)');
+      el.setAttribute('stroke-opacity','1');
+    } else {
+      el.setAttribute('stroke','rgba(53,198,196,.18)');
+      el.removeAttribute('filter');
+      el.setAttribute('stroke-opacity','1');
+    }
+  }
+}
+
+function animateLivenessTicks(targetFilled, color, duration, onDone){
+  const start = livenessTicksFilled;
+  const startTime = performance.now();
+  function frame(now){
+    const t = Math.min((now-startTime)/duration, 1);
+    // Ease-in-out cubic
+    const ease = t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+    const current = Math.round(start + (targetFilled-start)*ease);
+    if(current!==livenessTicksFilled){
+      livenessTicksFilled=current;
+      setLivenessTicks(current, color);
+    }
+    if(t<1){
+      livenessTickRaf=requestAnimationFrame(frame);
+    } else {
+      livenessTicksFilled=targetFilled;
+      setLivenessTicks(targetFilled,color);
+      if(onDone) onDone();
+    }
+  }
+  cancelAnimationFrame(livenessTickRaf);
+  livenessTickRaf=requestAnimationFrame(frame);
+}
+
+function startScanLine(){
+  const grp=document.getElementById('liveness-scanline-group');
+  const line=document.getElementById('liveness-scanline');
+  if(!grp||!line) return;
+  grp.setAttribute('opacity','1');
+  livenessScanY=76; livenessScanDir=1;
+  function frame(){
+    livenessScanY += livenessScanDir*1.6;
+    if(livenessScanY>380){ livenessScanDir=-1; }
+    if(livenessScanY<76){  livenessScanDir=1;  }
+    line.setAttribute('y1',livenessScanY.toFixed(0));
+    line.setAttribute('y2',livenessScanY.toFixed(0));
+    livenessScanRaf=requestAnimationFrame(frame);
+  }
+  livenessScanRaf=requestAnimationFrame(frame);
+}
+
+function stopScanLine(){
+  cancelAnimationFrame(livenessScanRaf);
+  const grp=document.getElementById('liveness-scanline-group');
+  if(grp) grp.setAttribute('opacity','0');
+}
+
 async function startLiveness(){
-  livenessStep = 0;
-  const overlay = document.getElementById('liveness-overlay');
+  livenessStep=0; livenessTicksFilled=0;
+  const overlay=document.getElementById('liveness-overlay');
   overlay.style.display='flex';
+  buildLivenessTicks();
+  setLivenessTicks(0);
   document.getElementById('liveness-bar-fill').style.width='0%';
-  document.getElementById('liveness-progress-label').textContent='0% Complete';
+  document.getElementById('liveness-progress-label').textContent='INITIALISING';
   LIVENESS_STEPS.forEach((_,i)=>{
     const el=document.getElementById('lvs-'+i);
     if(el) el.className='lv-step'+(i===0?' active':'');
   });
   try {
-    livenessStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:360,height:480}});
-    document.getElementById('liveness-video').srcObject = livenessStream;
-    runLivenessStep(0);
+    livenessStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:360},height:{ideal:480}}});
+    document.getElementById('liveness-video').srcObject=livenessStream;
+    // Brief pause so camera warms up
+    setTimeout(()=>{ startScanLine(); runLivenessStep(0); }, 600);
   } catch(e) {
     overlay.style.display='none';
     toast('Camera access denied — liveness check skipped','err');
-    wizState.livenessPassed=true; // allow continue in demo
+    wizState.livenessPassed=true;
     completeLiveness();
   }
 }
 
 function runLivenessStep(idx){
   if(idx>=LIVENESS_STEPS.length){ finishLiveness(); return; }
-  const s = LIVENESS_STEPS[idx];
-  document.getElementById('liveness-instr').textContent = s.instr;
-  const ring = document.getElementById('liveness-oval-ring');
-  if(ring) ring.style.stroke = idx===0?'#35C6C4':idx===1?'#F4B35B':idx===2?'#F4B35B':'#2ECC71';
+  const s=LIVENESS_STEPS[idx];
+  const instr=document.getElementById('liveness-instr');
+  if(instr) instr.textContent=s.instr;
 
-  // Update step dots
+  // Update step pills
   LIVENESS_STEPS.forEach((_,i)=>{
     const el=document.getElementById('lvs-'+i);
     if(el) el.className='lv-step'+(i<idx?' done':i===idx?' active':'');
   });
 
-  // Animate bar
-  const startPct = (idx/LIVENESS_STEPS.length)*100;
-  const endPct   = ((idx+1)/LIVENESS_STEPS.length)*100;
-  const bar = document.getElementById('liveness-bar-fill');
-  const lbl = document.getElementById('liveness-progress-label');
-  let elapsed=0;
-  const interval=50;
+  // Ticks: each step fills its share of the 48 ticks
+  const tickStart = Math.round((idx/LIVENESS_STEPS.length)*TICK_COUNT);
+  const tickEnd   = Math.round(((idx+1)/LIVENESS_STEPS.length)*TICK_COUNT);
+
+  // Animate progress bar
+  const barStart=(idx/LIVENESS_STEPS.length)*100;
+  const barEnd  =((idx+1)/LIVENESS_STEPS.length)*100;
+  const bar=document.getElementById('liveness-bar-fill');
+  const lbl=document.getElementById('liveness-progress-label');
+  let elapsed=0; const interval=50;
   livenessTimer=setInterval(()=>{
     elapsed+=interval;
-    const pct = startPct + (endPct-startPct)*(elapsed/s.duration);
-    if(bar) bar.style.width=Math.min(pct,endPct)+'%';
-    if(lbl) lbl.textContent=Math.round(Math.min(pct,endPct))+'% Complete';
+    const t=Math.min(elapsed/s.duration,1);
+    if(bar) bar.style.width=(barStart+(barEnd-barStart)*t)+'%';
+    if(lbl) lbl.textContent=`STEP ${idx+1} OF ${LIVENESS_STEPS.length} — ${Math.round(t*100)}%`;
     if(elapsed>=s.duration){
       clearInterval(livenessTimer);
       runLivenessStep(idx+1);
     }
   },interval);
+
+  // Animate the clock ticks for this step, chase from tickStart→tickEnd
+  animateLivenessTicks(tickEnd, s.color, s.duration*0.95);
 }
 
 function finishLiveness(){
+  stopScanLine();
   const bar=document.getElementById('liveness-bar-fill');
   const lbl=document.getElementById('liveness-progress-label');
   const instr=document.getElementById('liveness-instr');
   if(bar) bar.style.width='100%';
-  if(lbl) lbl.textContent='100% Complete';
-  if(instr) instr.textContent='✅ Liveness verified!';
-  LIVENESS_STEPS.forEach((_,i)=>{
-    const el=document.getElementById('lvs-'+i);
-    if(el) el.className='lv-step done';
+  if(lbl) lbl.textContent='SCAN COMPLETE';
+  if(instr){ instr.textContent='✅ Identity verified!'; instr.style.background='rgba(22,132,91,.85)'; }
+  // Fill all ticks green
+  animateLivenessTicks(TICK_COUNT,'#2ECC71',600,()=>{
+    LIVENESS_STEPS.forEach((_,i)=>{
+      const el=document.getElementById('lvs-'+i);
+      if(el) el.className='lv-step done';
+    });
   });
   setTimeout(()=>{
     cancelLiveness();
     wizState.livenessPassed=true;
     completeLiveness();
-  },1200);
+  },1800);
 }
 
 function completeLiveness(){
   const box=document.getElementById('liveness-status-box');
   const btn=document.getElementById('liveness-btn');
-  if(box){ box.style.display='block'; }
+  if(box) box.style.display='block';
   if(btn){ btn.textContent='✅ Re-run Liveness Check'; btn.style.background='var(--ok)'; }
   toast('✅ Liveness check passed','ok');
-  // Auto-advance if both ID and liveness done
   if(wizState.idVerified && wizState.livenessPassed){
     setTimeout(()=>{ wizStep=5; renderWiz(); },800);
   }
@@ -2789,6 +3027,8 @@ function completeLiveness(){
 
 function cancelLiveness(){
   clearInterval(livenessTimer);
+  cancelAnimationFrame(livenessTickRaf);
+  stopScanLine();
   if(livenessStream){ livenessStream.getTracks().forEach(t=>t.stop()); livenessStream=null; }
   const overlay=document.getElementById('liveness-overlay');
   if(overlay) overlay.style.display='none';
