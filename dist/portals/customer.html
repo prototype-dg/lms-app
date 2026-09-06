@@ -1477,126 +1477,6 @@ function openWizardFromProject(projectId){
   openWizard();
 }
 
-
-<!-- ════════════════════════════════════════════════════ -->
-<!-- WIZARD MODAL — 8-step application                   -->
-<!-- ════════════════════════════════════════════════════ -->
-<div class="modal-bg" id="wiz-overlay">
-  <div class="wizard">
-    <!-- Wizard header -->
-    <div class="wiz-header">
-      <div>
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.6);margin-bottom:2px">Loan Application</div>
-        <div style="font-size:15px;font-weight:700;color:#fff" id="wiz-title">Apply for Financing</div>
-      </div>
-      <button class="wiz-close" onclick="closeWizard()">✕</button>
-    </div>
-
-    <!-- Step indicators -->
-    <div class="wiz-steps" id="wiz-steps-row">
-      <div class="ws active" data-step="0"><div class="ws-n">1</div><div class="ws-lbl">Eligibility</div></div>
-      <div class="ws" data-step="1"><div class="ws-n">2</div><div class="ws-lbl">Personal</div></div>
-      <div class="ws" data-step="2"><div class="ws-n">3</div><div class="ws-lbl">Property</div></div>
-      <div class="ws" data-step="3"><div class="ws-n">4</div><div class="ws-lbl">Financing</div></div>
-      <div class="ws" data-step="4"><div class="ws-n">5</div><div class="ws-lbl">Identity</div></div>
-      <div class="ws" data-step="5"><div class="ws-n">6</div><div class="ws-lbl">Income</div></div>
-      <div class="ws" data-step="6"><div class="ws-n">7</div><div class="ws-lbl">Documents</div></div>
-      <div class="ws" data-step="7"><div class="ws-n">8</div><div class="ws-lbl">Review</div></div>
-    </div>
-
-    <!-- Wizard body — content swapped by JS -->
-    <div class="wiz-body" id="wiz-body"></div>
-
-    <!-- Wizard footer -->
-    <div class="wiz-footer">
-      <div style="font-size:11px;color:var(--g500)" id="wiz-step-lbl">Step 1 of 8</div>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-outline" id="wiz-back" onclick="wizBack()" style="visibility:hidden">← Back</button>
-        <button class="btn btn-teal" id="wiz-next" onclick="wizNext()">Continue →</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════════════════ -->
-<!-- LIVENESS CHECK OVERLAY                              -->
-<!-- ════════════════════════════════════════════════════ -->
-<div class="liveness-overlay" id="liveness-overlay">
-  <div class="liveness-modal">
-    <div class="liveness-header">
-      <div class="liveness-logo">🔐 Identity Verification</div>
-      <button class="liveness-close-btn" onclick="cancelLiveness()">✕</button>
-    </div>
-
-    <!-- STEP A: intro screen -->
-    <div id="liveness-intro">
-      <div style="text-align:center;padding:32px 24px">
-        <div style="font-size:56px;margin-bottom:16px">🤳</div>
-        <div style="font-size:18px;font-weight:700;color:var(--navy);margin-bottom:8px">Liveness Check</div>
-        <div style="font-size:13px;color:var(--g500);line-height:1.6;margin-bottom:24px">We'll take a quick video selfie to verify your identity. This typically takes 15–30 seconds.</div>
-        <div class="liveness-checklist">
-          <div class="liveness-check-item">✅ Good lighting in front of you</div>
-          <div class="liveness-check-item">✅ Remove sunglasses or hat</div>
-          <div class="liveness-check-item">✅ Keep your face centered</div>
-          <div class="liveness-check-item">✅ Follow the on-screen instructions</div>
-        </div>
-        <button class="btn btn-teal" style="width:100%;padding:14px;margin-top:24px;font-size:15px" onclick="startLivenessCamera()">📷 Start Camera →</button>
-        <div style="font-size:11px;color:var(--g500);margin-top:12px">Your video is processed locally and not stored.</div>
-      </div>
-    </div>
-
-    <!-- STEP B: camera feed -->
-    <div id="liveness-camera" style="display:none">
-      <div class="liveness-cam-wrap">
-        <video id="liveness-video" autoplay playsinline muted class="liveness-video"></video>
-        <!-- SVG oval overlay -->
-        <svg class="liveness-oval-svg" viewBox="0 0 340 440" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <mask id="oval-mask">
-              <rect width="340" height="440" fill="white"/>
-              <ellipse cx="170" cy="210" rx="118" ry="155" fill="black"/>
-            </mask>
-          </defs>
-          <rect width="340" height="440" fill="rgba(0,37,64,.55)" mask="url(#oval-mask)"/>
-          <ellipse id="liveness-oval-ring" cx="170" cy="210" rx="118" ry="155" fill="none" stroke="#35C6C4" stroke-width="3"/>
-          <ellipse id="liveness-progress-arc" cx="170" cy="210" rx="118" ry="155" fill="none" stroke="#059669" stroke-width="4" stroke-dasharray="0 1000" stroke-linecap="round" transform="rotate(-90 170 210)"/>
-        </svg>
-        <!-- Instruction banner -->
-        <div class="liveness-instruction" id="liveness-instruction">
-          <div class="liveness-inst-icon" id="liveness-inst-icon">👤</div>
-          <div id="liveness-inst-text">Center your face in the oval</div>
-        </div>
-        <!-- Progress bar -->
-        <div class="liveness-progress-wrap">
-          <div class="liveness-bar" id="liveness-bar" style="width:0%"></div>
-        </div>
-        <div class="liveness-status" id="liveness-status">Initializing camera…</div>
-      </div>
-    </div>
-
-    <!-- STEP C: success -->
-    <div id="liveness-success" style="display:none">
-      <div style="text-align:center;padding:40px 24px">
-        <div class="liveness-success-icon">✅</div>
-        <div style="font-size:20px;font-weight:800;color:var(--ok);margin-bottom:8px">Liveness Verified!</div>
-        <div style="font-size:13px;color:var(--g500);margin-bottom:24px">Your identity has been confirmed. You may continue with the application.</div>
-        <div class="liveness-result-grid">
-          <div class="liveness-result-item">
-            <div class="lr-val">✓</div><div class="lr-lbl">Face Detected</div>
-          </div>
-          <div class="liveness-result-item">
-            <div class="lr-val">✓</div><div class="lr-lbl">Liveness Confirmed</div>
-          </div>
-          <div class="liveness-result-item">
-            <div class="lr-val">97%</div><div class="lr-lbl">Match Score</div>
-          </div>
-        </div>
-        <button class="btn btn-teal" style="width:100%;padding:14px;margin-top:24px" onclick="completeLiveness()">Continue Application →</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ════════════════════════════════════════════════════ -->
 <!-- TOAST NOTIFICATIONS                                 -->
 <!-- ════════════════════════════════════════════════════ -->
@@ -2608,41 +2488,24 @@ async function submitApp(){
   const consent=document.getElementById('consent-chk');
   if(consent&&!consent.checked){showToast('Please accept the consent checkbox.','warn');return;}
   const btn=document.getElementById('wiz-next');
-  if(btn){btn.disabled=true;btn.textContent='Submitting…';}
+  if(btn){btn.disabled=true;btn.textContent='Submitting\u2026';}
+  // Flat payload matching POST /api/v1/portal/applications contract
+  const loanAmt = parseFloat(wizState.loanAmount)||148000;
+  const propVal  = parseFloat(wizState.propertyValue)||185000;
+  const sal      = parseFloat(wizState.salary)||3200;
   const payload={
-    product_id: wizState.productId||'prod_eco_home_001',
-    project_id: wizState.projectId||null,
-    unit_id:    wizState.unitId||null,
-    applicant:{
-      name:      wizState.fullName||'Ahmed Al-Rashidi',
-      civil_id:  wizState.civilId||'8827364',
-      email:     wizState.email||'ahmed@example.com',
-      phone:     wizState.phone||'+968 9123 4567',
-      nationality:'Omani',
-      employment_type: wizState.empType||'Employed',
-      employer:        wizState.employer||'Oman LNG LLC',
-      monthly_income:  parseFloat(wizState.income||4200),
-      years_employed:  parseInt(wizState.yearsEmployed||6)
-    },
-    property:{
-      source:        wizState.propSource||'partner',
-      address:       wizState.propAddress||'EcoVillage, Muscat',
-      value:         parseFloat(wizState.propValue||185000),
-      gsas_score:    parseInt(wizState.propGsas||91),
-      contractor_id: wizState.contractorId||'con001',
-      contractor_name:wizState.contractorName||'Al Jazeera Constructions LLC'
-    },
-    financing:{
-      loan_amount:      parseFloat(wizState.loanAmount||148000),
-      down_payment:     parseFloat(wizState.downPayment||37000),
-      tenure_years:     parseInt(wizState.tenure||20),
-      interest_rate:    parseFloat(wizState.rate||3.5),
-      monthly_payment:  parseFloat(wizState.monthlyPayment||856),
-      dbr_ratio:        parseFloat(wizState.dbr||20.4)
-    },
-    documents: wizState.uploadedDocs||[],
-    id_verified:      !!wizState.idVerified,
-    liveness_passed:  !!wizState.livenessPassed
+    product_id:       wizState.productId||'prod_eco_home_001',
+    project_id:       wizState.projectId||null,
+    unit_id:          wizState.unitId||null,
+    customer_name:    wizState.fullName||'Ahmed Al-Rashidi',
+    civil_id:         wizState.civilId||'8827364',
+    loan_amount:      loanAmt,
+    loan_term:        parseInt(wizState.tenure)||20,
+    property_address: wizState.propAddress||'EcoVillage Muscat, Unit '+(wizState.unitId||'V-01'),
+    property_source:  wizState.propSource||'partner',
+    gsas_score:       parseInt(wizState.gsasScore)||91,
+    salary:           sal,
+    epc_rating:       wizState.gsasScore>=85?'A':'B',
   };
   try{
     const r=await fetch('/api/v1/portal/applications',{
@@ -2652,13 +2515,13 @@ async function submitApp(){
     });
     const j=await r.json();
     if(!r.ok) throw new Error(j.error||'Submission failed');
-    wizState.appRef=j.reference||j.id||'APP-'+Date.now();
+    wizState.appRef=j.reference||j.application_id||'APP-'+Date.now();
     closeWizard();
-    showToast('Application submitted! Ref: '+wizState.appRef,'ok');
+    showToast('\u2705 Application submitted! Ref: '+wizState.appRef,'ok');
     showPage('tracking');
     setTimeout(()=>loadTracking(),400);
   }catch(e){
-    showToast('Error: '+e.message,'error');
+    showToast('\u26a0\ufe0f Error: '+e.message,'error');
     if(btn){btn.disabled=false;btn.textContent='Submit Application';}
   }
 }
@@ -2719,19 +2582,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   loadProducts();
   loadProjects();
   showPage('home');
-
-  // Tracking tab — load demo if already has ref
+  // Tracking tab — reload when visiting
   document.querySelector('[data-page="tracking"]')?.addEventListener('click',()=>{
     setTimeout(()=>loadTracking(),300);
   });
-
-  // Wizard next button
-  document.getElementById('wiz-next')?.addEventListener('click',()=>{
-    if(wizState.step===7) submitApp();
-    else wizNav(1);
-  });
-  document.getElementById('wiz-back')?.addEventListener('click',()=>wizNav(-1));
-  document.getElementById('wiz-close')?.addEventListener('click',closeWizard);
 });
 </script>
 </body>
