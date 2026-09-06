@@ -7,7 +7,7 @@ const app = new Hono<{ Bindings: NodeBindings }>()
 // ── Consumer Portal: All published products (segmented) ───────────────────
 app.get('/products', async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT id, name, name_ar, code, description, category, base_rate,
+    `SELECT id, name, name_ar, code, description, category, status, base_rate,
      min_amount, max_amount, min_term, max_term, max_ltv, max_dbr,
      gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,
      portal_hero_title, portal_hero_subtitle, portal_card_badge, portal_highlights,

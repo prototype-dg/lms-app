@@ -4771,7 +4771,7 @@ $e.post("/run", async (e) => {
 //#region src/api/portal.ts
 var q = new N();
 q.get("/products", async (e) => {
-	let { results: t } = await e.env.DB.prepare("SELECT id, name, name_ar, code, description, category, base_rate,\n     min_amount, max_amount, min_term, max_term, max_ltv, max_dbr,\n     gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n     portal_hero_title, portal_hero_subtitle, portal_card_badge, portal_highlights,\n     portal_calculator_enabled, esg_required_docs, configuration,\n     is_demo_product, published_at\n     FROM products WHERE portal_visible = 1 AND status = 'active'\n     ORDER BY is_demo_product DESC, category, published_at ASC").all();
+	let { results: t } = await e.env.DB.prepare("SELECT id, name, name_ar, code, description, category, status, base_rate,\n     min_amount, max_amount, min_term, max_term, max_ltv, max_dbr,\n     gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n     portal_hero_title, portal_hero_subtitle, portal_card_badge, portal_highlights,\n     portal_calculator_enabled, esg_required_docs, configuration,\n     is_demo_product, published_at\n     FROM products WHERE portal_visible = 1 AND status = 'active'\n     ORDER BY is_demo_product DESC, category, published_at ASC").all();
 	return e.json({
 		products: t,
 		total: t.length
@@ -5933,7 +5933,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await I.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var ot = "fbcddca";
+var ot = "8be9bb0";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
