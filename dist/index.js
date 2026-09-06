@@ -1865,7 +1865,7 @@ Product: ${p}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 			`Up to OMR ${Math.round((r.max_amount || 5e5) / 1e3)}K financing`
 		]);
 		let x = h.length > 0 ? 6 : 1;
-		return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, pge_stage=?, updated_at=? WHERE id=?").bind(+!!b, _, JSON.stringify(v), y, u, x, u, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({
+		return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?,\n     pge_stage=?, is_demo_product=1, updated_at=? WHERE id=?").bind(+!!b, _, JSON.stringify(v), y, u, x, u, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({
 			product_id: l,
 			rule_ids: h
 		}), u, n).run(), await z(e.env.DB, {
@@ -4616,7 +4616,13 @@ Qe.post("/run", async (e) => {
 //#endregion
 //#region src/api/portal.ts
 var q = new N();
-q.get("/products/:id", async (e) => {
+q.get("/products", async (e) => {
+	let { results: t } = await e.env.DB.prepare("SELECT id, name, name_ar, code, description, category, base_rate,\n     min_amount, max_amount, min_term, max_term, max_ltv, max_dbr,\n     gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n     portal_hero_title, portal_hero_subtitle, portal_card_badge, portal_highlights,\n     portal_calculator_enabled, esg_required_docs, configuration,\n     is_demo_product, published_at\n     FROM products WHERE portal_visible = 1 AND status = 'active'\n     ORDER BY is_demo_product DESC, category, published_at ASC").all();
+	return e.json({
+		products: t,
+		total: t.length
+	});
+}), q.get("/products/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT p.*, \n     (SELECT COUNT(*) FROM applications a WHERE a.product_id = p.id) as total_applications\n     FROM products p WHERE p.id = ? AND p.portal_visible = 1").bind(t).first();
 	if (!n) return e.json({ error: "Not found" }, 404);
 	let { results: r } = await e.env.DB.prepare("SELECT name, category, metric, operator, threshold_value, threshold_condition, severity, description, regulatory_reference\n     FROM rules WHERE (product_id = ? OR product_id IS NULL) AND is_active = 1\n     ORDER BY category, severity DESC").bind(t).all();
@@ -4648,7 +4654,7 @@ q.get("/products/:id", async (e) => {
 		premium_tier: i >= (o.gsas_premium_score || 85)
 	});
 }), q.get("/projects", async (e) => {
-	let { results: t } = await e.env.DB.prepare("SELECT p.id, p.name, p.code, p.location, p.governorate, p.type,\n     p.total_units, p.available_units, p.reserved_units, p.sold_units,\n     p.gsas_score, p.gsas_rating, p.epc_rating, p.status, p.green_eligible,\n     p.premium_tier, p.geo_json,\n     p.listing_visible, p.marketing_tagline, p.price_from, p.price_to,\n     p.completion_date, p.amenities, p.created_at,\n     d.company_name as developer_name\n     FROM projects p\n     LEFT JOIN developers d ON p.developer_id = d.id\n     WHERE p.listing_visible = 1 AND p.status = 'active'\n     ORDER BY p.premium_tier DESC, p.created_at DESC").all();
+	let { results: t } = await e.env.DB.prepare("SELECT p.id, p.name, p.code, p.location, p.governorate, p.type,\n     p.total_units, p.available_units, p.reserved_units, p.sold_units,\n     p.gsas_score, p.gsas_rating, p.epc_rating, p.status, p.green_eligible,\n     p.premium_tier, p.geo_json, p.hero_image_url, p.is_demo_project,\n     p.listing_visible, p.marketing_tagline, p.price_from, p.price_to,\n     p.completion_date, p.amenities, p.created_at,\n     d.company_name as developer_name\n     FROM projects p\n     LEFT JOIN developers d ON p.developer_id = d.id\n     WHERE p.listing_visible = 1 AND p.status = 'active'\n     ORDER BY p.is_demo_project DESC, p.premium_tier DESC, p.created_at DESC").all();
 	return e.json({
 		projects: t,
 		total: t.length
@@ -4656,11 +4662,14 @@ q.get("/products/:id", async (e) => {
 }), q.get("/projects/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT p.*, d.company_name as developer_name, d.contact_name\n     FROM projects p LEFT JOIN developers d ON p.developer_id = d.id\n     WHERE p.id = ? AND p.listing_visible = 1").bind(t).first();
 	if (!n) return e.json({ error: "Not found" }, 404);
-	let { results: r } = await e.env.DB.prepare("SELECT * FROM units WHERE project_id = ? ORDER BY unit_number").bind(t).all();
+	let { results: r } = await e.env.DB.prepare("SELECT u.*, c.company_name as contractor_name, c.cr_number as contractor_cr,\n     c.contact_name as contractor_contact, c.contact_phone as contractor_phone,\n     c.is_green_certified as contractor_green_certified, c.green_cert_ref as contractor_green_cert_ref\n     FROM units u\n     LEFT JOIN contractors c ON u.contractor_id = c.id\n     WHERE u.project_id = ? ORDER BY u.unit_number").bind(t).all();
 	return e.json({
 		project: n,
 		units: r
 	});
+}), q.get("/projects/:id/contractor", async (e) => {
+	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT c.* FROM contractors c\n     INNER JOIN units u ON u.contractor_id = c.id\n     WHERE u.project_id = ? LIMIT 1").bind(t).first();
+	return n ? e.json({ contractor: n }) : e.json({ contractor: null });
 }), q.post("/applications", async (e) => {
 	let { product_id: t, customer_name: n, unit_id: r, project_id: i, loan_amount: a, loan_term: o, property_address: s, property_source: c, gsas_score: l, epc_rating: u, salary: d, civil_id: f } = await e.req.json(), p = await e.env.DB.prepare("SELECT * FROM products WHERE id = ? AND status = ?").bind(t, "active").first();
 	if (!p) return e.json({ error: "Product not found or not active" }, 404);
@@ -4813,6 +4822,50 @@ q.get("/products/:id", async (e) => {
 		documents: i,
 		created_at: n.created_at
 	});
+}), q.post("/ocr", async (e) => {
+	let { image_base64: t, doc_type: n } = await e.req.json().catch(() => ({}));
+	if (!t) return e.json({ error: "image_base64 required" }, 400);
+	try {
+		let r = (await (await fetch("https://vision.googleapis.com/v1/images:annotate?key=AIzaSyBqQ4THcUG8wpRZbB2olfZqvR9mI1e-88E", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ requests: [{
+				image: { content: t },
+				features: [{
+					type: "DOCUMENT_TEXT_DETECTION",
+					maxResults: 1
+				}]
+			}] })
+		})).json())?.responses?.[0]?.fullTextAnnotation?.text || "", i = {}, a = r.split("\n").map((e) => e.trim()).filter(Boolean);
+		if (n === "salary_cert" || n === "hr_letter") for (let e of a) {
+			let t = e.toLowerCase();
+			if (!i.employer && (t.includes("company") || t.includes("employer") || t.includes("organisation")) && (i.employer = e.replace(/^[^:]+:\s*/, "").trim() || e), !i.basic_salary && (t.includes("basic") || t.includes("salary") || t.includes("راتب"))) {
+				let t = e.match(/[\d,]+(?:\.\d+)?/);
+				t && (i.basic_salary = t[0].replace(/,/g, ""));
+			}
+			if (!i.housing && (t.includes("housing") || t.includes("house") || t.includes("سكن"))) {
+				let t = e.match(/[\d,]+(?:\.\d+)?/);
+				t && (i.housing_allowance = t[0].replace(/,/g, ""));
+			}
+			if (!i.start_date && (t.includes("join") || t.includes("start") || t.includes("appointed") || t.includes("تعيين"))) {
+				let t = e.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-]\d{2}[\/\-]\d{2}/);
+				t && (i.employment_start_date = t[0]);
+			}
+			!i.employment_type && (t.includes("permanent") || t.includes("contract") || t.includes("دائم")) && (i.employment_type = t.includes("permanent") ? "Government" : "Private Sector");
+		}
+		return e.json({
+			success: !0,
+			full_text: r,
+			extracted: i,
+			doc_type: n
+		});
+	} catch (t) {
+		return e.json({
+			success: !1,
+			error: t.message,
+			extracted: {}
+		}, 500);
+	}
 }), q.get("/developer/products", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT id, name, code, description, category, base_rate, max_ltv, max_dbr, green_dbr,\n     min_term, max_term, min_amount, max_amount,\n     gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n     allow_partner_inventory, required_docs, esg_required_docs,\n     approved_materials, approved_vendors, ai_confidence_threshold,\n     portal_hero_title, developer_requirements, published_at\n     FROM products WHERE developer_portal_visible = 1 AND status = 'active'\n     ORDER BY published_at ASC").all(), n = await Promise.all(t.map(async (t) => {
 		let { results: n } = await e.env.DB.prepare("SELECT name, category, metric, operator, threshold_value, threshold_condition, severity, description, regulatory_reference\n       FROM rules WHERE (product_id = ? OR (product_id IS NULL AND category IN ('esg','compliance'))) AND is_active = 1\n       ORDER BY category").bind(t.id).all();
@@ -4926,7 +4979,7 @@ q.get("/products/:id", async (e) => {
 	});
 }), q.post("/developer/projects/:id/publish", async (e) => {
 	let t = e.req.param("id"), n = await e.req.json().catch(() => ({})), r = R();
-	return await e.env.DB.prepare("\n    UPDATE projects SET status = 'active', listing_visible = 1, green_eligible = 1, premium_tier = 1,\n    marketing_tagline = ?, price_from = ?, price_to = ?, amenities = ?,\n    completion_date = ?, updated_at = ? WHERE id = ?\n  ").bind(n.marketing_tagline || "Certified green living — GSAS Gold, EPC A-rated, energy-efficient villas in Seeb", n.price_from || 178e3, n.price_to || 198e3, JSON.stringify(n.amenities || [
+	return await e.env.DB.prepare("\n    UPDATE projects SET status = 'active', listing_visible = 1, green_eligible = 1, premium_tier = 1,\n    is_demo_project = 1,\n    marketing_tagline = ?, price_from = ?, price_to = ?, amenities = ?,\n    completion_date = ?, updated_at = ? WHERE id = ?\n  ").bind(n.marketing_tagline || "Certified green living — GSAS Gold, EPC A-rated, energy-efficient villas in Seeb", n.price_from || 178e3, n.price_to || 198e3, JSON.stringify(n.amenities || [
 		"GSAS Gold Certified",
 		"Solar Panels",
 		"Smart Home",
@@ -5601,7 +5654,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await I.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "c3d7c39";
+var at = "197fc97";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

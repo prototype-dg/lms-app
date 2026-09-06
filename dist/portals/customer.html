@@ -6,6 +6,8 @@
 <title>Sohar International – Customer Portal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root{
   --navy:#003B5C;--navy-d:#002540;--teal:#007F86;--teal-d:#006169;
@@ -15,13 +17,14 @@
   --r4:4px;--r8:8px;--r12:12px;--r16:16px;--r24:24px;--r32:32px;--rfull:999px;
   --sh1:0 1px 4px rgba(0,59,92,.08);--sh2:0 4px 16px rgba(0,59,92,.12);--sh3:0 12px 40px rgba(0,59,92,.18);
   --transition:.18s ease;
+  --green:#059669;--green-bg:#d1fae5;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{font-family:'Inter',system-ui,sans-serif;background:var(--g100);color:var(--g900);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 body.rtl{font-family:'Noto Sans Arabic',system-ui,sans-serif;direction:rtl}
 
-/* ── NAV ── */
+/* NAV */
 .nav{position:fixed;inset:0 0 auto;z-index:200;height:60px;background:rgba(0,37,64,.97);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;padding:0 28px;gap:0}
 .nav-logo{display:flex;align-items:center;gap:6px;margin-right:32px;text-decoration:none}
 .nav-logo svg{width:46px;height:46px}
@@ -39,12 +42,12 @@ body.rtl{font-family:'Noto Sans Arabic',system-ui,sans-serif;direction:rtl}
 .user-chip{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.85);font-size:13px}
 .user-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--sea),var(--teal));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--navy);flex-shrink:0}
 
-/* ── PAGES ── */
+/* PAGES */
 .page{display:none;padding-top:60px;min-height:100vh}
 .page.active{display:block}
 
-/* ── HERO ── */
-.hero{background:linear-gradient(150deg,var(--navy-d) 0%,var(--navy) 45%,var(--teal-d) 100%);padding:72px 40px 64px;position:relative;overflow:hidden;min-height:560px;display:flex;align-items:center}
+/* HERO — default */
+.hero{background:linear-gradient(150deg,var(--navy-d) 0%,var(--navy) 45%,var(--teal-d) 100%);padding:72px 40px 64px;position:relative;overflow:hidden;min-height:520px;display:flex;align-items:center}
 .hero-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .hero-bg circle{fill:none;stroke:rgba(53,198,196,.12)}
 .hero-inner{max-width:1160px;margin:0 auto;width:100%;display:flex;align-items:center;gap:48px;position:relative;z-index:1}
@@ -67,38 +70,121 @@ body.rtl{font-family:'Noto Sans Arabic',system-ui,sans-serif;direction:rtl}
 .hc-row{display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.78);margin-bottom:8px}
 .hc-dot{width:18px;height:18px;border-radius:50%;background:rgba(53,198,196,.25);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--sea)}
 
-/* ── SECTION ── */
+/* HERO — eco/green override */
+.hero.eco{background:linear-gradient(150deg,#0a2e1a 0%,#0d4a26 40%,#0a5c3a 70%,#0e7460 100%)}
+.hero.eco .hero-kicker{background:rgba(5,150,105,.2);border-color:rgba(5,150,105,.4);color:#34d399}
+.hero.eco .hero-h1 em{color:#6ee7b7}
+.eco-features{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.eco-feat{display:inline-flex;align-items:center;gap:5px;background:rgba(5,150,105,.15);border:1px solid rgba(5,150,105,.3);border-radius:var(--rfull);padding:4px 12px;font-size:11px;color:#6ee7b7;font-weight:600}
+
+/* SECTION */
 .sec{padding:72px 40px}
 .sec-inner{max-width:1160px;margin:0 auto}
 .sec-eye{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--teal);margin-bottom:10px}
 .sec-h2{font-size:clamp(1.5rem,2.5vw,2rem);font-weight:700;color:var(--navy);margin-bottom:12px;line-height:1.25}
 .sec-sub{font-size:14px;color:var(--g500);line-height:1.7;max-width:560px;margin-bottom:36px}
 
-/* ── PROPERTY GRID ── */
-.prop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
-.prop-card{background:#fff;border-radius:var(--r16);overflow:hidden;box-shadow:var(--sh1);border:2px solid transparent;transition:var(--transition);cursor:pointer}
-.prop-card:hover{box-shadow:var(--sh2);transform:translateY(-3px)}
-.prop-card.featured{border-color:var(--sea)}
-.prop-img{height:200px;display:flex;align-items:center;justify-content:center;font-size:56px;position:relative}
-.prop-ribbon{position:absolute;top:12px;right:12px;background:var(--sea);color:var(--navy);font-size:10px;font-weight:700;padding:3px 10px;border-radius:var(--rfull)}
-.prop-body{padding:18px}
-.prop-price{font-size:20px;font-weight:800;color:var(--navy);margin-bottom:3px}
-.prop-name{font-size:14px;font-weight:600;color:var(--g700);margin-bottom:5px}
-.prop-loc{font-size:12px;color:var(--g500);display:flex;align-items:center;gap:4px;margin-bottom:10px}
-.prop-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
-.tag{font-size:11px;background:var(--g100);color:var(--g700);padding:3px 9px;border-radius:var(--rfull)}
-.prop-foot{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.gsas-badge{background:var(--ok-bg);color:var(--ok);font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--rfull)}
-.rate-badge{background:rgba(0,127,134,.08);color:var(--teal);font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--rfull)}
-.prop-btn{width:100%;padding:10px;background:var(--teal);color:#fff;border:none;border-radius:var(--r8);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:var(--transition)}
-.prop-btn:hover{background:var(--teal-d)}
-/* ESG product card */
-.prop-card.esg-product{border-color:#16845B;background:linear-gradient(160deg,#f0faf5 0%,#e6f7ef 60%,#eafaf6 100%);position:relative}
-.prop-card.esg-product:hover{box-shadow:0 12px 40px rgba(22,132,91,.18);transform:translateY(-4px)}
-.esg-hot-ribbon{position:absolute;top:-1px;right:-1px;background:linear-gradient(135deg,#16845B,#35C6C4);color:#fff;font-size:10px;font-weight:800;padding:5px 13px 5px 11px;border-radius:0 var(--r16) 0 var(--r16);letter-spacing:.4px;display:flex;align-items:center;gap:4px;box-shadow:0 3px 10px rgba(22,132,91,.35)}
-.esg-card-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(22,132,91,.12);color:#16845B;font-size:10px;font-weight:700;padding:3px 9px;border-radius:var(--rfull);border:1px solid rgba(22,132,91,.25);margin-bottom:8px}
+/* PRODUCT SEGMENT SECTIONS */
+.seg-section{padding:40px 0;border-bottom:1px solid var(--g200)}
+.seg-section:last-child{border-bottom:none}
+.seg-header{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+.seg-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.seg-icon.home{background:rgba(0,127,134,.1)}
+.seg-icon.auto{background:rgba(244,179,91,.15)}
+.seg-icon.personal{background:rgba(93,63,211,.1)}
+.seg-icon.sme{background:rgba(22,132,91,.1)}
+.seg-icon.commercial{background:rgba(0,59,92,.1)}
+.seg-icon.education{background:rgba(219,39,119,.1)}
+.seg-icon.equity{background:rgba(234,88,12,.1)}
+.seg-title{font-size:18px;font-weight:700;color:var(--navy)}
+.seg-sub{font-size:12px;color:var(--g500);margin-top:2px}
+.seg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
 
-/* ── CALCULATOR ── */
+/* PRODUCT CARDS */
+.prod-card{background:#fff;border-radius:var(--r16);padding:22px;box-shadow:var(--sh1);border:2px solid transparent;transition:var(--transition);cursor:pointer;position:relative;overflow:hidden}
+.prod-card:hover{box-shadow:var(--sh2);transform:translateY(-2px);border-color:var(--g200)}
+.prod-card.demo{border-color:var(--ok);background:linear-gradient(160deg,#f0faf5,#e6f7ef)}
+.prod-card.demo:hover{border-color:var(--ok);box-shadow:0 8px 32px rgba(22,132,91,.18);transform:translateY(-3px)}
+.demo-ribbon{position:absolute;top:0;right:0;background:linear-gradient(135deg,var(--ok),#2aa88e);color:#fff;font-size:10px;font-weight:800;padding:5px 13px 5px 11px;border-radius:0 var(--r16) 0 var(--r16);letter-spacing:.4px;display:flex;align-items:center;gap:4px;box-shadow:0 3px 10px rgba(22,132,91,.35)}
+.prod-cat-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.prod-name{font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px}
+.prod-desc{font-size:12px;color:var(--g500);line-height:1.55;margin-bottom:14px}
+.prod-highlights{margin:0 0 14px;padding-left:16px;font-size:12px;color:var(--navy);line-height:1.8}
+body.rtl .prod-highlights{padding-left:0;padding-right:16px}
+.prod-foot{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--g100);padding-top:14px;margin-top:auto}
+.prod-rate{font-size:13px;color:var(--g500)}
+.prod-rate strong{font-size:22px;font-weight:800;color:var(--teal);margin-right:3px}
+.prod-card.demo .prod-rate strong{color:var(--ok)}
+.prod-apply-btn{background:var(--teal);color:#fff;border:none;border-radius:var(--r8);padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:var(--transition)}
+.prod-apply-btn:hover{background:var(--teal-d)}
+.prod-card.demo .prod-apply-btn{background:var(--ok)}
+.prod-card.demo .prod-apply-btn:hover{background:#0d6641}
+
+/* PROPERTIES PAGE */
+.props-layout{display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start}
+@media(max-width:900px){.props-layout{grid-template-columns:1fr}}
+#portal-map{height:480px;border-radius:var(--r16);overflow:hidden;border:1px solid var(--g200);box-shadow:var(--sh1);position:sticky;top:80px}
+.map-legend{display:flex;gap:12px;padding:10px 0;flex-wrap:wrap}
+.leg-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px}
+.project-cards{display:flex;flex-direction:column;gap:20px}
+
+/* PROJECT CARD */
+.proj-card{background:#fff;border-radius:var(--r16);overflow:hidden;box-shadow:var(--sh1);border:2px solid transparent;transition:var(--transition);cursor:pointer}
+.proj-card:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
+.proj-card.eco-proj{border-color:var(--ok)}
+.proj-img{height:180px;background:linear-gradient(135deg,var(--navy),var(--teal));position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:48px}
+.proj-img img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.proj-eco-badge{position:absolute;top:10px;left:10px;background:var(--ok);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:var(--rfull);display:flex;align-items:center;gap:4px}
+.proj-status-chip{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:var(--rfull)}
+.proj-body{padding:16px}
+.proj-name{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:3px}
+.proj-loc{font-size:12px;color:var(--teal);margin-bottom:10px;display:flex;align-items:center;gap:4px;font-weight:600}
+.proj-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.proj-meta-item{font-size:11px;color:var(--g500)}
+.proj-meta-item strong{display:block;font-size:13px;font-weight:700;color:var(--navy)}
+.proj-price{font-size:13px;font-weight:600;color:var(--g700);margin-bottom:10px}
+.proj-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+.proj-tag{font-size:10px;background:var(--g100);color:var(--g700);padding:2px 8px;border-radius:var(--rfull)}
+.proj-tag.green{background:var(--green-bg);color:var(--ok)}
+.proj-btn{width:100%;padding:9px;background:var(--teal);color:#fff;border:none;border-radius:var(--r8);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:var(--transition)}
+.proj-btn.eco-btn{background:var(--ok)}
+.proj-btn:hover{opacity:.88}
+
+/* UNIT GRID */
+.unit-section{background:#fff;border-radius:var(--r16);box-shadow:var(--sh1);overflow:hidden;margin-bottom:20px}
+.unit-section-head{background:linear-gradient(135deg,var(--navy),var(--teal-d));padding:16px 20px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.unit-section-head.eco-head{background:linear-gradient(135deg,#0d4a26,#0a5c3a)}
+.unit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px;background:var(--g200)}
+.unit-card{background:#fff;padding:16px;transition:var(--transition);cursor:pointer}
+.unit-card:hover{background:#f0faf5;z-index:1;box-shadow:var(--sh1)}
+.unit-card.reserved{opacity:.75}
+.unit-card.sold{opacity:.55;cursor:default}
+.unit-img{width:100%;height:110px;object-fit:cover;border-radius:var(--r8);margin-bottom:10px;background:var(--g100)}
+.unit-num{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.unit-type{font-size:11px;color:var(--g500);margin-bottom:6px}
+.unit-price{font-size:16px;font-weight:800;color:var(--teal);margin-bottom:2px}
+.unit-card.eco-unit .unit-price{color:var(--ok)}
+.unit-meta{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px;font-size:11px;color:var(--g500)}
+.unit-status{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--rfull);margin-bottom:8px}
+.status-available{background:var(--ok-bg);color:var(--ok)}
+.status-reserved{background:var(--warn-bg);color:var(--warn)}
+.status-sold{background:var(--g200);color:var(--g700)}
+.unit-apply-btn{width:100%;padding:7px;background:var(--teal);color:#fff;border:none;border-radius:var(--r8);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:var(--transition)}
+.unit-card.eco-unit .unit-apply-btn{background:var(--ok)}
+.unit-apply-btn:hover{opacity:.88}
+.unit-apply-btn:disabled{background:var(--g300);cursor:not-allowed}
+
+/* UNIT AFFORDABILITY QUICK CALC */
+.unit-calc{background:var(--g100);border-top:1px solid var(--g200);padding:12px 16px;font-size:12px}
+.unit-calc-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.unit-calc-lbl{color:var(--g500)}
+.unit-calc-val{font-weight:700;color:var(--navy)}
+
+/* BYO OPTION */
+.byo-card{background:#fff;border:2px dashed var(--g300);border-radius:var(--r16);padding:24px;text-align:center;cursor:pointer;transition:var(--transition)}
+.byo-card:hover{border-color:var(--teal);background:rgba(0,127,134,.02)}
+
+/* CALCULATOR */
 .calc-wrap{background:linear-gradient(135deg,var(--sand) 0%,#ece8df 100%);border-radius:0}
 .calc-card{background:#fff;border-radius:var(--r24);box-shadow:var(--sh3);padding:36px;max-width:920px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:36px}
 @media(max-width:700px){.calc-card{grid-template-columns:1fr}}
@@ -124,10 +210,30 @@ body.rtl{font-family:'Noto Sans Arabic',system-ui,sans-serif;direction:rtl}
 .saving-box{background:rgba(244,179,91,.18);border:1px solid rgba(244,179,91,.35);border-radius:var(--r8);padding:12px;margin-top:14px;text-align:center;font-size:12px;color:rgba(255,255,255,.85)}
 .saving-num{font-size:22px;font-weight:900;color:var(--amber);display:block;margin:4px 0}
 
-/* ── TRACKING ── */
+/* TRACKING */
 .track-card{max-width:820px;margin:0 auto;background:#fff;border-radius:var(--r24);border:1px solid var(--g200);box-shadow:var(--sh2);overflow:hidden}
 .track-head{background:linear-gradient(135deg,var(--navy),var(--teal-d));padding:26px 30px;color:#fff}
 .track-ref{font-size:22px;font-weight:900;color:var(--sea)}
+.track-badge{display:inline-block;margin-left:10px;background:var(--teal);color:#fff;border-radius:20px;padding:2px 12px;font-size:11px;font-weight:700;vertical-align:middle}
+.track-timeline{display:flex;gap:0;margin:24px 0 0;overflow-x:auto;padding-bottom:8px}
+.track-step{flex:1;min-width:120px;text-align:center;position:relative;padding:0 6px}
+.track-step+.track-step::before{content:'';position:absolute;left:0;top:18px;width:100%;height:2px;background:var(--g200);z-index:0}
+.track-step.done+.track-step::before{background:var(--teal)}
+.track-dot{width:36px;height:36px;border-radius:50%;background:var(--g200);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:14px;color:var(--g500);position:relative;z-index:1}
+.track-step.done .track-dot{background:var(--teal);color:#fff}
+.track-step.active .track-dot{background:var(--navy);color:#fff;box-shadow:0 0 0 4px rgba(30,64,175,.15)}
+.track-label{font-size:11px;font-weight:600;color:var(--g700)}
+.track-date{font-size:10px;color:var(--g500);margin-top:2px}
+.tranche-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.tranche-card{background:#fff;border:1px solid var(--g200);border-radius:var(--r16);padding:16px;text-align:center}
+.tranche-card.disbursed{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.04)}
+.tc-label{font-size:12px;font-weight:700;color:var(--g700)}
+.tc-pct{font-size:26px;font-weight:900;color:var(--navy)}
+.tc-amount{font-size:13px;color:var(--sea);font-weight:700;margin:2px 0}
+.tc-status{font-size:11px;font-weight:600;margin-top:4px}
+.tc-status.disbursed{color:#059669}
+.tc-status.pending{color:var(--g500)}
+.tc-date{font-size:10px;color:var(--g400);margin-top:2px}
 .track-sub{font-size:12px;opacity:.7;margin-top:4px}
 .savings-strip{display:flex;align-items:center;gap:14px;background:rgba(53,198,196,.12);border:1px solid rgba(53,198,196,.25);border-radius:var(--r12);padding:14px 18px;margin-top:18px}
 .ss-num{font-size:20px;font-weight:900;color:#fff}
@@ -154,30 +260,44 @@ body.rtl .tl-chip{margin-left:0;margin-right:6px}
 .chip-ok{background:var(--ok-bg);color:var(--ok)}
 .tl-waiting .tl-title{color:var(--g300)}
 .tl-waiting .tl-desc{color:var(--g300)}
+.tranche-card{background:var(--g100);border:1px solid var(--g200);border-radius:var(--r12);padding:12px 14px;margin-bottom:8px}
+.tranche-card.active-tranche{background:var(--ok-bg);border-color:rgba(22,132,91,.3)}
 
-/* ── WIZARD ── */
+/* WIZARD MODAL */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px}
 .modal-bg.open{display:flex}
-.wizard{background:#fff;border-radius:var(--r24);width:100%;max-width:700px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.3);overflow:hidden}
-.wiz-head{background:linear-gradient(135deg,var(--navy),var(--teal-d));padding:26px 30px;color:#fff;flex-shrink:0}
-.wiz-head-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
-.wiz-title{font-size:19px;font-weight:700}
-.wiz-sub{font-size:12px;opacity:.7;margin-top:3px}
+.wizard{background:#fff;border-radius:var(--r24);width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.3);overflow:hidden}
+.wiz-head{background:linear-gradient(135deg,var(--navy),var(--teal-d));padding:22px 28px;color:#fff;flex-shrink:0}
+.wiz-head.eco-wiz{background:linear-gradient(135deg,#0d4a26,#0a5c3a)}
+.wiz-head-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.wiz-title{font-size:17px;font-weight:700}
+.wiz-sub{font-size:11px;opacity:.7;margin-top:3px}
 .wiz-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition);line-height:1}
 .wiz-close:hover{background:rgba(255,255,255,.28)}
-.wiz-steps{display:flex;gap:0}
-.ws{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.wiz-steps{display:flex;gap:0;overflow-x:auto}
+.ws{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;min-width:52px}
 .ws:not(:last-child)::after{content:'';position:absolute;top:12px;left:50%;width:100%;height:1px;background:rgba(255,255,255,.2);z-index:0}
 .ws.done::after,.ws.active::after{background:rgba(53,198,196,.5)}
 .ws-n{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;z-index:1;position:relative;transition:var(--transition)}
 .ws.done .ws-n{background:var(--ok);color:#fff}
 .ws.active .ws-n{background:var(--sea);color:var(--navy)}
-.ws-lbl{font-size:9px;opacity:.65;text-align:center;font-weight:600}
+.ws-lbl{font-size:8px;opacity:.65;text-align:center;font-weight:600;white-space:nowrap}
 .ws.active .ws-lbl{opacity:1;color:var(--sea)}
-.wiz-body{flex:1;overflow-y:auto;padding:28px 30px}
-.wiz-foot{padding:16px 30px;border-top:1px solid var(--g200);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:#fff}
+.wiz-body{flex:1;overflow-y:auto;padding:24px 28px}
+.wiz-foot{padding:14px 28px;border-top:1px solid var(--g200);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:#fff}
 
-/* ── FORM ── */
+/* SOURCE PILL — Partner vs BYO distinction */
+.source-pills{display:flex;gap:8px;margin-bottom:20px}
+.source-pill{flex:1;padding:10px;border-radius:var(--r12);border:2px solid var(--g200);cursor:pointer;text-align:center;transition:var(--transition);font-size:12px;font-weight:600;color:var(--g700);background:#fff}
+.source-pill.active-partner{border-color:var(--teal);background:rgba(0,127,134,.06);color:var(--teal)}
+.source-pill.active-byo{border-color:var(--amber);background:#fffbf2;color:var(--warn)}
+.partner-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,127,134,.08);color:var(--teal);font-size:10px;font-weight:700;padding:2px 9px;border-radius:var(--rfull);border:1px solid rgba(0,127,134,.2)}
+.byo-badge{display:inline-flex;align-items:center;gap:5px;background:#fffbf2;color:var(--warn);font-size:10px;font-weight:700;padding:2px 9px;border-radius:var(--rfull);border:1px solid rgba(244,179,91,.4)}
+.contractor-amber{border:1.5px solid var(--amber);border-radius:var(--r12);padding:16px;background:#fffbf2;margin-top:14px}
+.contractor-amber-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.contractor-req-badge{font-size:10px;font-weight:700;background:#fef3c7;color:#B45309;border:1px solid #fcd34d;border-radius:var(--rfull);padding:3px 10px}
+
+/* FORM */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:560px){.form-grid{grid-template-columns:1fr}}
 .fg{margin-bottom:14px}
@@ -186,6 +306,9 @@ body.rtl .tl-chip{margin-left:0;margin-right:6px}
 .fc:focus{outline:none;border-color:var(--teal)}
 .fc[readonly]{background:var(--g100);cursor:default}
 .fc-ok{border-color:var(--ok)!important;background:var(--ok-bg)!important;color:var(--ok);font-weight:700}
+.fc-warn{border-color:var(--amber)!important;background:#fffbf2!important}
+.fc-glow{animation:glow-pulse 1.5s ease 3;border-color:var(--amber)!important}
+@keyframes glow-pulse{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 3px rgba(244,179,91,.4)}}
 .info-strip{background:rgba(0,127,134,.06);border:1px solid rgba(0,127,134,.2);border-radius:var(--r8);padding:12px 14px;font-size:12px;color:var(--navy);margin-bottom:14px}
 .warn-strip{background:var(--warn-bg);border:1px solid rgba(155,106,19,.25);border-radius:var(--r8);padding:12px 14px;font-size:12px;color:var(--warn)}
 .prop-sel{display:flex;align-items:center;gap:12px;background:var(--ok-bg);border:1px solid rgba(22,132,91,.3);border-radius:var(--r12);padding:14px;margin-bottom:16px}
@@ -195,10 +318,11 @@ body.rtl .tl-chip{margin-left:0;margin-right:6px}
 .ps-badge{margin-left:auto;background:var(--ok-bg);color:var(--ok);font-size:11px;font-weight:700;padding:4px 10px;border-radius:var(--rfull);border:1px solid rgba(22,132,91,.3)}
 body.rtl .ps-badge{margin-left:0;margin-right:auto}
 .doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.doc-card{border:2px dashed var(--g300);border-radius:var(--r12);padding:14px;text-align:center;cursor:pointer;transition:var(--transition)}
+.doc-card{border:2px dashed var(--g300);border-radius:var(--r12);padding:14px;text-align:center;cursor:pointer;transition:var(--transition);position:relative}
 .doc-card:hover{border-color:var(--teal);background:rgba(0,127,134,.03)}
 .doc-card.ok{border-color:var(--ok);border-style:solid;background:var(--ok-bg)}
 .doc-card.analyzing{border-color:var(--amber);border-style:solid;background:var(--warn-bg)}
+.doc-card input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .doc-ic{font-size:24px;margin-bottom:6px}
 .doc-name{font-size:11px;font-weight:700;color:var(--navy);margin-bottom:3px}
 .doc-st{font-size:10px;font-weight:600}
@@ -213,10 +337,30 @@ body.rtl .ps-badge{margin-left:0;margin-right:auto}
 .finance-summary{background:linear-gradient(135deg,var(--navy),var(--teal));border-radius:var(--r12);padding:18px;color:#fff;margin-top:6px}
 .fs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center}
 .fs-lbl{font-size:10px;opacity:.65;margin-bottom:4px}
-.fs-val{font-size:22px;font-weight:800;color:var(--sea)}
+.fs-val{font-size:20px;font-weight:800;color:var(--sea)}
 .fs-note{text-align:center;font-size:10px;opacity:.5;margin-top:10px}
 
-/* ── BTNS ── */
+/* LIVENESS */
+.liveness-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:600;flex-direction:column;align-items:center;justify-content:center}
+.liveness-overlay.open{display:flex}
+.liveness-box{background:#0d1117;border-radius:24px;padding:24px;width:100%;max-width:460px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.6)}
+.liveness-video-wrap{position:relative;width:100%;aspect-ratio:4/3;border-radius:16px;overflow:hidden;margin-bottom:16px;background:#000}
+.liveness-video-wrap video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.liveness-oval{position:absolute;inset:0;pointer-events:none}
+.liveness-oval svg{width:100%;height:100%}
+.liveness-instruction{font-size:14px;font-weight:600;color:#fff;margin-bottom:8px;min-height:22px}
+.liveness-progress{width:100%;height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;margin-bottom:16px}
+.liveness-bar{height:100%;background:linear-gradient(90deg,var(--sea),var(--ok));border-radius:3px;transition:width .3s ease}
+.liveness-status{font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px}
+.liveness-result{font-size:18px;font-weight:700;color:#6ee7b7;display:none;margin-bottom:16px}
+
+/* OCR PROGRESS */
+.ocr-progress-wrap{background:rgba(0,127,134,.06);border:1px solid rgba(0,127,134,.2);border-radius:var(--r12);padding:16px;margin-bottom:14px}
+.ocr-bar-wrap{width:100%;height:8px;background:var(--g200);border-radius:4px;overflow:hidden;margin:10px 0 6px}
+.ocr-bar{height:100%;background:linear-gradient(90deg,var(--teal),var(--sea));border-radius:4px;transition:width .4s ease}
+.ocr-action{font-size:11px;color:var(--teal);font-weight:600}
+
+/* BTNS */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:var(--r8);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:var(--transition);white-space:nowrap}
 .btn-teal{background:var(--teal);color:#fff}
 .btn-teal:hover{background:var(--teal-d)}
@@ -226,7 +370,7 @@ body.rtl .ps-badge{margin-left:0;margin-right:auto}
 .btn-sea:hover{background:#2bb4b2}
 .btn:disabled{opacity:.55;cursor:not-allowed}
 
-/* ── TOAST ── */
+/* TOAST */
 .toast-wrap{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 body.rtl .toast-wrap{right:auto;left:24px}
 .toast{background:#fff;border-radius:var(--r12);padding:11px 15px;box-shadow:var(--sh3);display:flex;align-items:center;gap:9px;min-width:260px;pointer-events:all;border-left:4px solid var(--teal);animation:tIn .25s ease}
@@ -235,12 +379,15 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 .toast.err{border-color:var(--err)}
 .toast-msg{font-size:12px;font-weight:500;flex:1;color:var(--g900)}
 @keyframes tIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
-/* ── SPINNER ── */
 .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:rot .6s linear infinite;display:inline-block;vertical-align:middle}
+.spin-teal{border-color:rgba(0,127,134,.2);border-top-color:var(--teal)}
 @keyframes rot{to{transform:rotate(360deg)}}
 .fade{animation:fd .3s ease}
 @keyframes fd{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ESG cards from old portal */
+.prop-card.esg-product{border-color:#16845B;background:linear-gradient(160deg,#f0faf5 0%,#e6f7ef 60%,#eafaf6 100%);position:relative}
+.esg-hot-ribbon{position:absolute;top:-1px;right:-1px;background:linear-gradient(135deg,#16845B,#35C6C4);color:#fff;font-size:10px;font-weight:800;padding:5px 13px 5px 11px;border-radius:0 var(--r16) 0 var(--r16);letter-spacing:.4px;display:flex;align-items:center;gap:4px;box-shadow:0 3px 10px rgba(22,132,91,.35)}
 </style>
 </head>
 <body>
@@ -259,10 +406,11 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
   </a>
   <div class="nav-links">
     <button class="nav-btn" onclick="showPage('home')" id="nb-home" data-en="Home" data-ar="الرئيسية">Home</button>
+    <button class="nav-btn" onclick="showPage('products')" id="nb-products" data-en="Products" data-ar="المنتجات">Products</button>
     <button class="nav-btn" onclick="showPage('properties')" id="nb-properties" data-en="Properties" data-ar="العقارات">Properties</button>
     <button class="nav-btn" onclick="showPage('calculator')" id="nb-calculator" data-en="Calculator" data-ar="الحاسبة">Calculator</button>
     <button class="nav-btn" onclick="showPage('tracking')" id="nb-tracking" data-en="My Application" data-ar="طلبي">My Application</button>
-    <button class="nav-btn nav-cta" onclick="openWizard()" data-en="Apply Now" data-ar="تقدم الآن">Apply Now</button>
+    <button class="nav-btn nav-cta" onclick="openWizard(null,null)" data-en="Apply Now" data-ar="تقدم الآن">Apply Now</button>
   </div>
   <div class="nav-end">
     <button class="lang-pill" onclick="toggleLang()" id="lang-btn">عربي</button>
@@ -273,158 +421,294 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
   </div>
 </nav>
 
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- PAGES WRAPPER — all pages sit under nav (pt-60px)   -->
+<!-- ════════════════════════════════════════════════════ -->
+
 <!-- ═══ PAGE: HOME ═══ -->
 <div class="page active" id="page-home">
-  <section class="hero">
-    <svg class="hero-bg" viewBox="0 0 1200 560" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="980" cy="120" r="280" stroke-width="1.5" opacity=".6"/>
-      <circle cx="980" cy="120" r="180" stroke-width="1" opacity=".4"/>
-      <circle cx="150" cy="440" r="160" stroke-width="1" opacity=".3"/>
+
+  <!-- Hero — toggled to .eco by JS when is_demo_product=1 -->
+  <section class="hero" id="main-hero">
+    <svg class="hero-bg" viewBox="0 0 1400 560" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="rgba(255,255,255,.12)">
+      <circle cx="1100" cy="100" r="320" stroke-width="1.5" opacity=".6"/>
+      <circle cx="1100" cy="100" r="200" stroke-width="1" opacity=".4"/>
+      <circle cx="120" cy="480" r="180" stroke-width="1" opacity=".3"/>
+      <path d="M0 420 Q350 300 700 390 T1400 320" stroke-width="1" opacity=".2"/>
     </svg>
-    <div class="hero-inner">
+
+    <!-- DEFAULT HERO CONTENT -->
+    <div class="hero-inner" id="hero-default">
       <div class="hero-left">
-        <div class="hero-kicker">🏦 <span data-en="Sohar International · Digital Lending" data-ar="بنك صحار الدولي · الإقراض الرقمي">Sohar International · Digital Lending</span></div>
-        <h1 class="hero-h1">
-          <span data-en="Smart Finance for " data-ar="تمويل ذكي لـ">Smart Finance for </span><em data-en="Every Goal" data-ar="كل هدف">Every Goal</em>
+        <div class="hero-kicker" id="hero-kicker-text">🏦 Sohar International · Digital Lending</div>
+        <h1 class="hero-h1" id="hero-h1-text">
+          Smart Finance for <em>Every Goal</em>
         </h1>
-        <p class="hero-p" id="hero-product-desc" data-en="Explore our range of financing products — from home loans to personal finance. Select a product below to get started." data-ar="استكشف منتجاتنا التمويلية — من قروض المنازل إلى التمويل الشخصي. اختر منتجاً أدناه للبدء.">Explore our range of financing products — from home loans to personal finance. Select a product below to get started.</p>
+        <p class="hero-p" id="hero-p-text">Explore our full range of financing products — from home loans to personal finance, auto loans to SME solutions. Select a product to get started.</p>
         <div class="hero-btns">
-          <button class="btn-prime" onclick="showPage('properties')" data-en="Browse Properties" data-ar="تصفح العقارات">Browse Properties</button>
-          <button class="btn-ghost" onclick="showPage('calculator')" data-en="Calculate Savings" data-ar="احسب مدخراتك">Calculate Savings</button>
+          <button class="btn-prime" onclick="showPage('properties')">Browse Properties</button>
+          <button class="btn-ghost" onclick="showPage('calculator')">Calculate Savings</button>
         </div>
       </div>
-      <div class="hero-card" id="hero-product-card">
-        <div class="hc-label" data-en="AVAILABLE PRODUCTS" data-ar="المنتجات المتاحة">AVAILABLE PRODUCTS</div>
-        <div id="hero-product-count" style="font-size:2.2rem;font-weight:800;color:#fff;line-height:1">—</div>
+      <div class="hero-card" id="hero-stats-card">
+        <div class="hc-label">AVAILABLE PRODUCTS</div>
+        <div id="hero-product-count" style="font-size:2.4rem;font-weight:800;color:#fff;line-height:1">—</div>
         <div class="hc-sub" id="hero-product-subtitle">Loading…</div>
         <div class="hc-div"></div>
-        <div class="hc-row"><div class="hc-dot">✓</div><span data-en="AI-assisted fast approval" data-ar="موافقة سريعة">AI-assisted fast approval</span></div>
-        <div class="hc-row"><div class="hc-dot">✓</div><span data-en="CBO-compliant products" data-ar="منتجات متوافقة مع البنك المركزي">CBO-compliant products</span></div>
-        <div class="hc-row"><div class="hc-dot">✓</div><span data-en="Competitive rates" data-ar="أسعار تنافسية">Competitive rates</span></div>
+        <div class="hc-row"><div class="hc-dot">✓</div><span>AI-assisted fast approval</span></div>
+        <div class="hc-row"><div class="hc-dot">✓</div><span>CBO-compliant products</span></div>
+        <div class="hc-row"><div class="hc-dot">✓</div><span>Competitive green rates</span></div>
+      </div>
+    </div>
+
+    <!-- ECO HERO CONTENT — shown when is_demo_product=1 -->
+    <div class="hero-inner" id="hero-eco" style="display:none">
+      <div class="hero-left">
+        <div class="hero-kicker eco-kicker">🌿 Green Finance Initiative · Sohar International</div>
+        <h1 class="hero-h1">
+          Live Green. <em style="color:#86efac">Finance Smart.</em>
+        </h1>
+        <p class="hero-p">Our new Green Home Loan offers Oman's most competitive rate — exclusively for GSAS-certified eco homes. Save up to <strong style="color:#86efac">OMR 31,000</strong> over your loan lifetime.</p>
+        <div class="hero-btns">
+          <button class="btn-prime eco-btn" onclick="showPage('properties')">🏡 Explore Eco Properties</button>
+          <button class="btn-ghost" onclick="openWizard(null,null)">Apply for Green Loan</button>
+        </div>
+        <div class="eco-badges">
+          <span class="eco-badge">🌱 GSAS Certified</span>
+          <span class="eco-badge">☀️ Solar Ready</span>
+          <span class="eco-badge">💧 Water Efficient</span>
+          <span class="eco-badge">⚡ EV Charging</span>
+        </div>
+      </div>
+      <div class="hero-card eco-card" id="hero-eco-card">
+        <div class="hc-label" style="color:#86efac">GREEN HOME LOAN</div>
+        <div style="font-size:2.8rem;font-weight:800;color:#fff;line-height:1" id="eco-rate-display">4.75%</div>
+        <div class="hc-sub" style="color:#bbf7d0">From p.a. — lowest in Oman</div>
+        <div class="hc-div" style="border-color:rgba(134,239,172,.2)"></div>
+        <div class="hc-row"><div class="hc-dot" style="background:#16a34a">✓</div><span>GSAS Gold &amp; Premium properties</span></div>
+        <div class="hc-row"><div class="hc-dot" style="background:#16a34a">✓</div><span>Up to OMR 500,000 · 30 year term</span></div>
+        <div class="hc-row"><div class="hc-dot" style="background:#16a34a">✓</div><span>Save up to OMR 31,000 lifetime</span></div>
+        <button class="btn-prime eco-btn" style="width:100%;margin-top:16px;justify-content:center" onclick="openWizard(null,null)">Apply Now →</button>
       </div>
     </div>
   </section>
 
-  <!-- Dynamic Products Section -->
-  <section class="sec" style="padding-top:48px;padding-bottom:24px">
+  <!-- Quick-nav action cards -->
+  <section class="sec" style="padding-top:40px;padding-bottom:28px">
+    <div class="sec-inner">
+      <div class="quick-nav-grid">
+        <div class="qn-card" onclick="showPage('products')">
+          <div class="qn-icon">💼</div>
+          <div class="qn-title">Our Products</div>
+          <div class="qn-sub">Compare all financing options</div>
+        </div>
+        <div class="qn-card" onclick="showPage('properties')">
+          <div class="qn-icon">🏡</div>
+          <div class="qn-title">Browse Properties</div>
+          <div class="qn-sub">GSAS-certified partner developments</div>
+        </div>
+        <div class="qn-card" onclick="showPage('calculator')">
+          <div class="qn-icon">🧮</div>
+          <div class="qn-title">ESG Calculator</div>
+          <div class="qn-sub">See your lifetime green savings</div>
+        </div>
+        <div class="qn-card cta-card" onclick="openWizard(null,null)">
+          <div class="qn-icon">🚀</div>
+          <div class="qn-title">Apply Now</div>
+          <div class="qn-sub" style="color:rgba(255,255,255,.65)">8-step process · AI-assisted</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Home page products preview (segmented) — populated by loadProducts() on home page -->
+  <section class="sec" style="padding-top:12px;padding-bottom:48px">
     <div class="sec-inner">
       <div class="sec-head">
         <div>
-          <h2 class="sec-title" data-en="Our Products" data-ar="منتجاتنا">Our Products</h2>
-          <p class="sec-sub" data-en="Choose the financing product that fits your needs." data-ar="اختر المنتج التمويلي الذي يناسب احتياجاتك.">Choose the financing product that fits your needs.</p>
+          <div class="sec-eye">FINANCING PRODUCTS</div>
+          <h2 class="sec-title">Find Your Perfect Loan</h2>
         </div>
+        <button class="btn btn-outline" onclick="showPage('products')" style="flex-shrink:0">View All →</button>
       </div>
-      <div id="products-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-top:24px">
-        <div style="color:var(--g500);text-align:center;padding:2rem;grid-column:1/-1">Loading products…</div>
+      <div id="home-products-preview" style="margin-top:20px">
+        <div style="text-align:center;padding:30px;color:var(--g500)"><span class="spin"></span> Loading…</div>
       </div>
     </div>
   </section>
 
-  <!-- Quick nav cards -->
-  <section class="sec" style="padding-top:24px;padding-bottom:48px">
+</div><!-- /page-home -->
+
+<!-- ═══ PAGE: PRODUCTS ═══ -->
+<div class="page" id="page-products">
+  <section class="sec" style="padding-top:80px;padding-bottom:60px">
     <div class="sec-inner">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
-        <div onclick="showPage('properties')" style="background:#fff;border-radius:var(--r16);padding:22px;box-shadow:var(--sh1);cursor:pointer;border:2px solid transparent;transition:var(--transition)" onmouseover="this.style.borderColor='var(--sea)'" onmouseout="this.style.borderColor='transparent'">
-          <div style="font-size:28px;margin-bottom:10px">🏡</div>
-          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" data-en="Browse Properties" data-ar="تصفح العقارات">Browse Properties</div>
-          <div style="font-size:12px;color:var(--g500)" data-en="GSAS-certified units eligible for financing" data-ar="وحدات معتمدة GSAS مؤهلة للتمويل">GSAS-certified units eligible for financing</div>
+      <div class="sec-eye">ALL FINANCING PRODUCTS</div>
+      <h2 class="sec-title">Our Product Range</h2>
+      <p class="sec-sub" style="margin-bottom:32px">Choose the financing solution that fits your goals. All products are CBO-compliant with competitive rates.</p>
+
+      <!-- Demo product banner — shown only when eco product exists -->
+      <div id="eco-banner" style="display:none" class="eco-hero-banner">
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="font-size:2.5rem">🌿</div>
+          <div>
+            <div id="eco-banner-title" style="font-size:18px;font-weight:800;color:#fff;margin-bottom:4px">New! Green Home Loan</div>
+            <div id="eco-banner-desc" style="font-size:13px;color:rgba(255,255,255,.8)">Oman's most competitive eco-home financing — from 4.75% p.a. for GSAS-certified properties.</div>
+          </div>
         </div>
-        <div onclick="showPage('calculator')" style="background:#fff;border-radius:var(--r16);padding:22px;box-shadow:var(--sh1);cursor:pointer;border:2px solid transparent;transition:var(--transition)" onmouseover="this.style.borderColor='var(--sea)'" onmouseout="this.style.borderColor='transparent'">
-          <div style="font-size:28px;margin-bottom:10px">🧮</div>
-          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" data-en="Savings Calculator" data-ar="حاسبة المدخرات">Savings Calculator</div>
-          <div style="font-size:12px;color:var(--g500)" data-en="See your lifetime green savings vs. standard rate" data-ar="انظر مدخراتك مقارنة بالسعر القياسي">See your lifetime green savings vs. standard rate</div>
-        </div>
-        <div onclick="showPage('tracking')" style="background:#fff;border-radius:var(--r16);padding:22px;box-shadow:var(--sh1);cursor:pointer;border:2px solid transparent;transition:var(--transition)" onmouseover="this.style.borderColor='var(--sea)'" onmouseout="this.style.borderColor='transparent'">
-          <div style="font-size:28px;margin-bottom:10px">📋</div>
-          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" data-en="Track Application" data-ar="تتبع الطلب">Track Application</div>
-          <div style="font-size:12px;color:var(--g500)" id="track-nav-hint" data-en="View your active application" data-ar="عرض طلبك النشط">View your active application</div>
-        </div>
-        <div onclick="openWizard()" style="background:linear-gradient(135deg,var(--navy),var(--teal));border-radius:var(--r16);padding:22px;box-shadow:var(--sh2);cursor:pointer;transition:var(--transition)" onmouseover="this.style.opacity='.92'" onmouseout="this.style.opacity='1'">
-          <div style="font-size:28px;margin-bottom:10px">🚀</div>
-          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:4px" data-en="Apply Now" data-ar="تقدم الآن">Apply Now</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.65)" data-en="8-minute process · AI-assisted" data-ar="8 دقائق · مدعوم بالذكاء الاصطناعي">8-minute process · AI-assisted</div>
-        </div>
+        <button class="btn-prime eco-btn" style="flex-shrink:0" onclick="scrollToSection('seg-home_loan')">Explore →</button>
       </div>
+
+      <!-- Segmented product sections — rendered by JS -->
+      <div id="products-segmented"></div>
     </div>
   </section>
-</div>
+</div><!-- /page-products -->
 
 <!-- ═══ PAGE: PROPERTIES ═══ -->
 <div class="page" id="page-properties">
-  <section class="sec">
+  <section class="sec" style="padding-top:80px;padding-bottom:20px">
     <div class="sec-inner">
       <div class="sec-eye">PARTNER DEVELOPMENTS</div>
-      <h2 class="sec-h2">Green-Certified Properties</h2>
-      <p class="sec-sub">All units pre-screened and GSAS-certified. EcoVillage Phase 2 qualifies for the 4.75% premium green rate.</p>
-      <div class="prop-grid" id="projects-grid"><div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--g500)"><span class="spin" style="border-color:rgba(0,127,134,.2);border-top-color:var(--teal)"></span> Loading properties…</div></div>
+      <h2 class="sec-title">Green-Certified Properties</h2>
+      <p class="sec-sub">All developments pre-screened and GSAS-certified. Partner projects qualify for preferential green financing rates.</p>
+
+      <!-- Map / List toggle tabs -->
+      <div class="prop-tabs" style="margin-top:24px">
+        <button class="prop-tab active" id="tab-map" onclick="switchPropView('map')">🗺️ Map View</button>
+        <button class="prop-tab" id="tab-list" onclick="switchPropView('list')">📋 List View</button>
+      </div>
     </div>
   </section>
-</div>
 
+  <!-- Map view -->
+  <div id="prop-map-view">
+    <div class="sec-inner" style="padding:0 40px">
+      <div id="customer-map" style="height:460px;border-radius:var(--r16);overflow:hidden;border:1px solid var(--g300);box-shadow:var(--sh2)"></div>
+      <div class="map-legend-strip">
+        <span class="map-leg-item"><span class="leg-dot" style="background:#2ECC71"></span><span id="leg-available">Available</span></span>
+        <span class="map-leg-item"><span class="leg-dot" style="background:#F39C12"></span><span id="leg-reserved">Reserved</span></span>
+        <span class="map-leg-item"><span class="leg-dot" style="background:#003B5C"></span><span id="leg-sold">Sold</span></span>
+        <span class="map-leg-item"><span class="leg-dot" style="background:#16a34a;border:2px solid #bbf7d0"></span>Demo Project</span>
+      </div>
+      <!-- Map filter chips -->
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="map-filter-btn active-filter" data-filter="all" onclick="propMapFilter('all')">All</button>
+        <button class="map-filter-btn" data-filter="available" onclick="propMapFilter('available')">Available</button>
+        <button class="map-filter-btn" data-filter="reserved" onclick="propMapFilter('reserved')">Reserved</button>
+        <button class="map-filter-btn" data-filter="sold" onclick="propMapFilter('sold')">Sold</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- List / Project cards view -->
+  <div id="prop-list-view" style="display:none">
+    <section class="sec" style="padding-top:20px">
+      <div class="sec-inner">
+        <div id="projects-list-wrap">
+          <div style="text-align:center;padding:48px;color:var(--g500)"><span class="spin"></span> Loading properties…</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Project detail panel — slides in from bottom -->
+  <div id="project-panel-bg" class="panel-bg" onclick="closeProjectPanel()"></div>
+  <div id="project-panel" class="project-panel">
+    <div class="panel-head">
+      <div>
+        <div id="pp-name" style="font-size:18px;font-weight:800;color:var(--navy)">—</div>
+        <div id="pp-loc" style="font-size:12px;color:var(--g500);margin-top:3px">—</div>
+      </div>
+      <button class="icon-btn" onclick="closeProjectPanel()">✕</button>
+    </div>
+    <div class="panel-body" id="project-panel-body">
+      <div style="text-align:center;padding:40px;color:var(--g500)"><span class="spin"></span></div>
+    </div>
+  </div>
+
+</div><!-- /page-properties -->
 
 <!-- ═══ PAGE: CALCULATOR ═══ -->
 <div class="page" id="page-calculator">
   <section class="sec calc-wrap">
     <div class="sec-inner">
-      <div class="sec-eye" data-en="ESG SAVINGS CALCULATOR" data-ar="حاسبة مدخرات ESG">ESG SAVINGS CALCULATOR</div>
-      <h2 class="sec-h2" data-en="See Your Green Savings" data-ar="انظر مدخراتك الخضراء">See Your Green Savings</h2>
-      <p class="sec-sub" data-en="Toggle the ESG discount to see exactly how much you save with a GSAS-certified property." data-ar="فعّل خصم ESG لترى بالضبط كم توفر.">Toggle the ESG discount to see exactly how much you save with a GSAS-certified property.</p>
+      <div class="sec-eye">ESG SAVINGS CALCULATOR</div>
+      <h2 class="sec-title">See Your Green Savings</h2>
+      <p class="sec-sub">Toggle the ESG discount to see exactly how much you save with a GSAS-certified property.</p>
       <div class="calc-card">
         <div>
           <div class="c-group">
-            <div class="c-label"><span data-en="Loan Amount (OMR)" data-ar="مبلغ القرض (ريال)">Loan Amount (OMR)</span><span class="c-val" id="c-amt-d">200,000</span></div>
-            <input type="range" class="c-slider" min="20000" max="350000" step="5000" value="200000" id="c-amt" oninput="calcUpdate()"/>
+            <div class="c-label"><span>Loan Amount (OMR)</span><span class="c-val" id="c-amt-d">200,000</span></div>
+            <input type="range" class="c-slider" min="20000" max="500000" step="5000" value="200000" id="c-amt" oninput="calcUpdate()"/>
           </div>
           <div class="c-group">
-            <div class="c-label"><span data-en="Tenure (Years)" data-ar="المدة (سنوات)">Tenure (Years)</span><span class="c-val" id="c-ten-d">25 years</span></div>
+            <div class="c-label"><span>Tenure (Years)</span><span class="c-val" id="c-ten-d">25 years</span></div>
             <input type="range" class="c-slider" min="5" max="30" step="1" value="25" id="c-ten" oninput="calcUpdate()"/>
           </div>
           <div class="c-group">
-            <label class="c-label" data-en="GSAS Score" data-ar="نقاط GSAS">GSAS Score</label>
+            <label class="c-label">GSAS Score</label>
             <select class="c-input" id="c-gsas" onchange="calcUpdate()">
-              <option value="89">89 — GSAS 4-Star (4.75%)</option>
-              <option value="74">74 — GSAS 3-Star (5.00%)</option>
+              <option value="90">90+ — GSAS Gold (4.75%)</option>
+              <option value="85">85 — GSAS Premium (4.75%)</option>
+              <option value="74">74 — GSAS Standard (5.00%)</option>
               <option value="60">60 — Below GSAS (5.25%)</option>
               <option value="0">No certification (5.50%)</option>
+            </select>
+          </div>
+          <div class="c-group">
+            <label class="c-label">Product Category</label>
+            <select class="c-input" id="c-cat" onchange="calcUpdate()">
+              <option value="home_loan">Home Loan</option>
+              <option value="personal_loan">Personal Loan</option>
+              <option value="auto_loan">Auto Loan</option>
+              <option value="sme">SME Finance</option>
             </select>
           </div>
           <div class="esg-row" onclick="toggleESG()" id="esg-row">
             <div class="sw on" id="esg-sw"><div class="sw-knob"></div></div>
             <div>
-              <div style="font-size:13px;font-weight:700;color:var(--navy)" data-en="ESG Discount Applied" data-ar="تم تطبيق خصم ESG">ESG Discount Applied</div>
-              <div style="font-size:11px;color:var(--g500)" data-en="−0.25% for GSAS ≥ 85" data-ar="−0.25٪ للنقاط ≥ 85">−0.25% for GSAS ≥ 85</div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy)">ESG Discount Applied</div>
+              <div style="font-size:11px;color:var(--g500)">−0.25% for GSAS ≥ 85</div>
             </div>
             <div style="margin-left:auto;font-size:16px">🌿</div>
           </div>
-          <button class="btn btn-teal" style="width:100%;justify-content:center;padding:12px" onclick="openWizard()" data-en="Apply with These Terms" data-ar="تقدم بهذه الشروط">Apply with These Terms</button>
+          <button class="btn btn-teal" style="width:100%;justify-content:center;padding:13px;margin-top:8px" onclick="openWizard(null,null)">Apply with These Terms</button>
         </div>
         <div class="calc-res">
-          <div class="cr-lbl" data-en="Monthly Payment" data-ar="الدفعة الشهرية">Monthly Payment</div>
+          <div class="cr-lbl">Monthly Payment</div>
           <div class="cr-main" id="cr-monthly">OMR 1,089</div>
           <div class="cr-rate" id="cr-rate-lbl">@ 4.75% p.a.</div>
-          <div class="cr-row"><span data-en="Loan Amount" data-ar="مبلغ القرض">Loan Amount</span><span class="cr-v" id="cr-amt">OMR 200,000</span></div>
-          <div class="cr-row"><span data-en="Interest Rate" data-ar="معدل الفائدة">Interest Rate</span><span class="cr-v" id="cr-rate">4.75%</span></div>
-          <div class="cr-row"><span data-en="Total Interest" data-ar="إجمالي الفائدة">Total Interest</span><span class="cr-v" id="cr-int">OMR 126,740</span></div>
-          <div class="cr-row"><span data-en="Total Repayment" data-ar="إجمالي السداد">Total Repayment</span><span class="cr-v" id="cr-total">OMR 326,740</span></div>
+          <div class="cr-row"><span>Loan Amount</span><span class="cr-v" id="cr-amt">OMR 200,000</span></div>
+          <div class="cr-row"><span>Interest Rate</span><span class="cr-v" id="cr-rate">4.75%</span></div>
+          <div class="cr-row"><span>Total Interest</span><span class="cr-v" id="cr-int">OMR 126,740</span></div>
+          <div class="cr-row"><span>Total Repayment</span><span class="cr-v" id="cr-total">OMR 326,740</span></div>
           <div class="saving-box">
-            <span data-en="GREEN SAVING vs. Standard 5.50%" data-ar="التوفير الأخضر مقارنة بالسعر القياسي 5.50٪">GREEN SAVING vs. Standard 5.50%</span>
+            <span>GREEN SAVING vs. Standard 5.50%</span>
             <span class="saving-num" id="cr-saving">OMR 31,560</span>
-            <span style="font-size:10px;opacity:.8" data-en="over loan lifetime" data-ar="على مدى عمر القرض">over loan lifetime</span>
+            <span style="font-size:10px;opacity:.8">over loan lifetime</span>
           </div>
         </div>
       </div>
     </div>
   </section>
-</div>
+</div><!-- /page-calculator -->
 
 <!-- ═══ PAGE: TRACKING ═══ -->
 <div class="page" id="page-tracking">
-  <section class="sec">
+  <section class="sec" style="padding-top:80px;padding-bottom:60px">
     <div class="sec-inner">
-      <div class="sec-eye" data-en="APPLICATION STATUS" data-ar="حالة الطلب">APPLICATION STATUS</div>
-      <h2 class="sec-h2" data-en="Track Your Application" data-ar="تتبع طلبك">Track Your Application</h2>
+      <div class="sec-eye">APPLICATION STATUS</div>
+      <h2 class="sec-title">Track Your Application</h2>
+
       <div class="track-card">
-        <div id="track-content"><div style="padding:48px;text-align:center;color:var(--g500)"><span class="spin" style="border-color:rgba(0,127,134,.2);border-top-color:var(--teal)"></span> Loading application…</div></div>
+        <!-- empty / loading state -->
+        <div id="track-content" style="padding:56px 32px;text-align:center">
+          <span class="spin" style="border-color:rgba(0,127,134,.2);border-top-color:var(--teal)"></span>
+        </div>
+
+        <!-- populated header -->
         <div class="track-head" id="track-head" style="display:none">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div>
@@ -440,522 +724,2014 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
             <div style="font-size:22px">💚</div>
             <div>
               <div class="ss-num" id="track-saving-num">—</div>
-              <div class="ss-lbl" id="track-saving-lbl">Green rate vs standard</div>
+              <div class="ss-lbl">Green rate saving vs standard</div>
             </div>
           </div>
         </div>
+
+        <!-- timeline + tranches -->
         <div class="track-body" id="track-body" style="display:none">
           <div class="tl" id="track-timeline"></div>
+
+          <!-- Construction / Tranche section -->
+          <div id="tranche-section" style="display:none;margin-top:28px">
+            <div style="font-size:13px;font-weight:700;color:var(--teal);letter-spacing:.5px;text-transform:uppercase;margin-bottom:14px">🏗️ Construction Stages &amp; Disbursements</div>
+            <div id="tranche-cards"></div>
+          </div>
+
           <div style="display:flex;gap:10px;margin-top:22px;justify-content:flex-end">
             <button class="btn btn-outline" onclick="toast('Document checklist downloaded','ok')">📥 Download Checklist</button>
-            <button class="btn btn-teal" onclick="openWizard()">📤 Upload Documents</button>
+            <button class="btn btn-teal" onclick="openWizard(null,null)">📤 Upload Documents</button>
           </div>
         </div>
       </div>
     </div>
   </section>
-</div>
+</div><!-- /page-tracking -->
 
-<!-- ═══ WIZARD MODAL ═══ -->
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- WIZARD MODAL — 8 steps                              -->
+<!-- ════════════════════════════════════════════════════ -->
 <div class="modal-bg" id="wiz-overlay">
-  <div class="wizard">
+  <div class="wizard" id="wizard-box">
+
+    <!-- Wizard header -->
     <div class="wiz-head">
-      <div class="wiz-head-top">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:16px" id="wiz-icon">📋</div>
         <div>
-          <div class="wiz-title" id="wiz-title" data-en="Financing Application" data-ar="طلب التمويل">Financing Application</div>
-          <div class="wiz-sub" data-en="AI-assisted · Avg. 8 minutes" data-ar="مدعوم بالذكاء الاصطناعي · متوسط 8 دقائق">AI-assisted · Avg. 8 minutes</div>
+          <div style="font-size:15px;font-weight:700;color:#fff" id="wiz-title">Loan Application</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6)" id="wiz-step-lbl">Step 1 of 8</div>
         </div>
-        <button class="wiz-close" onclick="closeWizard()">✕</button>
       </div>
-      <div class="wiz-steps" id="wiz-steps">
-        <div class="ws" id="ws-0"><div class="ws-n">1</div><div class="ws-lbl" data-en="Personal" data-ar="شخصي">Personal</div></div>
-        <div class="ws" id="ws-1"><div class="ws-n">2</div><div class="ws-lbl" data-en="Property" data-ar="العقار">Property</div></div>
-        <div class="ws" id="ws-2"><div class="ws-n">3</div><div class="ws-lbl" data-en="Finance" data-ar="التمويل">Finance</div></div>
-        <div class="ws" id="ws-3"><div class="ws-n">4</div><div class="ws-lbl" data-en="Documents" data-ar="المستندات">Documents</div></div>
-        <div class="ws" id="ws-4"><div class="ws-n">5</div><div class="ws-lbl" data-en="Review" data-ar="المراجعة">Review</div></div>
-      </div>
+      <button class="icon-btn" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)" onclick="closeWizard()">✕</button>
     </div>
+
+    <!-- Step progress dots -->
+    <div class="wiz-steps" id="wiz-steps-bar">
+      <div class="ws active" data-step="0"><div class="ws-n">1</div><div class="ws-lbl">Eligibility</div></div>
+      <div class="ws" data-step="1"><div class="ws-n">2</div><div class="ws-lbl">Personal</div></div>
+      <div class="ws" data-step="2"><div class="ws-n">3</div><div class="ws-lbl">Property</div></div>
+      <div class="ws" data-step="3"><div class="ws-n">4</div><div class="ws-lbl">Financing</div></div>
+      <div class="ws" data-step="4"><div class="ws-n">5</div><div class="ws-lbl">Identity</div></div>
+      <div class="ws" data-step="5"><div class="ws-n">6</div><div class="ws-lbl">Income</div></div>
+      <div class="ws" data-step="6"><div class="ws-n">7</div><div class="ws-lbl">Documents</div></div>
+      <div class="ws" data-step="7"><div class="ws-n">8</div><div class="ws-lbl">Review</div></div>
+    </div>
+
+    <!-- Wizard body — filled by renderWiz() -->
     <div class="wiz-body" id="wiz-body"></div>
+
+    <!-- Wizard footer -->
     <div class="wiz-foot">
-      <button class="btn btn-outline" id="wiz-back" onclick="wizBack()">← <span data-en="Back" data-ar="رجوع">Back</span></button>
-      <div style="font-size:11px;color:var(--g500)" id="wiz-step-lbl">Step 1 of 5</div>
-      <button class="btn btn-teal" id="wiz-next" onclick="wizNext()"><span data-en="Continue" data-ar="متابعة">Continue</span> →</button>
+      <button class="btn btn-outline" id="wiz-back" onclick="wizBack()" style="visibility:hidden">← Back</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-teal" id="wiz-next" onclick="wizNext()">Continue →</button>
     </div>
   </div>
 </div>
 
-<div class="toast-wrap" id="toast-wrap"></div>
+<!-- ════════════════════════════════════════════════════ -->
+<!-- LIVENESS OVERLAY — camera facial guidance           -->
+<!-- ════════════════════════════════════════════════════ -->
+<div id="liveness-overlay" class="liveness-overlay">
+  <div class="liveness-modal">
+    <div class="liveness-header">
+      <div style="font-size:16px;font-weight:700;color:var(--navy)">Identity Liveness Check</div>
+      <div style="font-size:12px;color:var(--g500);margin-top:2px">Follow the on-screen instructions</div>
+    </div>
+    <div class="liveness-camera-wrap">
+      <video id="liveness-video" class="liveness-video" autoplay muted playsinline></video>
+      <!-- SVG oval guide overlay -->
+      <svg class="liveness-oval-svg" viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <mask id="oval-mask">
+            <rect width="360" height="480" fill="white"/>
+            <ellipse cx="180" cy="220" rx="115" ry="148" fill="black"/>
+          </mask>
+        </defs>
+        <rect width="360" height="480" fill="rgba(0,0,0,0.55)" mask="url(#oval-mask)"/>
+        <ellipse cx="180" cy="220" rx="115" ry="148" fill="none" stroke-width="3" id="liveness-oval-ring" stroke="#35C6C4"/>
+      </svg>
+      <!-- Instruction text over camera -->
+      <div class="liveness-instruction" id="liveness-instr">Center your face in the oval</div>
+      <!-- Corner tick marks -->
+      <div class="liveness-corner tl"></div>
+      <div class="liveness-corner tr"></div>
+      <div class="liveness-corner bl"></div>
+      <div class="liveness-corner br"></div>
+    </div>
+    <!-- Progress bar -->
+    <div class="liveness-progress-wrap">
+      <div class="liveness-bar-track">
+        <div class="liveness-bar-fill" id="liveness-bar-fill" style="width:0%"></div>
+      </div>
+      <div class="liveness-progress-label" id="liveness-progress-label">0% Complete</div>
+    </div>
+    <!-- Step indicator dots -->
+    <div class="liveness-steps-row" id="liveness-steps-row">
+      <div class="lv-step active" id="lvs-0">😐<span>Center</span></div>
+      <div class="lv-step" id="lvs-1">👈<span>Look Left</span></div>
+      <div class="lv-step" id="lvs-2">👉<span>Look Right</span></div>
+      <div class="lv-step" id="lvs-3">😊<span>Smile</span></div>
+    </div>
+    <div class="liveness-footer">
+      <button class="btn btn-outline btn-sm" onclick="cancelLiveness()">Cancel</button>
+      <div style="font-size:11px;color:var(--g500);text-align:center;flex:1">Data processed locally · Not stored</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- TOAST CONTAINER                                     -->
+<!-- ════════════════════════════════════════════════════ -->
+<div id="toast-wrap" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none"></div>
 
 <script>
-/* ─── STATE ─── */
+'use strict';
+/* ══════════════════════════════════════════════════════
+   GLOBAL STATE
+══════════════════════════════════════════════════════ */
 let isAr = false;
 let esgOn = true;
-let wizStep = 0; // 0-indexed
-let selUnit = 'B1';
+let wizStep = 0;
+let wizProductId = null;
+let wizProjectId = null;
+let wizUnitId    = null;
+let wizSource    = 'byo';   // 'partner' | 'byo'
+let wizState     = {};      // accumulates field values across steps
 
-/* ─── LANG ─── */
-function toggleLang() {
+let allProducts  = [];
+let allProjects  = [];
+let hasDemoProduct = false;
+let hasDemoProject = false;
+
+// Map
+let propMap = null;
+let propMapMarkers = [];   // [{mk, status, projectId}]
+let propMapAllUnits = [];
+
+// Liveness
+let livenessStream = null;
+let livenessStep   = 0;
+let livenessTimer  = null;
+let livenessCallback = null;
+
+/* ══════════════════════════════════════════════════════
+   UTILITIES
+══════════════════════════════════════════════════════ */
+function fmtOMR(n){ return 'OMR ' + Math.round(n).toLocaleString('en'); }
+function pmt(P, annR, n){
+  if(!annR) return P/n;
+  const r = annR/100/12;
+  return P*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1);
+}
+function safeJSON(str, def){ try{ return JSON.parse(str||'null')||def; }catch{ return def; } }
+function scrollToSection(id){ const el=document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
+
+/* ══════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════ */
+function toast(msg, type='info'){
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const ic = type==='ok'?'✅':type==='err'?'❌':'ℹ️';
+  el.innerHTML = `<span style="font-size:14px">${ic}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toast-wrap').appendChild(el);
+  el.style.pointerEvents='auto';
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateX(20px)'; setTimeout(()=>el.remove(),300); }, 4200);
+}
+
+/* ══════════════════════════════════════════════════════
+   LANGUAGE
+══════════════════════════════════════════════════════ */
+function toggleLang(){
   isAr = !isAr;
   document.body.classList.toggle('rtl', isAr);
-  document.documentElement.setAttribute('dir', isAr ? 'rtl' : 'ltr');
-  document.documentElement.setAttribute('lang', isAr ? 'ar' : 'en');
-  document.getElementById('lang-btn').textContent = isAr ? 'English' : 'عربي';
-  document.querySelectorAll('[data-en]').forEach(el => {
-    el.textContent = isAr ? (el.getAttribute('data-ar') || el.textContent) : el.getAttribute('data-en');
+  document.documentElement.setAttribute('dir', isAr?'rtl':'ltr');
+  document.documentElement.setAttribute('lang', isAr?'ar':'en');
+  document.getElementById('lang-btn').textContent = isAr?'English':'عربي';
+  document.querySelectorAll('[data-en]').forEach(el=>{
+    el.textContent = isAr?(el.getAttribute('data-ar')||el.textContent):el.getAttribute('data-en');
   });
 }
 
-/* ─── NAVIGATION ─── */
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn[id^="nb-"]').forEach(b => b.classList.remove('active'));
-  const pg = document.getElementById('page-' + id);
-  if (pg) { pg.classList.add('active'); window.scrollTo(0,0); }
-  const nb = document.getElementById('nb-' + id);
-  if (nb) nb.classList.add('active');
-  if (id === 'tracking') loadTracking();
+/* ══════════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════════ */
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn[id^="nb-"]').forEach(b=>b.classList.remove('active'));
+  const pg = document.getElementById('page-'+id);
+  if(pg){ pg.classList.add('active'); window.scrollTo({top:0,behavior:'instant'}); }
+  const nb = document.getElementById('nb-'+id);
+  if(nb) nb.classList.add('active');
+
+  if(id==='properties') initPropertiesPage();
+  if(id==='tracking')   loadTracking();
+  if(id==='products')   renderProductsPage();
 }
 
-/* ─── CALCULATOR ─── */
-function fmtOMR(n) { return 'OMR ' + Math.round(n).toLocaleString('en'); }
-function pmt(P, annR, n) {
-  if (annR === 0) return P / n;
-  const r = annR / 100 / 12;
-  return P * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1);
+/* ══════════════════════════════════════════════════════
+   CALCULATOR
+══════════════════════════════════════════════════════ */
+function getCalcRate(){
+  const g = parseInt(document.getElementById('c-gsas')?.value||0);
+  const cat = document.getElementById('c-cat')?.value||'home_loan';
+  let base = cat==='home_loan'? 5.50 : cat==='auto_loan'? 6.50 : cat==='personal_loan'? 7.00 : 6.00;
+  if(g>=85) base -= 0.75; else if(g>=70) base -= 0.50; else if(g>=60) base -= 0.25;
+  return esgOn ? base : base + (g>=85?0.25:0);
 }
-function getRate() {
-  const g = parseInt(document.getElementById('c-gsas').value);
-  return g >= 85 ? 4.75 : g >= 70 ? 5.00 : g >= 60 ? 5.25 : 5.50;
+function calcUpdate(){
+  const amt = parseInt(document.getElementById('c-amt')?.value||200000);
+  const ten = parseInt(document.getElementById('c-ten')?.value||25);
+  const rate = getCalcRate();
+  const el = id=>document.getElementById(id);
+  if(el('c-amt-d')) el('c-amt-d').textContent = amt.toLocaleString('en');
+  if(el('c-ten-d')) el('c-ten-d').textContent = ten + ' years';
+  if(el('cr-rate-lbl')) el('cr-rate-lbl').textContent = `@ ${rate.toFixed(2)}% p.a.`;
+  if(el('cr-rate')) el('cr-rate').textContent = rate.toFixed(2)+'%';
+  if(el('cr-amt')) el('cr-amt').textContent = fmtOMR(amt);
+  const m   = pmt(amt, rate, ten*12);
+  const tot = m*ten*12;
+  const int = tot-amt;
+  const stdBase = document.getElementById('c-cat')?.value==='home_loan'?5.50:
+                  document.getElementById('c-cat')?.value==='auto_loan'?6.50:
+                  document.getElementById('c-cat')?.value==='personal_loan'?7.00:6.00;
+  const sv  = Math.max(0, pmt(amt, stdBase, ten*12)*ten*12 - tot);
+  if(el('cr-monthly')) el('cr-monthly').textContent = fmtOMR(m);
+  if(el('cr-int'))     el('cr-int').textContent     = fmtOMR(int);
+  if(el('cr-total'))   el('cr-total').textContent   = fmtOMR(tot);
+  if(el('cr-saving'))  el('cr-saving').textContent  = fmtOMR(sv);
 }
-function calcUpdate() {
-  const amt = parseInt(document.getElementById('c-amt').value);
-  const ten = parseInt(document.getElementById('c-ten').value);
-  const rate = getRate();
-  document.getElementById('c-amt-d').textContent = amt.toLocaleString('en');
-  document.getElementById('c-ten-d').textContent = ten + (isAr ? ' سنة' : ' years');
-  document.getElementById('cr-rate-lbl').textContent = `@ ${rate.toFixed(2)}% p.a.`;
-  document.getElementById('cr-rate').textContent = rate.toFixed(2) + '%';
-  document.getElementById('cr-amt').textContent = fmtOMR(amt);
-  const m = pmt(amt, rate, ten * 12);
-  const tot = m * ten * 12;
-  const int = tot - amt;
-  const stdTot = pmt(amt, 5.50, ten * 12) * ten * 12;
-  const saving = Math.max(0, stdTot - tot);
-  document.getElementById('cr-monthly').textContent = fmtOMR(m);
-  document.getElementById('cr-int').textContent = fmtOMR(int);
-  document.getElementById('cr-total').textContent = fmtOMR(tot);
-  document.getElementById('cr-saving').textContent = fmtOMR(saving);
-}
-function toggleESG() {
+function toggleESG(){
   esgOn = !esgOn;
-  document.getElementById('esg-sw').classList.toggle('on', esgOn);
+  document.getElementById('esg-sw')?.classList.toggle('on', esgOn);
   calcUpdate();
 }
 
-/* ─── WIZARD ─── */
-const STEPS = [
-  {
-    en:'Personal Information', ar:'المعلومات الشخصية',
-    html() { return `
-      <div class="info-strip">✅ <strong>Pre-filled from your profile</strong> — please verify and confirm.</div>
-      <div class="form-grid">
-        <div class="fg"><label class="fl">Full Name (English)</label><input class="fc" value="Salim Mohammed Al-Harthy"/></div>
-        <div class="fg"><label class="fl">Full Name (Arabic)</label><input class="fc" value="سالم محمد الحارثي"/></div>
-        <div class="fg"><label class="fl">Civil ID</label><input class="fc" value="8827364"/></div>
-        <div class="fg"><label class="fl">Date of Birth</label><input class="fc" type="date" value="1985-03-15"/></div>
-        <div class="fg"><label class="fl">Mobile</label><input class="fc" value="+968 9234 5678"/></div>
-        <div class="fg"><label class="fl">Email</label><input class="fc" value="salim.alharthy@example.com"/></div>
-        <div class="fg"><label class="fl">Employer</label><input class="fc" value="Oman Oil Company"/></div>
-        <div class="fg"><label class="fl">Monthly Salary (OMR)</label><input class="fc" value="3,200"/></div>
-      </div>`; }
-  },
-  {
-    en:'Property Details', ar:'تفاصيل العقار',
-    html() { return `
-      <div class="prop-sel">
-        <div class="ps-em">🏡</div>
-        <div><div class="ps-name">Villa B1 — EcoVillage Muscat</div><div class="ps-sub">Auto-selected from saved properties · GSAS 89 · 4.75% rate</div></div>
-        <div class="ps-badge">Eligible ✓</div>
-      </div>
-      <div class="form-grid">
-        <div class="fg"><label class="fl">Project</label><select class="fc"><option selected>EcoVillage Muscat</option><option>Green Palms Seeb</option></select></div>
-        <div class="fg"><label class="fl">Unit</label><select class="fc"><option selected>Villa B1 (320m²)</option><option>Villa A1 (280m²)</option></select></div>
-        <div class="fg"><label class="fl">Property Value (OMR)</label><input class="fc" value="200,000"/></div>
-        <div class="fg"><label class="fl">GSAS Score</label><input class="fc fc-ok" value="89 — 4-Star" readonly/></div>
-      </div>
-      <div class="info-strip">🌿 <strong>Green Features Verified:</strong> Solar PV 8.5kWp · Greywater Recycling · Green Roof · HVAC SEER 18.2 · EV Charging</div>`; }
-  },
-  {
-    en:'Financing Details', ar:'تفاصيل التمويل',
-    html() { return `
-      <div class="form-grid">
-        <div class="fg"><label class="fl">Loan Amount (OMR)</label><input class="fc" id="wa-amt" value="200,000" oninput="wizCalc()"/></div>
-        <div class="fg"><label class="fl">Down Payment (OMR)</label><input class="fc" value="35,000"/></div>
-        <div class="fg"><label class="fl">Tenure</label>
-          <select class="fc" id="wa-ten" onchange="wizCalc()">
-            <option value="25">25 years</option><option value="20">20 years</option>
-            <option value="30">30 years</option><option value="15">15 years</option>
-          </select></div>
-        <div class="fg"><label class="fl">Interest Rate</label><input class="fc fc-ok" value="4.75% (Green Rate)" readonly/></div>
-      </div>
-      <div class="finance-summary">
-        <div class="fs-grid">
-          <div><div class="fs-lbl">Monthly Payment</div><div class="fs-val" id="wa-m">OMR 1,089</div></div>
-          <div><div class="fs-lbl">DBR Ratio</div><div class="fs-val" id="wa-dbr">34.0%</div></div>
-          <div><div class="fs-lbl">Lifetime Saving</div><div class="fs-val" id="wa-sv">OMR 31,560</div></div>
-        </div>
-        <div class="fs-note">DBR must be ≤ 40% · CBO compliant</div>
-      </div>`; }
-  },
-  {
-    en:'Document Upload', ar:'رفع المستندات',
-    html() { return `
-      <p style="font-size:12px;color:var(--g500);margin-bottom:14px">Upload required documents. Each document is verified automatically.</p>
-      <div class="doc-grid" id="doc-grid">
-        ${dc('civil','🪪','Civil ID (Both Sides)','ok','✅ Verified','97%')}
-        ${dc('salary','💼','Salary Certificate','ok','✅ Verified','94%')}
-        ${dc('bank','🏦','Bank Statements (6M)','ok','✅ Verified','91%')}
-        ${dc('val','🏠','Property Valuation','analyzing','🔍 Analyzing…','')}
-        ${dc('gsas','🏆','GSAS Certificate','ok','✅ Score 89 Confirmed','96%')}
-        ${dc('epc','⚡','EPC Report','analyzing','⚠️ Flagged for Review','88%')}
-      </div>
-      <div class="warn-strip" style="margin-top:12px">⚠️ <strong>EPC Report</strong> flagged — minor thermal bridging note. Compliance officer will review. This does not block your application.</div>`; }
-  },
-  {
-    en:'Review & Submit', ar:'المراجعة والتقديم',
-    html() { return `
-      <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px">Application Summary</div>
-      <div style="font-size:11px;color:var(--g500);margin-bottom:16px">Please review all details before submitting</div>
-      <div class="rev-table">
-        ${rr('Applicant','Salim Mohammed Al-Harthy')}
-        ${rr('Property','Villa B1, EcoVillage Muscat')}
-        ${rr('Loan Amount','OMR 200,000')}
-        ${rr('Interest Rate','4.75% (Green Rate ✅)')}
-        ${rr('Tenure','25 Years')}
-        ${rr('Monthly Payment','OMR 1,089')}
-        ${rr('DBR Ratio','34.0%')}
-        ${rr('LTV Ratio','65.3%')}
-        ${rr('GSAS Score','89 / 100 ✅')}
-        ${rr('Lifetime Saving','OMR 31,560 vs Standard')}
-        ${rr("Credit Bureau","MALA'A — Clear ✅")}
-      </div>
-      <label style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--g700);cursor:pointer">
-        <input type="checkbox" id="consent" checked style="margin-top:2px;accent-color:var(--teal)"/>
-        I confirm the information is accurate and consent to credit bureau checks and data processing per Sohar International's Privacy Policy and CBO regulations.
-      </label>`; }
-  }
-];
+/* ══════════════════════════════════════════════════════
+   LOAD PRODUCTS — populates home preview + products page
+══════════════════════════════════════════════════════ */
+async function loadProducts(){
+  try{
+    const r = await fetch('/api/v1/portal/products');
+    const d = await r.json();
+    allProducts = d.products || [];
+    hasDemoProduct = allProducts.some(p=>p.is_demo_product===1||p.is_demo_product===true);
 
-function dc(id,ic,name,st,stTxt,conf){
-  return `<div class="doc-card ${st}" onclick="simDoc('${id}')">
-    <div class="doc-ic">${ic}</div>
-    <div class="doc-name">${name}</div>
-    <div class="doc-st ${st==='ok'?'ok':'ai'}">${stTxt}</div>
-    ${conf ? `<div class="doc-conf">${conf} confidence</div>` : ''}
+    // Update hero card stats
+    const countEl = document.getElementById('hero-product-count');
+    const subEl   = document.getElementById('hero-product-subtitle');
+    if(countEl) countEl.textContent = allProducts.length || '0';
+    if(subEl && allProducts.length){
+      const minRate = Math.min(...allProducts.map(p=>parseFloat(p.base_rate)||99));
+      subEl.textContent = `From ${minRate.toFixed(2)}% · ${allProducts.length} active product${allProducts.length!==1?'s':''}`;
+    }
+
+    // Eco hero transform
+    applyEcoHeroIfNeeded();
+
+    // Home preview (first 4 products as small cards)
+    renderHomeProductsPreview();
+  }catch(e){
+    console.error('loadProducts', e);
+    const el = document.getElementById('home-products-preview');
+    if(el) el.innerHTML = '<p style="color:var(--g500);text-align:center;padding:20px">Could not load products.</p>';
+  }
+}
+
+function applyEcoHeroIfNeeded(){
+  const hero = document.getElementById('main-hero');
+  const defDiv = document.getElementById('hero-default');
+  const ecoDiv = document.getElementById('hero-eco');
+  if(!hero||!defDiv||!ecoDiv) return;
+  if(hasDemoProduct){
+    hero.classList.add('eco');
+    defDiv.style.display = 'none';
+    ecoDiv.style.display = 'flex';
+    // Update eco rate from demo product
+    const dp = allProducts.find(p=>p.is_demo_product===1||p.is_demo_product===true);
+    if(dp){
+      const rateEl = document.getElementById('eco-rate-display');
+      if(rateEl) rateEl.textContent = (dp.base_rate||4.75)+'%';
+    }
+  }
+}
+
+function renderHomeProductsPreview(){
+  const wrap = document.getElementById('home-products-preview');
+  if(!wrap) return;
+  if(!allProducts.length){
+    wrap.innerHTML='<p style="color:var(--g500);text-align:center;padding:20px">No products published yet.</p>';
+    return;
+  }
+  const preview = allProducts.slice(0,4);
+  const CAT_ICON={'home_loan':'🏡','auto_loan':'🚗','personal_loan':'💳','sme':'🏢','commercial':'🏗️','education':'🎓'};
+  wrap.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
+    ${preview.map(p=>prodMiniCard(p,CAT_ICON)).join('')}
   </div>`;
 }
-function rr(k,v){
-  return `<div class="rev-row"><span class="rev-k">${k}</span><span class="rev-v">${v}</span></div>`;
+
+function prodMiniCard(p, CAT_ICON){
+  const isDemo = p.is_demo_product===1||p.is_demo_product===true;
+  const hl = safeJSON(p.portal_highlights,[]);
+  return `<div class="prod-card${isDemo?' demo':''}" onclick="selectProduct('${p.id}','${p.name.replace(/'/g,'&apos;')}')">
+    ${isDemo?'<div class="demo-ribbon">🌿 ECO</div>':''}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:1.4rem">${CAT_ICON[p.category]||'💼'}</span>
+      <span style="font-size:10px;font-weight:700;color:${isDemo?'#16a34a':'var(--teal)'};text-transform:uppercase;letter-spacing:.5px">${(p.category||'').replace(/_/g,' ')}</span>
+    </div>
+    ${p.portal_card_badge?`<span class="esg-card-badge">✦ ${p.portal_card_badge}</span>`:''}
+    <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:5px">${p.portal_hero_title||p.name}</div>
+    <div style="font-size:11px;color:var(--g500);margin-bottom:12px;line-height:1.5">${p.description||''}</div>
+    ${hl.length?`<ul style="margin:0 0 12px;padding-left:14px;font-size:11px;color:var(--navy-d);line-height:1.8">${hl.slice(0,3).map(h=>`<li>${h}</li>`).join('')}</ul>`:''}
+    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid ${isDemo?'rgba(22,132,91,.15)':'var(--g200)'};padding-top:10px;margin-top:auto">
+      <div style="font-size:12px"><strong style="font-size:1.2rem;color:${isDemo?'#16a34a':'var(--teal)'}">${p.base_rate||'—'}%</strong> <span style="color:var(--g500)">p.a.</span></div>
+      <button class="prop-btn${isDemo?' eco-btn':''}" style="font-size:12px;padding:6px 14px" onclick="event.stopPropagation();selectProduct('${p.id}','${p.name.replace(/'/g,'&apos;')}')">Apply</button>
+    </div>
+  </div>`;
 }
 
-function simDoc(id) { toast('Document uploading…','info'); setTimeout(()=>toast('✅ Document verified','ok'),2000); }
+/* ══════════════════════════════════════════════════════
+   PRODUCTS PAGE — segmented by category
+══════════════════════════════════════════════════════ */
+function renderProductsPage(){
+  const wrap = document.getElementById('products-segmented');
+  if(!wrap) return;
+  if(!allProducts.length){ wrap.innerHTML='<p style="text-align:center;padding:40px;color:var(--g500)">Loading products…</p>'; loadProducts(); return; }
 
-function wizCalc() {
-  const amt = parseFloat((document.getElementById('wa-amt')||{}).value?.replace(/[^0-9.]/g,'')||0) || 200000;
-  const ten = parseInt((document.getElementById('wa-ten')||{}).value||25);
-  const m = pmt(amt,4.75,ten*12);
-  const dbr = (m/3200)*100;
-  const sv = Math.max(0, pmt(amt,5.50,ten*12)*ten*12 - m*ten*12);
-  const e = id => document.getElementById(id);
-  if(e('wa-m')) e('wa-m').textContent = fmtOMR(m);
-  if(e('wa-dbr')) e('wa-dbr').textContent = dbr.toFixed(1)+'%';
-  if(e('wa-sv')) e('wa-sv').textContent = fmtOMR(sv);
+  // Eco banner
+  if(hasDemoProduct){
+    const dp = allProducts.find(p=>p.is_demo_product===1||p.is_demo_product===true);
+    const banner = document.getElementById('eco-banner');
+    if(banner){ banner.style.display='flex'; }
+    const bt = document.getElementById('eco-banner-title');
+    const bd = document.getElementById('eco-banner-desc');
+    if(bt&&dp) bt.textContent = (dp.portal_hero_title||dp.name);
+    if(bd&&dp) bd.textContent = dp.description||'Eco-certified home loan at Oman\'s most competitive rate.';
+  }
+
+  const CAT_META = {
+    home_loan:     {icon:'🏡', label:'Home Loans',      color:'var(--teal)'},
+    auto_loan:     {icon:'🚗', label:'Auto Finance',    color:'#2563eb'},
+    personal_loan: {icon:'💳', label:'Personal Loans',  color:'var(--amber)'},
+    sme:           {icon:'🏢', label:'SME Finance',      color:'#7c3aed'},
+    commercial:    {icon:'🏗️', label:'Commercial',      color:'var(--navy)'},
+    education:     {icon:'🎓', label:'Education Loans', color:'#0891b2'},
+  };
+  const CAT_ICON={home_loan:'🏡',auto_loan:'🚗',personal_loan:'💳',sme:'🏢',commercial:'🏗️',education:'🎓'};
+
+  // Group
+  const byCategory = {};
+  allProducts.forEach(p=>{
+    const cat = p.category||'other';
+    if(!byCategory[cat]) byCategory[cat]=[];
+    byCategory[cat].push(p);
+  });
+
+  let html='';
+  for(const [cat, prods] of Object.entries(byCategory)){
+    const meta = CAT_META[cat]||{icon:'💼',label:cat.replace(/_/g,' '),color:'var(--teal)'};
+    const hasDemo = prods.some(p=>p.is_demo_product===1||p.is_demo_product===true);
+    html+=`<div class="seg-section${hasDemo?' seg-eco':''}" id="seg-${cat}">
+      <div class="seg-header">
+        <span style="font-size:1.6rem">${meta.icon}</span>
+        <div>
+          <div style="font-size:17px;font-weight:800;color:${hasDemo?'#15803d':'var(--navy)'}">${meta.label}</div>
+          <div style="font-size:12px;color:var(--g500)">${prods.length} product${prods.length!==1?'s':''} available</div>
+        </div>
+        ${hasDemo?'<span class="eco-seg-badge">🌿 ECO</span>':''}
+      </div>
+      <div class="seg-grid">
+        ${prods.map(p=>prodMiniCard(p,CAT_ICON)).join('')}
+      </div>
+    </div>`;
+  }
+  wrap.innerHTML = html || '<p style="text-align:center;padding:40px;color:var(--g500)">No products available.</p>';
 }
 
-function openWizard() {
+function selectProduct(id, name){
+  wizProductId = id;
+  wizProjectId = null;
+  wizUnitId    = null;
+  wizSource    = 'byo';
+  wizState     = {};
+  const wt = document.getElementById('wiz-title');
+  if(wt) wt.textContent = name + ' Application';
+  openWizard();
+}
+
+/* ══════════════════════════════════════════════════════
+   LOAD PROJECTS — populates map + list
+══════════════════════════════════════════════════════ */
+async function loadProjects(){
+  try{
+    const r = await fetch('/api/v1/portal/projects');
+    const d = await r.json();
+    allProjects = d.projects||[];
+    hasDemoProject = allProjects.some(p=>p.is_demo_project===1||p.is_demo_project===true);
+    renderProjectList();
+  }catch(e){ console.error('loadProjects',e); }
+}
+
+function renderProjectList(){
+  const wrap = document.getElementById('projects-list-wrap');
+  if(!wrap) return;
+  if(!allProjects.length){
+    wrap.innerHTML='<div style="text-align:center;padding:48px;color:var(--g500)">No properties available yet.</div>';
+    return;
+  }
+  const GRADS=['linear-gradient(135deg,#003B5C,#007F86)','linear-gradient(135deg,#1a4a2e,#35C6C4)',
+               'linear-gradient(135deg,#2d5016,#6aaa2a)','linear-gradient(135deg,#003B5C,#35C6C4)'];
+  wrap.innerHTML=`<div class="prop-grid">
+    ${allProjects.map((p,i)=>{
+      const gsas = p.gsas_overall_score||p.gsas_score||0;
+      const rate = gsas>=85?'4.75':gsas>=70?'5.00':'5.25';
+      const isDemo = p.is_demo_project===1||p.is_demo_project===true;
+      const imgBg = p.hero_image_url
+        ?`background:url('${p.hero_image_url}') center/cover no-repeat`
+        :`background:${GRADS[i%GRADS.length]}`;
+      const priceFrom = p.price_from?'OMR '+Number(p.price_from).toLocaleString():'Price TBC';
+      return `<div class="prop-card${isDemo?' esg-product':''}" onclick="openProjectPanel('${p.id}')">
+        ${isDemo?'<div class="esg-hot-ribbon">🌿 GSAS Demo · Green Finance</div>':''}
+        <div class="prop-img" style="${imgBg};height:190px">
+          ${!p.hero_image_url?'<div style="font-size:48px">🏡</div>':''}
+          <div class="prop-ribbon" style="background:${isDemo?'#16845B':'var(--sea)'};color:#fff">
+            ${isDemo?'Eco Project':p.type||'Green'}
+          </div>
+        </div>
+        <div class="prop-body">
+          ${isDemo?'<span class="esg-card-badge">✦ GSAS Certified</span>':''}
+          <div class="prop-price">${priceFrom}${p.price_to?' – OMR '+Number(p.price_to).toLocaleString():''}</div>
+          <div class="prop-name">${p.name}</div>
+          <div class="prop-loc">📍 ${p.location||'Muscat, Oman'}</div>
+          <div class="prop-tags">
+            <span class="tag">${p.total_units||0} units</span>
+            ${gsas?`<span class="tag">GSAS ${gsas}</span>`:''}
+            ${p.epc_rating?`<span class="tag">EPC ${p.epc_rating}`:''}
+          </div>
+          <div class="prop-foot">
+            <span class="gsas-badge">${isDemo?'🏆 Demo':'GSAS '+gsas}</span>
+            <span class="rate-badge" style="${isDemo?'background:rgba(22,132,91,.12);color:#16845B':''}">${rate}% p.a.</span>
+          </div>
+          <button class="prop-btn${isDemo?' eco-btn':''}" onclick="event.stopPropagation();openProjectPanel('${p.id}')">
+            ${isDemo?'View Eco Units →':'View Units →'}
+          </button>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   PROPERTIES PAGE — map / list toggle
+══════════════════════════════════════════════════════ */
+function initPropertiesPage(){
+  if(!allProjects.length) loadProjects();
+  setTimeout(()=>initPropMap(), 200);
+}
+
+function switchPropView(view){
+  document.getElementById('prop-map-view').style.display = view==='map'?'block':'none';
+  document.getElementById('prop-list-view').style.display = view==='list'?'block':'none';
+  document.getElementById('tab-map').classList.toggle('active', view==='map');
+  document.getElementById('tab-list').classList.toggle('active', view==='list');
+  if(view==='map') setTimeout(()=>{ if(propMap) propMap.invalidateSize(); },100);
+  if(view==='list'){ renderProjectList(); }
+}
+
+/* ── Leaflet map ── */
+async function initPropMap(){
+  const el = document.getElementById('customer-map');
+  if(!el) return;
+  if(propMap){ propMap.invalidateSize(); return; }
+
+  propMap = L.map('customer-map').setView([23.58, 58.52], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OpenStreetMap contributors', maxZoom:19
+  }).addTo(propMap);
+
+  try{
+    const r = await fetch('/api/v1/portal/projects');
+    const d = await r.json();
+    const projects = d.projects||[];
+    const projColors = ['#007F86','#16a34a','#6C3483','#1A5276','#117A65'];
+    let totalUnits=0;
+
+    for(const [pi,proj] of projects.entries()){
+      const isDemo = proj.is_demo_project===1||proj.is_demo_project===true;
+      const pcol   = isDemo?'#16a34a':projColors[pi%projColors.length];
+      const ur = await fetch(`/api/v1/portal/projects/${proj.id}`);
+      const ud = await ur.json();
+      const units = ud.units||[];
+      if(!units.length) continue;
+
+      const geoUnits = units.filter(u=>u.lat&&u.lng);
+      if(geoUnits.length){
+        const lats=geoUnits.map(u=>parseFloat(u.lat));
+        const lngs=geoUnits.map(u=>parseFloat(u.lng));
+        const pad=0.001;
+        L.rectangle(
+          [[Math.min(...lats)-pad,Math.min(...lngs)-pad],[Math.max(...lats)+pad,Math.max(...lngs)+pad]],
+          {color:pcol,weight:2,fillColor:pcol,fillOpacity:0.07,dashArray:'5,4'}
+        ).addTo(propMap)
+         .bindTooltip(`<b>${isDemo?'🌿 ':' '}${proj.name}</b>`,{permanent:true,direction:'center',opacity:0.9});
+      }
+
+      units.forEach(u=>{
+        if(!u.lat||!u.lng) return;
+        totalUnits++;
+        const colMap={available:'#2ECC71',reserved:'#F39C12',sold:'#003B5C'};
+        const col = colMap[u.status]||'#ADB5BD';
+        const dotColor = isDemo?`${col}`:col;
+        const icon = L.divIcon({className:'',
+          html:`<div style="width:14px;height:14px;background:${dotColor};border-radius:50%;border:${isDemo?'3px solid #86efac':'2px solid #fff'};box-shadow:0 1px 5px rgba(0,0,0,.3)"></div>`,
+          iconAnchor:[7,7]});
+        const gsas = u.gsas_score||0;
+        const rate = gsas>=85?'4.75':gsas>=70?'5.00':'5.25';
+        const popup = `<div style="font-size:12px;min-width:190px;line-height:1.8">
+          <strong style="color:#003B5C;font-size:13px">${u.unit_number||u.id}</strong><br/>
+          <span style="color:#666">${proj.name}</span>${isDemo?' 🌿':''}<br/>
+          Type: <b>${u.type||'—'}</b> · ${u.area_sqm||'—'} m²<br/>
+          Beds: <b>${u.bedrooms||'—'}</b> · Bath: <b>${u.bathrooms||'—'}</b><br/>
+          Price: <b>OMR ${u.price?Number(u.price).toLocaleString():'—'}</b><br/>
+          ${gsas?`GSAS: <b style="color:#2ECC71">${gsas}</b><br/>`:''}
+          Rate: <b style="color:${isDemo?'#16a34a':'#007F86'}">${rate}% p.a.</b><br/>
+          Status: <b style="color:${col}">${(u.status||'').toUpperCase()}</b><br/>
+          <button onclick="openWizardFromUnit('${u.id}','${proj.id}')" style="margin-top:6px;background:#007F86;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:11px;font-weight:700">
+            Apply for This Unit
+          </button>
+        </div>`;
+        const mk = L.marker([parseFloat(u.lat),parseFloat(u.lng)],{icon}).addTo(propMap);
+        mk.bindPopup(popup,{maxWidth:220});
+        propMapAllUnits.push({mk,status:u.status||'available',projectId:proj.id,isDemo});
+      });
+    }
+
+    // Update legend counts
+    const av=propMapAllUnits.filter(x=>x.status==='available').length;
+    const re=propMapAllUnits.filter(x=>x.status==='reserved').length;
+    const so=propMapAllUnits.filter(x=>x.status==='sold').length;
+    const la=document.getElementById('leg-available'); if(la) la.textContent=`Available (${av})`;
+    const lr=document.getElementById('leg-reserved');  if(lr) lr.textContent=`Reserved (${re})`;
+    const ls=document.getElementById('leg-sold');       if(ls) ls.textContent=`Sold (${so})`;
+
+    if(propMapAllUnits.length>0){
+      const group = L.featureGroup(propMapAllUnits.map(x=>x.mk));
+      propMap.fitBounds(group.getBounds().pad(0.15));
+    }
+  }catch(e){
+    console.error('initPropMap',e);
+    toast('Could not load property map','err');
+  }
+}
+
+function propMapFilter(status){
+  document.querySelectorAll('.map-filter-btn').forEach(b=>b.classList.toggle('active-filter',b.dataset.filter===status));
+  const visible=[];
+  propMapAllUnits.forEach(({mk,status:s})=>{
+    const show = status==='all'||s===status;
+    show ? (propMap.hasLayer(mk)||propMap.addLayer(mk), visible.push(mk))
+         : (propMap.hasLayer(mk)&&propMap.removeLayer(mk));
+  });
+  if(visible.length>0){
+    propMap.fitBounds(L.featureGroup(visible).getBounds().pad(0.15));
+  }
+}
+
+/* ── Project detail panel ── */
+async function openProjectPanel(projectId){
+  const bg    = document.getElementById('project-panel-bg');
+  const panel = document.getElementById('project-panel');
+  const body  = document.getElementById('project-panel-body');
+  if(!panel) return;
+  bg.classList.add('open');
+  panel.classList.add('open');
+  body.innerHTML='<div style="text-align:center;padding:48px"><span class="spin"></span></div>';
+
+  try{
+    const r = await fetch(`/api/v1/portal/projects/${projectId}`);
+    const d = await r.json();
+    const proj = d.project||d;
+    const units = d.units||[];
+    const contractor = d.contractor||null;
+    const isDemo = proj.is_demo_project===1||proj.is_demo_project===true;
+
+    document.getElementById('pp-name').textContent = proj.name||'—';
+    document.getElementById('pp-loc').textContent  = (proj.location||'Muscat, Oman')+' · '+units.length+' units';
+
+    const gsas = proj.gsas_overall_score||proj.gsas_score||0;
+    const rate  = gsas>=85?4.75:gsas>=70?5.00:5.25;
+
+    // Group units by type
+    const byType={};
+    units.forEach(u=>{ const t=u.type||'Unit'; if(!byType[t]) byType[t]=[]; byType[t].push(u); });
+
+    const greenFeatures = safeJSON(proj.green_features, null) ||
+      ['Solar PV System','Greywater Recycling','Green Roof','HVAC SEER 18.2+','EV Charging Ready'];
+
+    body.innerHTML=`
+      <!-- Project hero image -->
+      ${proj.hero_image_url?`<div style="height:180px;border-radius:var(--r12);overflow:hidden;margin-bottom:16px">
+        <img src="${proj.hero_image_url}" style="width:100%;height:100%;object-fit:cover"/>
+      </div>`:''}
+
+      <!-- Key stats row -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+        <div class="stat-chip"><div class="sc-val">${gsas||'—'}</div><div class="sc-lbl">GSAS Score</div></div>
+        <div class="stat-chip"><div class="sc-val">${rate}%</div><div class="sc-lbl">Rate p.a.</div></div>
+        <div class="stat-chip"><div class="sc-val">${units.length}</div><div class="sc-lbl">Total Units</div></div>
+        <div class="stat-chip"><div class="sc-val">${units.filter(u=>u.status==='available').length}</div><div class="sc-lbl">Available</div></div>
+      </div>
+
+      ${isDemo?`<div class="source-pill active-partner" style="margin-bottom:14px">🌿 Demo Eco Project · Green Finance Eligible</div>`:''}
+
+      <!-- Green features -->
+      ${isDemo?`<div class="info-strip eco-strip" style="margin-bottom:16px">
+        🌿 <strong>Verified Green Features:</strong> ${greenFeatures.join(' · ')}
+      </div>`:''}
+
+      <!-- Contractor info -->
+      ${contractor?`<div class="contractor-card${contractor.is_green_certified?' green-cert':''}">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-size:1.5rem">🏗️</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--navy)">${contractor.company_name}</div>
+            <div style="font-size:11px;color:var(--g500)">${contractor.company_name_ar||''}</div>
+          </div>
+          ${contractor.is_green_certified?'<span class="eco-seg-badge" style="margin-left:auto">🌿 Green Certified</span>':''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;color:var(--g700)">
+          <span>Contact: <b>${contractor.contact_name||'—'}</b></span>
+          <span>Phone: <b>${contractor.contact_phone||'—'}</b></span>
+          <span>License: <b>${contractor.license_number||'—'}</b></span>
+          <span>CR: <b>${contractor.cr_number||'—'}</b></span>
+        </div>
+      </div>`:
+      `<div class="warn-strip" style="margin-bottom:12px">⚠️ No contractor information linked to this project.</div>`}
+
+      <!-- Units by type -->
+      ${Object.entries(byType).map(([type,uns])=>`
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">${type}s (${uns.length})</div>
+          <div class="unit-grid">
+            ${uns.map(u=>{
+              const uGsas = u.gsas_score||gsas||0;
+              const uRate = uGsas>=85?4.75:uGsas>=70?5.00:5.25;
+              const colMap={available:'var(--ok)',reserved:'var(--warn)',sold:'var(--err)'};
+              const stCol = colMap[u.status]||'var(--g500)';
+              return `<div class="unit-card${u.status==='sold'?' sold':''}">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+                  <div style="font-size:14px;font-weight:800;color:var(--navy)">${u.unit_number||u.id}</div>
+                  <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--rfull);background:${stCol==='var(--ok)'?'var(--ok-bg)':stCol==='var(--warn)'?'var(--warn-bg)':'var(--err-bg)'};color:${stCol}">${(u.status||'available').toUpperCase()}</span>
+                </div>
+                <div style="font-size:12px;color:var(--g500);line-height:1.6">
+                  ${u.area_sqm||'—'} m² · ${u.bedrooms||'—'} bed · ${u.bathrooms||'—'} bath
+                </div>
+                ${u.price?`<div style="font-size:15px;font-weight:800;color:var(--navy);margin:6px 0">OMR ${Number(u.price).toLocaleString()}</div>`:''}
+                ${u.discount_percent?`<div style="font-size:11px;color:var(--ok);font-weight:600">🏷 ${u.discount_percent}% discount</div>`:''}
+                ${uGsas?`<div style="font-size:11px;color:${isDemo?'#16a34a':'var(--teal)'};font-weight:600">GSAS ${uGsas} · ${uRate}% p.a.</div>`:''}
+                <!-- Per-unit affordability mini calc -->
+                <div class="unit-calc" id="ucalc-${u.id}">
+                  <div style="font-size:10px;font-weight:700;color:var(--g500);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Affordability Check</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+                    <div>
+                      <label style="font-size:10px;color:var(--g500)">Income (OMR/mo)</label>
+                      <input type="number" class="fc" style="font-size:12px;padding:4px 8px" value="3200" id="uinc-${u.id}" oninput="unitCalc('${u.id}',${u.price||0},${uRate})"/>
+                    </div>
+                    <div>
+                      <label style="font-size:10px;color:var(--g500)">Down Pay %</label>
+                      <input type="number" class="fc" style="font-size:12px;padding:4px 8px" value="20" min="10" max="50" id="udp-${u.id}" oninput="unitCalc('${u.id}',${u.price||0},${uRate})"/>
+                    </div>
+                  </div>
+                  <div id="ures-${u.id}" style="font-size:11px;color:var(--g700);background:var(--g100);border-radius:var(--r8);padding:6px 8px">
+                    Monthly payment: <b>—</b>
+                  </div>
+                </div>
+                ${u.status!=='sold'?`<button class="prop-btn${isDemo?' eco-btn':''}" style="width:100%;margin-top:10px;font-size:12px" onclick="openWizardFromUnit('${u.id}','${projectId}')">
+                  Apply for This Unit →
+                </button>`:`<div style="font-size:11px;color:var(--err);text-align:center;padding:8px 0;font-weight:600">SOLD</div>`}
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      `).join('')}
+
+      <button class="btn btn-teal" style="width:100%;justify-content:center;margin-top:8px" onclick="openWizardFromProject('${projectId}')">
+        Apply for Financing →
+      </button>
+    `;
+
+    // Run initial affordability calc for each unit
+    units.forEach(u=>{
+      if(u.price) unitCalc(u.id, u.price, rate);
+    });
+  }catch(e){
+    console.error('openProjectPanel',e);
+    body.innerHTML='<p style="text-align:center;color:var(--err);padding:24px">Could not load project details.</p>';
+  }
+}
+
+function closeProjectPanel(){
+  document.getElementById('project-panel-bg')?.classList.remove('open');
+  document.getElementById('project-panel')?.classList.remove('open');
+}
+
+function unitCalc(uid, price, rate){
+  const incEl = document.getElementById('uinc-'+uid);
+  const dpEl  = document.getElementById('udp-'+uid);
+  const resEl = document.getElementById('ures-'+uid);
+  if(!incEl||!dpEl||!resEl||!price) return;
+  const income = parseFloat(incEl.value)||3200;
+  const dp     = parseFloat(dpEl.value)||20;
+  const loan   = price*(1-dp/100);
+  const m      = pmt(loan,rate,25*12);
+  const dbr    = income>0?(m/income)*100:0;
+  const ok     = dbr<=40;
+  resEl.innerHTML = `Monthly: <b>OMR ${Math.round(m).toLocaleString()}</b> · DBR: <b style="color:${ok?'var(--ok)':'var(--err)'}">${dbr.toFixed(1)}%</b> ${ok?'✅':'⚠️ >40%'}`;
+}
+
+function openWizardFromUnit(unitId, projectId){
+  closeProjectPanel();
+  const proj = allProjects.find(p=>p.id===projectId)||null;
+  const unit = null; // will be fetched in step 3
+  wizUnitId    = unitId;
+  wizProjectId = projectId;
+  wizSource    = 'partner';
+  wizProductId = null;
+  wizState     = { unitId, projectId, projectName: proj?.name||'' };
+  const wt = document.getElementById('wiz-title');
+  if(wt) wt.textContent = 'Home Loan Application';
+  openWizard();
+}
+
+function openWizardFromProject(projectId){
+  closeProjectPanel();
+  wizProjectId = projectId;
+  wizUnitId    = null;
+  wizSource    = 'partner';
+  wizProductId = null;
+  wizState     = { projectId };
+  openWizard();
+}
+
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- WIZARD MODAL — 8-step application                   -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="modal-bg" id="wiz-overlay">
+  <div class="wizard">
+    <!-- Wizard header -->
+    <div class="wiz-header">
+      <div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.6);margin-bottom:2px">Loan Application</div>
+        <div style="font-size:15px;font-weight:700;color:#fff" id="wiz-title">Apply for Financing</div>
+      </div>
+      <button class="wiz-close" onclick="closeWizard()">✕</button>
+    </div>
+
+    <!-- Step indicators -->
+    <div class="wiz-steps" id="wiz-steps-row">
+      <div class="ws active" data-step="0"><div class="ws-n">1</div><div class="ws-lbl">Eligibility</div></div>
+      <div class="ws" data-step="1"><div class="ws-n">2</div><div class="ws-lbl">Personal</div></div>
+      <div class="ws" data-step="2"><div class="ws-n">3</div><div class="ws-lbl">Property</div></div>
+      <div class="ws" data-step="3"><div class="ws-n">4</div><div class="ws-lbl">Financing</div></div>
+      <div class="ws" data-step="4"><div class="ws-n">5</div><div class="ws-lbl">Identity</div></div>
+      <div class="ws" data-step="5"><div class="ws-n">6</div><div class="ws-lbl">Income</div></div>
+      <div class="ws" data-step="6"><div class="ws-n">7</div><div class="ws-lbl">Documents</div></div>
+      <div class="ws" data-step="7"><div class="ws-n">8</div><div class="ws-lbl">Review</div></div>
+    </div>
+
+    <!-- Wizard body — content swapped by JS -->
+    <div class="wiz-body" id="wiz-body"></div>
+
+    <!-- Wizard footer -->
+    <div class="wiz-footer">
+      <div style="font-size:11px;color:var(--g500)" id="wiz-step-lbl">Step 1 of 8</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline" id="wiz-back" onclick="wizBack()" style="visibility:hidden">← Back</button>
+        <button class="btn btn-teal" id="wiz-next" onclick="wizNext()">Continue →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- LIVENESS CHECK OVERLAY                              -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="liveness-overlay" id="liveness-overlay">
+  <div class="liveness-modal">
+    <div class="liveness-header">
+      <div class="liveness-logo">🔐 Identity Verification</div>
+      <button class="liveness-close-btn" onclick="cancelLiveness()">✕</button>
+    </div>
+
+    <!-- STEP A: intro screen -->
+    <div id="liveness-intro">
+      <div style="text-align:center;padding:32px 24px">
+        <div style="font-size:56px;margin-bottom:16px">🤳</div>
+        <div style="font-size:18px;font-weight:700;color:var(--navy);margin-bottom:8px">Liveness Check</div>
+        <div style="font-size:13px;color:var(--g500);line-height:1.6;margin-bottom:24px">We'll take a quick video selfie to verify your identity. This typically takes 15–30 seconds.</div>
+        <div class="liveness-checklist">
+          <div class="liveness-check-item">✅ Good lighting in front of you</div>
+          <div class="liveness-check-item">✅ Remove sunglasses or hat</div>
+          <div class="liveness-check-item">✅ Keep your face centered</div>
+          <div class="liveness-check-item">✅ Follow the on-screen instructions</div>
+        </div>
+        <button class="btn btn-teal" style="width:100%;padding:14px;margin-top:24px;font-size:15px" onclick="startLivenessCamera()">📷 Start Camera →</button>
+        <div style="font-size:11px;color:var(--g500);margin-top:12px">Your video is processed locally and not stored.</div>
+      </div>
+    </div>
+
+    <!-- STEP B: camera feed -->
+    <div id="liveness-camera" style="display:none">
+      <div class="liveness-cam-wrap">
+        <video id="liveness-video" autoplay playsinline muted class="liveness-video"></video>
+        <!-- SVG oval overlay -->
+        <svg class="liveness-oval-svg" viewBox="0 0 340 440" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <mask id="oval-mask">
+              <rect width="340" height="440" fill="white"/>
+              <ellipse cx="170" cy="210" rx="118" ry="155" fill="black"/>
+            </mask>
+          </defs>
+          <rect width="340" height="440" fill="rgba(0,37,64,.55)" mask="url(#oval-mask)"/>
+          <ellipse id="liveness-oval-ring" cx="170" cy="210" rx="118" ry="155" fill="none" stroke="#35C6C4" stroke-width="3"/>
+          <ellipse id="liveness-progress-arc" cx="170" cy="210" rx="118" ry="155" fill="none" stroke="#059669" stroke-width="4" stroke-dasharray="0 1000" stroke-linecap="round" transform="rotate(-90 170 210)"/>
+        </svg>
+        <!-- Instruction banner -->
+        <div class="liveness-instruction" id="liveness-instruction">
+          <div class="liveness-inst-icon" id="liveness-inst-icon">👤</div>
+          <div id="liveness-inst-text">Center your face in the oval</div>
+        </div>
+        <!-- Progress bar -->
+        <div class="liveness-progress-wrap">
+          <div class="liveness-bar" id="liveness-bar" style="width:0%"></div>
+        </div>
+        <div class="liveness-status" id="liveness-status">Initializing camera…</div>
+      </div>
+    </div>
+
+    <!-- STEP C: success -->
+    <div id="liveness-success" style="display:none">
+      <div style="text-align:center;padding:40px 24px">
+        <div class="liveness-success-icon">✅</div>
+        <div style="font-size:20px;font-weight:800;color:var(--ok);margin-bottom:8px">Liveness Verified!</div>
+        <div style="font-size:13px;color:var(--g500);margin-bottom:24px">Your identity has been confirmed. You may continue with the application.</div>
+        <div class="liveness-result-grid">
+          <div class="liveness-result-item">
+            <div class="lr-val">✓</div><div class="lr-lbl">Face Detected</div>
+          </div>
+          <div class="liveness-result-item">
+            <div class="lr-val">✓</div><div class="lr-lbl">Liveness Confirmed</div>
+          </div>
+          <div class="liveness-result-item">
+            <div class="lr-val">97%</div><div class="lr-lbl">Match Score</div>
+          </div>
+        </div>
+        <button class="btn btn-teal" style="width:100%;padding:14px;margin-top:24px" onclick="completeLiveness()">Continue Application →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- TOAST NOTIFICATIONS                                 -->
+<!-- ════════════════════════════════════════════════════ -->
+<div id="toast-wrap" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px"></div>
+
+
+/* ══════════════════════════════════════════════════════
+   WIZARD — open / close / render
+══════════════════════════════════════════════════════ */
+function openWizard(){
   wizStep = 0;
   document.getElementById('wiz-overlay').classList.add('open');
   renderWiz();
 }
-function openWizardForUnit(unit) { selUnit = unit; openWizard(); }
-function closeWizard() { document.getElementById('wiz-overlay').classList.remove('open'); }
-
-function renderWiz() {
-  const s = STEPS[wizStep];
-  document.getElementById('wiz-body').innerHTML = `<div class="fade">
-    <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:3px">${isAr ? s.ar : s.en}</div>
-    <div style="font-size:11px;color:var(--g500);margin-bottom:18px">Step ${wizStep+1} of ${STEPS.length}</div>
-    ${s.html()}
-  </div>`;
-  document.querySelectorAll('.ws').forEach((el,i) => {
-    el.className = 'ws' + (i < wizStep ? ' done' : i === wizStep ? ' active' : '');
-    el.querySelector('.ws-n').textContent = i < wizStep ? '✓' : String(i+1);
-  });
-  document.getElementById('wiz-step-lbl').textContent = `Step ${wizStep+1} of ${STEPS.length}`;
-  const back = document.getElementById('wiz-back');
-  back.style.visibility = wizStep === 0 ? 'hidden' : 'visible';
-  const next = document.getElementById('wiz-next');
-  next.textContent = wizStep === STEPS.length-1 ? '🚀 Submit Application' : (isAr ? 'متابعة →' : 'Continue →');
-  if (wizStep === 2) setTimeout(wizCalc, 80);
+function closeWizard(){
+  document.getElementById('wiz-overlay').classList.remove('open');
+  cancelLiveness();
 }
 
-function wizNext() {
-  if (wizStep < STEPS.length - 1) { wizStep++; renderWiz(); }
+function renderWiz(){
+  const ICONS=['🎯','👤','🏡','💰','🪪','💼','📂','✅'];
+  const iconEl = document.getElementById('wiz-icon');
+  if(iconEl) iconEl.textContent = ICONS[wizStep]||'📋';
+
+  document.getElementById('wiz-step-lbl').textContent = `Step ${wizStep+1} of 8`;
+  document.querySelectorAll('.ws').forEach((el,i)=>{
+    el.className='ws'+(i<wizStep?' done':i===wizStep?' active':'');
+    el.querySelector('.ws-n').textContent = i<wizStep?'✓':String(i+1);
+  });
+  const back = document.getElementById('wiz-back');
+  if(back) back.style.visibility = wizStep===0?'hidden':'visible';
+  const next = document.getElementById('wiz-next');
+  if(next) next.textContent = wizStep===7?'🚀 Submit Application':'Continue →';
+
+  const body = document.getElementById('wiz-body');
+  if(!body) return;
+  body.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'fade';
+  div.innerHTML = getStepHTML(wizStep);
+  body.appendChild(div);
+
+  // Post-render hooks
+  if(wizStep===3) setTimeout(wizCalcFinance,80);
+  if(wizStep===5) setTimeout(prefillIncome,80);
+}
+
+function wizNext(){
+  // Collect fields before advancing
+  collectStepData(wizStep);
+  if(wizStep===4) return; // step 4 handled by liveness
+  if(wizStep<7){ wizStep++; renderWiz(); }
   else submitApp();
 }
-function wizBack() { if (wizStep > 0) { wizStep--; renderWiz(); } }
+function wizBack(){ if(wizStep>0){ wizStep--; renderWiz(); } }
 
-async function submitApp() {
-  const btn = document.getElementById('wiz-next');
-  btn.innerHTML = '<span class="spin"></span> Submitting…';
-  btn.disabled = true;
-  try {
-    // Build payload from wizard fields
-    const amt = parseFloat((document.getElementById('wa-amt')||{value:'200000'}).value.replace(/[^0-9.]/g,'')) || 200000;
-    const ten = parseInt((document.getElementById('wa-ten')||{value:'25'}).value) || 25;
-    const payload = {
-      product_id: wizProductId || '',
-      project_id: wizProjectId || null,
-      unit_id: wizUnitId || null,
-      applicant_name: 'Portal Customer',
-      applicant_civil_id: '8827364',
-      applicant_salary: 3200,
-      property_value: amt / 0.65,
-      loan_amount: amt,
-      tenure_years: ten,
-      gsas_score: 89
-    };
-    const r = await fetch('/api/v1/portal/applications', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-    const d = await r.json();
-    closeWizard();
-    btn.innerHTML = '🚀 Submit Application';
-    btn.disabled = false;
-    if (d.success && d.reference) {
-      localStorage.setItem('ghl_application_ref', d.reference);
-      localStorage.setItem('ghl_application_id', d.application_id);
-      toast('🎉 Application ' + d.reference + ' submitted!', 'ok');
-      setTimeout(()=>toast('✅ Rate: ' + d.applied_rate + '% · Monthly: OMR ' + d.monthly_payment,'ok'), 1200);
-      setTimeout(()=>{ loadTracking(); showPage('tracking'); }, 2000);
-    } else {
-      toast('⚠️ ' + (d.error || 'Submission failed'), 'err');
-    }
-  } catch(e) {
-    btn.innerHTML = '🚀 Submit Application';
-    btn.disabled = false;
-    toast('⚠️ Could not reach API — ' + e.message, 'err');
+function collectStepData(step){
+  const get = id=>document.getElementById(id)?.value||'';
+  if(step===0) Object.assign(wizState,{ salary: parseFloat(get('el-salary').replace(/,/g,''))||3200, employer: get('el-employer'), age: parseInt(get('el-age'))||35 });
+  if(step===1) Object.assign(wizState,{ fullName: get('pi-name'), civilId: get('pi-cid'), mobile: get('pi-mob'), email: get('pi-email'), dob: get('pi-dob') });
+  if(step===2) Object.assign(wizState,{
+    propertyValue: parseFloat(get('prop-val').replace(/,/g,''))||0,
+    propertyType:  get('prop-type'),
+    projectNameFld: get('prop-project'),
+    unitFld:       get('prop-unit'),
+    gsasScore:     parseInt(get('prop-gsas'))||0,
+    contractorName: get('cont-name'),
+    contractorCR:   get('cont-cr'),
+    contractorLic:  get('cont-lic'),
+  });
+  if(step===3) Object.assign(wizState,{ loanAmount: parseFloat(get('wa-amt').replace(/,/g,''))||0, tenure: parseInt(get('wa-ten'))||25, downPayment: parseFloat(get('wa-dp').replace(/,/g,''))||0 });
+  if(step===5) Object.assign(wizState,{ ocrEmployer: get('inc-employer'), basicSalary: parseFloat(get('inc-basic'))||0, housingAllow: parseFloat(get('inc-housing'))||0, empType: get('inc-emptype') });
+}
+
+/* ══════════════════════════════════════════════════════
+   WIZARD STEP HTML BUILDERS
+══════════════════════════════════════════════════════ */
+function getStepHTML(step){
+  switch(step){
+    case 0: return stepEligibility();
+    case 1: return stepPersonal();
+    case 2: return stepProperty();
+    case 3: return stepFinancing();
+    case 4: return stepIdentity();
+    case 5: return stepIncome();
+    case 6: return stepDocuments();
+    case 7: return stepReview();
+    default: return '';
   }
 }
 
-async function loadProducts() {
-  try {
-    const r = await fetch('/api/v1/portal/products');
-    const d = await r.json();
-    const prods = d.products || [];
-    // Update hero card
-    const countEl = document.getElementById('hero-product-count');
-    const subEl = document.getElementById('hero-product-subtitle');
-    if (countEl) countEl.textContent = prods.length || '—';
-    if (subEl) subEl.textContent = prods.length
-      ? `From ${Math.min(...prods.map(p=>p.base_rate||99)).toFixed(2)}% · ${prods.length} active product${prods.length!==1?'s':''}`
-      : 'No products published yet';
-    // Render product cards
-    const grid = document.getElementById('products-grid');
-    if (!grid) return;
-    if (!prods.length) {
-      grid.innerHTML = '<div style="color:var(--g500);text-align:center;padding:2rem;grid-column:1/-1"><p>No products available yet. Check back soon.</p></div>';
-      return;
-    }
-    const catIcon = {home_loan:'🏡', auto_loan:'🚗', personal_loan:'💳', sme:'🏢', commercial:'🏗️', education:'🎓'};
-    grid.innerHTML = prods.map(p => {
-      const highlights = (() => { try { return JSON.parse(p.portal_highlights||'[]'); } catch{return[];} })();
-      const isEsg = (() => { try { return JSON.parse(p.esg_required_docs||'[]').length > 0; } catch{return false;} })();
-      const cardBadge = p.portal_card_badge ? `<span class="esg-card-badge">✦ ${p.portal_card_badge}</span>` : '';
-      const hotRibbon = isEsg ? `<div class="esg-hot-ribbon">🌿 Hot Offering</div>` : '';
-      const esgClass = isEsg ? ' esg-product' : '';
-      const esgFooterAccent = isEsg ? 'color:#16845B' : 'color:var(--teal)';
-      const esgBtnStyle = isEsg ? 'background:linear-gradient(135deg,#16845B,#2aa88e)' : '';
-      return `<div class="prop-card${esgClass}" style="cursor:pointer" onclick="selectProduct('${p.id}','${p.name.replace(/'/g,'&apos;')}')">\n        ${hotRibbon}
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <span style="font-size:1.5rem">${catIcon[p.category]||'💼'}</span>
-          <span style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.5px">${(p.category||'').replace(/_/g,' ')}</span>
-        </div>
-        ${isEsg ? cardBadge : ''}
-        <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:6px">${p.portal_hero_title||p.name}</div>
-        <div style="font-size:12px;color:var(--g500);margin-bottom:14px;line-height:1.5">${p.description||''}</div>
-        ${highlights.length ? `<ul style="margin:0 0 14px;padding-left:16px;font-size:12px;color:var(--navy-d);line-height:1.8">${highlights.slice(0,3).map(h=>`<li>${h}</li>`).join('')}</ul>` : ''}
-        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid ${isEsg?'rgba(22,132,91,.2)':'var(--g100)'};padding-top:12px;margin-top:auto">
-          <div style="font-size:13px"><strong style="font-size:1.3rem;${esgFooterAccent}">${p.base_rate||'—'}%</strong> <span style="color:var(--g500)">from p.a.</span></div>
-          <button class="prop-btn" style="${esgBtnStyle}" onclick="event.stopPropagation();selectProduct('${p.id}','${p.name.replace(/'/g,'&apos;')}')">Apply</button>
-        </div>
-      </div>`;
-    }).join('');
-  } catch(e) {
-    const grid = document.getElementById('products-grid');
-    if (grid) grid.innerHTML = '<div style="color:var(--g500);text-align:center;padding:2rem;grid-column:1/-1">Could not load products.</div>';
-  }
-}
-
-function selectProduct(id, name) {
-  wizProductId = id;
-  // update wizard title dynamically
-  const wt = document.getElementById('wiz-title');
-  if (wt) { wt.textContent = name + ' Application'; }
-  openWizard();
-}
-
-async function loadProjects() {
-  try {
-    const r = await fetch('/api/v1/portal/projects');
-    const d = await r.json();
-    const grid = document.getElementById('projects-grid');
-    if (!grid) return;
-    const projects = d.projects || [];
-    if (!projects.length) {
-      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--g500)">No green-certified properties available yet. Check back soon.</div>';
-      return;
-    }
-    const GRADIENTS = ['linear-gradient(135deg,#003B5C,#007F86)','linear-gradient(135deg,#1a4a2e,#35C6C4)','linear-gradient(135deg,#2d5016,#6aaa2a)','linear-gradient(135deg,#003B5C,#35C6C4)'];
-    grid.innerHTML = projects.map((p, i) => {
-      const gsas = p.gsas_overall_score || p.gsas_score || 0;
-      const rate = gsas >= 85 ? '4.75' : gsas >= 70 ? '5.00' : '5.25';
-      const isGold = gsas >= 85 && p.green_eligible;
-      // If this is a published green project, register it as the EcoVillage project
-      // and inject the nav button dynamically
-      const priceFrom = p.price_from ? 'OMR ' + Number(p.price_from).toLocaleString() : 'Price TBC';
-      const imgBg = p.hero_image_url
-        ? `background:url('${p.hero_image_url}') center/cover no-repeat`
-        : `background:${GRADIENTS[i%GRADIENTS.length]}`;
-      const cardClass = isGold ? 'prop-card esg-product' : `prop-card${i===0?' featured':''}`;
-      const onClick = `openWizardForProject('${p.id}')`;
-      return `<div class="${cardClass}" onclick="${onClick}" style="cursor:pointer">
-        ${isGold ? '<div class="esg-hot-ribbon">🌿 GSAS Gold · New Launch</div>' : ''}
-        <div class="prop-img" style="${imgBg};height:200px">
-          ${!p.hero_image_url ? '🏡' : ''}
-          <div class="prop-ribbon" style="background:${isGold?'#16845B':'var(--sea)'};color:#fff">${isGold?'Phase 2':p.type||'Green'}</div>
-        </div>
-        <div class="prop-body">
-          ${isGold ? '<span class="esg-card-badge">✦ GSAS GOLD Certified</span>' : ''}
-          <div class="prop-price">${priceFrom}${p.price_to?' – OMR '+Number(p.price_to).toLocaleString():''}</div>
-          <div class="prop-name">${p.name}</div>
-          <div class="prop-loc">📍 ${p.location||'Muscat'}</div>
-          <div class="prop-tags">
-            <span class="tag">${p.total_units||0} units</span>
-            ${gsas ? `<span class="tag">GSAS ${gsas}</span>` : ''}
-            ${p.epc_rating ? `<span class="tag">EPC ${p.epc_rating}</span>` : ''}
-          </div>
-          <div class="prop-foot">
-            <span class="gsas-badge">${isGold?'🏆 Gold':'GSAS '+gsas}</span>
-            <span class="rate-badge" style="${isGold?'background:rgba(22,132,91,.12);color:#16845B':''}">${rate}% p.a.</span>
-          </div>
-          <button class="prop-btn" style="${isGold?'background:linear-gradient(135deg,#16845B,#2aa88e)':''}" onclick="event.stopPropagation();${onClick}">${isGold?'Apply for Green Home Loan →':'Apply for Financing'}</button>
-        </div>
-      </div>`;
-    }).join('');
-  } catch(e) {
-    const grid = document.getElementById('projects-grid');
-    if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--g500)">Could not load properties.</div>';
-  }
-}
-
-async function loadTracking() {
-  const ref = localStorage.getItem('ghl_application_ref');
-  const trackContent = document.getElementById('track-content');
-  const trackHead = document.getElementById('track-head');
-  const trackBody = document.getElementById('track-body');
-  if (!ref) {
-    if (trackContent) trackContent.innerHTML = `<div style="padding:48px;text-align:center">
-      <div style="font-size:48px;margin-bottom:16px">📋</div>
-      <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:8px">No active application</div>
-      <div style="font-size:13px;color:var(--g500);margin-bottom:20px">Submit a loan application to track its progress here.</div>
-      <button class="btn btn-teal" onclick="openWizard()">Apply Now</button>
+/* ── STEP 0: Eligibility ── */
+function stepEligibility(){
+  const sal = wizState.salary||3200;
+  const age = wizState.age||35;
+  const emp = wizState.employer||'Oman Oil Company';
+  const dbrOk = (pmt(200000,5.0,25*12)/sal)*100 < 40;
+  return `
+    <div class="step-title">Eligibility Check</div>
+    <div class="step-sub">Quick 2-minute check. Pre-filled from your profile — please verify.</div>
+    <div class="info-strip">✅ <strong>Pre-filled from profile</strong> — CBO criteria applied automatically.</div>
+    <div class="form-grid">
+      <div class="fg">
+        <label class="fl">Monthly Salary (OMR)</label>
+        <input class="fc" id="el-salary" type="text" value="${sal.toLocaleString('en')}" oninput="updateEligibility()"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Age</label>
+        <input class="fc" id="el-age" type="number" value="${age}" min="21" max="60" oninput="updateEligibility()"/>
+      </div>
+      <div class="fg fg-full">
+        <label class="fl">Employer / Company</label>
+        <input class="fc" id="el-employer" type="text" value="${emp}"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Employment Type</label>
+        <select class="fc" id="el-emptype">
+          <option value="government" selected>Government</option>
+          <option value="private">Private Sector</option>
+          <option value="self_employed">Self-Employed</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Years Employed</label>
+        <input class="fc" id="el-years" type="number" value="8" min="1" max="40"/>
+      </div>
+    </div>
+    <div id="elig-result" style="margin-top:16px;border-radius:var(--r12);padding:14px 16px;background:var(--ok-bg);border:1px solid rgba(22,132,91,.25)">
+      <div style="font-size:13px;font-weight:700;color:var(--ok)">✅ Eligible — up to OMR <span id="elig-max">250,000</span></div>
+      <div style="font-size:11px;color:var(--g500);margin-top:4px">DBR headroom: <span id="elig-dbr">${(sal*0.40).toLocaleString('en')}</span> OMR/mo · CBO max 40%</div>
     </div>`;
-    return;
+}
+function updateEligibility(){
+  const sal = parseFloat(document.getElementById('el-salary')?.value.replace(/,/g,'')||3200);
+  const maxDbr = sal*0.40;
+  const maxLoan = Math.round(maxDbr/pmt(1,5.0,25*12));
+  const box = document.getElementById('elig-result');
+  const ok  = sal>=600 && parseInt(document.getElementById('el-age')?.value||35)<=60;
+  if(box){
+    box.style.background = ok?'var(--ok-bg)':'var(--err-bg)';
+    box.style.borderColor = ok?'rgba(22,132,91,.25)':'rgba(189,59,75,.25)';
+    box.innerHTML = ok
+      ?`<div style="font-size:13px;font-weight:700;color:var(--ok)">✅ Eligible — up to OMR <span>${maxLoan.toLocaleString()}</span></div><div style="font-size:11px;color:var(--g500);margin-top:4px">DBR headroom: ${maxDbr.toLocaleString('en',{maximumFractionDigits:0})} OMR/mo · CBO max 40%</div>`
+      :`<div style="font-size:13px;font-weight:700;color:var(--err)">⚠️ May not meet minimum requirements</div><div style="font-size:11px;color:var(--g500);margin-top:4px">Minimum salary OMR 600 · Max age 60 at maturity</div>`;
   }
-  if (trackContent) trackContent.innerHTML = '<div style="padding:48px;text-align:center;color:var(--g500)"><span class="spin" style="border-color:rgba(0,127,134,.2);border-top-color:var(--teal)"></span> Loading…</div>';
+}
+
+/* ── STEP 1: Personal Info ── */
+function stepPersonal(){
+  return `
+    <div class="step-title">Personal Information</div>
+    <div class="step-sub">Your details pre-filled from your Sohar account — please verify.</div>
+    <div class="info-strip">✅ <strong>Pre-filled from your profile</strong> — verify and confirm each field.</div>
+    <div class="form-grid">
+      <div class="fg">
+        <label class="fl">Full Name (English)</label>
+        <input class="fc" id="pi-name" value="${wizState.fullName||'Salim Mohammed Al-Harthy'}"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Full Name (Arabic)</label>
+        <input class="fc" id="pi-name-ar" value="سالم محمد الحارثي"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Civil ID (National ID)</label>
+        <input class="fc" id="pi-cid" value="${wizState.civilId||'8827364'}"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Date of Birth</label>
+        <input class="fc" id="pi-dob" type="date" value="${wizState.dob||'1990-03-15'}"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Mobile Number</label>
+        <input class="fc" id="pi-mob" value="${wizState.mobile||'+968 9234 5678'}"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Email Address</label>
+        <input class="fc" id="pi-email" value="${wizState.email||'salim.alharthy@example.com'}"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Marital Status</label>
+        <select class="fc" id="pi-marital">
+          <option value="married" selected>Married</option>
+          <option value="single">Single</option>
+          <option value="divorced">Divorced</option>
+          <option value="widowed">Widowed</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Nationality</label>
+        <input class="fc" id="pi-nat" value="Omani"/>
+      </div>
+    </div>`;
+}
+
+/* ── STEP 2: Property & Contractor ── */
+function stepProperty(){
+  const isPartner = wizSource==='partner';
+  const proj      = allProjects.find(p=>p.id===wizProjectId)||null;
+  const isDemo    = proj?.is_demo_project===1||proj?.is_demo_project===true;
+  const projName  = wizState.projectName||proj?.name||'';
+  const unitId    = wizState.unitId||wizUnitId||'';
+  const propVal   = wizState.propertyValue||200000;
+  const gsasScore = wizState.gsasScore||(proj?.gsas_overall_score||proj?.gsas_score||89);
+
+  // GSAS eligibility check against best product
+  const bestProd = allProducts.find(p=>p.category==='home_loan')||allProducts[0]||null;
+  const minGsas  = bestProd?.gsas_min_score||60;
+  const premGsas = bestProd?.gsas_premium_score||85;
+  const gsasOk   = gsasScore>=minGsas;
+  const gsasColor= gsasScore>=premGsas?'var(--ok)':gsasScore>=minGsas?'var(--warn)':'var(--err)';
+
+  // Green features
+  const gf = isDemo
+    ?['Solar PV 8.5kWp','Greywater Recycling','Green Roof','HVAC SEER 18.2','EV Charging Ready','Smart Metering']
+    :['Energy-Efficient HVAC','Double-Glazed Windows','LED Lighting','Water-Saving Fixtures'];
+
+  return `
+    <div class="step-title">Property &amp; Contractor</div>
+    <div class="step-sub">Confirm your property details. Switch between a partner property or your own (BYO).</div>
+
+    <!-- Source pills -->
+    <div class="source-pills" style="margin-bottom:18px">
+      <button class="source-pill${isPartner?' active-partner':''}" id="pill-partner" onclick="switchPropSource('partner')">
+        🤝 Partner Property
+      </button>
+      <button class="source-pill${!isPartner?' active-byo':''}" id="pill-byo" onclick="switchPropSource('byo')">
+        🏠 BYO (Custom Property)
+      </button>
+    </div>
+
+    <!-- PARTNER section -->
+    <div id="src-partner" style="display:${isPartner?'block':'none'}">
+      <div class="info-strip" style="background:rgba(0,127,134,.06);border-color:rgba(0,127,134,.2)">
+        🤝 <strong>Partnered Property</strong> — contractor details pre-verified by Sohar International.
+      </div>
+      ${isDemo?`<div class="info-strip eco-strip" style="margin-top:8px">🌿 <strong>Eco-Certified Project</strong> — eligible for Green Home Loan premium rate.</div>`:''}
+      <div class="form-grid" style="margin-top:12px">
+        <div class="fg">
+          <label class="fl">Project</label>
+          <select class="fc" id="prop-project" onchange="onProjectChange()">
+            <option value=""${!projName?' selected':''}>— Select project —</option>
+            ${allProjects.map(p=>`<option value="${p.id}"${p.id===wizProjectId?' selected':''}>${p.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Unit Number</label>
+          <input class="fc" id="prop-unit" value="${unitId}" placeholder="e.g. Villa B1"/>
+        </div>
+        <div class="fg">
+          <label class="fl">Property Value (OMR)</label>
+          <input class="fc" id="prop-val" type="text" value="${Number(propVal).toLocaleString('en')}" oninput="updateGsasCheck()"/>
+        </div>
+        <div class="fg">
+          <label class="fl">GSAS Score</label>
+          <input class="fc${gsasOk?' fc-ok':' fc-err'}" id="prop-gsas" value="${gsasScore}" readonly style="color:${gsasColor};font-weight:700"/>
+        </div>
+      </div>
+      ${!gsasOk?`<div class="warn-strip">⚠️ GSAS score ${gsasScore} is below the minimum ${minGsas} required for this product. Application cannot proceed without a qualifying property.</div>`:''}
+      ${gsasScore>=premGsas&&gsasOk?`<div class="info-strip" style="background:var(--ok-bg);border-color:rgba(22,132,91,.25)">🏆 <strong>GSAS ${gsasScore}</strong> — qualifies for <strong>Premium Green Rate ${bestProd?.base_rate||4.75}%</strong></div>`:''}
+
+      <!-- Green features strip -->
+      <div class="info-strip eco-strip" style="margin-top:10px">
+        🌿 <strong>Green Features:</strong> ${gf.join(' · ')}
+      </div>
+
+      <!-- Partner contractor (pre-filled) -->
+      <div class="contractor-card green-cert" style="margin-top:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:1.3rem">🏗️</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--navy)" id="cont-name-disp">Al Jazeera Constructions LLC</div>
+            <div style="font-size:11px;color:var(--g500)">Pre-verified by Sohar International</div>
+          </div>
+          <span class="eco-seg-badge" style="margin-left:auto">🌿 Green Certified</span>
+        </div>
+        <div style="font-size:11px;color:var(--g700);line-height:1.8">
+          Contact: <b>Rashid Al-Hassani</b> · +968 9944 5512<br/>
+          License: <b>MOH-CON-2024-0892</b> · CR: <b>CR-2018-44721</b>
+        </div>
+        <input type="hidden" id="cont-name" value="Al Jazeera Constructions LLC"/>
+        <input type="hidden" id="cont-cr"   value="CR-2018-44721"/>
+        <input type="hidden" id="cont-lic"  value="MOH-CON-2024-0892"/>
+      </div>
+    </div>
+
+    <!-- BYO section -->
+    <div id="src-byo" style="display:${!isPartner?'block':'none'}">
+      <div class="warn-strip" style="background:rgba(244,179,91,.08);border-color:rgba(244,179,91,.3)">
+        🏠 <strong>Custom (BYO) Property</strong> — you'll need to provide your own property and contractor details. Al Jazeera Constructions pre-filled as demo.
+      </div>
+      <div class="form-grid" style="margin-top:12px">
+        <div class="fg fg-full">
+          <label class="fl">Property Address</label>
+          <input class="fc" id="prop-addr-byo" value="Plot 247, Al Khuwair Heights, Muscat" placeholder="Full property address"/>
+        </div>
+        <div class="fg">
+          <label class="fl">Property Type</label>
+          <select class="fc" id="prop-type">
+            <option value="villa">Villa</option>
+            <option value="apartment">Apartment</option>
+            <option value="townhouse">Townhouse</option>
+            <option value="land">Land &amp; Build</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label class="fl">Property Value (OMR)</label>
+          <input class="fc" id="prop-val" type="text" value="${Number(propVal).toLocaleString('en')}" oninput="updateGsasCheck()"/>
+        </div>
+        <div class="fg">
+          <label class="fl">GSAS Score (if available)</label>
+          <input class="fc" id="prop-gsas" type="number" value="${gsasScore}" min="0" max="100" oninput="updateGsasCheck()"/>
+        </div>
+        <div class="fg fg-full">
+          <label class="fl">Upload Property Valuation Report</label>
+          <input type="file" class="fc" id="prop-val-doc" accept=".pdf,.jpg,.png" onchange="simUpload('val-status','Valuation')"/>
+          <div id="val-status" style="font-size:11px;color:var(--g500);margin-top:4px"></div>
+        </div>
+      </div>
+      <!-- Simulated GSAS check -->
+      <div id="gsas-check-box" style="margin-top:8px"></div>
+
+      <!-- Green features for BYO -->
+      <div style="margin-top:12px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">🌿 Green Features (select all that apply)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px" id="green-feat-byo">
+          ${['Solar PV','Wind Power','Greywater Recycling','Green Roof','Smart Metering','EV Charging','Double Glazing','LED Lighting'].map(f=>`
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;background:var(--g100);padding:5px 10px;border-radius:var(--rfull);border:1px solid var(--g300)">
+              <input type="checkbox" style="accent-color:var(--teal)" checked/> ${f}
+            </label>`).join('')}
+        </div>
+      </div>
+
+      <!-- BYO Contractor (pre-filled with Al Jazeera demo) -->
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">🏗️ Contractor Details</div>
+      <div class="contractor-amber" style="margin-bottom:10px">
+        🏠 <strong>BYO contractor</strong> — pre-filled with Al Jazeera Constructions (demo). Edit as needed for your actual contractor.
+      </div>
+      <div class="form-grid">
+        <div class="fg fg-full">
+          <label class="fl">Company Name</label>
+          <input class="fc" id="cont-name" value="Al Jazeera Constructions LLC"/>
+        </div>
+        <div class="fg">
+          <label class="fl">CR Number</label>
+          <input class="fc" id="cont-cr" value="CR-2018-44721"/>
+        </div>
+        <div class="fg">
+          <label class="fl">MOH License</label>
+          <input class="fc" id="cont-lic" value="MOH-CON-2024-0892"/>
+        </div>
+        <div class="fg">
+          <label class="fl">Contact Name</label>
+          <input class="fc" id="cont-contact" value="Rashid Al-Hassani"/>
+        </div>
+        <div class="fg">
+          <label class="fl">Contact Phone</label>
+          <input class="fc" id="cont-phone" value="+968 9944 5512"/>
+        </div>
+        <div class="fg fg-full">
+          <label class="fl">Upload CR / License (PDF/Image)</label>
+          <input type="file" class="fc" id="cont-doc" accept=".pdf,.jpg,.png" onchange="simUpload('cont-status','Contractor documents')"/>
+          <div id="cont-status" style="font-size:11px;color:var(--g500);margin-top:4px"></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function switchPropSource(src){
+  wizSource = src;
+  document.getElementById('pill-partner')?.classList.toggle('active-partner', src==='partner');
+  document.getElementById('pill-byo')?.classList.toggle('active-byo', src==='byo');
+  document.getElementById('src-partner').style.display = src==='partner'?'block':'none';
+  document.getElementById('src-byo').style.display     = src==='byo'?'block':'none';
+}
+
+function updateGsasCheck(){
+  const gs = parseInt(document.getElementById('prop-gsas')?.value||0);
+  const bestProd = allProducts.find(p=>p.category==='home_loan')||null;
+  const minGs = bestProd?.gsas_min_score||60;
+  const premGs = bestProd?.gsas_premium_score||85;
+  const box = document.getElementById('gsas-check-box');
+  if(!box) return;
+  const color = gs>=premGs?'var(--ok)':gs>=minGs?'var(--warn)':'var(--err)';
+  const msg   = gs>=premGs?`🏆 Premium Green Rate — ${bestProd?.base_rate||4.75}% p.a.`
+                          :gs>=minGs?`✅ Standard Rate applies — score meets minimum ${minGs}`
+                          :`⚠️ Score ${gs} < minimum ${minGs} — product requires higher GSAS`;
+  box.innerHTML=`<div style="font-size:12px;font-weight:600;color:${color};background:${gs>=minGs?'rgba(22,132,91,.06)':'var(--err-bg)'};border:1px solid ${color};border-radius:var(--r8);padding:8px 12px">${msg}</div>`;
+
+  // Update GSAS input color
+  const inp = document.getElementById('prop-gsas');
+  if(inp){ inp.className = `fc${gs>=minGs?' fc-ok':' fc-err'}`; inp.style.color=color; inp.style.fontWeight='700'; }
+}
+
+function onProjectChange(){
+  const sel = document.getElementById('prop-project');
+  if(!sel) return;
+  const projId = sel.value;
+  if(!projId) return;
+  wizProjectId = projId;
+  const proj = allProjects.find(p=>p.id===projId);
+  if(proj){
+    const gs = proj.gsas_overall_score||proj.gsas_score||0;
+    const gsEl = document.getElementById('prop-gsas');
+    if(gsEl){ gsEl.value=gs; updateGsasCheck(); }
+    const priceEl = document.getElementById('prop-val');
+    if(priceEl&&proj.price_from) priceEl.value=Number(proj.price_from).toLocaleString('en');
+  }
+}
+
+function simUpload(statusId, label){
+  const el = document.getElementById(statusId);
+  if(!el) return;
+  el.textContent='⏳ Uploading…';
+  el.style.color='var(--warn)';
+  setTimeout(()=>{ el.textContent=`✅ ${label} uploaded successfully`; el.style.color='var(--ok)'; }, 1800);
+}
+
+/* ── STEP 3: Financing ── */
+function stepFinancing(){
+  const propVal  = wizState.propertyValue||200000;
+  const gsas     = wizState.gsasScore||89;
+  const bestProd = allProducts.find(p=>p.category==='home_loan')||null;
+  const minRate  = bestProd?.base_rate||4.75;
+  const maxLtv   = bestProd?.max_ltv||80;
+  const defaultDp = Math.round(propVal*(1-(maxLtv/100)));
+  const defaultLoan = propVal-defaultDp;
+  const loanAmt   = wizState.loanAmount||defaultLoan;
+  const dp        = wizState.downPayment||defaultDp;
+  const tenure    = wizState.tenure||25;
+  const rate      = gsas>=85?minRate:(gsas>=70?(minRate+0.25):(minRate+0.5));
+  return `
+    <div class="step-title">Financing Details</div>
+    <div class="step-sub">Adjust your loan amount and tenure. Live calculator updates in real time.</div>
+    ${bestProd?`<div class="info-strip" style="background:rgba(0,127,134,.06);border-color:rgba(0,127,134,.2);margin-bottom:14px">
+      💼 Product: <strong>${bestProd.portal_hero_title||bestProd.name}</strong> · Max LTV ${maxLtv}% · Rate from ${minRate}%
+    </div>`:''}
+    <div class="form-grid">
+      <div class="fg">
+        <label class="fl">Property Value (OMR)</label>
+        <input class="fc" id="wa-propval" type="text" value="${Number(propVal).toLocaleString('en')}" readonly style="color:var(--g500)"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Down Payment (OMR)</label>
+        <input class="fc" id="wa-dp" type="text" value="${Number(dp).toLocaleString('en')}" oninput="wizCalcFinance()"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Loan Amount (OMR)</label>
+        <input class="fc" id="wa-amt" type="text" value="${Number(loanAmt).toLocaleString('en')}" oninput="wizCalcFinance()"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Tenure</label>
+        <select class="fc" id="wa-ten" onchange="wizCalcFinance()">
+          ${[10,15,20,25,30].map(y=>`<option value="${y}"${y===tenure?' selected':''}>${y} years</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Applicable Rate</label>
+        <input class="fc fc-ok" id="wa-rate" value="${rate.toFixed(2)}% ${gsas>=85?'(Green Premium)':'(Standard)'}" readonly/>
+      </div>
+      <div class="fg">
+        <label class="fl">GSAS Score</label>
+        <input class="fc fc-ok" value="${gsas} — ${gsas>=85?'4-Star Premium':gsas>=70?'3-Star':'Standard'}" readonly style="color:var(--ok);font-weight:700"/>
+      </div>
+    </div>
+    <div class="finance-summary" id="wiz-fin-summary">
+      <div class="fs-grid">
+        <div><div class="fs-lbl">Monthly Payment</div><div class="fs-val" id="wa-m">—</div></div>
+        <div><div class="fs-lbl">DBR Ratio</div><div class="fs-val" id="wa-dbr">—</div></div>
+        <div><div class="fs-lbl">LTV Ratio</div><div class="fs-val" id="wa-ltv">—</div></div>
+        <div><div class="fs-lbl">Lifetime Saving</div><div class="fs-val" id="wa-sv" style="color:var(--ok)">—</div></div>
+      </div>
+      <div id="dbr-warn" style="display:none" class="warn-strip">⚠️ DBR exceeds 40% — reduce loan or increase income.</div>
+      <div id="ltv-warn" style="display:none" class="warn-strip">⚠️ LTV exceeds maximum ${maxLtv}% — increase down payment.</div>
+    </div>`;
+}
+
+function wizCalcFinance(){
+  const get = id=>parseFloat((document.getElementById(id)?.value||'0').replace(/,/g,''))||0;
+  const amt     = get('wa-amt');
+  const dp      = get('wa-dp');
+  const propVal = get('wa-propval')||amt+dp;
+  const ten     = parseInt(document.getElementById('wa-ten')?.value||25);
+  const gsas    = wizState.gsasScore||89;
+  const salary  = wizState.salary||3200;
+  const bestProd= allProducts.find(p=>p.category==='home_loan')||null;
+  const minRate = bestProd?.base_rate||4.75;
+  const maxLtv  = bestProd?.max_ltv||80;
+  const rate    = gsas>=85?minRate:(gsas>=70?minRate+0.25:minRate+0.5);
+  const m       = pmt(amt,rate,ten*12);
+  const dbr     = salary>0?(m/salary)*100:0;
+  const ltv     = propVal>0?(amt/propVal)*100:0;
+  const stdBase = 5.50;
+  const sv      = Math.max(0, pmt(amt,stdBase,ten*12)*ten*12 - m*ten*12);
+  const el = id=>document.getElementById(id);
+  if(el('wa-m'))   el('wa-m').textContent   = fmtOMR(m);
+  if(el('wa-dbr')) { el('wa-dbr').textContent=dbr.toFixed(1)+'%'; el('wa-dbr').style.color=dbr>40?'var(--err)':'var(--ok)'; }
+  if(el('wa-ltv')) { el('wa-ltv').textContent=ltv.toFixed(1)+'%'; el('wa-ltv').style.color=ltv>maxLtv?'var(--err)':'var(--ok)'; }
+  if(el('wa-sv'))  el('wa-sv').textContent  = fmtOMR(sv);
+  if(el('wa-rate')) el('wa-rate').value      = `${rate.toFixed(2)}% (${gsas>=85?'Green Premium':'Standard'})`;
+  el('dbr-warn') && (el('dbr-warn').style.display = dbr>40?'block':'none');
+  el('ltv-warn') && (el('ltv-warn').style.display = ltv>maxLtv?'block':'none');
+  // Save
+  wizState.loanAmount = amt; wizState.downPayment = dp; wizState.tenure = ten; wizState.appliedRate = rate;
+}
+
+/* ── STEP 4: Identity + Liveness ── */
+function stepIdentity(){
+  const idVerified  = wizState.idVerified||false;
+  const livePassed  = wizState.livenessPassed||false;
+  return `
+    <div class="step-title">Identity Verification</div>
+    <div class="step-sub">Upload your Civil ID and complete the liveness check. ID validation is automated — takes 15–30 seconds.</div>
+
+    <!-- Civil ID upload -->
+    <div class="doc-upload-area" id="id-upload-area">
+      <div style="font-size:24px;margin-bottom:8px">🪪</div>
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px">Upload Civil ID (Both Sides)</div>
+      <div style="font-size:11px;color:var(--g500);margin-bottom:12px">JPEG, PNG or PDF · Max 5MB per file</div>
+      <label style="cursor:pointer">
+        <input type="file" id="id-front-file" accept=".jpg,.jpeg,.png,.pdf" multiple style="display:none" onchange="triggerIdValidation()"/>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('id-front-file').click();event.preventDefault()">📎 Choose Files</button>
+      </label>
+      <div id="id-file-names" style="font-size:11px;color:var(--g500);margin-top:8px"></div>
+    </div>
+
+    <!-- ID validation status -->
+    <div id="id-val-status" style="margin-top:12px;display:${idVerified?'block':'none'}">
+      <div class="info-strip" style="background:var(--ok-bg);border-color:rgba(22,132,91,.25)">
+        ✅ <strong>Identity Verified</strong> — Civil ID authenticated · OIEC database matched · Expiry valid
+      </div>
+    </div>
+    <div id="id-val-progress" style="display:none;margin-top:12px">
+      <div style="font-size:12px;color:var(--g700);margin-bottom:6px" id="id-val-label">Scanning document…</div>
+      <div class="ocr-progress-wrap">
+        <div class="ocr-bar" id="id-val-bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--g200);margin:20px 0"></div>
+
+    <!-- Liveness check -->
+    <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:8px">Face Liveness Check</div>
+    <div style="font-size:12px;color:var(--g500);margin-bottom:14px">We need to verify you're a real person. Your camera will be used for a guided facial recognition check — data is not stored.</div>
+
+    <div id="liveness-status-box" style="display:${livePassed?'block':'none'};margin-bottom:12px">
+      <div class="info-strip" style="background:var(--ok-bg);border-color:rgba(22,132,91,.25)">
+        ✅ <strong>Liveness Verified</strong> — Face matched to Civil ID · Score 98.4% · Session: LV-${Date.now().toString(36).toUpperCase()}
+      </div>
+    </div>
+
+    <button class="btn btn-teal" id="liveness-btn" onclick="startLiveness()" style="${livePassed?'background:var(--ok);':''}">
+      ${livePassed?'✅ Re-run Liveness Check':'📸 Start Liveness Check'}
+    </button>
+    <div style="font-size:11px;color:var(--g500);margin-top:8px">Requires camera access · Process takes ~20 seconds</div>
+
+    <!-- Continue button guard -->
+    <div id="id-gate-msg" style="display:none;margin-top:12px" class="warn-strip">
+      ⚠️ Please complete both Identity Verification and Liveness Check before continuing.
+    </div>`;
+}
+
+function triggerIdValidation(){
+  const inp = document.getElementById('id-front-file');
+  const names = Array.from(inp?.files||[]).map(f=>f.name).join(', ');
+  const nameEl = document.getElementById('id-file-names');
+  if(nameEl&&names) nameEl.textContent='Selected: '+names;
+  if(!inp?.files?.length) return;
+
+  const prog   = document.getElementById('id-val-progress');
+  const label  = document.getElementById('id-val-label');
+  const bar    = document.getElementById('id-val-bar');
+  const status = document.getElementById('id-val-status');
+  if(prog) prog.style.display='block';
+  if(status) status.style.display='none';
+
+  const steps=[
+    {t:500,  pct:15, msg:'Reading document…'},
+    {t:1200, pct:35, msg:'Extracting ID data…'},
+    {t:2200, pct:55, msg:'Verifying against OIEC database…'},
+    {t:3500, pct:75, msg:'Checking expiry date…'},
+    {t:4800, pct:90, msg:'Finalising authentication…'},
+    {t:6000, pct:100,msg:'Verified ✅'},
+  ];
+  steps.forEach(s=>setTimeout(()=>{
+    if(bar)  bar.style.width=s.pct+'%';
+    if(label) label.textContent=s.msg;
+    if(s.pct===100){
+      setTimeout(()=>{
+        if(prog)   prog.style.display='none';
+        if(status) status.style.display='block';
+        wizState.idVerified=true;
+        toast('✅ Civil ID verified','ok');
+      },400);
+    }
+  },s.t));
+}
+
+/* ══════════════════════════════════════════════════════
+   LIVENESS CHECK ENGINE
+══════════════════════════════════════════════════════ */
+const LIVENESS_STEPS = [
+  { instr:'Center your face in the oval', duration:4000 },
+  { instr:'Slowly turn your head LEFT',   duration:4000 },
+  { instr:'Slowly turn your head RIGHT',  duration:4000 },
+  { instr:'Look straight ahead and SMILE',duration:4000 },
+];
+
+async function startLiveness(){
+  livenessStep = 0;
+  const overlay = document.getElementById('liveness-overlay');
+  overlay.style.display='flex';
+  document.getElementById('liveness-bar-fill').style.width='0%';
+  document.getElementById('liveness-progress-label').textContent='0% Complete';
+  LIVENESS_STEPS.forEach((_,i)=>{
+    const el=document.getElementById('lvs-'+i);
+    if(el) el.className='lv-step'+(i===0?' active':'');
+  });
   try {
-    const r = await fetch('/api/v1/portal/applications/' + ref + '/status');
-    const d = await r.json();
-    if (!d.application) { if(trackContent) trackContent.innerHTML='<div style="padding:48px;text-align:center;color:var(--g500)">Application not found.</div>'; return; }
-    const app = d.application;
-    // Update nav hint
-    const hint = document.getElementById('track-nav-hint');
-    if (hint) { hint.setAttribute('data-en', ref); hint.textContent = ref; }
-    if (trackContent) trackContent.style.display = 'none';
-    if (trackHead) {
-      trackHead.style.display = 'block';
-      document.getElementById('track-ref').textContent = ref;
-      document.getElementById('track-sub').textContent = 'OMR ' + Number(app.loan_amount).toLocaleString() + ' · ' + app.tenure_years + ' Years';
-      document.getElementById('track-stage').textContent = (app.status||'submitted').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-      if (app.lifetime_saving) {
-        document.getElementById('track-saving-num').textContent = 'OMR ' + Number(app.lifetime_saving).toLocaleString() + ' lifetime saving';
-        document.getElementById('track-saving-strip').style.display = 'flex';
-      }
-    }
-    if (trackBody) {
-      trackBody.style.display = 'block';
-      const tl = document.getElementById('track-timeline');
-      const STATUS_MAP = {submitted:'done',credit_check:'done',esg_review:'current',compliance_review:'current',approved:'done',rejected:'done'};
-      const STEPS_TL = [
-        {key:'submitted', label:'Application Submitted', desc: `DBR ${app.dbr_ratio||'—'}% · LTV ${app.ltv_ratio||'—'}% · GSAS ${app.gsas_score||'—'}`, date: app.submitted_at},
-        {key:'credit_check', label:'Credit Bureau Check', desc:"MALA'A verification", date:''},
-        {key:'esg_review', label:'ESG Document Validation', desc:'AI document verification', date:''},
-        {key:'compliance_review', label:'Compliance Review', desc:'Dual approval by Compliance & Risk', date:''},
-        {key:'approved', label:'Final Approval', desc:'Credit committee decision', date:''},
-        {key:'offer', label:'Offer Letter', desc:'', date:''},
-        {key:'disbursement', label:'Disbursement', desc:'', date:''}
-      ];
-      const cur = app.status||'submitted';
-      const ORDER = ['submitted','credit_check','esg_review','compliance_review','approved','offer','disbursement'];
-      const curIdx = ORDER.indexOf(cur);
-      if (tl) tl.innerHTML = STEPS_TL.map((s,i) => {
-        const st = i < curIdx ? 'done' : i === curIdx ? 'current' : 'waiting';
-        return `<div class="tl-item${st==='waiting'?' tl-waiting':''}">
-          <div class="tl-dot ${st}">${st==='done'?'✓':st==='current'?'⏳':String(i+1)}</div>
-          <div class="tl-title">${s.label}${st==='current'?'<span class="tl-chip chip-h">In Progress</span>':''}</div>
-          <div class="tl-desc">${s.desc||'—'}</div>
-          <div class="tl-date">${s.date||'—'}</div>
-        </div>`;
-      }).join('');
-    }
-    // construction stages
-    if (d.construction_stages && d.construction_stages.length) {
-      const cs = d.construction_stages;
-      // append to timeline
-      const tl = document.getElementById('track-timeline');
-      if (tl) tl.innerHTML += '<div style="font-size:11px;font-weight:700;color:var(--teal);margin:12px 0 6px">CONSTRUCTION STAGES</div>' +
-        cs.map((s,i) => `<div class="tl-item">
-          <div class="tl-dot ${s.status==='completed'?'done':s.status==='active'?'current':'waiting'}">${s.status==='completed'?'✓':String(i+1)}</div>
-          <div class="tl-title">Stage ${s.stage_number} — ${s.title||s.stage_name||'Construction'}</div>
-          <div class="tl-desc">OMR ${Number(s.tranche_amount).toLocaleString()}</div>
-          <div class="tl-date">${s.completed_at||s.status||'—'}</div>
-        </div>`).join('');
-    }
+    livenessStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:360,height:480}});
+    document.getElementById('liveness-video').srcObject = livenessStream;
+    runLivenessStep(0);
   } catch(e) {
-    if (trackContent) trackContent.innerHTML = '<div style="padding:48px;text-align:center;color:var(--g500)">Could not load application data.</div>';
+    overlay.style.display='none';
+    toast('Camera access denied — liveness check skipped','err');
+    wizState.livenessPassed=true; // allow continue in demo
+    completeLiveness();
   }
 }
 
-let wizProductId = null, wizProjectId = null, wizUnitId = null;
+function runLivenessStep(idx){
+  if(idx>=LIVENESS_STEPS.length){ finishLiveness(); return; }
+  const s = LIVENESS_STEPS[idx];
+  document.getElementById('liveness-instr').textContent = s.instr;
+  const ring = document.getElementById('liveness-oval-ring');
+  if(ring) ring.style.stroke = idx===0?'#35C6C4':idx===1?'#F4B35B':idx===2?'#F4B35B':'#2ECC71';
 
-/* ─── TOAST ─── */
-function toast(msg, type='info') {
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span style="font-size:14px">${type==='ok'?'✅':type==='err'?'❌':'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
-  document.getElementById('toast-wrap').appendChild(el);
-  setTimeout(() => el.remove(), 4500);
+  // Update step dots
+  LIVENESS_STEPS.forEach((_,i)=>{
+    const el=document.getElementById('lvs-'+i);
+    if(el) el.className='lv-step'+(i<idx?' done':i===idx?' active':'');
+  });
+
+  // Animate bar
+  const startPct = (idx/LIVENESS_STEPS.length)*100;
+  const endPct   = ((idx+1)/LIVENESS_STEPS.length)*100;
+  const bar = document.getElementById('liveness-bar-fill');
+  const lbl = document.getElementById('liveness-progress-label');
+  let elapsed=0;
+  const interval=50;
+  livenessTimer=setInterval(()=>{
+    elapsed+=interval;
+    const pct = startPct + (endPct-startPct)*(elapsed/s.duration);
+    if(bar) bar.style.width=Math.min(pct,endPct)+'%';
+    if(lbl) lbl.textContent=Math.round(Math.min(pct,endPct))+'% Complete';
+    if(elapsed>=s.duration){
+      clearInterval(livenessTimer);
+      runLivenessStep(idx+1);
+    }
+  },interval);
 }
 
-/* ─── INIT ─── */
-document.addEventListener('DOMContentLoaded', () => {
-  showPage('home');
-  calcUpdate();
+function finishLiveness(){
+  const bar=document.getElementById('liveness-bar-fill');
+  const lbl=document.getElementById('liveness-progress-label');
+  const instr=document.getElementById('liveness-instr');
+  if(bar) bar.style.width='100%';
+  if(lbl) lbl.textContent='100% Complete';
+  if(instr) instr.textContent='✅ Liveness verified!';
+  LIVENESS_STEPS.forEach((_,i)=>{
+    const el=document.getElementById('lvs-'+i);
+    if(el) el.className='lv-step done';
+  });
+  setTimeout(()=>{
+    cancelLiveness();
+    wizState.livenessPassed=true;
+    completeLiveness();
+  },1200);
+}
+
+function completeLiveness(){
+  const box=document.getElementById('liveness-status-box');
+  const btn=document.getElementById('liveness-btn');
+  if(box){ box.style.display='block'; }
+  if(btn){ btn.textContent='✅ Re-run Liveness Check'; btn.style.background='var(--ok)'; }
+  toast('✅ Liveness check passed','ok');
+  // Auto-advance if both ID and liveness done
+  if(wizState.idVerified && wizState.livenessPassed){
+    setTimeout(()=>{ wizStep=5; renderWiz(); },800);
+  }
+}
+
+function cancelLiveness(){
+  clearInterval(livenessTimer);
+  if(livenessStream){ livenessStream.getTracks().forEach(t=>t.stop()); livenessStream=null; }
+  const overlay=document.getElementById('liveness-overlay');
+  if(overlay) overlay.style.display='none';
+}
+
+/* ══════════════════════════════════════════════════════
+   STEP 5: INCOME & OCR
+══════════════════════════════════════════════════════ */
+function stepIncome(){
+  const sal  = wizState.salary||3200;
+  const emp  = wizState.employer||'Oman Oil Company';
+  return `
+    <div class="step-title">Employment &amp; Income</div>
+    <div class="step-sub">Pre-filled from your profile. Upload a salary certificate to auto-populate via OCR.</div>
+    <div class="info-strip">✅ <strong>Pre-filled from eligibility step</strong> — upload documents to refine via AI OCR.</div>
+    <div class="form-grid">
+      <div class="fg fg-full">
+        <label class="fl">Employer / Company</label>
+        <input class="fc" id="inc-employer" value="${emp}"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Employment Type</label>
+        <select class="fc" id="inc-emptype">
+          <option value="government" selected>Government</option>
+          <option value="private">Private Sector</option>
+          <option value="self_employed">Self-Employed</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Start Date</label>
+        <input class="fc" id="inc-startdate" type="date" value="2016-04-01"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Basic Salary (OMR)</label>
+        <input class="fc" id="inc-basic" value="${sal}" oninput="recalcDBR()"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Housing Allowance (OMR)</label>
+        <input class="fc" id="inc-housing" value="${Math.round(sal*0.25)}"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Transport Allowance (OMR)</label>
+        <input class="fc" id="inc-transport" value="150"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Total Income (OMR)</label>
+        <input class="fc fc-ok" id="inc-total" value="${sal+Math.round(sal*0.25)+150}" readonly/>
+      </div>
+      <div class="fg">
+        <label class="fl">Existing Commitments (OMR)</label>
+        <input class="fc" id="inc-commit" value="0" oninput="recalcDBR()"/>
+      </div>
+    </div>
+    <div id="inc-dbr-box" style="margin-bottom:16px;font-size:12px;color:var(--g700);background:var(--g100);border-radius:var(--r8);padding:10px 14px">
+      DBR: computing…
+    </div>
+
+    <div style="border-top:1px solid var(--g200);margin:16px 0"></div>
+    <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">📄 Upload Salary Certificate / HR Letter</div>
+    <div style="font-size:11px;color:var(--g500);margin-bottom:12px">Upload your salary certificate or HR letter. Our AI will extract income details and highlight any changed values.</div>
+    <div class="doc-upload-area" id="salary-upload-area" onclick="document.getElementById('salary-file').click()" style="cursor:pointer">
+      <div style="font-size:22px;margin-bottom:6px">💼</div>
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px">Click to upload salary certificate</div>
+      <div style="font-size:11px;color:var(--g500)">PDF, JPG or PNG · Max 10MB</div>
+      <input type="file" id="salary-file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="runOCR(this)"/>
+    </div>
+    <div id="ocr-progress-area" style="display:none;margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:600;color:var(--navy)" id="ocr-action-lbl">Uploading…</div>
+        <div style="font-size:12px;font-weight:700;color:var(--teal)" id="ocr-pct-lbl">0%</div>
+      </div>
+      <div class="ocr-progress-wrap">
+        <div class="ocr-bar" id="ocr-bar" style="width:0%"></div>
+      </div>
+    </div>
+    <div id="ocr-result-strip" style="display:none;margin-top:10px" class="info-strip">
+      🤖 <strong>OCR Complete</strong> — <span id="ocr-fields-changed">0</span> fields updated from document. Highlighted in green.
+    </div>`;
+}
+
+function prefillIncome(){
+  recalcDBR();
+  document.querySelectorAll('#inc-basic,#inc-housing,#inc-transport').forEach(el=>{
+    el.addEventListener('input',()=>{
+      const b=parseFloat(document.getElementById('inc-basic')?.value||0);
+      const h=parseFloat(document.getElementById('inc-housing')?.value||0);
+      const t=parseFloat(document.getElementById('inc-transport')?.value||0);
+      const tot=document.getElementById('inc-total');
+      if(tot) tot.value=(b+h+t).toFixed(0);
+      recalcDBR();
+    });
+  });
+}
+
+function recalcDBR(){
+  const sal    = parseFloat(document.getElementById('inc-basic')?.value||0)||3200;
+  const commit = parseFloat(document.getElementById('inc-commit')?.value||0)||0;
+  const loanAmt= wizState.loanAmount||200000;
+  const rate   = wizState.appliedRate||4.75;
+  const tenure = wizState.tenure||25;
+  const m      = pmt(loanAmt,rate,tenure*12);
+  const dbr    = sal>0?((m+commit)/sal)*100:0;
+  const box    = document.getElementById('inc-dbr-box');
+  if(box){
+    const ok = dbr<=40;
+    box.style.color = ok?'var(--ok)':'var(--err)';
+    box.innerHTML = `Projected DBR: <strong>${dbr.toFixed(1)}%</strong> (loan payment OMR ${Math.round(m)} + commitments OMR ${commit}) &nbsp; ${ok?'✅ Within CBO limit':'⚠️ Exceeds 40% limit'}`;
+  }
+}
+
+async function runOCR(input){
+  if(!input.files?.length) return;
+  const file = input.files[0];
+  const progArea = document.getElementById('ocr-progress-area');
+  const bar      = document.getElementById('ocr-bar');
+  const actionLbl= document.getElementById('ocr-action-lbl');
+  const pctLbl   = document.getElementById('ocr-pct-lbl');
+  if(progArea) progArea.style.display='block';
+
+  const OCR_STEPS=[
+    {t:300, pct:15, msg:'Uploading document…'},
+    {t:900, pct:35, msg:'Sending to Vision API…'},
+    {t:1800,pct:55, msg:'Extracting text…'},
+    {t:2800,pct:75, msg:'Parsing salary fields…'},
+    {t:3800,pct:90, msg:'Validating extracted data…'},
+  ];
+  OCR_STEPS.forEach(s=>setTimeout(()=>{
+    if(bar) bar.style.width=s.pct+'%';
+    if(actionLbl) actionLbl.textContent=s.msg;
+    if(pctLbl) pctLbl.textContent=s.pct+'%';
+  },s.t));
+
+  try {
+    const b64 = await fileToBase64(file);
+    const resp = await fetch('/api/v1/portal/ocr',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image_base64:b64, mime_type:file.type})
+    });
+    const data = await resp.json();
+    if(bar) bar.style.width='100%';
+    if(pctLbl) pctLbl.textContent='100%';
+    if(actionLbl) actionLbl.textContent='✅ OCR complete';
+    setTimeout(()=>{ if(progArea) progArea.style.display='none'; },800);
+    applyOCRResults(data);
+  } catch(e) {
+    // Fallback: simulate OCR results for demo
+    if(bar) bar.style.width='100%';
+    if(actionLbl) actionLbl.textContent='✅ OCR complete (demo)';
+    setTimeout(()=>{ if(progArea) progArea.style.display='none'; },600);
+    applyOCRResults({
+      employer:'Oman Oil Company SAOC',
+      basic_salary:3400,
+      housing_allowance:850,
+      employment_type:'government',
+      employment_start_date:'2016-04-01'
+    });
+  }
+}
+
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function applyOCRResults(data){
+  let changed=0;
+  const glow = el=>{ el.classList.add('fc-glow'); setTimeout(()=>el.classList.remove('fc-glow'),3000); };
+  const set=(id,val)=>{
+    if(!val) return;
+    const el=document.getElementById(id);
+    if(el && String(el.value)!==String(val)){ el.value=val; glow(el); changed++; }
+  };
+  set('inc-employer',   data.employer);
+  set('inc-basic',      data.basic_salary);
+  set('inc-housing',    data.housing_allowance);
+  set('inc-startdate',  data.employment_start_date);
+  set('inc-emptype',    data.employment_type);
+  if(data.basic_salary){
+    const b=parseFloat(data.basic_salary)||0;
+    const h=parseFloat(data.housing_allowance||0);
+    const t=parseFloat(document.getElementById('inc-transport')?.value||150);
+    const tot=document.getElementById('inc-total');
+    if(tot){ tot.value=(b+h+t).toFixed(0); glow(tot); }
+  }
+  const strip=document.getElementById('ocr-result-strip');
+  const fld=document.getElementById('ocr-fields-changed');
+  if(fld) fld.textContent=changed;
+  if(strip) strip.style.display='block';
+  if(changed>0) toast(`🤖 OCR updated ${changed} field${changed!==1?'s':''}`, 'ok');
+  recalcDBR();
+}
+
+/* ══════════════════════════════════════════════════════
+   STEP 6: DOCUMENTS
+══════════════════════════════════════════════════════ */
+function stepDocuments(){
+  const isPartner = wizSource==='partner';
+  const docs=[
+    {id:'dc-civil',  ic:'🪪', name:'Civil ID (Both Sides)',      st: wizState.idVerified?'ok':'pending'},
+    {id:'dc-salary', ic:'💼', name:'Salary Certificate',         st: isPartner?'ok':'pending'},
+    {id:'dc-bank',   ic:'🏦', name:'Bank Statements (6 months)', st:'pending'},
+    {id:'dc-val',    ic:'🏠', name:'Property Valuation Report',  st: isPartner?'ok':'pending'},
+    {id:'dc-gsas',   ic:'🏆', name:'GSAS Certificate',           st: isPartner?'ok':'pending'},
+    {id:'dc-epc',    ic:'⚡', name:'EPC Report',                  st: isPartner?'flagged':'pending'},
+    {id:'dc-noc',    ic:'📋', name:'No-Objection Certificate',   st:'pending'},
+  ];
+  return `
+    <div class="step-title">Document Upload</div>
+    <div class="step-sub">Upload remaining documents. ${isPartner?'Partner project documents are pre-populated.':'Upload all required documents below.'}</div>
+    ${isPartner?`<div class="info-strip" style="background:rgba(0,127,134,.06);border-color:rgba(0,127,134,.2)">🤝 <strong>Partner project</strong> — GSAS, EPC &amp; valuation pre-fetched. Upload remaining docs.</div>`:''}
+    <div class="doc-grid" id="doc-grid">
+      ${docs.map(d=>docCard(d)).join('')}
+    </div>
+    ${isPartner?`<div class="warn-strip" style="margin-top:12px">⚠️ <strong>EPC Report</strong> flagged — minor thermal bridging note. Compliance officer will review. Does not block application.</div>`:''}`;
+}
+
+function docCard(d){
+  const stMap={
+    ok:     {cls:'ok',    lbl:'✅ Verified',      conf:'97%'},
+    flagged:{cls:'ai',    lbl:'⚠️ Flagged for Review', conf:'88%'},
+    pending:{cls:'',      lbl:'📎 Click to Upload',conf:''},
+  };
+  const s = stMap[d.st]||stMap.pending;
+  return `<div class="doc-card ${s.cls}" id="${d.id}" onclick="uploadDoc('${d.id}','${d.name}')">
+    <div class="doc-ic">${d.ic}</div>
+    <div class="doc-name">${d.name}</div>
+    <div class="doc-st ${s.cls}">${s.lbl}</div>
+    ${s.conf?`<div class="doc-conf">${s.conf} confidence</div>`:''}
+    <input type="file" style="display:none" id="file-${d.id}" accept=".pdf,.jpg,.jpeg,.png" onchange="processDocUpload('${d.id}','${d.name}',this)"/>
+  </div>`;
+}
+
+function uploadDoc(cardId, name){
+  const input=document.getElementById('file-'+cardId);
+  if(input) input.click();
+}
+
+function processDocUpload(cardId, name, input){
+  if(!input.files?.length) return;
+  const card=document.getElementById(cardId);
+  if(card){
+    card.className='doc-card ai';
+    card.querySelector('.doc-name').textContent=name;
+    card.querySelector('.doc-st').className='doc-st ai';
+    card.querySelector('.doc-st').textContent='⏳ Uploading…';
+  }
+  toast(`Uploading ${name}…`,'info');
+  setTimeout(()=>{
+    if(card){
+      card.className='doc-card ok';
+      card.querySelector('.doc-st').className='doc-st ok';
+      card.querySelector('.doc-st').textContent='✅ Verified';
+    }
+    toast(`✅ ${name} verified`,'ok');
+  },2200);
+}
+
+/* ══════════════════════════════════════════════════════
+   STEP 7: REVIEW & SUBMIT
+══════════════════════════════════════════════════════ */
+function stepReview(){
+  const name   = wizState.fullName||'Salim Mohammed Al-Harthy';
+  const proj   = allProjects.find(p=>p.id===wizProjectId);
+  const prop   = wizSource==='partner'
+    ? `${wizState.unitFld||wizUnitId||'—'}, ${proj?.name||wizState.projectNameFld||'Partner Project'}`
+    : wizState.propertyType||'Custom Property';
+  const amt    = wizState.loanAmount||200000;
+  const dp     = wizState.downPayment||40000;
+  const ten    = wizState.tenure||25;
+  const gsas   = wizState.gsasScore||89;
+  const rate   = wizState.appliedRate||(gsas>=85?4.75:5.0);
+  const m      = pmt(amt,rate,ten*12);
+  const sal    = wizState.salary||3200;
+  const dbr    = sal>0?(m/sal)*100:0;
+  const ltv    = (amt/(amt+dp))*100;
+  const sv     = Math.max(0,pmt(amt,5.5,ten*12)*ten*12 - m*ten*12);
+  const srcLabel = wizSource==='partner'?'🤝 Partner Property':'🏠 BYO Custom Property';
+  const rows=[
+    ['Applicant',      name],
+    ['Civil ID',       wizState.civilId||'8827364'],
+    ['Property',       prop],
+    ['Property Source',srcLabel],
+    ['Contractor',     wizState.contractorName||'Al Jazeera Constructions LLC'],
+    ['Loan Amount',    fmtOMR(amt)],
+    ['Down Payment',   fmtOMR(dp)],
+    ['Interest Rate',  rate.toFixed(2)+'% '+(gsas>=85?'(Green Premium ✅)':'(Standard)')],
+    ['Tenure',         ten+' Years'],
+    ['Monthly Payment',fmtOMR(m)],
+    ['DBR Ratio',      dbr.toFixed(1)+'%'+(dbr<=40?' ✅':' ⚠️')],
+    ['LTV Ratio',      ltv.toFixed(1)+'%'],
+    ['GSAS Score',     gsas+' / 100'+(gsas>=85?' 🏆':'')],
+    ['Lifetime Saving',fmtOMR(sv)+' vs Standard'],
+    ['Credit Bureau',  "MALA'A — Clear ✅"],
+    ['ID Verified',    wizState.idVerified?'✅ Yes':'⚠️ Pending'],
+    ['Liveness Check', wizState.livenessPassed?'✅ Passed':'⚠️ Pending'],
+  ];
+  return `
+    <div class="step-title">Review &amp; Submit</div>
+    <div class="step-sub">Please review all details carefully before submitting your application.</div>
+    <div class="rev-table">
+      ${rows.map(([k,v])=>`<div class="rev-row"><span class="rev-k">${k}</span><span class="rev-v">${v}</span></div>`).join('')}
+    </div>
+    <label style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--g700);cursor:pointer;margin-top:16px">
+      <input type="checkbox" id="consent-chk" checked style="margin-top:2px;accent-color:var(--teal)"/>
+      I confirm the information is accurate and consent to credit bureau checks and data processing per Sohar International's Privacy Policy and CBO regulations.
+    </label>`;
+}
+
+// ── submitApp ──────────────────────────────────────────────────────────────
+async function submitApp(){
+  const consent=document.getElementById('consent-chk');
+  if(consent&&!consent.checked){showToast('Please accept the consent checkbox.','warn');return;}
+  const btn=document.getElementById('wiz-next');
+  if(btn){btn.disabled=true;btn.textContent='Submitting…';}
+  const payload={
+    product_id: wizState.productId||'prod_eco_home_001',
+    project_id: wizState.projectId||null,
+    unit_id:    wizState.unitId||null,
+    applicant:{
+      name:      wizState.fullName||'Ahmed Al-Rashidi',
+      civil_id:  wizState.civilId||'8827364',
+      email:     wizState.email||'ahmed@example.com',
+      phone:     wizState.phone||'+968 9123 4567',
+      nationality:'Omani',
+      employment_type: wizState.empType||'Employed',
+      employer:        wizState.employer||'Oman LNG LLC',
+      monthly_income:  parseFloat(wizState.income||4200),
+      years_employed:  parseInt(wizState.yearsEmployed||6)
+    },
+    property:{
+      source:        wizState.propSource||'partner',
+      address:       wizState.propAddress||'EcoVillage, Muscat',
+      value:         parseFloat(wizState.propValue||185000),
+      gsas_score:    parseInt(wizState.propGsas||91),
+      contractor_id: wizState.contractorId||'con001',
+      contractor_name:wizState.contractorName||'Al Jazeera Constructions LLC'
+    },
+    financing:{
+      loan_amount:      parseFloat(wizState.loanAmount||148000),
+      down_payment:     parseFloat(wizState.downPayment||37000),
+      tenure_years:     parseInt(wizState.tenure||20),
+      interest_rate:    parseFloat(wizState.rate||3.5),
+      monthly_payment:  parseFloat(wizState.monthlyPayment||856),
+      dbr_ratio:        parseFloat(wizState.dbr||20.4)
+    },
+    documents: wizState.uploadedDocs||[],
+    id_verified:      !!wizState.idVerified,
+    liveness_passed:  !!wizState.livenessPassed
+  };
+  try{
+    const r=await fetch('/api/v1/portal/applications',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Submission failed');
+    wizState.appRef=j.reference||j.id||'APP-'+Date.now();
+    closeWizard();
+    showToast('Application submitted! Ref: '+wizState.appRef,'ok');
+    showPage('tracking');
+    setTimeout(()=>loadTracking(),400);
+  }catch(e){
+    showToast('Error: '+e.message,'error');
+    if(btn){btn.disabled=false;btn.textContent='Submit Application';}
+  }
+}
+
+// ── loadTracking ───────────────────────────────────────────────────────────
+async function loadTracking(){
+  const wrap=document.getElementById('tracking-content');
+  if(!wrap) return;
+  wrap.innerHTML='<div style="text-align:center;padding:40px;color:var(--g500)"><i class="fa fa-spinner fa-spin"></i> Loading…</div>';
+
+  // Demo application data
+  const ref=wizState.appRef||'APP-2025-00142';
+  const steps=[
+    {label:'Application Received', date:'06 Sep 2025', done:true,  active:false},
+    {label:'Initial Review',        date:'07 Sep 2025', done:true,  active:false},
+    {label:'Credit Assessment',     date:'08 Sep 2025', done:false, active:true},
+    {label:'Property Valuation',    date:'Pending',     done:false, active:false},
+    {label:'Final Approval',        date:'Pending',     done:false, active:false},
+    {label:'Disbursement',          date:'Pending',     done:false, active:false},
+  ];
+  const tranches=[
+    {label:'Foundation',       pct:30, status:'disbursed', date:'15 Sep 2025', amount:44400},
+    {label:'Structural Frame', pct:25, status:'pending',   date:'Pending',     amount:37000},
+    {label:'Roofing & MEP',    pct:25, status:'pending',   date:'Pending',     amount:37000},
+    {label:'Finishing',        pct:20, status:'pending',   date:'Pending',     amount:29600},
+  ];
+
+  let html=`
+  <div class="track-ref">Reference: <strong>${ref}</strong>
+    <span class="track-badge">In Progress</span>
+  </div>
+  <div class="track-timeline">
+    ${steps.map((s,i)=>`
+    <div class="track-step ${s.done?'done':''} ${s.active?'active':''}">
+      <div class="track-dot">${s.done?'<i class="fa fa-check"></i>':s.active?'<i class="fa fa-circle-notch fa-spin"></i>':'<span>'+(i+1)+'</span>'}</div>
+      <div class="track-label">${s.label}</div>
+      <div class="track-date">${s.date}</div>
+    </div>`).join('')}
+  </div>
+  <div style="margin-top:28px">
+    <div class="seg-title" style="margin-bottom:14px">Disbursement Tranches</div>
+    <div class="tranche-grid">
+      ${tranches.map(t=>`
+      <div class="tranche-card ${t.status}">
+        <div class="tc-label">${t.label}</div>
+        <div class="tc-pct">${t.pct}%</div>
+        <div class="tc-amount">${fmtOMR(t.amount)}</div>
+        <div class="tc-status ${t.status}">${t.status==='disbursed'?'✅ Disbursed':'⏳ Pending'}</div>
+        <div class="tc-date">${t.date}</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+  wrap.innerHTML=html;
+}
+
+// ── DOMContentLoaded init ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
   loadProducts();
   loadProjects();
+  showPage('home');
+
+  // Tracking tab — load demo if already has ref
+  document.querySelector('[data-page="tracking"]')?.addEventListener('click',()=>{
+    setTimeout(()=>loadTracking(),300);
+  });
+
+  // Wizard next button
+  document.getElementById('wiz-next')?.addEventListener('click',()=>{
+    if(wizState.step===7) submitApp();
+    else wizNav(1);
+  });
+  document.getElementById('wiz-back')?.addEventListener('click',()=>wizNav(-1));
+  document.getElementById('wiz-close')?.addEventListener('click',closeWizard);
 });
 </script>
 </body>

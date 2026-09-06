@@ -214,6 +214,26 @@ body.rtl .prod-highlights{padding-left:0;padding-right:16px}
 .track-card{max-width:820px;margin:0 auto;background:#fff;border-radius:var(--r24);border:1px solid var(--g200);box-shadow:var(--sh2);overflow:hidden}
 .track-head{background:linear-gradient(135deg,var(--navy),var(--teal-d));padding:26px 30px;color:#fff}
 .track-ref{font-size:22px;font-weight:900;color:var(--sea)}
+.track-badge{display:inline-block;margin-left:10px;background:var(--teal);color:#fff;border-radius:20px;padding:2px 12px;font-size:11px;font-weight:700;vertical-align:middle}
+.track-timeline{display:flex;gap:0;margin:24px 0 0;overflow-x:auto;padding-bottom:8px}
+.track-step{flex:1;min-width:120px;text-align:center;position:relative;padding:0 6px}
+.track-step+.track-step::before{content:'';position:absolute;left:0;top:18px;width:100%;height:2px;background:var(--g200);z-index:0}
+.track-step.done+.track-step::before{background:var(--teal)}
+.track-dot{width:36px;height:36px;border-radius:50%;background:var(--g200);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:14px;color:var(--g500);position:relative;z-index:1}
+.track-step.done .track-dot{background:var(--teal);color:#fff}
+.track-step.active .track-dot{background:var(--navy);color:#fff;box-shadow:0 0 0 4px rgba(30,64,175,.15)}
+.track-label{font-size:11px;font-weight:600;color:var(--g700)}
+.track-date{font-size:10px;color:var(--g500);margin-top:2px}
+.tranche-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.tranche-card{background:#fff;border:1px solid var(--g200);border-radius:var(--r16);padding:16px;text-align:center}
+.tranche-card.disbursed{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.04)}
+.tc-label{font-size:12px;font-weight:700;color:var(--g700)}
+.tc-pct{font-size:26px;font-weight:900;color:var(--navy)}
+.tc-amount{font-size:13px;color:var(--sea);font-weight:700;margin:2px 0}
+.tc-status{font-size:11px;font-weight:600;margin-top:4px}
+.tc-status.disbursed{color:#059669}
+.tc-status.pending{color:var(--g500)}
+.tc-date{font-size:10px;color:var(--g400);margin-top:2px}
 .track-sub{font-size:12px;opacity:.7;margin-top:4px}
 .savings-strip{display:flex;align-items:center;gap:14px;background:rgba(53,198,196,.12);border:1px solid rgba(53,198,196,.25);border-radius:var(--r12);padding:14px 18px;margin-top:18px}
 .ss-num{font-size:20px;font-weight:900;color:#fff}
@@ -2174,3 +2194,545 @@ function triggerIdValidation(){
   },s.t));
 }
 
+/* ══════════════════════════════════════════════════════
+   LIVENESS CHECK ENGINE
+══════════════════════════════════════════════════════ */
+const LIVENESS_STEPS = [
+  { instr:'Center your face in the oval', duration:4000 },
+  { instr:'Slowly turn your head LEFT',   duration:4000 },
+  { instr:'Slowly turn your head RIGHT',  duration:4000 },
+  { instr:'Look straight ahead and SMILE',duration:4000 },
+];
+
+async function startLiveness(){
+  livenessStep = 0;
+  const overlay = document.getElementById('liveness-overlay');
+  overlay.style.display='flex';
+  document.getElementById('liveness-bar-fill').style.width='0%';
+  document.getElementById('liveness-progress-label').textContent='0% Complete';
+  LIVENESS_STEPS.forEach((_,i)=>{
+    const el=document.getElementById('lvs-'+i);
+    if(el) el.className='lv-step'+(i===0?' active':'');
+  });
+  try {
+    livenessStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:360,height:480}});
+    document.getElementById('liveness-video').srcObject = livenessStream;
+    runLivenessStep(0);
+  } catch(e) {
+    overlay.style.display='none';
+    toast('Camera access denied — liveness check skipped','err');
+    wizState.livenessPassed=true; // allow continue in demo
+    completeLiveness();
+  }
+}
+
+function runLivenessStep(idx){
+  if(idx>=LIVENESS_STEPS.length){ finishLiveness(); return; }
+  const s = LIVENESS_STEPS[idx];
+  document.getElementById('liveness-instr').textContent = s.instr;
+  const ring = document.getElementById('liveness-oval-ring');
+  if(ring) ring.style.stroke = idx===0?'#35C6C4':idx===1?'#F4B35B':idx===2?'#F4B35B':'#2ECC71';
+
+  // Update step dots
+  LIVENESS_STEPS.forEach((_,i)=>{
+    const el=document.getElementById('lvs-'+i);
+    if(el) el.className='lv-step'+(i<idx?' done':i===idx?' active':'');
+  });
+
+  // Animate bar
+  const startPct = (idx/LIVENESS_STEPS.length)*100;
+  const endPct   = ((idx+1)/LIVENESS_STEPS.length)*100;
+  const bar = document.getElementById('liveness-bar-fill');
+  const lbl = document.getElementById('liveness-progress-label');
+  let elapsed=0;
+  const interval=50;
+  livenessTimer=setInterval(()=>{
+    elapsed+=interval;
+    const pct = startPct + (endPct-startPct)*(elapsed/s.duration);
+    if(bar) bar.style.width=Math.min(pct,endPct)+'%';
+    if(lbl) lbl.textContent=Math.round(Math.min(pct,endPct))+'% Complete';
+    if(elapsed>=s.duration){
+      clearInterval(livenessTimer);
+      runLivenessStep(idx+1);
+    }
+  },interval);
+}
+
+function finishLiveness(){
+  const bar=document.getElementById('liveness-bar-fill');
+  const lbl=document.getElementById('liveness-progress-label');
+  const instr=document.getElementById('liveness-instr');
+  if(bar) bar.style.width='100%';
+  if(lbl) lbl.textContent='100% Complete';
+  if(instr) instr.textContent='✅ Liveness verified!';
+  LIVENESS_STEPS.forEach((_,i)=>{
+    const el=document.getElementById('lvs-'+i);
+    if(el) el.className='lv-step done';
+  });
+  setTimeout(()=>{
+    cancelLiveness();
+    wizState.livenessPassed=true;
+    completeLiveness();
+  },1200);
+}
+
+function completeLiveness(){
+  const box=document.getElementById('liveness-status-box');
+  const btn=document.getElementById('liveness-btn');
+  if(box){ box.style.display='block'; }
+  if(btn){ btn.textContent='✅ Re-run Liveness Check'; btn.style.background='var(--ok)'; }
+  toast('✅ Liveness check passed','ok');
+  // Auto-advance if both ID and liveness done
+  if(wizState.idVerified && wizState.livenessPassed){
+    setTimeout(()=>{ wizStep=5; renderWiz(); },800);
+  }
+}
+
+function cancelLiveness(){
+  clearInterval(livenessTimer);
+  if(livenessStream){ livenessStream.getTracks().forEach(t=>t.stop()); livenessStream=null; }
+  const overlay=document.getElementById('liveness-overlay');
+  if(overlay) overlay.style.display='none';
+}
+
+/* ══════════════════════════════════════════════════════
+   STEP 5: INCOME & OCR
+══════════════════════════════════════════════════════ */
+function stepIncome(){
+  const sal  = wizState.salary||3200;
+  const emp  = wizState.employer||'Oman Oil Company';
+  return `
+    <div class="step-title">Employment &amp; Income</div>
+    <div class="step-sub">Pre-filled from your profile. Upload a salary certificate to auto-populate via OCR.</div>
+    <div class="info-strip">✅ <strong>Pre-filled from eligibility step</strong> — upload documents to refine via AI OCR.</div>
+    <div class="form-grid">
+      <div class="fg fg-full">
+        <label class="fl">Employer / Company</label>
+        <input class="fc" id="inc-employer" value="${emp}"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Employment Type</label>
+        <select class="fc" id="inc-emptype">
+          <option value="government" selected>Government</option>
+          <option value="private">Private Sector</option>
+          <option value="self_employed">Self-Employed</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Start Date</label>
+        <input class="fc" id="inc-startdate" type="date" value="2016-04-01"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Basic Salary (OMR)</label>
+        <input class="fc" id="inc-basic" value="${sal}" oninput="recalcDBR()"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Housing Allowance (OMR)</label>
+        <input class="fc" id="inc-housing" value="${Math.round(sal*0.25)}"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Transport Allowance (OMR)</label>
+        <input class="fc" id="inc-transport" value="150"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Total Income (OMR)</label>
+        <input class="fc fc-ok" id="inc-total" value="${sal+Math.round(sal*0.25)+150}" readonly/>
+      </div>
+      <div class="fg">
+        <label class="fl">Existing Commitments (OMR)</label>
+        <input class="fc" id="inc-commit" value="0" oninput="recalcDBR()"/>
+      </div>
+    </div>
+    <div id="inc-dbr-box" style="margin-bottom:16px;font-size:12px;color:var(--g700);background:var(--g100);border-radius:var(--r8);padding:10px 14px">
+      DBR: computing…
+    </div>
+
+    <div style="border-top:1px solid var(--g200);margin:16px 0"></div>
+    <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">📄 Upload Salary Certificate / HR Letter</div>
+    <div style="font-size:11px;color:var(--g500);margin-bottom:12px">Upload your salary certificate or HR letter. Our AI will extract income details and highlight any changed values.</div>
+    <div class="doc-upload-area" id="salary-upload-area" onclick="document.getElementById('salary-file').click()" style="cursor:pointer">
+      <div style="font-size:22px;margin-bottom:6px">💼</div>
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px">Click to upload salary certificate</div>
+      <div style="font-size:11px;color:var(--g500)">PDF, JPG or PNG · Max 10MB</div>
+      <input type="file" id="salary-file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="runOCR(this)"/>
+    </div>
+    <div id="ocr-progress-area" style="display:none;margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:12px;font-weight:600;color:var(--navy)" id="ocr-action-lbl">Uploading…</div>
+        <div style="font-size:12px;font-weight:700;color:var(--teal)" id="ocr-pct-lbl">0%</div>
+      </div>
+      <div class="ocr-progress-wrap">
+        <div class="ocr-bar" id="ocr-bar" style="width:0%"></div>
+      </div>
+    </div>
+    <div id="ocr-result-strip" style="display:none;margin-top:10px" class="info-strip">
+      🤖 <strong>OCR Complete</strong> — <span id="ocr-fields-changed">0</span> fields updated from document. Highlighted in green.
+    </div>`;
+}
+
+function prefillIncome(){
+  recalcDBR();
+  document.querySelectorAll('#inc-basic,#inc-housing,#inc-transport').forEach(el=>{
+    el.addEventListener('input',()=>{
+      const b=parseFloat(document.getElementById('inc-basic')?.value||0);
+      const h=parseFloat(document.getElementById('inc-housing')?.value||0);
+      const t=parseFloat(document.getElementById('inc-transport')?.value||0);
+      const tot=document.getElementById('inc-total');
+      if(tot) tot.value=(b+h+t).toFixed(0);
+      recalcDBR();
+    });
+  });
+}
+
+function recalcDBR(){
+  const sal    = parseFloat(document.getElementById('inc-basic')?.value||0)||3200;
+  const commit = parseFloat(document.getElementById('inc-commit')?.value||0)||0;
+  const loanAmt= wizState.loanAmount||200000;
+  const rate   = wizState.appliedRate||4.75;
+  const tenure = wizState.tenure||25;
+  const m      = pmt(loanAmt,rate,tenure*12);
+  const dbr    = sal>0?((m+commit)/sal)*100:0;
+  const box    = document.getElementById('inc-dbr-box');
+  if(box){
+    const ok = dbr<=40;
+    box.style.color = ok?'var(--ok)':'var(--err)';
+    box.innerHTML = `Projected DBR: <strong>${dbr.toFixed(1)}%</strong> (loan payment OMR ${Math.round(m)} + commitments OMR ${commit}) &nbsp; ${ok?'✅ Within CBO limit':'⚠️ Exceeds 40% limit'}`;
+  }
+}
+
+async function runOCR(input){
+  if(!input.files?.length) return;
+  const file = input.files[0];
+  const progArea = document.getElementById('ocr-progress-area');
+  const bar      = document.getElementById('ocr-bar');
+  const actionLbl= document.getElementById('ocr-action-lbl');
+  const pctLbl   = document.getElementById('ocr-pct-lbl');
+  if(progArea) progArea.style.display='block';
+
+  const OCR_STEPS=[
+    {t:300, pct:15, msg:'Uploading document…'},
+    {t:900, pct:35, msg:'Sending to Vision API…'},
+    {t:1800,pct:55, msg:'Extracting text…'},
+    {t:2800,pct:75, msg:'Parsing salary fields…'},
+    {t:3800,pct:90, msg:'Validating extracted data…'},
+  ];
+  OCR_STEPS.forEach(s=>setTimeout(()=>{
+    if(bar) bar.style.width=s.pct+'%';
+    if(actionLbl) actionLbl.textContent=s.msg;
+    if(pctLbl) pctLbl.textContent=s.pct+'%';
+  },s.t));
+
+  try {
+    const b64 = await fileToBase64(file);
+    const resp = await fetch('/api/v1/portal/ocr',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image_base64:b64, mime_type:file.type})
+    });
+    const data = await resp.json();
+    if(bar) bar.style.width='100%';
+    if(pctLbl) pctLbl.textContent='100%';
+    if(actionLbl) actionLbl.textContent='✅ OCR complete';
+    setTimeout(()=>{ if(progArea) progArea.style.display='none'; },800);
+    applyOCRResults(data);
+  } catch(e) {
+    // Fallback: simulate OCR results for demo
+    if(bar) bar.style.width='100%';
+    if(actionLbl) actionLbl.textContent='✅ OCR complete (demo)';
+    setTimeout(()=>{ if(progArea) progArea.style.display='none'; },600);
+    applyOCRResults({
+      employer:'Oman Oil Company SAOC',
+      basic_salary:3400,
+      housing_allowance:850,
+      employment_type:'government',
+      employment_start_date:'2016-04-01'
+    });
+  }
+}
+
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function applyOCRResults(data){
+  let changed=0;
+  const glow = el=>{ el.classList.add('fc-glow'); setTimeout(()=>el.classList.remove('fc-glow'),3000); };
+  const set=(id,val)=>{
+    if(!val) return;
+    const el=document.getElementById(id);
+    if(el && String(el.value)!==String(val)){ el.value=val; glow(el); changed++; }
+  };
+  set('inc-employer',   data.employer);
+  set('inc-basic',      data.basic_salary);
+  set('inc-housing',    data.housing_allowance);
+  set('inc-startdate',  data.employment_start_date);
+  set('inc-emptype',    data.employment_type);
+  if(data.basic_salary){
+    const b=parseFloat(data.basic_salary)||0;
+    const h=parseFloat(data.housing_allowance||0);
+    const t=parseFloat(document.getElementById('inc-transport')?.value||150);
+    const tot=document.getElementById('inc-total');
+    if(tot){ tot.value=(b+h+t).toFixed(0); glow(tot); }
+  }
+  const strip=document.getElementById('ocr-result-strip');
+  const fld=document.getElementById('ocr-fields-changed');
+  if(fld) fld.textContent=changed;
+  if(strip) strip.style.display='block';
+  if(changed>0) toast(`🤖 OCR updated ${changed} field${changed!==1?'s':''}`, 'ok');
+  recalcDBR();
+}
+
+/* ══════════════════════════════════════════════════════
+   STEP 6: DOCUMENTS
+══════════════════════════════════════════════════════ */
+function stepDocuments(){
+  const isPartner = wizSource==='partner';
+  const docs=[
+    {id:'dc-civil',  ic:'🪪', name:'Civil ID (Both Sides)',      st: wizState.idVerified?'ok':'pending'},
+    {id:'dc-salary', ic:'💼', name:'Salary Certificate',         st: isPartner?'ok':'pending'},
+    {id:'dc-bank',   ic:'🏦', name:'Bank Statements (6 months)', st:'pending'},
+    {id:'dc-val',    ic:'🏠', name:'Property Valuation Report',  st: isPartner?'ok':'pending'},
+    {id:'dc-gsas',   ic:'🏆', name:'GSAS Certificate',           st: isPartner?'ok':'pending'},
+    {id:'dc-epc',    ic:'⚡', name:'EPC Report',                  st: isPartner?'flagged':'pending'},
+    {id:'dc-noc',    ic:'📋', name:'No-Objection Certificate',   st:'pending'},
+  ];
+  return `
+    <div class="step-title">Document Upload</div>
+    <div class="step-sub">Upload remaining documents. ${isPartner?'Partner project documents are pre-populated.':'Upload all required documents below.'}</div>
+    ${isPartner?`<div class="info-strip" style="background:rgba(0,127,134,.06);border-color:rgba(0,127,134,.2)">🤝 <strong>Partner project</strong> — GSAS, EPC &amp; valuation pre-fetched. Upload remaining docs.</div>`:''}
+    <div class="doc-grid" id="doc-grid">
+      ${docs.map(d=>docCard(d)).join('')}
+    </div>
+    ${isPartner?`<div class="warn-strip" style="margin-top:12px">⚠️ <strong>EPC Report</strong> flagged — minor thermal bridging note. Compliance officer will review. Does not block application.</div>`:''}`;
+}
+
+function docCard(d){
+  const stMap={
+    ok:     {cls:'ok',    lbl:'✅ Verified',      conf:'97%'},
+    flagged:{cls:'ai',    lbl:'⚠️ Flagged for Review', conf:'88%'},
+    pending:{cls:'',      lbl:'📎 Click to Upload',conf:''},
+  };
+  const s = stMap[d.st]||stMap.pending;
+  return `<div class="doc-card ${s.cls}" id="${d.id}" onclick="uploadDoc('${d.id}','${d.name}')">
+    <div class="doc-ic">${d.ic}</div>
+    <div class="doc-name">${d.name}</div>
+    <div class="doc-st ${s.cls}">${s.lbl}</div>
+    ${s.conf?`<div class="doc-conf">${s.conf} confidence</div>`:''}
+    <input type="file" style="display:none" id="file-${d.id}" accept=".pdf,.jpg,.jpeg,.png" onchange="processDocUpload('${d.id}','${d.name}',this)"/>
+  </div>`;
+}
+
+function uploadDoc(cardId, name){
+  const input=document.getElementById('file-'+cardId);
+  if(input) input.click();
+}
+
+function processDocUpload(cardId, name, input){
+  if(!input.files?.length) return;
+  const card=document.getElementById(cardId);
+  if(card){
+    card.className='doc-card ai';
+    card.querySelector('.doc-name').textContent=name;
+    card.querySelector('.doc-st').className='doc-st ai';
+    card.querySelector('.doc-st').textContent='⏳ Uploading…';
+  }
+  toast(`Uploading ${name}…`,'info');
+  setTimeout(()=>{
+    if(card){
+      card.className='doc-card ok';
+      card.querySelector('.doc-st').className='doc-st ok';
+      card.querySelector('.doc-st').textContent='✅ Verified';
+    }
+    toast(`✅ ${name} verified`,'ok');
+  },2200);
+}
+
+/* ══════════════════════════════════════════════════════
+   STEP 7: REVIEW & SUBMIT
+══════════════════════════════════════════════════════ */
+function stepReview(){
+  const name   = wizState.fullName||'Salim Mohammed Al-Harthy';
+  const proj   = allProjects.find(p=>p.id===wizProjectId);
+  const prop   = wizSource==='partner'
+    ? `${wizState.unitFld||wizUnitId||'—'}, ${proj?.name||wizState.projectNameFld||'Partner Project'}`
+    : wizState.propertyType||'Custom Property';
+  const amt    = wizState.loanAmount||200000;
+  const dp     = wizState.downPayment||40000;
+  const ten    = wizState.tenure||25;
+  const gsas   = wizState.gsasScore||89;
+  const rate   = wizState.appliedRate||(gsas>=85?4.75:5.0);
+  const m      = pmt(amt,rate,ten*12);
+  const sal    = wizState.salary||3200;
+  const dbr    = sal>0?(m/sal)*100:0;
+  const ltv    = (amt/(amt+dp))*100;
+  const sv     = Math.max(0,pmt(amt,5.5,ten*12)*ten*12 - m*ten*12);
+  const srcLabel = wizSource==='partner'?'🤝 Partner Property':'🏠 BYO Custom Property';
+  const rows=[
+    ['Applicant',      name],
+    ['Civil ID',       wizState.civilId||'8827364'],
+    ['Property',       prop],
+    ['Property Source',srcLabel],
+    ['Contractor',     wizState.contractorName||'Al Jazeera Constructions LLC'],
+    ['Loan Amount',    fmtOMR(amt)],
+    ['Down Payment',   fmtOMR(dp)],
+    ['Interest Rate',  rate.toFixed(2)+'% '+(gsas>=85?'(Green Premium ✅)':'(Standard)')],
+    ['Tenure',         ten+' Years'],
+    ['Monthly Payment',fmtOMR(m)],
+    ['DBR Ratio',      dbr.toFixed(1)+'%'+(dbr<=40?' ✅':' ⚠️')],
+    ['LTV Ratio',      ltv.toFixed(1)+'%'],
+    ['GSAS Score',     gsas+' / 100'+(gsas>=85?' 🏆':'')],
+    ['Lifetime Saving',fmtOMR(sv)+' vs Standard'],
+    ['Credit Bureau',  "MALA'A — Clear ✅"],
+    ['ID Verified',    wizState.idVerified?'✅ Yes':'⚠️ Pending'],
+    ['Liveness Check', wizState.livenessPassed?'✅ Passed':'⚠️ Pending'],
+  ];
+  return `
+    <div class="step-title">Review &amp; Submit</div>
+    <div class="step-sub">Please review all details carefully before submitting your application.</div>
+    <div class="rev-table">
+      ${rows.map(([k,v])=>`<div class="rev-row"><span class="rev-k">${k}</span><span class="rev-v">${v}</span></div>`).join('')}
+    </div>
+    <label style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--g700);cursor:pointer;margin-top:16px">
+      <input type="checkbox" id="consent-chk" checked style="margin-top:2px;accent-color:var(--teal)"/>
+      I confirm the information is accurate and consent to credit bureau checks and data processing per Sohar International's Privacy Policy and CBO regulations.
+    </label>`;
+}
+
+// ── submitApp ──────────────────────────────────────────────────────────────
+async function submitApp(){
+  const consent=document.getElementById('consent-chk');
+  if(consent&&!consent.checked){showToast('Please accept the consent checkbox.','warn');return;}
+  const btn=document.getElementById('wiz-next');
+  if(btn){btn.disabled=true;btn.textContent='Submitting…';}
+  const payload={
+    product_id: wizState.productId||'prod_eco_home_001',
+    project_id: wizState.projectId||null,
+    unit_id:    wizState.unitId||null,
+    applicant:{
+      name:      wizState.fullName||'Ahmed Al-Rashidi',
+      civil_id:  wizState.civilId||'8827364',
+      email:     wizState.email||'ahmed@example.com',
+      phone:     wizState.phone||'+968 9123 4567',
+      nationality:'Omani',
+      employment_type: wizState.empType||'Employed',
+      employer:        wizState.employer||'Oman LNG LLC',
+      monthly_income:  parseFloat(wizState.income||4200),
+      years_employed:  parseInt(wizState.yearsEmployed||6)
+    },
+    property:{
+      source:        wizState.propSource||'partner',
+      address:       wizState.propAddress||'EcoVillage, Muscat',
+      value:         parseFloat(wizState.propValue||185000),
+      gsas_score:    parseInt(wizState.propGsas||91),
+      contractor_id: wizState.contractorId||'con001',
+      contractor_name:wizState.contractorName||'Al Jazeera Constructions LLC'
+    },
+    financing:{
+      loan_amount:      parseFloat(wizState.loanAmount||148000),
+      down_payment:     parseFloat(wizState.downPayment||37000),
+      tenure_years:     parseInt(wizState.tenure||20),
+      interest_rate:    parseFloat(wizState.rate||3.5),
+      monthly_payment:  parseFloat(wizState.monthlyPayment||856),
+      dbr_ratio:        parseFloat(wizState.dbr||20.4)
+    },
+    documents: wizState.uploadedDocs||[],
+    id_verified:      !!wizState.idVerified,
+    liveness_passed:  !!wizState.livenessPassed
+  };
+  try{
+    const r=await fetch('/api/v1/portal/applications',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Submission failed');
+    wizState.appRef=j.reference||j.id||'APP-'+Date.now();
+    closeWizard();
+    showToast('Application submitted! Ref: '+wizState.appRef,'ok');
+    showPage('tracking');
+    setTimeout(()=>loadTracking(),400);
+  }catch(e){
+    showToast('Error: '+e.message,'error');
+    if(btn){btn.disabled=false;btn.textContent='Submit Application';}
+  }
+}
+
+// ── loadTracking ───────────────────────────────────────────────────────────
+async function loadTracking(){
+  const wrap=document.getElementById('tracking-content');
+  if(!wrap) return;
+  wrap.innerHTML='<div style="text-align:center;padding:40px;color:var(--g500)"><i class="fa fa-spinner fa-spin"></i> Loading…</div>';
+
+  // Demo application data
+  const ref=wizState.appRef||'APP-2025-00142';
+  const steps=[
+    {label:'Application Received', date:'06 Sep 2025', done:true,  active:false},
+    {label:'Initial Review',        date:'07 Sep 2025', done:true,  active:false},
+    {label:'Credit Assessment',     date:'08 Sep 2025', done:false, active:true},
+    {label:'Property Valuation',    date:'Pending',     done:false, active:false},
+    {label:'Final Approval',        date:'Pending',     done:false, active:false},
+    {label:'Disbursement',          date:'Pending',     done:false, active:false},
+  ];
+  const tranches=[
+    {label:'Foundation',       pct:30, status:'disbursed', date:'15 Sep 2025', amount:44400},
+    {label:'Structural Frame', pct:25, status:'pending',   date:'Pending',     amount:37000},
+    {label:'Roofing & MEP',    pct:25, status:'pending',   date:'Pending',     amount:37000},
+    {label:'Finishing',        pct:20, status:'pending',   date:'Pending',     amount:29600},
+  ];
+
+  let html=`
+  <div class="track-ref">Reference: <strong>${ref}</strong>
+    <span class="track-badge">In Progress</span>
+  </div>
+  <div class="track-timeline">
+    ${steps.map((s,i)=>`
+    <div class="track-step ${s.done?'done':''} ${s.active?'active':''}">
+      <div class="track-dot">${s.done?'<i class="fa fa-check"></i>':s.active?'<i class="fa fa-circle-notch fa-spin"></i>':'<span>'+(i+1)+'</span>'}</div>
+      <div class="track-label">${s.label}</div>
+      <div class="track-date">${s.date}</div>
+    </div>`).join('')}
+  </div>
+  <div style="margin-top:28px">
+    <div class="seg-title" style="margin-bottom:14px">Disbursement Tranches</div>
+    <div class="tranche-grid">
+      ${tranches.map(t=>`
+      <div class="tranche-card ${t.status}">
+        <div class="tc-label">${t.label}</div>
+        <div class="tc-pct">${t.pct}%</div>
+        <div class="tc-amount">${fmtOMR(t.amount)}</div>
+        <div class="tc-status ${t.status}">${t.status==='disbursed'?'✅ Disbursed':'⏳ Pending'}</div>
+        <div class="tc-date">${t.date}</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+  wrap.innerHTML=html;
+}
+
+// ── DOMContentLoaded init ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  loadProducts();
+  loadProjects();
+  showPage('home');
+
+  // Tracking tab — load demo if already has ref
+  document.querySelector('[data-page="tracking"]')?.addEventListener('click',()=>{
+    setTimeout(()=>loadTracking(),300);
+  });
+
+  // Wizard next button
+  document.getElementById('wiz-next')?.addEventListener('click',()=>{
+    if(wizState.step===7) submitApp();
+    else wizNav(1);
+  });
+  document.getElementById('wiz-back')?.addEventListener('click',()=>wizNav(-1));
+  document.getElementById('wiz-close')?.addEventListener('click',closeWizard);
+});
+</script>
+</body>
+</html>
