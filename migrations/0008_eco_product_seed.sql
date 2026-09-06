@@ -34,6 +34,11 @@ INSERT OR IGNORE INTO products (
 -- Mark Green Home Finance as demo product and make it portal-visible
 UPDATE products SET is_demo_product = 1, portal_visible = 1 WHERE id = 'prod_eco_home_001';
 
+-- ── 1b. Ensure projects has columns needed by this migration ──
+-- (db-adapter swallows 'duplicate column' errors so safe to re-run)
+ALTER TABLE projects ADD COLUMN gsas_overall_score REAL;
+ALTER TABLE projects ADD COLUMN green_features TEXT;
+
 -- ── 2. EcoVillage Muscat project (activate + mark demo) ───
 -- Ensure proj004 exists (may not if project seeds are elsewhere)
 INSERT OR IGNORE INTO projects (
