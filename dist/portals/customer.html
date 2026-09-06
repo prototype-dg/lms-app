@@ -2864,12 +2864,13 @@ function stepFinancing(){
 }
 
 function wizCalcFinance(){
+  const el = id=>document.getElementById(id);   // ← defined FIRST so all blocks below can use it
+
   const gsas    = wizState.gsasScore||0;
   const salary  = wizState.salary||3200;
-  const propVal = parseFloat(document.getElementById('wa-propval')?.value||0)||wizState.propertyValue||200000;
-  const dpPctEl = document.getElementById('wa-dp-slider');
-  const dpPct   = parseFloat(dpPctEl?.value||20);
-  const ten     = parseInt(document.getElementById('wa-ten')?.value||25);
+  const propVal = parseFloat(el('wa-propval')?.value||0)||wizState.propertyValue||200000;
+  const dpPct   = parseFloat(el('wa-dp-slider')?.value||20);
+  const ten     = parseInt(el('wa-ten')?.value||25);
   const selProd = (wizProductId ? allProducts.find(p=>p.id===wizProductId) : null)
                   || allProducts.find(p=>p.category==='home_loan'&&(p.is_demo_product===1||p.is_demo_product===true))
                   || allProducts.find(p=>p.category==='home_loan')
@@ -2894,8 +2895,6 @@ function wizCalcFinance(){
   const sv      = Math.max(0, pmt(amt,baseRate,ten*12)*ten*12 - m*ten*12);
 
   // ── Live comparison panel update (green product selected) ──
-  // Finds the standard product via data-std-id on the .prod-compare table;
-  // recalculates every time down-payment or tenure slider moves.
   const cmpTable = document.querySelector('.prod-compare[data-std-id]');
   if(cmpTable && selProd){
     const stdId   = cmpTable.getAttribute('data-std-id');
@@ -2923,8 +2922,6 @@ function wizCalcFinance(){
   const isPrem  = gsas>=premGs && discP>0;
   const isGreen = gsas>=minGs  && (discP>0||discS>0);
   const rateLbl = isPrem ? 'Green Premium 🌿' : isGreen ? 'Green Standard 🌿' : 'Standard';
-
-  const el = id=>document.getElementById(id);
   // Update slider labels
   if(el('wa-dp-pct'))  el('wa-dp-pct').textContent  = dpPct+'%';
   if(el('wa-dp-val'))  el('wa-dp-val').textContent  = 'OMR '+Math.round(dp).toLocaleString();
