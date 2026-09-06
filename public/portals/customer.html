@@ -1890,6 +1890,7 @@ function renderWiz(){
 
   // Post-render hooks
   if(wizStep===2 && wizProjectId) setTimeout(()=>loadUnitPicker(wizProjectId), 80);
+  if(wizStep===2) setTimeout(updateGsasCheck, 0);   // restore live status after re-render
   if(wizStep===3) setTimeout(wizCalcFinance,80);
   if(wizStep===5) setTimeout(prefillIncome,80);
 }
@@ -2114,8 +2115,7 @@ function stepProperty(){
           ✅ Selected: <span id="unit-selected-label">—</span>
         </div>
       </div>
-      ${!gsasOk?`<div class="warn-strip">⚠️ GSAS score ${gsasScore} is below the minimum ${minGsas} required for this product. Application cannot proceed without a qualifying property.</div>`:''}
-      ${gsasScore>=premGsas&&gsasOk?`<div class="info-strip" style="background:var(--ok-bg);border-color:rgba(22,132,91,.25)">🏆 <strong>GSAS ${gsasScore}</strong> — qualifies for <strong>Premium Green Rate ${bestProd?.base_rate||4.75}%</strong></div>`:''}
+      <div id="gsas-partner-status" style="margin-top:10px"></div>
 
       <!-- Green features strip -->
       <div class="info-strip eco-strip" style="margin-top:10px">
@@ -2237,13 +2237,30 @@ function updateGsasCheck(){
   const bestProd = allProducts.find(p=>p.category==='home_loan')||null;
   const minGs = bestProd?.gsas_min_score||60;
   const premGs = bestProd?.gsas_premium_score||85;
-  const box = document.getElementById('gsas-check-box');
-  if(!box) return;
   const color = gs>=premGs?'var(--ok)':gs>=minGs?'var(--warn)':'var(--err)';
-  const msg   = gs>=premGs?`🏆 Premium Green Rate — ${bestProd?.base_rate||4.75}% p.a.`
+
+  // BYO section box
+  const box = document.getElementById('gsas-check-box');
+  if(box){
+    const msg = gs>=premGs?`🏆 Premium Green Rate — ${bestProd?.base_rate||4.75}% p.a.`
                           :gs>=minGs?`✅ Standard Rate applies — score meets minimum ${minGs}`
                           :`⚠️ Score ${gs} < minimum ${minGs} — product requires higher GSAS`;
-  box.innerHTML=`<div style="font-size:12px;font-weight:600;color:${color};background:${gs>=minGs?'rgba(22,132,91,.06)':'var(--err-bg)'};border:1px solid ${color};border-radius:var(--r8);padding:8px 12px">${msg}</div>`;
+    box.innerHTML=`<div style="font-size:12px;font-weight:600;color:${color};background:${gs>=minGs?'rgba(22,132,91,.06)':'var(--err-bg)'};border:1px solid ${color};border-radius:var(--r8);padding:8px 12px">${msg}</div>`;
+  }
+
+  // Partner section live status (replaces static baked HTML)
+  const partnerStatus = document.getElementById('gsas-partner-status');
+  if(partnerStatus){
+    if(gs===0){
+      partnerStatus.innerHTML = '';
+    } else if(gs < minGs){
+      partnerStatus.innerHTML = `<div class="warn-strip">⚠️ GSAS score ${gs} is below the minimum ${minGs} required for this product. Application cannot proceed without a qualifying property.</div>`;
+    } else if(gs >= premGs){
+      partnerStatus.innerHTML = `<div class="info-strip" style="background:var(--ok-bg);border-color:rgba(22,132,91,.25)">🏆 <strong>GSAS ${gs}</strong> — qualifies for <strong>Premium Green Rate ${bestProd?.base_rate||4.75}%</strong></div>`;
+    } else {
+      partnerStatus.innerHTML = `<div class="info-strip">✅ <strong>GSAS ${gs}</strong> — meets minimum ${minGs}, standard rate applies.</div>`;
+    }
+  }
 
   // Update GSAS input color
   const inp = document.getElementById('prop-gsas');
