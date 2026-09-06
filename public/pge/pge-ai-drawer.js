@@ -182,17 +182,27 @@
       // The server emits add_rule, set_field, set_workflow, highlight_field, set_tab
       // events inside ui_events[]. Each stage module listens to 'aiEvent' on the bus
       // and handles events relevant to its own stage.
+      //
+      // DUPLICATE-GUARD: when rules_draft is also present in this response, the
+      // aiRulesDraft handler (below) is the single authoritative path for inserting
+      // rules. Skip forwarding add_rule ui_events in that case to avoid double-inserts.
+      const hasRulesDraft = Array.isArray(d.rules_draft) && d.rules_draft.length > 0;
       if (Array.isArray(d.ui_events) && d.ui_events.length > 0) {
         for (const evt of d.ui_events) {
+          if (hasRulesDraft && evt.type === 'add_rule') continue; // handled by aiRulesDraft
           bus.emit('aiEvent', evt);
         }
       }
 
       // ── Auto-apply rules_draft when AI completes stage 3 ─────────────────
       // rules_draft is emitted by the server at stage 3 (eligibility rules stage).
-      // The drawer was previously discarding this — now we forward it to stage3
-      // via the bus so it can bulk-insert into the rules table and patch the product.
-      if (Array.isArray(d.rules_draft) && d.rules_draft.length > 0 && d.current_stage === 3) {
+      // IMPORTANT: the fallback state machine returns current_stage: 4 on the same
+      // turn it generates the rules (it combines Stage 3 completion + Stage 4 opening
+      // in a single response). So we check current_stage >= 3 (not === 3) to catch
+      // both the pure-stage-3 case (real GPT) and the stage-3→4 transition turn
+      // (fallback state machine). We also gate on rules_draft being non-empty so
+      // stage 4+ turns that don't include rules don't trigger this erroneously.
+      if (Array.isArray(d.rules_draft) && d.rules_draft.length > 0 && d.current_stage >= 3) {
         bus.emit('aiRulesDraft', { rules: d.rules_draft, stage: d.current_stage });
       }
     } catch (e) {
