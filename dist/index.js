@@ -4973,8 +4973,8 @@ q.get("/products", async (e) => {
 		return null;
 	};
 	try {
-		let i = (n || "").toLowerCase().includes("pdf"), o = "";
-		if (i) {
+		let o = (n || "").toLowerCase().includes("pdf"), s = "";
+		if (o) {
 			let e = await (await fetch(`https://vision.googleapis.com/v1p4beta1/files:annotate?key=${r}`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -4987,8 +4987,8 @@ q.get("/products", async (e) => {
 					pages: [1]
 				}] })
 			})).json();
-			o = (e?.responses?.[0]?.responses?.[0])?.fullTextAnnotation?.text || "", o ||= (e?.responses?.[0]?.responses || []).map((e) => e?.fullTextAnnotation?.text || "").join("\n");
-		} else o = (await (await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${r}`, {
+			s = (e?.responses?.[0]?.responses?.[0])?.fullTextAnnotation?.text || "", s ||= (e?.responses?.[0]?.responses || []).map((e) => e?.fullTextAnnotation?.text || "").join("\n");
+		} else s = (await (await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${r}`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ requests: [{
@@ -4999,12 +4999,12 @@ q.get("/products", async (e) => {
 				}]
 			}] })
 		})).json())?.responses?.[0]?.fullTextAnnotation?.text || "";
-		if (!o) return e.json({
+		if (!s) return e.json({
 			success: !1,
 			error: "No text extracted from document",
 			extracted: {}
 		}, 422);
-		let s = {}, c = o.split("\n").map((e) => e.trim()).filter(Boolean), l = {
+		let c = {}, l = s.split("\n").map((e) => e.trim()).filter(Boolean), u = {
 			january: "01",
 			february: "02",
 			march: "03",
@@ -5018,43 +5018,103 @@ q.get("/products", async (e) => {
 			november: "11",
 			december: "12"
 		};
-		for (let e = 0; e < c.length; e++) {
-			let t = c[e], n = t.toLowerCase();
-			if (s.employer || (/oman oil company/i.test(t) ? s.employer = "Oman Oil Company S.A.O.C" : /company\s+s\.?a\.?o\.?c/i.test(t) || /company\s+saoc/i.test(t) ? s.employer = t.replace(/\s*(cr|tel|fax|p\.?o\.?).*$/i, "").trim() : (n.includes("employer") || n.includes("company name")) && n.includes(":") && (s.employer = t.split(":").slice(1).join(":").trim())), s.employment_type || (/government\s+civil\s+service|government\s+sector|civil\s+service/i.test(t) ? s.employment_type = "government" : /private\s+sector|private\s+company/i.test(t) ? s.employment_type = "private" : /self[\s-]employed/i.test(t) && (s.employment_type = "self_employed")), !s.employment_start_date) {
+		for (let e = 0; e < l.length; e++) {
+			let t = l[e], n = t.toLowerCase();
+			if (c.employer || (/oman oil company/i.test(t) ? c.employer = "Oman Oil Company S.A.O.C" : /company\s+s\.?a\.?o\.?c/i.test(t) || /company\s+saoc/i.test(t) ? c.employer = t.replace(/\s*(cr|tel|fax|p\.?o\.?).*$/i, "").trim() : (n.includes("employer") || n.includes("company name")) && n.includes(":") && (c.employer = t.split(":").slice(1).join(":").trim())), c.employment_type || (/government\s+civil\s+service|government\s+sector|civil\s+service/i.test(t) ? c.employment_type = "government" : /private\s+sector|private\s+company/i.test(t) ? c.employment_type = "private" : /self[\s-]employed/i.test(t) && (c.employment_type = "self_employed")), !c.employment_start_date) {
 				let e = t.match(/(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/i) || t.match(/\d{4}-\d{2}-\d{2}/) || t.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
 				if (e) {
 					let t = e[0], n = t.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/i);
 					if (n) {
-						let e = l[n[2].toLowerCase()] || "01", t = n[3], r = n[1].padStart(2, "0");
-						parseInt(t) >= 2e3 && parseInt(t) <= 2025 && (s.employment_start_date = `${t}-${e}-${r}`);
-					} else s.employment_start_date = t;
+						let e = u[n[2].toLowerCase()] || "01", t = n[3], r = n[1].padStart(2, "0");
+						parseInt(t) >= 2e3 && parseInt(t) <= 2025 && (c.employment_start_date = `${t}-${e}-${r}`);
+					} else c.employment_start_date = t;
 				}
 			}
-			if (!s.basic_salary && /basic\s+salary/i.test(t) && !/less|deduction|social/i.test(n)) {
-				let t = a(c, e, 3);
-				t && parseFloat(t) > 100 && parseFloat(t) < 5e4 && (s.basic_salary = parseFloat(t).toFixed(0));
+			if (!c.basic_salary && /basic\s+salary/i.test(t) && !/less|deduction|social/i.test(n)) {
+				let e = i(t);
+				e && parseFloat(e) > 100 && parseFloat(e) < 5e4 && (c.basic_salary = parseFloat(e).toFixed(0));
 			}
-			if (!s.housing_allowance && /housing\s+allowance|house\s+allowance/i.test(t)) {
-				let t = a(c, e, 3);
-				t && parseFloat(t) > 0 && parseFloat(t) < 2e4 && (s.housing_allowance = parseFloat(t).toFixed(0));
+			if (!c.housing_allowance && /housing\s+allowance|house\s+allowance/i.test(t)) {
+				let e = i(t);
+				e && parseFloat(e) > 0 && parseFloat(e) < 2e4 && (c.housing_allowance = parseFloat(e).toFixed(0));
 			}
-			if (!s.transport_allowance && /transport(?:ation)?\s+allowance/i.test(t) && !/car\s+rental/i.test(n)) {
-				let t = a(c, e, 3);
-				t && parseFloat(t) > 0 && parseFloat(t) < 5e3 && (s.transport_allowance = parseFloat(t).toFixed(0));
+			if (!c.transport_allowance && /transport(?:ation)?\s+allowance/i.test(t) && !/car\s+rental/i.test(n)) {
+				let e = i(t);
+				e && parseFloat(e) > 0 && parseFloat(e) < 5e3 && (c.transport_allowance = parseFloat(e).toFixed(0));
 			}
-			if (!s.car_rental_allowance && /car\s+rental|vehicle\s+allowance|car\s+allowance/i.test(t)) {
-				let t = a(c, e, 3);
-				t && parseFloat(t) > 0 && parseFloat(t) < 1e4 && (s.car_rental_allowance = parseFloat(t).toFixed(0));
+			if (!c.car_rental_allowance && /car\s+rental|vehicle\s+allowance|car\s+allowance/i.test(t)) {
+				let e = i(t);
+				e && parseFloat(e) > 0 && parseFloat(e) < 1e4 && (c.car_rental_allowance = parseFloat(e).toFixed(0));
 			}
-			if (!s.net_salary && /net\s+(?:monthly\s+)?salary|net\s+pay/i.test(t)) {
-				let t = a(c, e, 3);
-				t && parseFloat(t) > 100 && (s.net_salary = parseFloat(t).toFixed(0));
+			if (!c.net_salary && /net\s+(?:monthly\s+)?salary|net\s+pay/i.test(t)) {
+				let e = i(t);
+				e && parseFloat(e) > 100 && (c.net_salary = parseFloat(e).toFixed(0));
+			}
+			if (/remuneration\s+schedule|remuneration\s+component|monthly\s+salary\s+breakdown/i.test(t)) {
+				let t = [
+					{
+						key: "basic_salary",
+						re: /basic\s+salary/i,
+						min: 100,
+						max: 5e4
+					},
+					{
+						key: "housing_allowance",
+						re: /housing\s+allowance|house\s+allowance/i,
+						min: 0,
+						max: 2e4
+					},
+					{
+						key: "car_rental_allowance",
+						re: /car\s+rental|vehicle\s+allowance|car\s+allow/i,
+						min: 0,
+						max: 1e4
+					},
+					{
+						key: "transport_allowance",
+						re: /transport(?:ation)?\s+allowance/i,
+						min: 0,
+						max: 5e3
+					},
+					{
+						key: "net_salary",
+						re: /net\s+(?:monthly\s+)?salary|net\s+pay/i,
+						min: 100,
+						max: 1e5
+					}
+				], n = l.slice(e, e + 60), r = [], a = [];
+				for (let e of n) {
+					let n = e.toLowerCase(), o = /less|deduction|social\s+insur/i.test(e);
+					for (let i of t) if (i.re.test(e) && !r.find((e) => e.key === i.key)) {
+						if (i.key === "transport_allowance" && /car\s+rental/i.test(n)) continue;
+						r.push(i);
+					}
+					if (!o && !(t.some((t) => t.re.test(e)) || /frequency|component|schedule|monthly|annual|telecommunication|performance|bonus/i.test(e))) {
+						let t = i(e);
+						if (t) {
+							let e = parseFloat(t);
+							e > 0 && e < 1e5 && a.push(e);
+						}
+					}
+				}
+				r.forEach((e, t) => {
+					let n = a[t];
+					n !== void 0 && (n < e.min || n > e.max || c[e.key] || (c[e.key] = n.toFixed(0)));
+				});
+			}
+			if (!c.net_salary && /net\s+(?:monthly\s+)?salary|net\s+pay/i.test(t)) {
+				let t = a(l, e, 2);
+				t && parseFloat(t) > 100 && (c.net_salary = parseFloat(t).toFixed(0));
+			}
+			if (!c.basic_salary && /basic\s+salary/i.test(t) && !/less|deduction/i.test(n)) {
+				let t = a(l, e, 5);
+				t && parseFloat(t) > 100 && parseFloat(t) < 5e4 && (c.basic_salary = parseFloat(t).toFixed(0));
 			}
 		}
 		return e.json({
 			success: !0,
-			full_text: o,
-			extracted: s
+			full_text: s,
+			extracted: c
 		});
 	} catch (t) {
 		return e.json({
@@ -5851,7 +5911,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await I.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "f3d9de9";
+var at = "2cd1ca6";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
