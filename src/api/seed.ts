@@ -282,6 +282,11 @@ app.post('/reset-demo', async (c) => {
   const TEMPLATE_PRODUCT_CODES = ['SHL-STANDARD','AFL-PERSONAL','PL-UNSECURED','SME-WORKCAP','HELOC-STANDARD','CPF-COMMERCIAL','EHL-EXPAT','EDU-FINANCE']
 
   try {
+    // Disable FK enforcement for the duration of the reset.
+    // We own the entire operation and restore a known-good state at the end,
+    // so it is safe to bypass FK checks here. Re-enabled in finally block.
+    await db.prepare("PRAGMA foreign_keys = OFF").run()
+
     // ── 1. Delete ALL descendant rows in FK-safe leaf-to-root order ──────
     // Correct FK chain: construction_stages → applications → products
     //                   rules → products
@@ -318,6 +323,27 @@ app.post('/reset-demo', async (c) => {
         `DELETE FROM ai_threads WHERE product_id IS NOT NULL AND product_id NOT IN (${idPlaceholders})`
       ).bind(...TEMPLATE_PRODUCT_IDS).run()
     } catch(_) { /* ai_threads table may not exist yet */ }
+
+    // 1g. product_versions → products.id  (FK child — must delete before products)
+    try {
+      await db.prepare(
+        `DELETE FROM product_versions WHERE product_id NOT IN (${idPlaceholders})`
+      ).bind(...TEMPLATE_PRODUCT_IDS).run()
+    } catch(_) { /* table may not exist */ }
+
+    // 1h. compliance_tag_mappings → products.id
+    try {
+      await db.prepare(
+        `DELETE FROM compliance_tag_mappings WHERE product_id NOT IN (${idPlaceholders})`
+      ).bind(...TEMPLATE_PRODUCT_IDS).run()
+    } catch(_) { /* table may not exist */ }
+
+    // 1i. market_product_mappings → products.id
+    try {
+      await db.prepare(
+        `DELETE FROM market_product_mappings WHERE product_id NOT IN (${idPlaceholders})`
+      ).bind(...TEMPLATE_PRODUCT_IDS).run()
+    } catch(_) { /* table may not exist */ }
 
     // ── 2. Now safely delete non-template products ───────────────────────
     await db.prepare(
@@ -606,6 +632,22 @@ app.post('/reset-demo', async (c) => {
         (id,project_id,unit_number,type,area_sqm,bedrooms,bathrooms,price,lat,lng,status,features,gsas_score,created_at)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`)
         .bind(u[0],u[1],u[2],u[3],u[4],u[5],u[6],u[7],u[8],u[9],u[10],'[]',null).run()
+    }
+
+    // proj004 – EcoVillage Muscat: 6 eco-villas (re-seeded so reset restores portal state)
+    const proj004Units: [string,string,string,string,number,number,number,number,number,string,number,string][] = [
+      ['eco-v01','proj004','EV-101','villa',210,3,2,185000,'available',89,'con001','["Solar PV","Greywater Recycling","Green Roof","EV Charging"]'],
+      ['eco-v02','proj004','EV-102','villa',225,3,2,195000,'available',89,'con001','["Solar PV","Greywater Recycling","Green Roof","EV Charging"]'],
+      ['eco-v03','proj004','EV-103','villa',245,4,3,210000,'reserved',89,'con001','["Solar PV","Greywater Recycling","HVAC SEER 18","EV Charging"]'],
+      ['eco-v04','proj004','EV-201','villa',258,4,3,220000,'available',91,'con001','["Solar PV 8.5kWp","Greywater Recycling","Smart Metering","EV Charging"]'],
+      ['eco-v05','proj004','EV-202','villa',272,4,3,235000,'sold',     91,'con001','["Solar PV 8.5kWp","Greywater Recycling","Smart Metering","EV Charging"]'],
+      ['eco-v06','proj004','EV-203','villa',290,5,4,248000,'available',91,'con001','["Solar PV 8.5kWp","Green Roof","Smart Metering","EV Charging"]'],
+    ]
+    for (const u of proj004Units) {
+      await db.prepare(`INSERT OR IGNORE INTO units
+        (id,project_id,unit_number,type,area_sqm,bedrooms,bathrooms,price,status,gsas_score,contractor_id,features,floor_number,created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'))`)
+        .bind(u[0],u[1],u[2],u[3],u[4],u[5],u[6],u[7],u[8],u[9],u[10],u[11]).run()
     }
 
     // ── 6. Restore seed applications to exact template state ─────────────
