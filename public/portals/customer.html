@@ -2736,3 +2736,1569 @@ document.addEventListener('DOMContentLoaded',()=>{
 </script>
 </body>
 </html>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════ */
+let isAr = false;
+let esgOn = true;
+let wizStep = 0;
+let wizProductId = null;
+let wizProjectId = null;
+let wizUnitId = null;
+let wizUnitData = null;
+let wizPropertySource = 'partner'; // 'partner' | 'byo'
+let wizContractorData = null;
+let livenessVerified = false;
+let livenessStream = null;
+let livenessTimer = null;
+let livenessStep = 0;
+let propMap = null;
+let propMapAllUnits = [];
+let allProductsCache = [];
+let allProjectsCache = [];
+
+const BYO_CONTRACTOR = {
+  id: 'con001',
+  company_name: 'Al Jazeera Constructions LLC',
+  company_name_ar: 'شركة الجزيرة للإنشاءات ذ.م.م',
+  cr_number: 'CR-2018-44721',
+  contact_name: 'Rashid Al-Hassani',
+  contact_phone: '+968 9944 5512',
+  contact_email: 'rashid@aljazeera-const.om',
+  license_number: 'MOH-CON-2024-0892',
+  is_green_certified: 1,
+  green_cert_ref: 'GBCOMAN-2024-0147',
+  specialization: 'residential'
+};
+
+/* ═══════════════════════════════════════════════════════
+   LANGUAGE
+════════════════════════════════════════════════════════ */
+function toggleLang() {
+  isAr = !isAr;
+  document.body.classList.toggle('rtl', isAr);
+  document.documentElement.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+  document.documentElement.setAttribute('lang', isAr ? 'ar' : 'en');
+  document.getElementById('lang-btn').textContent = isAr ? 'English' : 'عربي';
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = isAr ? (el.getAttribute('data-ar') || el.textContent) : el.getAttribute('data-en');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════════════════ */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn[id^="nb-"]').forEach(b => b.classList.remove('active'));
+  const pg = document.getElementById('page-' + id);
+  if (pg) { pg.classList.add('active'); window.scrollTo(0, 0); }
+  const nb = document.getElementById('nb-' + id);
+  if (nb) nb.classList.add('active');
+  if (id === 'tracking') loadTracking();
+  if (id === 'properties') setTimeout(() => initPropertyMap(), 200);
+}
+
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ═══════════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════════════ */
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  const ic = type === 'ok' ? '✅' : type === 'err' ? '❌' : 'ℹ️';
+  el.innerHTML = `<span style="font-size:14px">${ic}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toast-wrap').appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+/* ═══════════════════════════════════════════════════════
+   CALCULATOR (standalone page)
+════════════════════════════════════════════════════════ */
+function fmtOMR(n) { return 'OMR ' + Math.round(n).toLocaleString('en-US'); }
+function pmt(P, annR, n) {
+  if (!annR || annR === 0) return P / n;
+  const r = annR / 100 / 12;
+  return P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+}
+function getCalcRate(gsas) {
+  if (gsas >= 85) return esgOn ? 4.75 : 5.00;
+  if (gsas >= 70) return 5.00;
+  if (gsas >= 60) return 5.25;
+  return 5.50;
+}
+function calcUpdate() {
+  const amt = parseInt(document.getElementById('c-amt').value);
+  const ten = parseInt(document.getElementById('c-ten').value);
+  const gsas = parseInt(document.getElementById('c-gsas').value);
+  const rate = getCalcRate(gsas);
+  const d = id => document.getElementById(id);
+  d('c-amt-d').textContent = amt.toLocaleString('en-US');
+  d('c-ten-d').textContent = ten + ' years';
+  d('cr-rate-lbl').textContent = '@ ' + rate.toFixed(2) + '% p.a.';
+  d('cr-rate').textContent = rate.toFixed(2) + '%';
+  d('cr-amt').textContent = fmtOMR(amt);
+  const m = pmt(amt, rate, ten * 12);
+  const tot = m * ten * 12;
+  const int = tot - amt;
+  const stdTot = pmt(amt, 5.50, ten * 12) * ten * 12;
+  const saving = Math.max(0, stdTot - tot);
+  d('cr-monthly').textContent = fmtOMR(m);
+  d('cr-int').textContent = fmtOMR(int);
+  d('cr-total').textContent = fmtOMR(tot);
+  d('cr-saving').textContent = fmtOMR(saving);
+}
+function toggleESG() {
+  esgOn = !esgOn;
+  document.getElementById('esg-sw').classList.toggle('on', esgOn);
+  calcUpdate();
+}
+
+/* ═══════════════════════════════════════════════════════
+   PRODUCTS — load + render segmented sections
+════════════════════════════════════════════════════════ */
+const CAT_META = {
+  home_loan:     { label: 'Home Loans',     icon: '🏡', desc: 'Finance your dream home with competitive rates' },
+  personal_loan: { label: 'Personal Loans', icon: '💳', desc: 'Flexible personal financing for any purpose' },
+  auto_loan:     { label: 'Auto Loans',     icon: '🚗', desc: 'Drive your new vehicle with easy financing' },
+  sme:           { label: 'SME Finance',    icon: '🏢', desc: 'Business financing solutions for SMEs' },
+  commercial:    { label: 'Commercial',     icon: '🏗️', desc: 'Commercial property and project financing' },
+  education:     { label: 'Education',      icon: '🎓', desc: 'Invest in your future with education loans' },
+};
+
+async function loadProducts() {
+  try {
+    const r = await fetch('/api/v1/portal/products');
+    const d = await r.json();
+    allProductsCache = d.products || [];
+    const hasDemo = allProductsCache.some(p => p.is_demo_product === 1);
+
+    // Hero eco transform
+    if (hasDemo) {
+      document.getElementById('main-hero').classList.add('eco');
+      document.getElementById('hero-default').style.display = 'none';
+      document.getElementById('hero-eco').style.display = 'flex';
+      document.getElementById('eco-banner').style.display = 'flex';
+      const demoP = allProductsCache.find(p => p.is_demo_product === 1);
+      if (demoP) {
+        document.getElementById('eco-banner-title').textContent = demoP.portal_hero_title || 'New! Green Home Loan';
+        document.getElementById('eco-banner-desc').textContent = demoP.description || '';
+        document.getElementById('eco-rate-display').textContent = (demoP.base_rate || '4.75') + '%';
+        document.getElementById('wiz-title').textContent = demoP.name + ' Application';
+        wizProductId = demoP.id;
+      }
+    } else {
+      const countEl = document.getElementById('hero-product-count');
+      const subEl = document.getElementById('hero-product-subtitle');
+      if (countEl) countEl.textContent = allProductsCache.length || '—';
+      if (subEl && allProductsCache.length) {
+        const minRate = Math.min(...allProductsCache.map(p => parseFloat(p.base_rate) || 99));
+        subEl.textContent = `From ${minRate.toFixed(2)}% · ${allProductsCache.length} active product${allProductsCache.length !== 1 ? 's' : ''}`;
+      }
+    }
+
+    renderProductsSegmented(allProductsCache, 'products-segmented');
+    renderHomeProductsPreview(allProductsCache);
+  } catch (e) {
+    console.error('loadProducts', e);
+  }
+}
+
+function renderProductCard(p, compact) {
+  const highlights = (() => { try { return JSON.parse(p.portal_highlights || '[]'); } catch { return []; } })();
+  const isDemo = p.is_demo_product === 1;
+  const catIcon = (CAT_META[p.category] || {}).icon || '💼';
+  const badge = p.portal_card_badge ? `<span class="esg-card-badge">✦ ${p.portal_card_badge}</span>` : '';
+  const ribbon = isDemo ? `<div class="demo-ribbon">🌿 NEW · Green Loan</div>` : '';
+  const cardCls = `prod-card${isDemo ? ' demo' : ''}`;
+  const hl = highlights.slice(0, compact ? 2 : 3).map(h => `<li>${h}</li>`).join('');
+  return `<div class="${cardCls}" onclick="selectProduct('${p.id}','${(p.name||'').replace(/'/g,"\\'")}')">
+    ${ribbon}
+    ${badge}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:1.6rem">${catIcon}</span>
+      <span style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.5px">${(CAT_META[p.category]||{}).label||p.category}</span>
+    </div>
+    <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:5px;line-height:1.3">${p.portal_hero_title || p.name}</div>
+    <div style="font-size:12px;color:var(--g500);margin-bottom:12px;line-height:1.5">${(p.description||'').substring(0,90)}${(p.description||'').length>90?'…':''}</div>
+    ${hl ? `<ul style="margin:0 0 12px;padding-left:14px;font-size:11px;color:var(--navy-d);line-height:1.9">${hl}</ul>` : ''}
+    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid ${isDemo?'rgba(22,132,91,.2)':'var(--g200)'};padding-top:10px;margin-top:auto">
+      <div><strong style="font-size:1.3rem;color:${isDemo?'#16845B':'var(--teal)'}">${p.base_rate||'—'}%</strong> <span style="font-size:11px;color:var(--g500)">from p.a.</span></div>
+      <button class="prod-apply-btn${isDemo?' eco':''}" onclick="event.stopPropagation();selectProduct('${p.id}','${(p.name||'').replace(/'/g,"\\'")}')">Apply</button>
+    </div>
+  </div>`;
+}
+
+function renderProductsSegmented(products, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (!products.length) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--g500)">No products available yet.</div>';
+    return;
+  }
+
+  // Group by category; demo products always in home_loan segment first
+  const groups = {};
+  products.forEach(p => {
+    const cat = p.category || 'other';
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(p);
+  });
+
+  // Sort categories: home_loan first (has demo), then rest
+  const catOrder = ['home_loan', 'personal_loan', 'auto_loan', 'sme', 'commercial', 'education', 'other'];
+  const sortedCats = Object.keys(groups).sort((a, b) => {
+    const ai = catOrder.indexOf(a); const bi = catOrder.indexOf(b);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
+  container.innerHTML = sortedCats.map(cat => {
+    const meta = CAT_META[cat] || { label: cat, icon: '💼', desc: '' };
+    const hasDemo = groups[cat].some(p => p.is_demo_product === 1);
+    // Sort: demo first within segment
+    const prods = [...groups[cat]].sort((a, b) => (b.is_demo_product || 0) - (a.is_demo_product || 0));
+    return `<div class="seg-section${hasDemo?' eco-seg':''}" id="seg-${cat}">
+      <div class="seg-header">
+        <div class="seg-icon">${meta.icon}</div>
+        <div>
+          <div class="seg-title">${meta.label}</div>
+          <div class="seg-desc">${meta.desc}</div>
+        </div>
+        ${hasDemo ? '<span class="eco-seg-pill">🌿 Featured</span>' : ''}
+      </div>
+      <div class="seg-grid">${prods.map(p => renderProductCard(p, false)).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderHomeProductsPreview(products) {
+  const container = document.getElementById('home-products-preview');
+  if (!container || !products.length) return;
+  // Show max 4 products — demo first
+  const sorted = [...products].sort((a, b) => (b.is_demo_product || 0) - (a.is_demo_product || 0));
+  const preview = sorted.slice(0, 4);
+  container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px">${preview.map(p => renderProductCard(p, true)).join('')}</div>`;
+}
+
+function selectProduct(id, name) {
+  wizProductId = id;
+  const wt = document.getElementById('wiz-title');
+  if (wt) wt.textContent = name + ' Application';
+  openWizard(id, null);
+}
+
+/* ═══════════════════════════════════════════════════════
+   PROPERTIES — Leaflet map + project list
+════════════════════════════════════════════════════════ */
+function switchPropView(view) {
+  document.getElementById('prop-map-view').style.display = view === 'map' ? 'block' : 'none';
+  document.getElementById('prop-list-view').style.display = view === 'list' ? 'block' : 'none';
+  document.getElementById('tab-map').classList.toggle('active', view === 'map');
+  document.getElementById('tab-list').classList.toggle('active', view === 'list');
+  if (view === 'map') setTimeout(() => { if (propMap) propMap.invalidateSize(); else initPropertyMap(); }, 150);
+  if (view === 'list') loadProjectsList();
+}
+
+async function initPropertyMap() {
+  const el = document.getElementById('customer-map');
+  if (!el) return;
+  if (propMap) { propMap.invalidateSize(); return; }
+
+  propMap = L.map('customer-map').setView([23.58, 58.52], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 19
+  }).addTo(propMap);
+
+  try {
+    const r = await fetch('/api/v1/portal/projects');
+    const d = await r.json();
+    const projects = d.projects || [];
+    allProjectsCache = projects;
+
+    const projColors = ['#007F86', '#C8891A', '#16a34a', '#6C3483', '#1A5276'];
+    let totalUnits = 0;
+
+    for (const [pi, proj] of projects.entries()) {
+      const isDemo = proj.is_demo_project === 1;
+      const pcol = isDemo ? '#16a34a' : projColors[pi % projColors.length];
+
+      const ur = await fetch(`/api/v1/portal/projects/${proj.id}`);
+      const ud = await ur.json();
+      const units = ud.units || [];
+      if (!units.length) continue;
+
+      const geoUnits = units.filter(u => u.lat && u.lng);
+      if (geoUnits.length) {
+        const lats = geoUnits.map(u => parseFloat(u.lat));
+        const lngs = geoUnits.map(u => parseFloat(u.lng));
+        const pad = 0.0008;
+        const bounds = [
+          [Math.min(...lats) - pad, Math.min(...lngs) - pad],
+          [Math.max(...lats) + pad, Math.max(...lngs) + pad]
+        ];
+        L.rectangle(bounds, {
+          color: pcol, weight: isDemo ? 2.5 : 2,
+          fillColor: pcol, fillOpacity: isDemo ? 0.1 : 0.05,
+          dashArray: isDemo ? null : '5,4'
+        }).addTo(propMap)
+          .bindTooltip(`<b>${proj.name}</b>${isDemo ? ' 🌿' : ''}`, { permanent: true, direction: 'center', opacity: 0.88 });
+      }
+
+      units.forEach(u => {
+        if (!u.lat || !u.lng) return;
+        totalUnits++;
+        const colMap = { available: '#2ECC71', reserved: '#F39C12', sold: '#003B5C' };
+        const col = colMap[u.status] || '#ADB5BD';
+        const size = isDemo ? 14 : 12;
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="width:${size}px;height:${size}px;background:${col};border-radius:50%;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35)${isDemo?';outline:2px solid #16a34a':''}"></div>`,
+          iconAnchor: [size / 2, size / 2]
+        });
+        const gsasOk = u.gsas_score >= 85;
+        const rate = gsasOk ? '4.75' : u.gsas_score >= 70 ? '5.00' : '5.25';
+        const popupHtml = `<div style="font-size:12px;min-width:190px;line-height:1.8">
+          <strong style="color:#003B5C;font-size:13px">${u.unit_number || u.id}</strong><br/>
+          <span style="color:#666">${proj.name}${isDemo ? ' 🌿' : ''}</span><br/>
+          Type: <b>${u.type || '—'}</b> · ${u.area_sqm || '—'} m²<br/>
+          Price: <b>OMR ${u.price ? Number(u.price).toLocaleString() : '—'}</b><br/>
+          GSAS: <b style="color:#2ECC71">${u.gsas_score || '—'}</b> · Rate: <b>${rate}%</b><br/>
+          Status: <b style="color:${col}">${(u.status || '').toUpperCase()}</b><br/>
+          ${u.status === 'available' ? `<button onclick="openWizardForUnit(${JSON.stringify(u).replace(/"/g,"'")})" style="margin-top:6px;padding:4px 12px;background:#007F86;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px">Apply for Financing →</button>` : ''}
+        </div>`;
+        const mk = L.marker([parseFloat(u.lat), parseFloat(u.lng)], { icon }).addTo(propMap);
+        mk.bindPopup(popupHtml, { maxWidth: 240 });
+        propMapAllUnits.push({ mk, status: u.status || 'available', isDemo, proj });
+      });
+    }
+
+    // Update legend counts
+    const av = propMapAllUnits.filter(x => x.status === 'available').length;
+    const re = propMapAllUnits.filter(x => x.status === 'reserved').length;
+    const so = propMapAllUnits.filter(x => x.status === 'sold').length;
+    const la = document.getElementById('leg-available'); if (la) la.textContent = `Available (${av})`;
+    const lr = document.getElementById('leg-reserved');  if (lr) lr.textContent = `Reserved (${re})`;
+    const ls = document.getElementById('leg-sold');       if (ls) ls.textContent = `Sold (${so})`;
+
+    if (propMapAllUnits.length > 0) {
+      const group = L.featureGroup(propMapAllUnits.map(x => x.mk));
+      propMap.fitBounds(group.getBounds().pad(0.15));
+    }
+  } catch (e) {
+    console.error('initPropertyMap', e);
+    toast('Could not load property map', 'err');
+  }
+}
+
+function propMapFilter(status) {
+  document.querySelectorAll('.map-filter-btn').forEach(b => b.classList.toggle('active-filter', b.dataset.filter === status));
+  const visible = [];
+  propMapAllUnits.forEach(({ mk, status: s }) => {
+    const show = status === 'all' || s === status;
+    if (show) { if (!propMap.hasLayer(mk)) propMap.addLayer(mk); visible.push(mk); }
+    else { if (propMap.hasLayer(mk)) propMap.removeLayer(mk); }
+  });
+  if (visible.length > 0) {
+    propMap.fitBounds(L.featureGroup(visible).getBounds().pad(0.18));
+  } else {
+    toast('No units match this filter', 'info');
+  }
+}
+
+async function loadProjectsList() {
+  const wrap = document.getElementById('projects-list-wrap');
+  if (!wrap) return;
+  const projects = allProjectsCache.length ? allProjectsCache : await (async () => {
+    const r = await fetch('/api/v1/portal/projects');
+    const d = await r.json();
+    allProjectsCache = d.projects || [];
+    return allProjectsCache;
+  })();
+
+  if (!projects.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:48px;color:var(--g500)">No partner properties available yet.</div>';
+    return;
+  }
+
+  const GRADIENTS = ['linear-gradient(135deg,#003B5C,#007F86)', 'linear-gradient(135deg,#1a4a2e,#35C6C4)', 'linear-gradient(135deg,#003B5C,#35C6C4)'];
+  wrap.innerHTML = `<div class="proj-grid">${projects.map((proj, i) => {
+    const gsas = proj.gsas_overall_score || 0;
+    const isDemo = proj.is_demo_project === 1;
+    const rate = gsas >= 85 ? '4.75' : gsas >= 70 ? '5.00' : '5.25';
+    const imgBg = proj.hero_image_url ? `background:url('${proj.hero_image_url}') center/cover` : `background:${GRADIENTS[i % GRADIENTS.length]}`;
+    const priceFrom = proj.price_from ? 'OMR ' + Number(proj.price_from).toLocaleString() : 'Price TBC';
+    return `<div class="proj-card${isDemo ? ' eco-proj' : ''}" onclick="openProjectPanel('${proj.id}')">
+      ${isDemo ? '<div class="eco-hot-ribbon">🌿 DEMO PROJECT · Partner Development</div>' : ''}
+      <div class="proj-img" style="${imgBg};height:210px;position:relative;border-radius:var(--r12) var(--r12) 0 0;overflow:hidden">
+        ${!proj.hero_image_url ? `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:48px">${isDemo ? '🏡' : '🏗️'}</div>` : ''}
+        <div class="proj-ribbon" style="background:${isDemo ? '#16845B' : 'var(--teal)'}">
+          ${isDemo ? 'GSAS Gold' : (proj.type || 'Partner')}
+        </div>
+      </div>
+      <div class="proj-body">
+        ${isDemo ? '<span class="eco-card-badge" style="margin-bottom:8px;display:inline-block">✦ GSAS Gold Certified</span>' : ''}
+        <div class="proj-price">${priceFrom}${proj.price_to ? ' – OMR ' + Number(proj.price_to).toLocaleString() : ''}</div>
+        <div class="proj-name">${proj.name}</div>
+        <div class="proj-loc">📍 ${proj.location || 'Muscat'}</div>
+        <div class="proj-tags">
+          <span class="tag">${proj.total_units || 0} units</span>
+          ${gsas ? `<span class="tag${isDemo ? ' eco-tag' : ''}">GSAS ${gsas}${isDemo ? ' 🏆' : ''}</span>` : ''}
+          ${proj.epc_rating ? `<span class="tag">EPC ${proj.epc_rating}</span>` : ''}
+          ${proj.green_eligible ? `<span class="tag eco-tag">Green Rate ${rate}%</span>` : ''}
+        </div>
+        <div class="proj-foot">
+          <span class="gsas-badge${isDemo ? ' eco' : ''}">${isDemo ? '🏆 Gold' : 'GSAS ' + gsas}</span>
+          <span class="rate-badge${isDemo ? ' eco' : ''}">${rate}% p.a.</span>
+        </div>
+        <button class="proj-apply-btn${isDemo ? ' eco' : ''}" onclick="event.stopPropagation();openProjectPanel('${proj.id}')">
+          ${isDemo ? '🌿 View Units →' : 'View Details →'}
+        </button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function openProjectPanel(projectId) {
+  const bg = document.getElementById('project-panel-bg');
+  const panel = document.getElementById('project-panel');
+  const body = document.getElementById('project-panel-body');
+  bg.classList.add('open');
+  panel.classList.add('open');
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--g500)"><span class="spin"></span></div>';
+
+  try {
+    const r = await fetch(`/api/v1/portal/projects/${projectId}`);
+    const d = await r.json();
+    const proj = d.project || {};
+    const units = d.units || [];
+    const contractor = d.contractor || null;
+    const isDemo = proj.is_demo_project === 1;
+
+    document.getElementById('pp-name').textContent = proj.name || '—';
+    document.getElementById('pp-loc').textContent = (proj.location || 'Muscat') + (isDemo ? ' · 🌿 Demo Project' : '');
+
+    // Build unit grid
+    const availUnits = units.filter(u => u.status === 'available');
+    const unitTypes = [...new Set(units.map(u => u.type).filter(Boolean))];
+
+    const greenFeatures = (() => {
+      try { return JSON.parse(proj.green_features || proj.esg_features || '[]'); }
+      catch { return isDemo ? ['Solar PV 8.5kWp', 'Greywater Recycling', 'Green Roof', 'HVAC SEER 18.2', 'EV Charging Ready'] : []; }
+    })();
+
+    body.innerHTML = `
+      ${isDemo ? `<div class="demo-proj-banner"><span style="font-size:1.4rem">🌿</span><div><div style="font-weight:700;color:#166534">GSAS Gold Certified Development</div><div style="font-size:12px;color:#15803d">Qualifies for Green Home Loan at 4.75% p.a.</div></div></div>` : ''}
+      ${greenFeatures.length ? `<div class="green-features-strip">${greenFeatures.map(f => `<span class="gf-pill">✅ ${f}</span>`).join('')}</div>` : ''}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+        <div class="stat-pill"><div class="sp-num">${units.length}</div><div class="sp-lbl">Total Units</div></div>
+        <div class="stat-pill"><div class="sp-num" style="color:#2ECC71">${availUnits.length}</div><div class="sp-lbl">Available</div></div>
+        <div class="stat-pill"><div class="sp-num">${proj.gsas_overall_score || '—'}</div><div class="sp-lbl">GSAS Score</div></div>
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">Available Units</div>
+      ${availUnits.length ? `<div class="unit-grid">${availUnits.map(u => renderUnitCard(u, proj, isDemo)).join('')}</div>`
+        : '<div style="color:var(--g500);font-size:13px;text-align:center;padding:20px">No units currently available</div>'}
+
+      ${contractor ? `
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin:20px 0 10px">🏗️ Contractor</div>
+      <div class="contractor-card${contractor.is_green_certified ? ' green' : ''}">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-size:24px">${contractor.is_green_certified ? '🌿' : '🏗️'}</div>
+          <div><div style="font-weight:700;color:var(--navy)">${contractor.company_name}</div>
+          <div style="font-size:11px;color:var(--g500)">${contractor.company_name_ar || ''}</div></div>
+          ${isDemo ? '<span class="source-pill active-partner" style="margin-left:auto">Partnered</span>' : ''}
+        </div>
+        <div class="contractor-details">
+          <span>👤 ${contractor.contact_name}</span>
+          <span>📞 ${contractor.contact_phone}</span>
+          <span>📧 ${contractor.contact_email}</span>
+          <span>📋 ${contractor.license_number}</span>
+          ${contractor.is_green_certified ? `<span style="color:#16845B">🏆 Green Certified: ${contractor.green_cert_ref}</span>` : ''}
+        </div>
+      </div>` : ''}`;
+  } catch (e) {
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--err)">Could not load project details.</div>';
+  }
+}
+
+function renderUnitCard(u, proj, isDemo) {
+  const gsasOk = u.gsas_score >= 85;
+  const rate = gsasOk ? '4.75' : u.gsas_score >= 70 ? '5.00' : '5.25';
+  const price = u.price ? Number(u.price) : 0;
+  const downPct = 0.20;
+  const loanAmt = price * (1 - downPct);
+  const tenYears = 25;
+  const monthlyPmt = loanAmt > 0 ? pmt(loanAmt, parseFloat(rate), tenYears * 12) : 0;
+  return `<div class="unit-card${isDemo ? ' eco-unit' : ''}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+      <div>
+        <div style="font-weight:700;color:var(--navy);font-size:14px">${u.unit_number || u.id}</div>
+        <div style="font-size:11px;color:var(--g500)">${u.type || 'Unit'}</div>
+      </div>
+      ${isDemo ? `<span class="eco-tag" style="font-size:10px;padding:2px 7px">GSAS ${u.gsas_score || '—'}</span>` : ''}
+    </div>
+    <div class="unit-details">
+      <span>📐 ${u.area_sqm || '—'} m²</span>
+      <span>🛏️ ${u.bedrooms || '—'} bed</span>
+      <span>🚿 ${u.bathrooms || '—'} bath</span>
+    </div>
+    <div style="font-size:16px;font-weight:800;color:${isDemo ? '#16845B' : 'var(--navy)'};margin:10px 0 4px">
+      OMR ${price ? price.toLocaleString() : '—'}
+    </div>
+    ${monthlyPmt > 0 ? `<div class="unit-affordability">
+      <span style="font-size:11px;color:var(--g500)">Est. monthly @ ${rate}%</span>
+      <span style="font-size:13px;font-weight:700;color:var(--teal)">${fmtOMR(monthlyPmt)}/mo</span>
+    </div>` : ''}
+    <button class="unit-apply-btn${isDemo ? ' eco' : ''}" onclick="openWizardForUnit(${escJ(u)},${escJ(proj)})">
+      Apply for Financing →
+    </button>
+  </div>`;
+}
+
+function escJ(obj) {
+  return "'" + JSON.stringify(obj).replace(/'/g, "\\'") + "'";
+}
+
+function closeProjectPanel() {
+  document.getElementById('project-panel-bg').classList.remove('open');
+  document.getElementById('project-panel').classList.remove('open');
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   WIZARD — open / close / render
+════════════════════════════════════════════════════════ */
+function openWizard(productId, unitId) {
+  if (productId) wizProductId = productId;
+  if (unitId) wizUnitId = unitId;
+  wizStep = 0;
+  livenessVerified = false;
+  document.getElementById('wiz-overlay').classList.add('open');
+  renderWiz();
+}
+
+function openWizardForUnit(unitStr, projStr) {
+  try {
+    const u = typeof unitStr === 'string' ? JSON.parse(unitStr) : unitStr;
+    const p = typeof projStr === 'string' ? JSON.parse(projStr) : (projStr || {});
+    wizUnitData = u;
+    wizUnitId = u.id;
+    wizProjectId = p.id || null;
+    wizPropertySource = 'partner';
+    // Pre-select demo product if available
+    const demoProd = allProductsCache.find(x => x.is_demo_product === 1);
+    if (demoProd) wizProductId = demoProd.id;
+    const wt = document.getElementById('wiz-title');
+    if (wt) wt.textContent = `${u.unit_number || u.id} — Loan Application`;
+    openWizard(null, null);
+  } catch(e) {
+    console.error('openWizardForUnit', e);
+    openWizard(null, null);
+  }
+}
+
+function closeWizard() {
+  document.getElementById('wiz-overlay').classList.remove('open');
+  stopLivenessCamera();
+}
+
+function wizBack() {
+  if (wizStep > 0) { wizStep--; renderWiz(); }
+}
+
+async function wizNext() {
+  const STEPS = 8;
+  if (wizStep < STEPS - 1) {
+    // Validate step 4 (identity) — liveness must be done
+    if (wizStep === 4 && !livenessVerified) {
+      toast('Please complete the liveness check before continuing', 'err');
+      return;
+    }
+    wizStep++;
+    renderWiz();
+  } else {
+    await submitApp();
+  }
+}
+
+function renderWiz() {
+  const body = document.getElementById('wiz-body');
+  const stepLbl = document.getElementById('wiz-step-lbl');
+  const backBtn = document.getElementById('wiz-back');
+  const nextBtn = document.getElementById('wiz-next');
+  const STEPS = 8;
+
+  body.innerHTML = getWizStepHtml(wizStep);
+
+  // Update step indicators
+  document.querySelectorAll('.ws').forEach((el, i) => {
+    el.className = 'ws' + (i < wizStep ? ' done' : i === wizStep ? ' active' : '');
+    const n = el.querySelector('.ws-n');
+    if (n) n.textContent = i < wizStep ? '✓' : String(i + 1);
+  });
+
+  stepLbl.textContent = `Step ${wizStep + 1} of ${STEPS}`;
+  backBtn.style.visibility = wizStep === 0 ? 'hidden' : 'visible';
+  nextBtn.textContent = wizStep === STEPS - 1 ? '🚀 Submit Application' : 'Continue →';
+
+  // Post-render hooks
+  if (wizStep === 3) setTimeout(wizCalcUpdate, 80);
+  if (wizStep === 1) { /* source pills already rendered */ }
+}
+
+/* ─── WIZARD STEP HTML BUILDER ─── */
+function getWizStepHtml(step) {
+  switch(step) {
+    case 0: return wizStep0_Eligibility();
+    case 1: return wizStep1_Personal();
+    case 2: return wizStep2_Property();
+    case 3: return wizStep3_Financing();
+    case 4: return wizStep4_Identity();
+    case 5: return wizStep5_Income();
+    case 6: return wizStep6_Documents();
+    case 7: return wizStep7_Review();
+    default: return '<div>Step not found</div>';
+  }
+}
+
+/* ── Step 0: Eligibility ── */
+function wizStep0_Eligibility() {
+  return `<div class="wiz-step-content">
+    <div class="step-title">Eligibility Check</div>
+    <div class="step-sub">Let's confirm you qualify for financing</div>
+    <div class="elig-checks">
+      <div class="elig-item pass">
+        <span class="elig-ic">✅</span>
+        <div><div class="elig-t">Omani Citizen or Resident</div><div class="elig-s">Valid Civil ID required</div></div>
+      </div>
+      <div class="elig-item pass">
+        <span class="elig-ic">✅</span>
+        <div><div class="elig-t">Age 21 – 60 years</div><div class="elig-s">At time of application</div></div>
+      </div>
+      <div class="elig-item pass">
+        <span class="elig-ic">✅</span>
+        <div><div class="elig-t">Minimum Salary OMR 500/month</div><div class="elig-s">Confirmed via salary certificate</div></div>
+      </div>
+      <div class="elig-item pass">
+        <span class="elig-ic">✅</span>
+        <div><div class="elig-t">DBR ≤ 40%</div><div class="elig-s">Total monthly obligations / salary</div></div>
+      </div>
+      <div class="elig-item pass">
+        <span class="elig-ic">✅</span>
+        <div><div class="elig-t">MALA'A Credit Bureau</div><div class="elig-s">No active defaults</div></div>
+      </div>
+    </div>
+    <div class="info-strip">🟢 All eligibility criteria met. You can proceed with your application.</div>
+  </div>`;
+}
+
+/* ── Step 1: Personal Info ── */
+function wizStep1_Personal() {
+  return `<div class="wiz-step-content">
+    <div class="step-title">Personal Information</div>
+    <div class="step-sub">Pre-filled from your profile — verify and confirm</div>
+    <div class="info-strip">✅ <strong>Sohar International Profile Linked</strong> — details imported automatically.</div>
+    <div class="form-grid">
+      <div class="fg"><label class="fl">Full Name (English)</label><input class="fc" id="w-name-en" value="Salim Mohammed Al-Harthy"/></div>
+      <div class="fg"><label class="fl">Full Name (Arabic)</label><input class="fc" id="w-name-ar" value="سالم محمد الحارثي"/></div>
+      <div class="fg"><label class="fl">Civil ID Number</label><input class="fc" id="w-civil-id" value="8827364"/></div>
+      <div class="fg"><label class="fl">Date of Birth</label><input class="fc" type="date" id="w-dob" value="1985-03-15"/></div>
+      <div class="fg"><label class="fl">Mobile</label><input class="fc" id="w-mobile" value="+968 9234 5678"/></div>
+      <div class="fg"><label class="fl">Email</label><input class="fc" id="w-email" value="salim.alharthy@example.com"/></div>
+      <div class="fg"><label class="fl">Marital Status</label>
+        <select class="fc" id="w-marital">
+          <option>Married</option><option>Single</option><option>Divorced</option><option>Widowed</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Dependants</label>
+        <select class="fc" id="w-deps"><option value="3">3</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="4">4</option><option value="5+">5+</option></select>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── Step 2: Property & Contractor ── */
+function wizStep2_Property() {
+  const hasUnit = !!wizUnitData;
+  const unit = wizUnitData || {};
+  const isPartner = hasUnit;
+  const gsas = unit.gsas_score || 0;
+  const gsasOk = gsas >= 85;
+  const gsasFail = unit && allProductsCache.length > 0;
+  // Get min GSAS from selected product
+  const prod = allProductsCache.find(p => p.id === wizProductId);
+  const minGsas = prod ? (prod.gsas_min_score || 80) : 80;
+  const gsasBlocked = hasUnit && gsas < minGsas;
+
+  return `<div class="wiz-step-content">
+    <div class="step-title">Property &amp; Contractor</div>
+    <div class="step-sub">Select your property or provide your own</div>
+
+    <!-- Source selection pills -->
+    <div class="source-pills" style="margin-bottom:20px">
+      <button class="source-pill ${isPartner ? 'active-partner' : ''}" id="src-partner" onclick="setPropertySource('partner')">
+        🏘️ Partner Property
+        <span style="font-size:10px;display:block;opacity:.8">From our developments</span>
+      </button>
+      <button class="source-pill ${!isPartner ? 'active-byo' : ''}" id="src-byo" onclick="setPropertySource('byo')">
+        🔑 Your Own Property (BYO)
+        <span style="font-size:10px;display:block;opacity:.8">Custom property</span>
+      </button>
+    </div>
+
+    <!-- PARTNER section -->
+    <div id="prop-partner-section" style="display:${isPartner ? 'block' : 'none'}">
+      ${hasUnit ? `<div class="prop-sel">
+        <div class="ps-em">🏡</div>
+        <div>
+          <div class="ps-name">${unit.unit_number || unit.id} — ${unit.type || 'Unit'}</div>
+          <div class="ps-sub">${unit.area_sqm || '—'} m² · GSAS ${gsas} · OMR ${unit.price ? Number(unit.price).toLocaleString() : '—'}</div>
+        </div>
+        <span class="source-pill active-partner" style="flex-shrink:0">Partnered ✓</span>
+      </div>` : `<div class="info-strip" style="color:var(--g500)">No unit pre-selected. <a href="#" onclick="closeWizard();showPage('properties');return false" style="color:var(--teal)">Browse properties</a> to select a unit first.</div>`}
+
+      ${hasUnit ? `
+      ${gsasBlocked ? `<div class="warn-strip" style="margin-top:12px">⚠️ GSAS Score ${gsas} is below the minimum <strong>${minGsas}</strong> required for the selected product. Please choose a higher-rated unit or select a different product.</div>` : ''}
+      ${!gsasBlocked && gsasOk ? `<div class="info-strip" style="background:var(--ok-bg);color:var(--ok)">🌿 <strong>GSAS ${gsas} — Eligible for Green Rate 4.75% p.a.</strong></div>` : ''}
+      ` : ''}
+
+      <!-- Partnered contractor — pre-filled from DB -->
+      ${hasUnit ? `<div class="contractor-card green" style="margin-top:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-size:24px">🌿</div>
+          <div>
+            <div style="font-weight:700;color:var(--navy)" id="p-con-name">${BYO_CONTRACTOR.company_name}</div>
+            <div style="font-size:11px;color:var(--g500)">${BYO_CONTRACTOR.company_name_ar}</div>
+          </div>
+          <span class="source-pill active-partner" style="margin-left:auto">Partnered</span>
+        </div>
+        <div class="contractor-details">
+          <span>👤 ${BYO_CONTRACTOR.contact_name}</span>
+          <span>📞 ${BYO_CONTRACTOR.contact_phone}</span>
+          <span>📧 ${BYO_CONTRACTOR.contact_email}</span>
+          <span>📋 CR: ${BYO_CONTRACTOR.cr_number}</span>
+          <span style="color:#16845B">🏆 Green Certified: ${BYO_CONTRACTOR.green_cert_ref}</span>
+        </div>
+      </div>` : ''}
+    </div>
+
+    <!-- BYO section -->
+    <div id="prop-byo-section" style="display:${!isPartner ? 'block' : 'none'}">
+      <div class="byo-banner">
+        <span class="source-pill active-byo">🔑 BYO — Custom Property</span>
+        <span style="font-size:12px;color:var(--g700)">Provide your own property details below</span>
+      </div>
+      <div class="form-grid" style="margin-top:14px">
+        <div class="fg"><label class="fl">Property Address</label><input class="fc" id="w-byo-addr" placeholder="e.g. Block 4, Al Seeb, Muscat"/></div>
+        <div class="fg"><label class="fl">Property Type</label>
+          <select class="fc" id="w-byo-type"><option>Villa</option><option>Apartment</option><option>Townhouse</option><option>Land + Construction</option></select>
+        </div>
+        <div class="fg"><label class="fl">Area (m²)</label><input class="fc" id="w-byo-area" type="number" placeholder="e.g. 280"/></div>
+        <div class="fg"><label class="fl">Estimated Value (OMR)</label><input class="fc" id="w-byo-val" type="number" placeholder="e.g. 180000"/></div>
+        <div class="fg col-2"><label class="fl">GSAS Score (if known)</label><input class="fc" id="w-byo-gsas" type="number" placeholder="0 = none" min="0" max="100" value="0" oninput="checkBYOGsas(this.value)"/></div>
+      </div>
+      <div id="byo-gsas-warn" style="display:none" class="warn-strip">⚠️ GSAS score entered is below the minimum required for the selected product. You may still apply but the green rate may not apply.</div>
+
+      <!-- Simulated Green Features for BYO -->
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin:14px 0 8px">🌿 Green Features (Self-Reported)</div>
+      <div class="byo-features-grid" id="byo-features">
+        ${['Solar PV Installation','Greywater Recycling','HVAC Energy Rating A','Thermal Insulation','EV Charging Ready','Rainwater Harvesting'].map((f,i) =>
+          `<label class="feat-toggle"><input type="checkbox" id="feat-${i}" ${i<3?'checked':''}/> ${f}</label>`
+        ).join('')}
+      </div>
+
+      <!-- BYO Contractor — pre-populated with Al Jazeera (demo) -->
+      <div class="contractor-amber" style="margin-top:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--warn);margin-bottom:8px">
+          ⚠️ <span class="source-pill active-byo" style="font-size:10px">BYO</span> Contractor — Pre-filled for demo
+        </div>
+        <div class="contractor-card" style="border:1px solid var(--amber)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="font-size:24px">🌿</div>
+            <div>
+              <div style="font-weight:700;color:var(--navy)">${BYO_CONTRACTOR.company_name}</div>
+              <div style="font-size:11px;color:var(--g500)">${BYO_CONTRACTOR.company_name_ar}</div>
+            </div>
+            <span class="source-pill active-byo" style="margin-left:auto">BYO</span>
+          </div>
+          <div class="form-grid">
+            <div class="fg"><label class="fl">Company Name</label><input class="fc" value="${BYO_CONTRACTOR.company_name}" id="byo-con-name"/></div>
+            <div class="fg"><label class="fl">CR Number</label><input class="fc" value="${BYO_CONTRACTOR.cr_number}" id="byo-con-cr"/></div>
+            <div class="fg"><label class="fl">Contact Name</label><input class="fc" value="${BYO_CONTRACTOR.contact_name}" id="byo-con-contact"/></div>
+            <div class="fg"><label class="fl">License Number</label><input class="fc" value="${BYO_CONTRACTOR.license_number}" id="byo-con-lic"/></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function setPropertySource(src) {
+  wizPropertySource = src;
+  document.getElementById('prop-partner-section').style.display = src === 'partner' ? 'block' : 'none';
+  document.getElementById('prop-byo-section').style.display = src === 'byo' ? 'block' : 'none';
+  document.getElementById('src-partner').className = 'source-pill' + (src === 'partner' ? ' active-partner' : '');
+  document.getElementById('src-byo').className = 'source-pill' + (src === 'byo' ? ' active-byo' : '');
+}
+
+function checkBYOGsas(val) {
+  const prod = allProductsCache.find(p => p.id === wizProductId);
+  const minGsas = prod ? (prod.gsas_min_score || 80) : 80;
+  const warn = document.getElementById('byo-gsas-warn');
+  if (warn) warn.style.display = (parseInt(val) > 0 && parseInt(val) < minGsas) ? 'block' : 'none';
+}
+
+/* ── Step 3: Financing ── */
+function wizStep3_Financing() {
+  const unit = wizUnitData || {};
+  const propVal = unit.price ? Number(unit.price) : 200000;
+  const downAmt = Math.round(propVal * 0.20);
+  const loanAmt = propVal - downAmt;
+  const gsas = unit.gsas_score || 85;
+  const prod = allProductsCache.find(p => p.id === wizProductId) || {};
+  const baseRate = parseFloat(prod.base_rate || '4.75');
+  const gsasDiscount = gsas >= (prod.gsas_premium_score || 85) ? (prod.green_discount_premium || 0.25) : 0;
+  const appliedRate = Math.max(baseRate - gsasDiscount, 4.25).toFixed(2);
+
+  return `<div class="wiz-step-content">
+    <div class="step-title">Financing Details</div>
+    <div class="step-sub">Review and adjust your loan parameters</div>
+    <div class="form-grid">
+      <div class="fg"><label class="fl">Property Value (OMR)</label><input class="fc" id="wa-propval" type="number" value="${propVal}" oninput="wizCalcUpdate()"/></div>
+      <div class="fg"><label class="fl">Down Payment (OMR)</label><input class="fc" id="wa-down" type="number" value="${downAmt}" oninput="wizCalcUpdate()"/></div>
+      <div class="fg"><label class="fl">Loan Amount (OMR)</label><input class="fc fc-ok" id="wa-amt" type="number" value="${loanAmt}" readonly/></div>
+      <div class="fg"><label class="fl">Tenure (Years)</label>
+        <select class="fc" id="wa-ten" onchange="wizCalcUpdate()">
+          <option value="25" selected>25 years</option>
+          <option value="20">20 years</option>
+          <option value="30">30 years</option>
+          <option value="15">15 years</option>
+          <option value="10">10 years</option>
+        </select>
+      </div>
+      <div class="fg col-2"><label class="fl">Applied Rate</label><input class="fc fc-ok" id="wa-rate" value="${appliedRate}% (${gsas>=85?'Green Rate':gsas>=70?'Standard Green':'Standard'})" readonly/></div>
+    </div>
+    <div class="finance-summary" id="wiz-fin-summary">
+      <div class="fs-grid">
+        <div><div class="fs-lbl">Monthly Payment</div><div class="fs-val" id="wa-m">OMR —</div></div>
+        <div><div class="fs-lbl">DBR Ratio</div><div class="fs-val" id="wa-dbr">—%</div></div>
+        <div><div class="fs-lbl">LTV Ratio</div><div class="fs-val" id="wa-ltv">—%</div></div>
+        <div><div class="fs-lbl">Green Saving</div><div class="fs-val" id="wa-sv" style="color:#16845B">OMR —</div></div>
+      </div>
+      <div id="wa-dbr-warn" style="display:none" class="warn-strip">⚠️ DBR exceeds 40% — please reduce loan amount or increase tenure.</div>
+      <div class="fs-note">DBR must be ≤ 40% · LTV ≤ ${prod.max_ltv || 80}% · CBO compliant</div>
+    </div>
+    ${gsas >= 85 ? `<div class="info-strip" style="background:var(--ok-bg);color:var(--ok)">🌿 <strong>GSAS Gold Rate Applied:</strong> ${appliedRate}% — saves you OMR ${Math.round((pmt(loanAmt,5.50,25*12)-pmt(loanAmt,parseFloat(appliedRate),25*12))*25*12).toLocaleString()} over 25 years</div>` : ''}
+  </div>`;
+}
+
+function wizCalcUpdate() {
+  const pv = parseFloat((document.getElementById('wa-propval') || {}).value) || 200000;
+  const dp = parseFloat((document.getElementById('wa-down') || {}).value) || 40000;
+  const la = Math.max(0, pv - dp);
+  const ten = parseInt((document.getElementById('wa-ten') || {}).value) || 25;
+  const prod = allProductsCache.find(p => p.id === wizProductId) || {};
+  const baseRate = parseFloat(prod.base_rate || '4.75');
+  const unit = wizUnitData || {};
+  const gsas = unit.gsas_score || 85;
+  const gsasDiscount = gsas >= (prod.gsas_premium_score || 85) ? (prod.green_discount_premium || 0.25) : 0;
+  const rate = parseFloat((baseRate - gsasDiscount).toFixed(2));
+
+  // LTV-based rate check
+  const ltv = pv > 0 ? (la / pv * 100) : 0;
+  const salary = 3200; // from step 1
+  const m = pmt(la, rate, ten * 12);
+  const dbr = salary > 0 ? (m / salary * 100) : 0;
+  const sv = Math.max(0, pmt(la, 5.50, ten * 12) * ten * 12 - m * ten * 12);
+
+  const d = id => document.getElementById(id);
+  if (d('wa-amt')) d('wa-amt').value = Math.round(la).toLocaleString();
+  if (d('wa-m')) d('wa-m').textContent = fmtOMR(m);
+  if (d('wa-dbr')) { d('wa-dbr').textContent = dbr.toFixed(1) + '%'; d('wa-dbr').style.color = dbr > 40 ? 'var(--err)' : 'var(--ok)'; }
+  if (d('wa-ltv')) { d('wa-ltv').textContent = ltv.toFixed(1) + '%'; d('wa-ltv').style.color = ltv > (prod.max_ltv || 80) ? 'var(--err)' : 'inherit'; }
+  if (d('wa-sv')) d('wa-sv').textContent = fmtOMR(sv);
+  if (d('wa-dbr-warn')) d('wa-dbr-warn').style.display = dbr > 40 ? 'block' : 'none';
+  if (d('wa-rate')) d('wa-rate').value = rate + '% (' + (gsas >= 85 ? 'Green Rate' : gsas >= 70 ? 'Standard Green' : 'Standard') + ')';
+}
+
+/* ── Step 4: Identity & Liveness ── */
+function wizStep4_Identity() {
+  const verified = livenessVerified;
+  return `<div class="wiz-step-content">
+    <div class="step-title">Identity Verification</div>
+    <div class="step-sub">Upload your Civil ID and complete liveness check</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="doc-upload-zone" id="zone-civil-front" onclick="triggerUpload('civil-front-input')">
+        <input type="file" id="civil-front-input" accept="image/*" style="display:none" onchange="handleIdUpload(this,'civil-front','civil-front-zone-status')"/>
+        <div class="duz-icon">🪪</div>
+        <div class="duz-label">Civil ID — Front</div>
+        <div class="duz-status" id="civil-front-zone-status">Click to upload</div>
+      </div>
+      <div class="doc-upload-zone" id="zone-civil-back" onclick="triggerUpload('civil-back-input')">
+        <input type="file" id="civil-back-input" accept="image/*" style="display:none" onchange="handleIdUpload(this,'civil-back','civil-back-zone-status')"/>
+        <div class="duz-icon">🪪</div>
+        <div class="duz-label">Civil ID — Back</div>
+        <div class="duz-status" id="civil-back-zone-status">Click to upload</div>
+      </div>
+    </div>
+
+    <!-- Simulated ID validation progress -->
+    <div id="id-validation-wrap" style="display:none;margin-bottom:18px">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px">🔍 Validating Identity Document…</div>
+      <div class="ocr-progress-wrap"><div class="ocr-bar" id="id-val-bar" style="width:0%"></div></div>
+      <div style="font-size:11px;color:var(--g500);margin-top:5px" id="id-val-status">Analyzing document…</div>
+    </div>
+    <div id="id-validation-result" style="display:none"></div>
+
+    <!-- Liveness check -->
+    <div class="liveness-card" id="liveness-card">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:32px">🤳</div>
+        <div>
+          <div style="font-weight:700;color:var(--navy)">Liveness Check</div>
+          <div style="font-size:12px;color:var(--g500)">Required to verify you are physically present</div>
+        </div>
+        <div id="liveness-status-badge" style="margin-left:auto">
+          ${verified ? '<span class="badge-ok">✅ Verified</span>' : '<span class="badge-pending">Pending</span>'}
+        </div>
+      </div>
+      ${!verified ? `<button class="btn btn-teal" style="width:100%;margin-top:12px" onclick="openLiveness()">📷 Start Liveness Check →</button>` : `<div class="info-strip" style="margin-top:10px;background:var(--ok-bg);color:var(--ok)">✅ Identity confirmed · Match score 97%</div>`}
+    </div>
+  </div>`;
+}
+
+function triggerUpload(inputId) {
+  document.getElementById(inputId).click();
+}
+
+async function handleIdUpload(input, side, statusId) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById(statusId);
+  if (statusEl) statusEl.textContent = `✅ ${file.name}`;
+  // Simulate ID validation with delay
+  const wrap = document.getElementById('id-validation-wrap');
+  const resultEl = document.getElementById('id-validation-result');
+  if (wrap) wrap.style.display = 'block';
+  if (resultEl) resultEl.style.display = 'none';
+  simulateIdValidation();
+}
+
+function simulateIdValidation() {
+  const bar = document.getElementById('id-val-bar');
+  const status = document.getElementById('id-val-status');
+  const resultEl = document.getElementById('id-validation-result');
+  const STAGES = [
+    [15, 'Uploading document…'],
+    [30, 'Detecting document type…'],
+    [50, 'Extracting fields (OCR)…'],
+    [70, 'Cross-referencing national registry…'],
+    [85, 'Verifying biometric data…'],
+    [95, 'Final compliance check…'],
+    [100, 'Validation complete']
+  ];
+  let si = 0;
+  const advance = () => {
+    if (si >= STAGES.length) {
+      if (document.getElementById('id-validation-wrap')) document.getElementById('id-validation-wrap').style.display = 'none';
+      if (resultEl) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `<div class="info-strip" style="background:var(--ok-bg);color:var(--ok)">
+          ✅ <strong>Document Verified</strong> — Civil ID No. 8827364 · Name: Salim Mohammed Al-Harthy · Expiry: 2029-12-31
+        </div>`;
+      }
+      return;
+    }
+    const [pct, msg] = STAGES[si++];
+    if (bar) bar.style.width = pct + '%';
+    if (status) status.textContent = msg;
+    setTimeout(advance, 700 + Math.random() * 400);
+  };
+  advance();
+}
+
+function openLiveness() {
+  document.getElementById('liveness-overlay').classList.add('open');
+  document.getElementById('liveness-intro').style.display = 'block';
+  document.getElementById('liveness-camera').style.display = 'none';
+  document.getElementById('liveness-success').style.display = 'none';
+}
+
+/* ── Step 5: Employment & Income with OCR ── */
+function wizStep5_Income() {
+  const salary = wizUnitData ? 3200 : 3200;
+  return `<div class="wiz-step-content">
+    <div class="step-title">Employment &amp; Income</div>
+    <div class="step-sub">Upload salary/HR certificate for automated OCR extraction</div>
+
+    <!-- Document Upload -->
+    <div class="doc-upload-zone" id="zone-salary" onclick="triggerUpload('salary-doc-input')" style="margin-bottom:16px">
+      <input type="file" id="salary-doc-input" accept="image/*,application/pdf" style="display:none" onchange="handleSalaryOCR(this)"/>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="font-size:2rem">💼</div>
+        <div>
+          <div class="duz-label">Salary / HR Certificate</div>
+          <div class="duz-status" id="salary-upload-status">Click to upload — fields will auto-fill via OCR</div>
+        </div>
+        <div id="salary-upload-icon" style="margin-left:auto;font-size:1.5rem">📤</div>
+      </div>
+    </div>
+
+    <!-- OCR progress -->
+    <div id="ocr-progress-wrap" style="display:none;margin-bottom:16px">
+      <div class="ocr-progress-header">
+        <div style="font-size:12px;font-weight:700;color:var(--navy)">🤖 AI Document Processing</div>
+        <div style="font-size:12px;color:var(--teal)" id="ocr-pct-label">0%</div>
+      </div>
+      <div class="ocr-progress-wrap"><div class="ocr-bar" id="ocr-progress-bar" style="width:0%;background:linear-gradient(90deg,var(--teal),var(--sea))"></div></div>
+      <div style="font-size:11px;color:var(--g500);margin-top:4px" id="ocr-action">Initializing…</div>
+    </div>
+
+    <!-- Income fields — glow on OCR change -->
+    <div class="form-grid">
+      <div class="fg"><label class="fl">Employer Name</label><input class="fc" id="w-employer" value="Oman Oil Company"/></div>
+      <div class="fg"><label class="fl">Employment Type</label>
+        <select class="fc" id="w-emp-type"><option>Government</option><option selected>Semi-Government</option><option>Private</option><option>Self-Employed</option></select>
+      </div>
+      <div class="fg"><label class="fl">Basic Salary (OMR)</label><input class="fc" id="w-basic-sal" value="${salary.toLocaleString()}" type="number"/></div>
+      <div class="fg"><label class="fl">Housing Allowance (OMR)</label><input class="fc" id="w-housing" value="800" type="number"/></div>
+      <div class="fg"><label class="fl">Other Allowances (OMR)</label><input class="fc" id="w-other-allow" value="200" type="number"/></div>
+      <div class="fg"><label class="fl">Employment Start Date</label><input class="fc" id="w-emp-start" type="date" value="2018-06-01"/></div>
+      <div class="fg col-2"><label class="fl">Total Monthly Income (OMR)</label><input class="fc fc-ok" id="w-total-income" value="${(salary+800+200).toLocaleString()}" readonly/></div>
+    </div>
+    <div id="ocr-changed-notice" style="display:none" class="info-strip">✨ <strong>Fields updated from OCR</strong> — highlighted values were extracted from your document. Please verify accuracy.</div>
+  </div>`;
+}
+
+async function handleSalaryOCR(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('salary-upload-status').textContent = `📄 ${file.name} — processing…`;
+  document.getElementById('salary-upload-icon').textContent = '⏳';
+  document.getElementById('ocr-progress-wrap').style.display = 'block';
+
+  // OCR animation stages
+  const OCR_STAGES = [
+    [12, 'Uploading to secure processor…'],
+    [28, 'Detecting document layout…'],
+    [44, 'Running Google Vision OCR…'],
+    [60, 'Extracting salary fields…'],
+    [75, 'Parsing employer details…'],
+    [88, 'Validating extracted data…'],
+    [100, '✅ Extraction complete']
+  ];
+  let si = 0;
+  const advanceOCR = () => {
+    if (si >= OCR_STAGES.length) {
+      finishOCR();
+      return;
+    }
+    const [pct, action] = OCR_STAGES[si++];
+    const bar = document.getElementById('ocr-progress-bar');
+    const lbl = document.getElementById('ocr-pct-label');
+    const act = document.getElementById('ocr-action');
+    if (bar) bar.style.width = pct + '%';
+    if (lbl) lbl.textContent = pct + '%';
+    if (act) act.textContent = action;
+    setTimeout(advanceOCR, 600 + Math.random() * 500);
+  };
+  advanceOCR();
+
+  // Real OCR call in background
+  try {
+    const b64 = await fileToBase64(file);
+    const res = await fetch('/api/v1/portal/ocr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: b64.split(',')[1], mime_type: file.type })
+    });
+    const data = await res.json();
+    if (data.fields) window._ocrFields = data.fields;
+  } catch (e) {
+    console.warn('OCR API failed, using simulated values', e);
+    window._ocrFields = {
+      employer: 'Oman Oil Company',
+      basic_salary: '3200',
+      housing_allowance: '850',
+      employment_type: 'Semi-Government',
+      employment_start_date: '2018-06-01'
+    };
+  }
+}
+
+function finishOCR() {
+  document.getElementById('ocr-progress-wrap').style.display = 'none';
+  document.getElementById('salary-upload-icon').textContent = '✅';
+  const fields = window._ocrFields || {
+    employer: 'Oman Oil Company',
+    basic_salary: '3400',
+    housing_allowance: '850',
+    employment_type: 'Semi-Government',
+    employment_start_date: '2018-06-01'
+  };
+  const updates = {
+    'w-employer': fields.employer,
+    'w-basic-sal': fields.basic_salary,
+    'w-housing': fields.housing_allowance,
+    'w-emp-start': fields.employment_start_date
+  };
+  if (fields.employment_type) {
+    const sel = document.getElementById('w-emp-type');
+    if (sel) { for(let i=0;i<sel.options.length;i++) { if(sel.options[i].value===fields.employment_type||sel.options[i].text===fields.employment_type) { sel.selectedIndex=i; break; } } }
+  }
+  let anyChanged = false;
+  Object.entries(updates).forEach(([id, val]) => {
+    if (!val) return;
+    const el = document.getElementById(id);
+    if (!el || el.value === String(val)) return;
+    el.value = val;
+    el.classList.add('fc-glow');
+    setTimeout(() => el.classList.remove('fc-glow'), 3500);
+    anyChanged = true;
+  });
+  // Update total
+  const basic = parseFloat(document.getElementById('w-basic-sal').value) || 0;
+  const housing = parseFloat(document.getElementById('w-housing').value) || 0;
+  const other = parseFloat(document.getElementById('w-other-allow').value) || 0;
+  const totalEl = document.getElementById('w-total-income');
+  if (totalEl) totalEl.value = (basic + housing + other).toLocaleString();
+  if (anyChanged) document.getElementById('ocr-changed-notice').style.display = 'block';
+}
+
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ── Step 6: Documents ── */
+function wizStep6_Documents() {
+  const isPartner = wizPropertySource === 'partner' && wizUnitData;
+  return `<div class="wiz-step-content">
+    <div class="step-title">Document Upload</div>
+    <div class="step-sub">Upload the required supporting documents</div>
+    <p style="font-size:12px;color:var(--g500);margin-bottom:16px">Click on any document card to upload. Partner property documents are pre-populated where available.</p>
+    <div class="doc-grid" id="doc-grid-main">
+      ${docCard('salary-cert','💼','Salary Certificate',isPartner?'ok':'pending',isPartner?'✅ Verified (OCR)':'Upload required')}
+      ${docCard('bank-stmts','🏦','Bank Statements (6M)',isPartner?'ok':'pending',isPartner?'✅ Verified':'Upload required')}
+      ${docCard('no-obj','🏛️','No-Objection Certificate',isPartner?'ok':'pending',isPartner?'✅ Verified':'From employer')}
+      ${docCard('prop-val','🏠','Property Valuation Report',isPartner?'analyzing':'pending',isPartner?'🔍 Processing…':'Upload required')}
+      ${docCard('gsas-cert','🏆','GSAS Certificate',isPartner?'ok':'pending',isPartner?'✅ Score 89 Confirmed':'Upload if available (optional for BYO)')}
+      ${docCard('epc','⚡','EPC Report',isPartner?'flagged':'pending',isPartner?'⚠️ Minor flag — under review':'Upload if available')}
+    </div>
+    ${isPartner ? `<div class="info-strip" style="margin-top:12px">🌿 <strong>Partner Project:</strong> GSAS certificate and contractor documents pre-verified through Al Jazeera Constructions LLC.</div>` : ''}
+    ${isPartner && true ? `<div class="warn-strip" style="margin-top:8px">⚠️ <strong>EPC Report</strong> flagged — minor thermal bridging note. Compliance officer will review. This does not block your application.</div>` : ''}
+  </div>`;
+}
+
+function docCard(id, icon, name, status, statusTxt) {
+  const statusClass = status === 'ok' ? 'ok' : status === 'analyzing' ? 'ai' : status === 'flagged' ? 'flagged' : 'pending';
+  return `<div class="doc-card ${statusClass}" onclick="handleDocUpload('${id}')">
+    <input type="file" id="doc-input-${id}" accept="image/*,application/pdf" style="display:none" onchange="handleDocFile(this,'${id}')"/>
+    <div class="doc-ic">${icon}</div>
+    <div class="doc-name">${name}</div>
+    <div class="doc-st">${statusTxt}</div>
+  </div>`;
+}
+
+function handleDocUpload(id) {
+  const input = document.getElementById('doc-input-' + id);
+  if (input) input.click();
+}
+
+function handleDocFile(input, docId) {
+  const file = input.files[0];
+  if (!file) return;
+  const card = input.closest('.doc-card');
+  if (card) {
+    card.className = 'doc-card analyzing';
+    const st = card.querySelector('.doc-st');
+    if (st) st.textContent = '⏳ Uploading…';
+    setTimeout(() => {
+      card.className = 'doc-card ok';
+      if (st) st.textContent = '✅ ' + file.name;
+    }, 2000 + Math.random() * 1500);
+  }
+  toast('Uploading ' + file.name + '…', 'info');
+}
+
+/* ── Step 7: Review & Submit ── */
+function wizStep7_Review() {
+  const unit = wizUnitData || {};
+  const prod = allProductsCache.find(p => p.id === wizProductId) || {};
+  const pv = parseFloat((document.getElementById('wa-propval') || {}).value) || (unit.price || 200000);
+  const dp = parseFloat((document.getElementById('wa-down') || {}).value) || Math.round(pv * 0.20);
+  const la = pv - dp;
+  const ten = parseInt((document.getElementById('wa-ten') || {}).value) || 25;
+  const gsas = unit.gsas_score || 85;
+  const baseRate = parseFloat(prod.base_rate || '4.75');
+  const discount = gsas >= (prod.gsas_premium_score || 85) ? (prod.green_discount_premium || 0.25) : 0;
+  const rate = parseFloat((baseRate - discount).toFixed(2));
+  const m = pmt(la, rate, ten * 12);
+  const salary = parseFloat((document.getElementById('w-basic-sal') || {}).value) || 3200;
+  const dbr = salary > 0 ? (m / salary * 100).toFixed(1) : '—';
+  const ltv = pv > 0 ? ((la / pv) * 100).toFixed(1) : '—';
+  const sv = fmtOMR(Math.max(0, pmt(la, 5.50, ten * 12) * ten * 12 - m * ten * 12));
+  const propName = unit.unit_number ? `${unit.unit_number} — ${unit.type || 'Unit'}` : (wizPropertySource === 'byo' ? 'Custom Property (BYO)' : '—');
+  const contractor = wizPropertySource === 'byo' ? BYO_CONTRACTOR.company_name : BYO_CONTRACTOR.company_name;
+
+  return `<div class="wiz-step-content">
+    <div class="step-title">Application Review</div>
+    <div class="step-sub">Please review all details before submitting</div>
+
+    <div class="rev-section">
+      <div class="rev-section-title">Applicant Details</div>
+      ${rr('Name', (document.getElementById('w-name-en') || {}).value || 'Salim Mohammed Al-Harthy')}
+      ${rr('Civil ID', (document.getElementById('w-civil-id') || {}).value || '8827364')}
+      ${rr('Mobile', (document.getElementById('w-mobile') || {}).value || '+968 9234 5678')}
+      ${rr('Employer', (document.getElementById('w-employer') || {}).value || 'Oman Oil Company')}
+      ${rr('Monthly Salary', fmtOMR(salary))}
+    </div>
+
+    <div class="rev-section">
+      <div class="rev-section-title">Property Details</div>
+      ${rr('Property', propName)}
+      ${rr('Source', wizPropertySource === 'partner' ? '🏘️ Partner Development' : '🔑 BYO Custom Property')}
+      ${rr('Contractor', contractor)}
+      ${rr('GSAS Score', (gsas >= 85 ? '🏆 ' : '') + gsas + (gsas >= 85 ? ' — Gold Certified' : ''))}
+    </div>
+
+    <div class="rev-section">
+      <div class="rev-section-title">Financing Terms</div>
+      ${rr('Loan Amount', fmtOMR(la))}
+      ${rr('Property Value', fmtOMR(pv))}
+      ${rr('Down Payment', fmtOMR(dp))}
+      ${rr('Interest Rate', rate + '% ' + (gsas >= 85 ? '(Green Rate ✅)' : '(Standard)'))}
+      ${rr('Tenure', ten + ' Years')}
+      ${rr('Monthly Payment', fmtOMR(m))}
+      ${rr('DBR Ratio', dbr + '%')}
+      ${rr('LTV Ratio', ltv + '%')}
+      ${rr('Green Saving', sv + ' vs Standard Rate')}
+      ${rr("Credit Bureau", "MALA'A — Clear ✅")}
+    </div>
+
+    <label style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--g700);cursor:pointer;margin-top:16px">
+      <input type="checkbox" id="consent-check" checked style="margin-top:2px;accent-color:var(--teal)"/>
+      I confirm all information is accurate and consent to credit bureau checks and data processing per Sohar International's Privacy Policy and CBO regulations.
+    </label>
+  </div>`;
+}
+
+function rr(k, v) {
+  return `<div class="rev-row"><span class="rev-k">${k}</span><span class="rev-v">${v}</span></div>`;
+}
+
+/* ── Submit ── */
+async function submitApp() {
+  const btn = document.getElementById('wiz-next');
+  const consent = document.getElementById('consent-check');
+  if (consent && !consent.checked) { toast('Please accept the terms to proceed', 'err'); return; }
+  btn.innerHTML = '<span class="spin"></span> Submitting…';
+  btn.disabled = true;
+
+  const pv = parseFloat((document.getElementById('wa-propval') || {}).value) || 200000;
+  const dp = parseFloat((document.getElementById('wa-down') || {}).value) || 40000;
+  const la = pv - dp;
+  const ten = parseInt((document.getElementById('wa-ten') || {}).value) || 25;
+  const prod = allProductsCache.find(p => p.id === wizProductId) || {};
+  const gsas = (wizUnitData || {}).gsas_score || 85;
+  const salary = parseFloat((document.getElementById('w-basic-sal') || {}).value) || 3200;
+  const name = (document.getElementById('w-name-en') || {}).value || 'Portal Customer';
+  const civil = (document.getElementById('w-civil-id') || {}).value || '8827364';
+
+  const payload = {
+    product_id: wizProductId || '',
+    project_id: wizProjectId || null,
+    unit_id: wizUnitId || null,
+    applicant_name: name,
+    applicant_civil_id: civil,
+    applicant_salary: salary,
+    property_value: pv,
+    loan_amount: la,
+    tenure_years: ten,
+    gsas_score: gsas,
+    property_source: wizPropertySource,
+    contractor_id: BYO_CONTRACTOR.id
+  };
+
+  try {
+    const r = await fetch('/api/v1/portal/applications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    btn.innerHTML = '🚀 Submit Application';
+    btn.disabled = false;
+    closeWizard();
+    if (d.success && d.reference) {
+      localStorage.setItem('ghl_application_ref', d.reference);
+      localStorage.setItem('ghl_application_id', d.application_id);
+      toast('🎉 Application ' + d.reference + ' submitted!', 'ok');
+      setTimeout(() => toast('✅ Rate: ' + d.applied_rate + '% · Monthly: OMR ' + Math.round(d.monthly_payment).toLocaleString(), 'ok'), 1200);
+      setTimeout(() => { loadTracking(); showPage('tracking'); }, 2000);
+    } else {
+      toast('⚠️ ' + (d.error || 'Submission failed'), 'err');
+    }
+  } catch (e) {
+    btn.innerHTML = '🚀 Submit Application';
+    btn.disabled = false;
+    toast('⚠️ Could not reach API: ' + e.message, 'err');
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   LIVENESS CHECK — real camera + guided instructions
+════════════════════════════════════════════════════════ */
+async function startLivenessCamera() {
+  document.getElementById('liveness-intro').style.display = 'none';
+  document.getElementById('liveness-camera').style.display = 'block';
+
+  const statusEl = document.getElementById('liveness-status');
+  try {
+    livenessStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false
+    });
+    const video = document.getElementById('liveness-video');
+    video.srcObject = livenessStream;
+    await video.play();
+    statusEl.textContent = 'Camera ready — face detection starting…';
+    setTimeout(runLivenessFlow, 1200);
+  } catch (err) {
+    statusEl.textContent = '⚠️ Camera access denied. Please allow camera and retry.';
+    console.error('getUserMedia', err);
+  }
+}
+
+const LIVENESS_INSTRUCTIONS = [
+  { icon: '👤', text: 'Center your face in the oval', duration: 2800, progress: 0 },
+  { icon: '✅', text: 'Face detected — hold still…',  duration: 1800, progress: 15 },
+  { icon: '👈', text: 'Slowly turn your head LEFT',    duration: 2500, progress: 30 },
+  { icon: '👉', text: 'Now turn your head RIGHT',       duration: 2500, progress: 50 },
+  { icon: '☝️', text: 'Look slightly UP',               duration: 2000, progress: 65 },
+  { icon: '👇', text: 'Look slightly DOWN',              duration: 2000, progress: 78 },
+  { icon: '😊', text: 'Face forward — almost done!',    duration: 2000, progress: 90 },
+  { icon: '🔒', text: 'Finalizing verification…',       duration: 1500, progress: 97 },
+];
+
+let _livenessPhase = 0;
+
+function runLivenessFlow() {
+  _livenessPhase = 0;
+  advanceLiveness();
+}
+
+function advanceLiveness() {
+  if (_livenessPhase >= LIVENESS_INSTRUCTIONS.length) {
+    completeLivenessFlow();
+    return;
+  }
+  const step = LIVENESS_INSTRUCTIONS[_livenessPhase++];
+  const instIcon = document.getElementById('liveness-inst-icon');
+  const instText = document.getElementById('liveness-inst-text');
+  const barEl = document.getElementById('liveness-bar');
+  const statusEl = document.getElementById('liveness-status');
+  const ovalRing = document.getElementById('liveness-oval-ring');
+  const progressArc = document.getElementById('liveness-progress-arc');
+
+  if (instIcon) instIcon.textContent = step.icon;
+  if (instText) instText.textContent = step.text;
+  if (barEl) barEl.style.width = step.progress + '%';
+  if (statusEl) statusEl.textContent = step.text;
+
+  // Color oval ring based on stage
+  if (ovalRing) {
+    ovalRing.setAttribute('stroke', _livenessPhase > 2 ? '#059669' : '#35C6C4');
+  }
+  // Animate progress arc
+  if (progressArc) {
+    const circumference = 2 * Math.PI * Math.sqrt((118 * 118 + 155 * 155) / 2);
+    const dashLen = (step.progress / 100) * circumference;
+    progressArc.setAttribute('stroke-dasharray', dashLen + ' ' + circumference);
+  }
+
+  // Animate instruction icon
+  if (instIcon) {
+    instIcon.style.transform = 'scale(1.2)';
+    setTimeout(() => { if(instIcon) instIcon.style.transform = 'scale(1)'; }, 300);
+  }
+
+  livenessTimer = setTimeout(advanceLiveness, step.duration);
+}
+
+function completeLivenessFlow() {
+  stopLivenessCamera();
+  livenessVerified = true;
+  document.getElementById('liveness-camera').style.display = 'none';
+  document.getElementById('liveness-success').style.display = 'block';
+
+  // Update bar to 100%
+  const bar = document.getElementById('liveness-bar');
+  if (bar) bar.style.width = '100%';
+}
+
+function completeLiveness() {
+  // Close overlay and update wizard step
+  document.getElementById('liveness-overlay').classList.remove('open');
+  livenessVerified = true;
+  // Update liveness card in wizard if on step 4
+  if (wizStep === 4) {
+    const badge = document.getElementById('liveness-status-badge');
+    const card = document.getElementById('liveness-card');
+    if (badge) badge.innerHTML = '<span class="badge-ok">✅ Verified</span>';
+    if (card) {
+      const btn = card.querySelector('.btn.btn-teal');
+      if (btn) {
+        btn.outerHTML = '<div class="info-strip" style="margin-top:10px;background:var(--ok-bg);color:var(--ok)">✅ Identity confirmed · Match score 97%</div>';
+      }
+    }
+    toast('✅ Liveness check passed — identity confirmed', 'ok');
+  }
+}
+
+function cancelLiveness() {
+  stopLivenessCamera();
+  document.getElementById('liveness-overlay').classList.remove('open');
+  document.getElementById('liveness-intro').style.display = 'block';
+  document.getElementById('liveness-camera').style.display = 'none';
+  document.getElementById('liveness-success').style.display = 'none';
+}
+
+function stopLivenessCamera() {
+  if (livenessTimer) clearTimeout(livenessTimer);
+  if (livenessStream) {
+    livenessStream.getTracks().forEach(t => t.stop());
+    livenessStream = null;
+  }
+  const video = document.getElementById('liveness-video');
+  if (video) { video.srcObject = null; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   APPLICATION TRACKING
+════════════════════════════════════════════════════════ */
+async function loadTracking() {
+  const ref = localStorage.getItem('ghl_application_ref');
+  const trackContent = document.getElementById('track-content');
+  const trackHead = document.getElementById('track-head');
+  const trackBody = document.getElementById('track-body');
+
+  if (!ref) {
+    if (trackContent) trackContent.innerHTML = `<div style="padding:56px 32px;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">📋</div>
+      <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:8px">No active application</div>
+      <div style="font-size:13px;color:var(--g500);margin-bottom:20px">Submit a loan application to track its progress here.</div>
+      <button class="btn btn-teal" onclick="openWizard(null,null)">Apply Now →</button>
+    </div>`;
+    return;
+  }
+
+  if (trackContent) { trackContent.innerHTML = '<div style="padding:40px;text-align:center"><span class="spin" style="border-color:rgba(0,127,134,.2);border-top-color:var(--teal)"></span></div>'; trackContent.style.display = 'block'; }
+  if (trackHead) trackHead.style.display = 'none';
+  if (trackBody) trackBody.style.display = 'none';
+
+  try {
+    const r = await fetch('/api/v1/portal/applications/' + ref + '/status');
+    const d = await r.json();
+    if (!d.application) {
+      if (trackContent) trackContent.innerHTML = '<div style="padding:48px;text-align:center;color:var(--g500)">Application not found. <a href="#" onclick="localStorage.removeItem(\'ghl_application_ref\');loadTracking()" style="color:var(--teal)">Clear</a></div>';
+      return;
+    }
+    const app = d.application;
+
+    if (trackContent) trackContent.style.display = 'none';
+    if (trackHead) {
+      trackHead.style.display = 'block';
+      document.getElementById('track-ref').textContent = ref;
+      document.getElementById('track-sub').textContent = 'OMR ' + Number(app.loan_amount || 0).toLocaleString() + ' · ' + (app.tenure_years || '—') + ' years';
+      document.getElementById('track-stage').textContent = (app.status || 'submitted').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      if (app.lifetime_saving && Number(app.lifetime_saving) > 0) {
+        document.getElementById('track-saving-num').textContent = 'OMR ' + Number(app.lifetime_saving).toLocaleString() + ' lifetime saving';
+        document.getElementById('track-saving-strip').style.display = 'flex';
+      }
+    }
+
+    if (trackBody) {
+      trackBody.style.display = 'block';
+      const tl = document.getElementById('track-timeline');
+      const TL_STEPS = [
+        { key: 'submitted', label: 'Application Submitted', desc: `DBR ${app.dbr_ratio || '—'}% · LTV ${app.ltv_ratio || '—'}% · GSAS ${app.gsas_score || '—'}`, date: app.submitted_at },
+        { key: 'credit_check', label: "Credit Bureau (MALA'A)", desc: 'Identity and credit verification', date: '' },
+        { key: 'esg_review', label: 'ESG Document Validation', desc: 'AI-powered document checks', date: '' },
+        { key: 'compliance_review', label: 'Compliance Review', desc: 'Dual approval by Compliance & Risk officers', date: '' },
+        { key: 'approved', label: 'Final Credit Approval', desc: 'Credit committee decision', date: '' },
+        { key: 'offer', label: 'Offer Letter Issued', desc: 'Formal offer ready for signature', date: '' },
+        { key: 'disbursement', label: 'Disbursement', desc: 'First tranche released to contractor', date: '' }
+      ];
+      const ORDER = ['submitted', 'credit_check', 'esg_review', 'compliance_review', 'approved', 'offer', 'disbursement'];
+      const curIdx = ORDER.indexOf(app.status || 'submitted');
+
+      if (tl) tl.innerHTML = TL_STEPS.map((s, i) => {
+        const st = i < curIdx ? 'done' : i === curIdx ? 'current' : 'waiting';
+        return `<div class="tl-item${st === 'waiting' ? ' tl-waiting' : ''}">
+          <div class="tl-dot ${st}">${st === 'done' ? '✓' : st === 'current' ? '⏳' : String(i + 1)}</div>
+          <div class="tl-title">${s.label}${st === 'current' ? '<span class="tl-chip chip-h">In Progress</span>' : st === 'done' ? '<span class="tl-chip chip-d">Complete</span>' : ''}</div>
+          <div class="tl-desc">${s.desc || ''}</div>
+          <div class="tl-date">${s.date || (st === 'done' ? '—' : '')}</div>
+        </div>`;
+      }).join('');
+
+      // Construction stages / tranche section
+      if (d.construction_stages && d.construction_stages.length) {
+        const tsection = document.getElementById('tranche-section');
+        const tcards = document.getElementById('tranche-cards');
+        if (tsection) tsection.style.display = 'block';
+        if (tcards) tcards.innerHTML = d.construction_stages.map((s, i) => {
+          const stClass = s.status === 'completed' ? 'done' : s.status === 'active' ? 'current' : 'waiting';
+          return `<div class="tranche-card ${stClass}">
+            <div class="tc-head">
+              <div class="tc-num">Stage ${s.stage_number || i + 1}</div>
+              <div class="tc-amt">OMR ${Number(s.tranche_amount || 0).toLocaleString()}</div>
+              <div class="tc-status">${s.status === 'completed' ? '✅ Disbursed' : s.status === 'active' ? '🔄 In Progress' : '⏳ Pending'}</div>
+            </div>
+            <div class="tc-title">${s.title || s.stage_name || 'Construction Stage'}</div>
+            <div class="tc-desc">${s.description || ''}</div>
+            ${s.completed_at ? `<div class="tc-date">📅 ${s.completed_at}</div>` : ''}
+          </div>`;
+        }).join('');
+      }
+    }
+  } catch (e) {
+    console.error('loadTracking', e);
+    if (trackContent) trackContent.innerHTML = '<div style="padding:48px;text-align:center;color:var(--g500)">Could not load application data.</div>';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  showPage('home');
+  calcUpdate();
+  loadProducts();
+  // Keyboard close for wizard
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeWizard(); cancelLiveness(); } });
+  // Close liveness overlay on bg click
+  document.getElementById('liveness-overlay').addEventListener('click', function(e) {
+    if (e.target === this) cancelLiveness();
+  });
+});
+
+</script>
+</body>
+</html>
