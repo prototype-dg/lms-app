@@ -347,17 +347,17 @@ body.rtl .ps-badge{margin-left:0;margin-right:auto}
 .fs-note{text-align:center;font-size:10px;opacity:.5;margin-top:10px}
 
 /* LIVENESS — Apple Face ID style redesign */
-.liveness-overlay{display:none;position:fixed;inset:0;z-index:700;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.liveness-overlay{display:none;position:fixed;inset:0;z-index:700;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:#000913}
 .liveness-overlay.open{display:flex}
 
-/* Animated particle background */
-.liveness-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 30% 20%,#0a1628 0%,#050d1a 40%,#000913 100%);overflow:hidden}
+/* Animated particle background — z-index:-1 so modal renders above it */
+.liveness-bg{position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at 30% 20%,#0a1628 0%,#050d1a 40%,#000913 100%);overflow:hidden;pointer-events:none}
 .liveness-bg::before{content:'';position:absolute;inset:0;
   background:
-    radial-gradient(circle at 15% 35%,rgba(0,127,134,.18) 0%,transparent 50%),
-    radial-gradient(circle at 85% 20%,rgba(53,198,196,.12) 0%,transparent 45%),
-    radial-gradient(circle at 70% 80%,rgba(0,59,92,.25) 0%,transparent 55%),
-    radial-gradient(circle at 20% 80%,rgba(46,204,113,.08) 0%,transparent 40%);
+    radial-gradient(circle at 15% 35%,rgba(0,127,134,.22) 0%,transparent 50%),
+    radial-gradient(circle at 85% 20%,rgba(53,198,196,.15) 0%,transparent 45%),
+    radial-gradient(circle at 70% 80%,rgba(0,59,92,.30) 0%,transparent 55%),
+    radial-gradient(circle at 20% 80%,rgba(46,204,113,.10) 0%,transparent 40%);
 }
 .liveness-bg-grid{position:absolute;inset:0;background-image:
   linear-gradient(rgba(53,198,196,.04) 1px,transparent 1px),
@@ -370,8 +370,8 @@ body.rtl .ps-badge{margin-left:0;margin-right:auto}
 .liveness-orb.o3{width:160px;height:160px;background:rgba(46,204,113,.08);bottom:30%;left:5%;animation-delay:-7s}
 @keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-30px) scale(1.08)}}
 
-/* Modal card */
-.liveness-modal{position:relative;z-index:1;background:rgba(10,18,35,.92);border:1px solid rgba(53,198,196,.2);border-radius:28px;padding:0;width:100%;max-width:390px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.9),0 0 0 1px rgba(53,198,196,.08),inset 0 1px 0 rgba(255,255,255,.06);margin:auto;backdrop-filter:blur(20px)}
+/* Modal card — z-index:1 lifts above .liveness-bg (z:0) */
+.liveness-modal{position:relative;z-index:1;background:rgba(10,18,35,.94);border:1px solid rgba(53,198,196,.22);border-radius:28px;padding:0;width:100%;max-width:390px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.9),0 0 0 1px rgba(53,198,196,.1),inset 0 1px 0 rgba(255,255,255,.06);margin:auto;backdrop-filter:blur(20px)}
 
 /* Header */
 .liveness-header{padding:18px 22px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.07)}
@@ -575,31 +575,7 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 .ppc-chk{width:22px;height:22px;border-radius:50%;border:2px solid var(--g300);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:var(--transition);margin-top:2px}
 .prod-pick-card.selected .ppc-chk{background:var(--ok);border-color:var(--ok);color:#fff}
 
-/* ══ LIVENESS OVERLAY — Apple FaceID style ══ */
-.liveness-modal{background:#0d1117;border-radius:20px;padding:0;width:100%;max-width:400px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.8);margin:auto}
-.liveness-header{background:#161b22;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08);gap:12px}
-.liveness-header-text{display:flex;flex-direction:column;gap:2px}
-.liveness-camera-wrap{position:relative;background:#000;width:100%;aspect-ratio:3/4;max-height:46vh;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.liveness-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
-.liveness-oval-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.liveness-instruction{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.72);backdrop-filter:blur(8px);color:#fff;font-size:13px;font-weight:600;padding:7px 18px;border-radius:var(--rfull);white-space:nowrap;text-align:center;max-width:90%}
-.liveness-corner{position:absolute;width:20px;height:20px;border-color:#35C6C4;border-style:solid;pointer-events:none}
-.liveness-corner.tl{top:10px;left:10px;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
-.liveness-corner.tr{top:10px;right:10px;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
-.liveness-corner.bl{bottom:10px;left:10px;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
-.liveness-corner.br{bottom:10px;right:10px;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
-.liveness-progress-wrap{padding:12px 20px 6px;background:#0d1117}
-.liveness-bar-track{width:100%;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden}
-.liveness-bar-fill{height:100%;background:linear-gradient(90deg,#35C6C4,#2ECC71);border-radius:3px;transition:width .3s ease}
-.liveness-progress-label{font-size:11px;color:rgba(255,255,255,.45);text-align:center;margin-top:5px}
-.liveness-steps-row{display:flex;justify-content:center;gap:16px;padding:8px 20px 12px;background:#0d1117}
-.lv-step{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:20px;opacity:.35;transition:var(--transition)}
-.lv-step span{font-size:9px;color:rgba(255,255,255,.45);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
-.lv-step.active{opacity:1;transform:scale(1.18)}
-.lv-step.active span{color:#35C6C4}
-.lv-step.done{opacity:.65}
-.lv-step.done span{color:#2ECC71}
-.liveness-footer{display:flex;align-items:center;gap:12px;padding:10px 20px 14px;border-top:1px solid rgba(255,255,255,.08);background:#0d1117}
+/* ══ LIVENESS OVERLAY — duplicate block removed; styles live in LIVENESS section above ══ */
 
 /* ══ PANEL (project slide-up panel) ══ */
 .panel-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400}
@@ -2823,13 +2799,13 @@ function triggerIdValidation(){
    LIVENESS — Apple Face ID style with clock-tick ring
 ══════════════════════════════════════════════════════ */
 const LIVENESS_STEPS = [
-  { instr:'Position your face in the oval',    duration:3500, color:'#35C6C4' },
-  { instr:'Slowly turn your head to the LEFT', duration:4500, color:'#F4B35B' },
-  { instr:'Now turn your head to the RIGHT',   duration:4500, color:'#F4B35B' },
-  { instr:'Look straight ahead — hold still',  duration:3500, color:'#2ECC71' },
+  { instr:'Keep still — scanning your face',       duration:3500, color:'#35C6C4', motion:'none'  },
+  { instr:'Slowly rotate clockwise ↻',             duration:5000, color:'#F4B35B', motion:'right' },
+  { instr:'Continue rotating — keep going ↻',     duration:5000, color:'#F4B35B', motion:'right' },
+  { instr:'Centre your face and hold still',       duration:3000, color:'#2ECC71', motion:'none'  },
 ];
 
-// Build the 48 clock-tick SVG marks around the oval at startup
+// ── Clock-tick ring constants ──
 const TICK_COUNT = 48;
 // Oval params matching SVG viewBox (cx=180 cy=228 rx=118 ry=152)
 const LV_OX=180, LV_OY=228, LV_RX=130, LV_RY=166; // slightly outside the oval
@@ -2838,6 +2814,54 @@ let livenessTickRaf = null;
 let livenessScanRaf = null;
 let livenessScanY   = 76; // scan line Y start (top of oval)
 let livenessScanDir = 1;
+
+// ── Motion detection via canvas pixel-diff ──
+let livenessMotionCanvas = null;
+let livenessMotionCtx    = null;
+let livenessMotionPrev   = null;  // previous frame ImageData
+let livenessMotionRaf    = null;
+let livenessMotionScore  = 0;     // smoothed motion score 0–1
+let livenessMotionAccum  = 0;     // accumulated motion for step gating
+const LV_MOTION_NEEDED   = 120;   // motion-units needed to advance a motion step
+
+function startMotionDetection(){
+  const video = document.getElementById('liveness-video');
+  if(!video) return;
+  if(!livenessMotionCanvas){
+    livenessMotionCanvas = document.createElement('canvas');
+    livenessMotionCanvas.width  = 64; // small for perf
+    livenessMotionCanvas.height = 48;
+    livenessMotionCtx = livenessMotionCanvas.getContext('2d',{willReadFrequently:true});
+  }
+  livenessMotionPrev = null;
+  livenessMotionScore = 0;
+  livenessMotionAccum = 0;
+  function detectFrame(){
+    livenessMotionRaf = requestAnimationFrame(detectFrame);
+    if(!video.videoWidth) return;
+    livenessMotionCtx.drawImage(video,0,0,64,48);
+    const cur = livenessMotionCtx.getImageData(0,0,64,48);
+    if(livenessMotionPrev){
+      let diff=0;
+      for(let i=0;i<cur.data.length;i+=4){
+        diff += Math.abs(cur.data[i]  -livenessMotionPrev.data[i])
+               +Math.abs(cur.data[i+1]-livenessMotionPrev.data[i+1])
+               +Math.abs(cur.data[i+2]-livenessMotionPrev.data[i+2]);
+      }
+      // Normalise: max possible diff per pixel = 3*255, 64*48 pixels
+      const score = Math.min(diff / (64*48*3*255*0.04), 1); // 0.04 = ~4% change = full score
+      livenessMotionScore = livenessMotionScore*0.7 + score*0.3; // smooth
+      livenessMotionAccum += livenessMotionScore;
+    }
+    livenessMotionPrev = cur;
+  }
+  livenessMotionRaf = requestAnimationFrame(detectFrame);
+}
+
+function stopMotionDetection(){
+  cancelAnimationFrame(livenessMotionRaf);
+  livenessMotionRaf = null;
+}
 
 function buildLivenessTicks(){
   const g = document.getElementById('liveness-ticks');
@@ -2945,8 +2969,12 @@ async function startLiveness(){
   try {
     livenessStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:360},height:{ideal:480}}});
     document.getElementById('liveness-video').srcObject=livenessStream;
-    // Brief pause so camera warms up
-    setTimeout(()=>{ startScanLine(); runLivenessStep(0); }, 600);
+    // Warm-up then start
+    setTimeout(()=>{
+      startScanLine();
+      startMotionDetection();
+      runLivenessStep(0);
+    }, 700);
   } catch(e) {
     overlay.style.display='none';
     toast('Camera access denied — liveness check skipped','err');
@@ -2957,6 +2985,7 @@ async function startLiveness(){
 
 function runLivenessStep(idx){
   if(idx>=LIVENESS_STEPS.length){ finishLiveness(); return; }
+  clearInterval(livenessTimer);
   const s=LIVENESS_STEPS[idx];
   const instr=document.getElementById('liveness-instr');
   if(instr) instr.textContent=s.instr;
@@ -2967,45 +2996,70 @@ function runLivenessStep(idx){
     if(el) el.className='lv-step'+(i<idx?' done':i===idx?' active':'');
   });
 
-  // Ticks: each step fills its share of the 48 ticks
   const tickStart = Math.round((idx/LIVENESS_STEPS.length)*TICK_COUNT);
   const tickEnd   = Math.round(((idx+1)/LIVENESS_STEPS.length)*TICK_COUNT);
-
-  // Animate progress bar
-  const barStart=(idx/LIVENESS_STEPS.length)*100;
-  const barEnd  =((idx+1)/LIVENESS_STEPS.length)*100;
+  const barStart  = (idx/LIVENESS_STEPS.length)*100;
+  const barEnd    = ((idx+1)/LIVENESS_STEPS.length)*100;
   const bar=document.getElementById('liveness-bar-fill');
   const lbl=document.getElementById('liveness-progress-label');
-  let elapsed=0; const interval=50;
+  const needsMotion = s.motion && s.motion!=='none';
+
+  // Reset motion accumulator for this step
+  livenessMotionAccum = 0;
+  let elapsed=0; const interval=80;
+
   livenessTimer=setInterval(()=>{
     elapsed+=interval;
-    const t=Math.min(elapsed/s.duration,1);
-    if(bar) bar.style.width=(barStart+(barEnd-barStart)*t)+'%';
+
+    // Progress driver:
+    // • Motion steps (head-turn): driven by detected movement, capped at deadline
+    // • Still steps (center/hold): purely time-driven
+    let t;
+    if(needsMotion){
+      // Motion contribution: how much movement collected vs needed
+      const motionT = Math.min(livenessMotionAccum / LV_MOTION_NEEDED, 1);
+      // Time safety net: if user barely moves, still advance by 60% of the deadline
+      const timeT = elapsed / (s.duration * 1.6);
+      t = Math.min(Math.max(motionT, timeT * 0.6), 1);
+    } else {
+      t = Math.min(elapsed / s.duration, 1);
+    }
+
+    // Update progress bar
+    const pct = barStart+(barEnd-barStart)*t;
+    if(bar) bar.style.width=pct+'%';
     if(lbl) lbl.textContent=`STEP ${idx+1} OF ${LIVENESS_STEPS.length} — ${Math.round(t*100)}%`;
-    if(elapsed>=s.duration){
+
+    // Drive ticks in real-time based on t
+    const targetTicks = Math.round(tickStart + (tickEnd-tickStart)*t);
+    if(targetTicks!==livenessTicksFilled){
+      livenessTicksFilled=targetTicks;
+      setLivenessTicks(targetTicks, s.color);
+    }
+
+    // Advance when t reaches 1 (motion satisfied OR deadline passed)
+    if(t>=1){
       clearInterval(livenessTimer);
       runLivenessStep(idx+1);
     }
   },interval);
-
-  // Animate the clock ticks for this step, chase from tickStart→tickEnd
-  animateLivenessTicks(tickEnd, s.color, s.duration*0.95);
 }
 
 function finishLiveness(){
+  clearInterval(livenessTimer);
   stopScanLine();
+  stopMotionDetection();
   const bar=document.getElementById('liveness-bar-fill');
   const lbl=document.getElementById('liveness-progress-label');
   const instr=document.getElementById('liveness-instr');
   if(bar) bar.style.width='100%';
   if(lbl) lbl.textContent='SCAN COMPLETE';
   if(instr){ instr.textContent='✅ Identity verified!'; instr.style.background='rgba(22,132,91,.85)'; }
-  // Fill all ticks green
-  animateLivenessTicks(TICK_COUNT,'#2ECC71',600,()=>{
-    LIVENESS_STEPS.forEach((_,i)=>{
-      const el=document.getElementById('lvs-'+i);
-      if(el) el.className='lv-step done';
-    });
+  // Burst all remaining ticks to green instantly
+  setLivenessTicks(TICK_COUNT,'#2ECC71');
+  LIVENESS_STEPS.forEach((_,i)=>{
+    const el=document.getElementById('lvs-'+i);
+    if(el) el.className='lv-step done';
   });
   setTimeout(()=>{
     cancelLiveness();
@@ -3029,6 +3083,7 @@ function cancelLiveness(){
   clearInterval(livenessTimer);
   cancelAnimationFrame(livenessTickRaf);
   stopScanLine();
+  stopMotionDetection();
   if(livenessStream){ livenessStream.getTracks().forEach(t=>t.stop()); livenessStream=null; }
   const overlay=document.getElementById('liveness-overlay');
   if(overlay) overlay.style.display='none';
@@ -3188,9 +3243,11 @@ async function runOCR(input){
     if(actionLbl) actionLbl.textContent='✅ OCR complete (demo)';
     setTimeout(()=>{ if(progArea) progArea.style.display='none'; },600);
     applyOCRResults({
-      employer:'Oman Oil Company SAOC',
-      basic_salary:3400,
-      housing_allowance:850,
+      employer:'Oman Oil Company S.A.O.C',
+      basic_salary:'3700',
+      housing_allowance:'925',
+      car_rental_allowance:'350',
+      transport_allowance:'150',
       employment_type:'government',
       employment_start_date:'2016-04-01'
     });

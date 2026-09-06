@@ -336,22 +336,57 @@ app.post('/ocr', async (c) => {
   }
 
   try {
-    const resp = await fetch(
-      `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requests: [{
-            image: { content: image_base64 },
-            features: [{ type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }]
-          }]
-        })
+    // Vision API: PDFs must use files:annotate (v1p4beta1); images use images:annotate.
+    // Detect by MIME type and route accordingly so both PDF uploads and photo uploads work.
+    const isPDF = (mime_type || '').toLowerCase().includes('pdf')
+
+    let fullText = ''
+
+    if (isPDF) {
+      // ── PDF path: files:annotate (synchronous, inline content, max ~20MB) ──
+      const resp = await fetch(
+        `https://vision.googleapis.com/v1p4beta1/files:annotate?key=${VISION_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requests: [{
+              inputConfig: { content: image_base64, mimeType: 'application/pdf' },
+              features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+              pages: [1]   // first page only — salary cert is 1 page
+            }]
+          })
+        }
+      )
+      const vdata = await resp.json() as any
+      // files:annotate response: responses[0].responses[0].fullTextAnnotation.text
+      const inner = vdata?.responses?.[0]?.responses?.[0]
+      fullText = inner?.fullTextAnnotation?.text || ''
+      if (!fullText) {
+        // Fallback: try to join all page texts
+        const pages = vdata?.responses?.[0]?.responses || []
+        fullText = pages.map((p: any) => p?.fullTextAnnotation?.text || '').join('\n')
       }
-    )
-    const vdata = await resp.json() as any
-    const fullText: string = vdata?.responses?.[0]?.fullTextAnnotation?.text || ''
-    if (!fullText) return c.json({ success: false, error: 'No text extracted', extracted: {} }, 422)
+    } else {
+      // ── Image path: images:annotate ──
+      const resp = await fetch(
+        `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requests: [{
+              image: { content: image_base64 },
+              features: [{ type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }]
+            }]
+          })
+        }
+      )
+      const vdata = await resp.json() as any
+      fullText = vdata?.responses?.[0]?.fullTextAnnotation?.text || ''
+    }
+
+    if (!fullText) return c.json({ success: false, error: 'No text extracted from document', extracted: {} }, 422)
 
     const extracted: Record<string, any> = {}
     const lines = fullText.split('\n').map((l: string) => l.trim()).filter(Boolean)
