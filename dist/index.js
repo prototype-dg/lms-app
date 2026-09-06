@@ -4789,7 +4789,7 @@ q.get("/products", async (e) => {
 		premium_tier: i >= (o.gsas_premium_score || 85)
 	});
 }), q.get("/projects", async (e) => {
-	let { results: t } = await e.env.DB.prepare("SELECT p.id, p.name, p.code, p.location, p.governorate, p.type,\n     p.total_units, p.available_units, p.reserved_units, p.sold_units,\n     p.gsas_score, p.gsas_rating, p.epc_rating, p.status, p.green_eligible,\n     p.premium_tier, p.geo_json, p.hero_image_url, p.is_demo_project,\n     p.listing_visible, p.marketing_tagline, p.price_from, p.price_to,\n     p.completion_date, p.amenities, p.created_at,\n     d.company_name as developer_name\n     FROM projects p\n     LEFT JOIN developers d ON p.developer_id = d.id\n     WHERE p.listing_visible = 1 AND p.status = 'active'\n     ORDER BY p.is_demo_project DESC, p.premium_tier DESC, p.created_at DESC").all();
+	let { results: t } = await e.env.DB.prepare("SELECT p.id, p.name, p.code, p.location, p.governorate, p.type,\n     p.total_units, p.available_units, p.reserved_units, p.sold_units,\n     p.gsas_score, p.gsas_rating, p.epc_rating, p.status, p.green_eligible,\n     p.premium_tier, p.geo_json, p.hero_image_url, p.is_demo_project,\n     p.listing_visible, p.marketing_tagline, p.price_from, p.price_to,\n     p.completion_date, p.amenities, p.created_at,\n     d.company_name as developer_name,\n     (SELECT MIN(u.gsas_score) FROM units u WHERE u.project_id = p.id AND u.gsas_score IS NOT NULL AND u.gsas_score > 0) as unit_gsas_min,\n     (SELECT MAX(u.gsas_score) FROM units u WHERE u.project_id = p.id AND u.gsas_score IS NOT NULL AND u.gsas_score > 0) as unit_gsas_max\n     FROM projects p\n     LEFT JOIN developers d ON p.developer_id = d.id\n     WHERE p.listing_visible = 1 AND p.status = 'active'\n     ORDER BY p.is_demo_project DESC, p.premium_tier DESC, p.created_at DESC").all();
 	return e.json({
 		projects: t,
 		total: t.length
@@ -4958,10 +4958,14 @@ q.get("/products", async (e) => {
 		created_at: n.created_at
 	});
 }), q.post("/ocr", async (e) => {
-	let { image_base64: t, doc_type: n } = await e.req.json().catch(() => ({}));
+	let { image_base64: t, mime_type: n } = await e.req.json().catch(() => ({}));
 	if (!t) return e.json({ error: "image_base64 required" }, 400);
+	let r = (e) => {
+		let t = e.match(/[\d,]+\.\d{3}|[\d,]+\.\d{1,2}|[\d,]{3,}/);
+		return t ? t[0].replace(/,/g, "") : null;
+	};
 	try {
-		let r = (await (await fetch("https://vision.googleapis.com/v1/images:annotate?key=AIzaSyBqQ4THcUG8wpRZbB2olfZqvR9mI1e-88E", {
+		let n = (await (await fetch("https://vision.googleapis.com/v1/images:annotate?key=AIzaSyBqQ4THcUG8wpRZbB2olfZqvR9mI1e-88E", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ requests: [{
@@ -4971,28 +4975,63 @@ q.get("/products", async (e) => {
 					maxResults: 1
 				}]
 			}] })
-		})).json())?.responses?.[0]?.fullTextAnnotation?.text || "", i = {}, a = r.split("\n").map((e) => e.trim()).filter(Boolean);
-		if (n === "salary_cert" || n === "hr_letter") for (let e of a) {
-			let t = e.toLowerCase();
-			if (!i.employer && (t.includes("company") || t.includes("employer") || t.includes("organisation")) && (i.employer = e.replace(/^[^:]+:\s*/, "").trim() || e), !i.basic_salary && (t.includes("basic") || t.includes("salary") || t.includes("راتب"))) {
-				let t = e.match(/[\d,]+(?:\.\d+)?/);
-				t && (i.basic_salary = t[0].replace(/,/g, ""));
+		})).json())?.responses?.[0]?.fullTextAnnotation?.text || "";
+		if (!n) return e.json({
+			success: !1,
+			error: "No text extracted",
+			extracted: {}
+		}, 422);
+		let i = {}, a = n.split("\n").map((e) => e.trim()).filter(Boolean);
+		for (let e = 0; e < a.length; e++) {
+			let t = a[e], n = t.toLowerCase();
+			if ((a[e + 1] || "").toLowerCase(), i.employer || (n.includes("company s.a.o.c") || n.includes("company saoc") || n.includes("oman oil") ? i.employer = t.replace(/\s+cr.*$/i, "").replace(/\s+tel.*$/i, "").trim() : (n.includes("employer") || n.includes("company name")) && n.includes(":") && (i.employer = t.split(":").slice(1).join(":").trim())), i.employment_type || (n.includes("government") || n.includes("civil service") ? i.employment_type = "government" : n.includes("private sector") || n.includes("private company") ? i.employment_type = "private" : (n.includes("self-employed") || n.includes("self employed")) && (i.employment_type = "self_employed")), !i.employment_start_date && (n.includes("since") || n.includes("start") || n.includes("employed") || n.includes("april") || n.includes("joined"))) {
+				let e = t.match(/\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i) || t.match(/\d{4}-\d{2}-\d{2}/) || t.match(/\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/);
+				if (e) {
+					let t = e[0], n = {
+						january: "01",
+						february: "02",
+						march: "03",
+						april: "04",
+						may: "05",
+						june: "06",
+						july: "07",
+						august: "08",
+						september: "09",
+						october: "10",
+						november: "11",
+						december: "12"
+					}, r = t.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/i);
+					if (r) {
+						let e = n[r[2].toLowerCase()] || "01";
+						i.employment_start_date = `${r[3]}-${e}-${r[1].padStart(2, "0")}`;
+					} else i.employment_start_date = t;
+				}
 			}
-			if (!i.housing && (t.includes("housing") || t.includes("house") || t.includes("سكن"))) {
-				let t = e.match(/[\d,]+(?:\.\d+)?/);
-				t && (i.housing_allowance = t[0].replace(/,/g, ""));
+			if (!i.basic_salary && (n.includes("basic salary") || n.includes("basic") && n.includes("salary"))) {
+				let n = r(t) || r(a[e + 1] || "");
+				n && parseFloat(n) > 100 && parseFloat(n) < 5e4 && (i.basic_salary = n);
 			}
-			if (!i.start_date && (t.includes("join") || t.includes("start") || t.includes("appointed") || t.includes("تعيين"))) {
-				let t = e.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-]\d{2}[\/\-]\d{2}/);
-				t && (i.employment_start_date = t[0]);
+			if (!i.housing_allowance && (n.includes("housing allowance") || n.includes("house allowance"))) {
+				let n = r(t) || r(a[e + 1] || "");
+				n && parseFloat(n) > 0 && (i.housing_allowance = n);
 			}
-			!i.employment_type && (t.includes("permanent") || t.includes("contract") || t.includes("دائم")) && (i.employment_type = t.includes("permanent") ? "Government" : "Private Sector");
+			if (!i.transport_allowance && (n.includes("transport allowance") || n.includes("transportation allowance"))) {
+				let n = r(t) || r(a[e + 1] || "");
+				n && parseFloat(n) > 0 && (i.transport_allowance = n);
+			}
+			if (!i.car_rental_allowance && (n.includes("car rental") || n.includes("vehicle allowance") || n.includes("car allowance"))) {
+				let n = r(t) || r(a[e + 1] || "");
+				n && parseFloat(n) > 0 && (i.car_rental_allowance = n);
+			}
+			if (!i.net_salary && n.includes("net") && (n.includes("salary") || n.includes("monthly"))) {
+				let n = r(t) || r(a[e + 1] || "");
+				n && parseFloat(n) > 100 && (i.net_salary = n);
+			}
 		}
 		return e.json({
 			success: !0,
-			full_text: r,
-			extracted: i,
-			doc_type: n
+			full_text: n,
+			extracted: i
 		});
 	} catch (t) {
 		return e.json({
@@ -5789,7 +5828,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await I.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "e31a021";
+var at = "140a05c";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

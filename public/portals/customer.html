@@ -2823,15 +2823,19 @@ function stepIncome(){
       </div>
       <div class="fg">
         <label class="fl">Basic Salary (OMR)</label>
-        <input class="fc" id="inc-basic" value="${sal}" oninput="recalcDBR()"/>
+        <input class="fc" id="inc-basic" value="${sal}" oninput="recalcIncTotal()"/>
       </div>
       <div class="fg">
         <label class="fl">Housing Allowance (OMR)</label>
-        <input class="fc" id="inc-housing" value="${Math.round(sal*0.25)}"/>
+        <input class="fc" id="inc-housing" value="${Math.round(sal*0.25)}" oninput="recalcIncTotal()"/>
       </div>
       <div class="fg">
         <label class="fl">Transport Allowance (OMR)</label>
-        <input class="fc" id="inc-transport" value="150"/>
+        <input class="fc" id="inc-transport" value="150" oninput="recalcIncTotal()"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Car Rental Allowance (OMR)</label>
+        <input class="fc" id="inc-car-rental" value="0" oninput="recalcIncTotal()"/>
       </div>
       <div class="fg">
         <label class="fl">Total Income (OMR)</label>
