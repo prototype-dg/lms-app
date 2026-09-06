@@ -1500,19 +1500,36 @@ async function initPropMap(){
           });
         };
 
-        const rectLabel = `<b style="cursor:pointer" onclick="(function(){var b=propMapProjectBounds['${proj.id}'];if(b)propMap.flyToBounds(b,{padding:[30,30],maxZoom:19,duration:0.75});})()">${isDemo?'🌿 ':''}${proj.name}</b>`;
+        // Rectangle outline — non-interactive fill so unit marker clicks are never blocked
         const rect = L.rectangle(projBounds,
           {color:pcol,weight:2.5,fillColor:pcol,fillOpacity:0.08,dashArray:'6,4',interactive:true}
-        ).addTo(propMap)
-         .bindTooltip(rectLabel,{permanent:true,direction:'center',opacity:0.95,className:'proj-tooltip'});
-
-        // Clicks on the rectangle body AND on the tooltip label both zoom in
+        ).addTo(propMap);
         rect.on('click', flyToProj);
-        // Also make the tooltip element itself forward clicks to flyToProj
-        rect.on('tooltipopen', () => {
-          const tooltipEl = rect.getTooltip()?.getElement();
-          if(tooltipEl) tooltipEl.addEventListener('click', flyToProj);
+
+        // Label marker at rectangle centre — always clickable, no tooltip pointer-event issues
+        const centre = projBounds.getCenter();
+        const labelIcon = L.divIcon({
+          className: '',
+          html: `<div onclick="(function(){var b=propMapProjectBounds['${proj.id}'];if(b&&propMap)propMap.flyToBounds(b,{padding:[30,30],maxZoom:19,duration:0.75});})()" style="
+            transform:translate(-50%,-50%);
+            background:#fff;
+            border:1.5px solid ${pcol};
+            border-radius:6px;
+            padding:4px 10px;
+            font-size:12px;
+            font-weight:700;
+            color:#003B5C;
+            white-space:nowrap;
+            cursor:pointer;
+            box-shadow:0 2px 6px rgba(0,0,0,.18);
+            user-select:none;
+            pointer-events:auto;
+          ">${isDemo?'🌿 ':''}${proj.name}<br><span style="font-size:10px;font-weight:400;color:#007F86">Click to zoom in</span></div>`,
+          iconSize:   [0, 0],
+          iconAnchor: [0, 0],
         });
+        const labelMarker = L.marker(centre, {icon:labelIcon, interactive:true, zIndexOffset:500}).addTo(propMap);
+        labelMarker.on('click', flyToProj);
       }
 
       units.forEach(u=>{
