@@ -1402,7 +1402,10 @@ function renderProjectList(){
                'linear-gradient(135deg,#2d5016,#6aaa2a)','linear-gradient(135deg,#003B5C,#35C6C4)'];
   wrap.innerHTML=`<div class="prop-grid">
     ${allProjects.map((p,i)=>{
-      const gsas = p.gsas_overall_score||p.gsas_score||(p.premium_tier?92:p.green_eligible?75:0);
+      const uMin  = p.unit_gsas_min||0;
+      const uMax  = p.unit_gsas_max||0;
+      const gsas  = uMax || p.gsas_overall_score || p.gsas_score || (p.premium_tier?92:p.green_eligible?75:0);
+      const gsasLabel = (uMin && uMax && uMin!==uMax) ? `${uMin}–${uMax}` : (gsas||null);
       const rate = gsas>=85?'4.75':gsas>=70?'5.00':'5.25';
       const isEco     = p.is_demo_project===1||p.is_demo_project===true;
       const priceFrom = p.price_from?'OMR '+Number(p.price_from).toLocaleString():'Price TBC';
@@ -1427,13 +1430,13 @@ function renderProjectList(){
             <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:5px">${priceFrom}${priceTo?' \u2013 '+priceTo:''}</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
               <span class="tag">&#127968; ${p.total_units||0} units</span>
-              ${gsas?`<span class="tag">GSAS ${gsas}</span>`:''}
+              ${gsasLabel?`<span class="tag">GSAS ${gsasLabel}</span>`:''}
               ${p.epc_rating?`<span class="tag">EPC ${p.epc_rating}</span>`:''}
               <span class="tag" style="color:${isEco?'#16845B':'var(--teal)'};font-weight:700">${rate}% p.a.</span>
             </div>
           </div>
           <div class="prop-foot">
-            <span class="gsas-badge">GSAS ${gsas||'\u2014'}</span>
+            <span class="gsas-badge">GSAS ${gsasLabel||'\u2014'}</span>
             <span class="rate-badge" style="${isEco?'background:rgba(22,132,91,.12);color:#16845B':''}">${rate}% p.a.</span>
           </div>
           <div style="display:flex;gap:6px;margin-top:10px">
@@ -2866,17 +2869,19 @@ function stepIncome(){
     </div>`;
 }
 
+function recalcIncTotal(){
+  const b=parseFloat(document.getElementById('inc-basic')?.value||0);
+  const h=parseFloat(document.getElementById('inc-housing')?.value||0);
+  const t=parseFloat(document.getElementById('inc-transport')?.value||0);
+  const cr=parseFloat(document.getElementById('inc-car-rental')?.value||0);
+  const tot=document.getElementById('inc-total');
+  if(tot) tot.value=(b+h+t+cr).toFixed(0);
+  recalcDBR();
+}
 function prefillIncome(){
   recalcDBR();
-  document.querySelectorAll('#inc-basic,#inc-housing,#inc-transport').forEach(el=>{
-    el.addEventListener('input',()=>{
-      const b=parseFloat(document.getElementById('inc-basic')?.value||0);
-      const h=parseFloat(document.getElementById('inc-housing')?.value||0);
-      const t=parseFloat(document.getElementById('inc-transport')?.value||0);
-      const tot=document.getElementById('inc-total');
-      if(tot) tot.value=(b+h+t).toFixed(0);
-      recalcDBR();
-    });
+  document.querySelectorAll('#inc-basic,#inc-housing,#inc-transport,#inc-car-rental').forEach(el=>{
+    el.addEventListener('input', recalcIncTotal);
   });
 }
 
@@ -2923,14 +2928,16 @@ async function runOCR(input){
     const resp = await fetch('/api/v1/portal/ocr',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image_base64:b64, mime_type:file.type})
+      body:JSON.stringify({image_base64:b64, mime_type:file.type, doc_type:'salary_cert'})
     });
+    if(!resp.ok) throw new Error('OCR API error '+resp.status);
     const data = await resp.json();
+    if(!data.success) throw new Error(data.error||'OCR failed');
     if(bar) bar.style.width='100%';
     if(pctLbl) pctLbl.textContent='100%';
-    if(actionLbl) actionLbl.textContent='✅ OCR complete';
+    if(actionLbl) actionLbl.textContent='\u2705 OCR complete';
     setTimeout(()=>{ if(progArea) progArea.style.display='none'; },800);
-    applyOCRResults(data);
+    applyOCRResults(data.extracted||{});
   } catch(e) {
     // Fallback: simulate OCR results for demo
     if(bar) bar.style.width='100%';
@@ -2957,24 +2964,31 @@ function fileToBase64(file){
 
 function applyOCRResults(data){
   let changed=0;
-  const glow = el=>{ el.classList.add('fc-glow'); setTimeout(()=>el.classList.remove('fc-glow'),3000); };
-  const set=(id,val)=>{
-    if(!val) return;
-    const el=document.getElementById(id);
-    if(el && String(el.value)!==String(val)){ el.value=val; glow(el); changed++; }
+  const glow = el=>{
+    el.classList.remove('fc-glow');
+    void el.offsetWidth; // reflow to restart animation
+    el.classList.add('fc-glow');
+    setTimeout(()=>el.classList.remove('fc-glow'),1500);
   };
-  set('inc-employer',   data.employer);
-  set('inc-basic',      data.basic_salary);
-  set('inc-housing',    data.housing_allowance);
-  set('inc-startdate',  data.employment_start_date);
-  set('inc-emptype',    data.employment_type);
-  if(data.basic_salary){
-    const b=parseFloat(data.basic_salary)||0;
-    const h=parseFloat(data.housing_allowance||0);
-    const t=parseFloat(document.getElementById('inc-transport')?.value||150);
-    const tot=document.getElementById('inc-total');
-    if(tot){ tot.value=(b+h+t).toFixed(0); glow(tot); }
-  }
+  const set=(id,val)=>{
+    if(val===null||val===undefined||val==='') return;
+    const el=document.getElementById(id);
+    if(el && String(el.value).trim()!==String(val).trim()){ el.value=val; glow(el); changed++; }
+  };
+  set('inc-employer',     data.employer);
+  set('inc-basic',        data.basic_salary);
+  set('inc-housing',      data.housing_allowance);
+  set('inc-transport',    data.transport_allowance);
+  set('inc-car-rental',   data.car_rental_allowance);
+  set('inc-startdate',    data.employment_start_date);
+  set('inc-emptype',      data.employment_type);
+  // Recalc total from all allowance fields
+  const b=parseFloat(document.getElementById('inc-basic')?.value||0);
+  const h=parseFloat(document.getElementById('inc-housing')?.value||0);
+  const t=parseFloat(document.getElementById('inc-transport')?.value||0);
+  const cr=parseFloat(document.getElementById('inc-car-rental')?.value||0);
+  const tot=document.getElementById('inc-total');
+  if(tot){ const newTotal=(b+h+t+cr).toFixed(0); if(tot.value!==newTotal){tot.value=newTotal;glow(tot);} }
   const strip=document.getElementById('ocr-result-strip');
   const fld=document.getElementById('ocr-fields-changed');
   if(fld) fld.textContent=changed;

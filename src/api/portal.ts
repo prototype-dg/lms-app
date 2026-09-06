@@ -108,7 +108,9 @@ app.get('/projects', async (c) => {
      p.premium_tier, p.geo_json, p.hero_image_url, p.is_demo_project,
      p.listing_visible, p.marketing_tagline, p.price_from, p.price_to,
      p.completion_date, p.amenities, p.created_at,
-     d.company_name as developer_name
+     d.company_name as developer_name,
+     (SELECT MIN(u.gsas_score) FROM units u WHERE u.project_id = p.id AND u.gsas_score IS NOT NULL AND u.gsas_score > 0) as unit_gsas_min,
+     (SELECT MAX(u.gsas_score) FROM units u WHERE u.project_id = p.id AND u.gsas_score IS NOT NULL AND u.gsas_score > 0) as unit_gsas_max
      FROM projects p
      LEFT JOIN developers d ON p.developer_id = d.id
      WHERE p.listing_visible = 1 AND p.status = 'active'
@@ -302,10 +304,17 @@ app.get('/applications/:ref/status', async (c) => {
 // ── Consumer Portal: OCR proxy (Google Vision — keeps API key server-side) ──
 app.post('/ocr', async (c) => {
   const body = await c.req.json().catch(() => ({})) as any
-  const { image_base64, doc_type } = body
+  const { image_base64, mime_type } = body
   if (!image_base64) return c.json({ error: 'image_base64 required' }, 400)
 
   const VISION_KEY = 'AIzaSyBqQ4THcUG8wpRZbB2olfZqvR9mI1e-88E'
+
+  // Helper: extract first number from a line
+  const firstNum = (line: string): string | null => {
+    const m = line.match(/[\d,]+\.\d{3}|[\d,]+\.\d{1,2}|[\d,]{3,}/)
+    return m ? m[0].replace(/,/g, '') : null
+  }
+
   try {
     const resp = await fetch(
       `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`,
@@ -322,37 +331,78 @@ app.post('/ocr', async (c) => {
     )
     const vdata = await resp.json() as any
     const fullText: string = vdata?.responses?.[0]?.fullTextAnnotation?.text || ''
+    if (!fullText) return c.json({ success: false, error: 'No text extracted', extracted: {} }, 422)
 
-    // Parse structured fields from OCR text based on doc_type
-    const extracted: Record<string, string> = {}
+    const extracted: Record<string, any> = {}
     const lines = fullText.split('\n').map((l: string) => l.trim()).filter(Boolean)
 
-    if (doc_type === 'salary_cert' || doc_type === 'hr_letter') {
-      // Try to extract salary-related fields
-      for (const line of lines) {
-        const ll = line.toLowerCase()
-        if (!extracted.employer && (ll.includes('company') || ll.includes('employer') || ll.includes('organisation'))) {
-          extracted.employer = line.replace(/^[^:]+:\s*/,'').trim() || line
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      const ll   = line.toLowerCase()
+      const next = (lines[i+1] || '').toLowerCase()
+
+      // ── Employer name: look for org name line after letterhead keywords ──
+      if (!extracted.employer) {
+        if (ll.includes('company s.a.o.c') || ll.includes('company saoc') || ll.includes('oman oil')) {
+          // grab the whole company name, strip trailing registry numbers
+          extracted.employer = line.replace(/\s+cr.*$/i,'').replace(/\s+tel.*$/i,'').trim()
+        } else if ((ll.includes('employer') || ll.includes('company name')) && ll.includes(':')) {
+          extracted.employer = line.split(':').slice(1).join(':').trim()
         }
-        if (!extracted.basic_salary && (ll.includes('basic') || ll.includes('salary') || ll.includes('راتب'))) {
-          const m = line.match(/[\d,]+(?:\.\d+)?/)
-          if (m) extracted.basic_salary = m[0].replace(/,/g,'')
+      }
+
+      // ── Employment type ──
+      if (!extracted.employment_type) {
+        if (ll.includes('government') || ll.includes('civil service')) extracted.employment_type = 'government'
+        else if (ll.includes('private sector') || ll.includes('private company')) extracted.employment_type = 'private'
+        else if (ll.includes('self-employed') || ll.includes('self employed')) extracted.employment_type = 'self_employed'
+      }
+
+      // ── Employment start date ──
+      if (!extracted.employment_start_date) {
+        if (ll.includes('since') || ll.includes('start') || ll.includes('employed') || ll.includes('april') || ll.includes('joined')) {
+          const dm = line.match(/\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i)
+               || line.match(/\d{4}-\d{2}-\d{2}/)
+               || line.match(/\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/)
+          if (dm) {
+            // normalise to YYYY-MM-DD
+            const raw = dm[0]
+            const months: Record<string,string> = {january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'}
+            const wp = raw.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/i)
+            if (wp) {
+              const mm = months[wp[2].toLowerCase()] || '01'
+              extracted.employment_start_date = `${wp[3]}-${mm}-${wp[1].padStart(2,'0')}`
+            } else {
+              extracted.employment_start_date = raw
+            }
+          }
         }
-        if (!extracted.housing && (ll.includes('housing') || ll.includes('house') || ll.includes('سكن'))) {
-          const m = line.match(/[\d,]+(?:\.\d+)?/)
-          if (m) extracted.housing_allowance = m[0].replace(/,/g,'')
-        }
-        if (!extracted.start_date && (ll.includes('join') || ll.includes('start') || ll.includes('appointed') || ll.includes('تعيين'))) {
-          const m = line.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-]\d{2}[\/\-]\d{2}/)
-          if (m) extracted.employment_start_date = m[0]
-        }
-        if (!extracted.employment_type && (ll.includes('permanent') || ll.includes('contract') || ll.includes('دائم'))) {
-          extracted.employment_type = ll.includes('permanent') ? 'Government' : 'Private Sector'
-        }
+      }
+
+      // ── Salary fields — match label then grab number from same or next line ──
+      if (!extracted.basic_salary && (ll.includes('basic salary') || (ll.includes('basic') && ll.includes('salary')))) {
+        const n = firstNum(line) || firstNum(lines[i+1] || '')
+        if (n && parseFloat(n) > 100 && parseFloat(n) < 50000) extracted.basic_salary = n
+      }
+      if (!extracted.housing_allowance && (ll.includes('housing allowance') || ll.includes('house allowance'))) {
+        const n = firstNum(line) || firstNum(lines[i+1] || '')
+        if (n && parseFloat(n) > 0) extracted.housing_allowance = n
+      }
+      if (!extracted.transport_allowance && (ll.includes('transport allowance') || ll.includes('transportation allowance'))) {
+        const n = firstNum(line) || firstNum(lines[i+1] || '')
+        if (n && parseFloat(n) > 0) extracted.transport_allowance = n
+      }
+      if (!extracted.car_rental_allowance && (ll.includes('car rental') || ll.includes('vehicle allowance') || ll.includes('car allowance'))) {
+        const n = firstNum(line) || firstNum(lines[i+1] || '')
+        if (n && parseFloat(n) > 0) extracted.car_rental_allowance = n
+      }
+      if (!extracted.net_salary && (ll.includes('net') && (ll.includes('salary') || ll.includes('monthly')))) {
+        const n = firstNum(line) || firstNum(lines[i+1] || '')
+        if (n && parseFloat(n) > 100) extracted.net_salary = n
       }
     }
 
-    return c.json({ success: true, full_text: fullText, extracted, doc_type })
+    return c.json({ success: true, full_text: fullText, extracted })
   } catch (e: any) {
     return c.json({ success: false, error: e.message, extracted: {} }, 500)
   }
