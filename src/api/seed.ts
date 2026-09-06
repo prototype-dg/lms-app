@@ -272,6 +272,25 @@ app.post('/run', async (c) => {
   }
 })
 
+// ── Purge user-created applications only ─────────────────────────────────
+// Deletes all applications except the two seed records (app001, app002),
+// plus their child construction_stages and documents. Products/projects untouched.
+app.post('/purge-applications', async (c) => {
+  const db = c.env.DB
+  try {
+    await db.prepare("PRAGMA foreign_keys = OFF").run()
+    await db.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run()
+    await db.prepare("DELETE FROM documents WHERE entity_type='application' AND entity_id NOT IN ('app001','app002')").run()
+    await db.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run()
+    await db.prepare("PRAGMA foreign_keys = ON").run()
+    const { results } = await db.prepare("SELECT id, reference, customer_name FROM applications ORDER BY created_at").all() as any
+    return c.json({ success: true, remaining_applications: results })
+  } catch(e: any) {
+    await db.prepare("PRAGMA foreign_keys = ON").run()
+    return c.json({ success: false, error: e.message }, 500)
+  }
+})
+
 // ── Demo reset endpoint ───────────────────────────────────────────────────
 // Full hard-reset: returns DB to the exact pre-presentation template state.
 // All user-created products, applications, threads, and live data are purged.
