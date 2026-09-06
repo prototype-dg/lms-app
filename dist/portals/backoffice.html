@@ -3213,11 +3213,11 @@ function renderRiskPanel(comp, appData) {
 }
 
 async function approveRisk(appId) {
-  await fetch(`/api/v1/compliance/${appId}/approve-esg`, {
+  await fetch(`/api/v1/compliance/${appId}/approve-risk`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ user_id:'u003', user_name:'Omar Al-Mantheri', notes:'Credit risk assessment complete. Stress test passed. Collateral adequate. Recommend approval.' })
   });
-  toast('Credit Risk Approved. Application forwarded for final sign-off.','success');
+  toast('Credit Risk Approved. Application status updated to Approved.','success');
   closePanel();
   await renderCreditReview();
 }
