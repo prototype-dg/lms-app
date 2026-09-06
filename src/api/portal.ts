@@ -159,9 +159,12 @@ app.get('/applications', async (c) => {
   const { results } = await c.env.DB.prepare(`
     SELECT a.id, a.reference, a.customer_name, a.unit_id, a.project_id,
            a.loan_amount, a.applied_rate as interest_rate, a.status,
-           a.gsas_score, a.created_at, p.name as product_name
+           a.gsas_score, a.created_at, p.name as product_name,
+           u.unit_number, pr.name as project_name
     FROM applications a
-    LEFT JOIN products p ON a.product_id = p.id
+    LEFT JOIN products p  ON a.product_id  = p.id
+    LEFT JOIN units u     ON a.unit_id     = u.id
+    LEFT JOIN projects pr ON a.project_id  = pr.id
     ORDER BY a.created_at DESC
     LIMIT 200
   `).all() as any

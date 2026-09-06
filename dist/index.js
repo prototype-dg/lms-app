@@ -3198,61 +3198,72 @@ var W = new N();
 W.get("/esg/:appId", async (e) => {
 	let t = e.req.param("appId"), n = t.startsWith("GHL") || t.startsWith("HL"), r = await e.env.DB.prepare(n ? "SELECT * FROM applications WHERE reference = ?" : "SELECT * FROM applications WHERE id = ?").bind(t).first();
 	if (!r) return e.json({ error: "Not found" }, 404);
-	let { results: i } = await e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'project' AND entity_id = ?").bind(r.project_id).all(), a = i.find((e) => e.doc_type === "gsas_cert"), o = i.find((e) => e.doc_type === "epc_report"), s = i.find((e) => e.doc_type === "eia_approval"), c = a ? JSON.parse(a.extracted_data || "{}") : {}, l = o ? JSON.parse(o.extracted_data || "{}") : {}, u = s ? JSON.parse(s.extracted_data || "{}") : {}, d = {
+	let { results: i } = await e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'project' AND entity_id = ?").bind(r.project_id || "").all(), { results: a } = await e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'application' AND entity_id = ?").bind(r.id).all();
+	[...i || [], ...a || []];
+	let o = (e) => a?.find((t) => t.doc_type === e) || i?.find((t) => t.doc_type === e), s = o("gsas_cert"), c = o("epc_report"), l = o("eia_approval"), u = s ? JSON.parse(s.extracted_data || "{}") : {}, d = c ? JSON.parse(c.extracted_data || "{}") : {}, f = l ? JSON.parse(l.extracted_data || "{}") : {}, p = r.salary_omr || r.salary || 0, m = r.loan_amount || 0, h = r.loan_term || 25, g = r.applied_rate || 5.5, _ = r.property_value || m / .8, v = g / 100 / 12, y = h * 12, b = v > 0 ? m * v * (1 + v) ** +y / ((1 + v) ** +y - 1) : m / y, x = r.dbr || (p > 0 ? Math.round(b / p * 100 * 10) / 10 : null), S = r.ltv || (_ > 0 ? Math.round(m / _ * 100 * 10) / 10 : null), C = r.malaa_score || r.credit_score || null, w = g + 3.5, T = v > 0 ? (() => {
+		let e = w / 100 / 12;
+		return m * e * (1 + e) ** +y / ((1 + e) ** +y - 1);
+	})() : b, E = p > 0 ? Math.round(T / p * 100 * 10) / 10 : null, D = E === null || E <= 60, O = {
 		gsas: {
-			status: a?.validation_status || "pending",
-			confidence: a?.ai_confidence || 0,
-			score: c.overall_score || r.gsas_score,
-			rating: c.rating || "Unknown",
-			certificate_number: c.certificate_number || "N/A",
-			expiry: c.expiry_date || "N/A",
-			color: a?.validation_status === "auto_verified" ? "green" : a?.validation_status === "manual_review" ? "amber" : "red"
-		},
-		epc: {
-			status: o?.validation_status || "pending",
-			confidence: o?.ai_confidence || 0,
-			rating: l.rating || r.epc_rating || "A",
-			expiry: l.expiry_date || "N/A",
-			notes: o?.validation_notes || "",
-			color: o?.validation_status === "auto_verified" || o?.validation_status === "approved" ? "green" : o?.validation_status === "manual_review" ? "amber" : "red"
-		},
-		eia: {
 			status: s?.validation_status || "pending",
 			confidence: s?.ai_confidence || 0,
-			reference: u.reference || "N/A",
-			issuer: u.issuer || "N/A",
+			score: u.overall_score || r.gsas_score,
+			rating: u.rating || (r.gsas_score >= 90 ? "Platinum" : r.gsas_score >= 75 ? "Gold" : r.gsas_score >= 60 ? "Silver" : "Unknown"),
+			certificate_number: u.certificate_number || "N/A",
+			expiry: u.expiry_date || "N/A",
 			color: s?.validation_status === "auto_verified" ? "green" : s?.validation_status === "manual_review" ? "amber" : "red"
 		},
-		ai_recommendation: Ke(a, o, s),
-		overall_esg_status: qe(a, o, s)
-	}, f = {
+		epc: {
+			status: c?.validation_status || "pending",
+			confidence: c?.ai_confidence || 0,
+			rating: d.rating || r.epc_rating || "A",
+			expiry: d.expiry_date || "N/A",
+			notes: c?.validation_notes || "",
+			filename: c?.filename || null,
+			file_url: c?.file_url || null,
+			doc_id: c?.id || null,
+			color: c?.validation_status === "auto_verified" || c?.validation_status === "approved" ? "green" : c?.validation_status === "manual_review" ? "amber" : "red"
+		},
+		eia: {
+			status: l?.validation_status || "pending",
+			confidence: l?.ai_confidence || 0,
+			reference: f.reference || "N/A",
+			issuer: f.issuer || "N/A",
+			color: l?.validation_status === "auto_verified" ? "green" : l?.validation_status === "manual_review" ? "amber" : "red"
+		},
+		ai_recommendation: Ke(s, c, l),
+		overall_esg_status: qe(s, c, l)
+	}, ee = {
 		dbr: {
-			value: r.dbr,
+			value: x,
 			max: 55,
-			status: r.dbr <= 55 ? "pass" : "fail",
-			label: `${r.dbr}% (Max: 55% for green products)`
+			status: x === null || x <= 55 ? "pass" : "fail",
+			label: "Max 55% for green products"
 		},
 		ltv: {
-			value: r.ltv,
+			value: S,
 			max: 90,
-			status: r.ltv <= 90 ? "pass" : "fail",
-			label: `${r.ltv}% (Max: 90%)`
+			status: S === null || S <= 90 ? "pass" : "fail",
+			label: "Max 90%"
 		},
 		malaa_score: {
-			value: r.malaa_score,
+			value: C,
 			min: 650,
-			status: (r.malaa_score || 750) >= 650 ? "pass" : "fail",
-			label: `${r.malaa_score || 750} (Min: 650)`
+			status: C ? C >= 650 ? "pass" : "fail" : "pass",
+			label: "Min 650"
 		},
 		stress_test: {
-			passed: r.stress_test_passed,
-			rate: r.stress_test_rate,
-			label: `Passed at ${r.stress_test_rate}% (+350bps)`
-		}
+			passed: D,
+			rate: parseFloat(w.toFixed(2)),
+			stress_dbr: E,
+			label: `Rate +350bps scenario: ${w.toFixed(2)}%`
+		},
+		monthly_payment: Math.round(b),
+		property_value: Math.round(_)
 	};
 	return e.json({
-		esg_status: d,
-		credit_metrics: f,
+		esg_status: O,
+		credit_metrics: ee,
 		application: r
 	});
 }), W.post("/:appId/approve-esg", async (e) => {
@@ -4825,7 +4836,7 @@ q.get("/products", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT c.* FROM contractors c\n     INNER JOIN units u ON u.contractor_id = c.id\n     WHERE u.project_id = ? LIMIT 1").bind(t).first();
 	return n ? e.json({ contractor: n }) : e.json({ contractor: null });
 }), q.get("/applications", async (e) => {
-	let { results: t } = await e.env.DB.prepare("\n    SELECT a.id, a.reference, a.customer_name, a.unit_id, a.project_id,\n           a.loan_amount, a.applied_rate as interest_rate, a.status,\n           a.gsas_score, a.created_at, p.name as product_name\n    FROM applications a\n    LEFT JOIN products p ON a.product_id = p.id\n    ORDER BY a.created_at DESC\n    LIMIT 200\n  ").all();
+	let { results: t } = await e.env.DB.prepare("\n    SELECT a.id, a.reference, a.customer_name, a.unit_id, a.project_id,\n           a.loan_amount, a.applied_rate as interest_rate, a.status,\n           a.gsas_score, a.created_at, p.name as product_name,\n           u.unit_number, pr.name as project_name\n    FROM applications a\n    LEFT JOIN products p  ON a.product_id  = p.id\n    LEFT JOIN units u     ON a.unit_id     = u.id\n    LEFT JOIN projects pr ON a.project_id  = pr.id\n    ORDER BY a.created_at DESC\n    LIMIT 200\n  ").all();
 	return e.json({ applications: t || [] });
 }), q.post("/applications", async (e) => {
 	let { product_id: t, customer_name: n, unit_id: r, project_id: i, loan_amount: a, loan_term: o, property_address: s, property_source: c, gsas_score: l, epc_rating: u, salary: d, civil_id: f, applied_rate: p } = await e.req.json(), m = await e.env.DB.prepare("SELECT * FROM products WHERE id = ? AND status = ?").bind(t, "active").first();
@@ -5933,7 +5944,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await I.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var ot = "5a26009";
+var ot = "9b1f6cd";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

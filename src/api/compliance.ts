@@ -13,25 +13,50 @@ app.get('/esg/:appId', async (c) => {
   ).bind(appId).first() as any
   if (!app_) return c.json({ error: 'Not found' }, 404)
   
-  // Get ESG documents
-  const { results: docs } = await c.env.DB.prepare(
+  // Get ESG documents — check both project-level and application-level uploads
+  const { results: projDocs } = await c.env.DB.prepare(
     `SELECT * FROM documents WHERE entity_type = 'project' AND entity_id = ?`
-  ).bind(app_.project_id).all() as any
-  
-  const gsasDoc = docs.find((d: any) => d.doc_type === 'gsas_cert')
-  const epcDoc = docs.find((d: any) => d.doc_type === 'epc_report')
-  const eiaDoc = docs.find((d: any) => d.doc_type === 'eia_approval')
+  ).bind(app_.project_id || '').all() as any
+  const { results: appDocs } = await c.env.DB.prepare(
+    `SELECT * FROM documents WHERE entity_type = 'application' AND entity_id = ?`
+  ).bind(app_.id).all() as any
+  const allDocs = [...(projDocs || []), ...(appDocs || [])]
+
+  // Prefer application-level doc if present (customer-uploaded), fall back to project-level
+  const findDoc = (type: string) =>
+    appDocs?.find((d: any) => d.doc_type === type) || projDocs?.find((d: any) => d.doc_type === type)
+
+  const gsasDoc = findDoc('gsas_cert')
+  const epcDoc  = findDoc('epc_report')
+  const eiaDoc  = findDoc('eia_approval')
   
   const gsasData = gsasDoc ? JSON.parse(gsasDoc.extracted_data || '{}') : {}
-  const epcData = epcDoc ? JSON.parse(epcDoc.extracted_data || '{}') : {}
-  const eiaData = eiaDoc ? JSON.parse(eiaDoc.extracted_data || '{}') : {}
-  
+  const epcData  = epcDoc  ? JSON.parse(epcDoc.extracted_data  || '{}') : {}
+  const eiaData  = eiaDoc  ? JSON.parse(eiaDoc.extracted_data  || '{}') : {}
+
+  // Compute DBR, LTV from stored or derived values
+  const salary      = (app_ as any).salary_omr || (app_ as any).salary || 0
+  const loanAmt     = (app_ as any).loan_amount || 0
+  const loanTerm    = (app_ as any).loan_term || 25
+  const appliedRate = (app_ as any).applied_rate || 5.5
+  const propVal     = (app_ as any).property_value || loanAmt / 0.8
+  const r           = (appliedRate / 100) / 12
+  const n           = loanTerm * 12
+  const monthlyPmt  = r > 0 ? loanAmt * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : loanAmt / n
+  const dbr         = (app_ as any).dbr || (salary > 0 ? Math.round((monthlyPmt / salary) * 100 * 10) / 10 : null)
+  const ltv         = (app_ as any).ltv || (propVal > 0 ? Math.round((loanAmt / propVal) * 100 * 10) / 10 : null)
+  const malaaScore  = (app_ as any).malaa_score || (app_ as any).credit_score || null
+  const stressRate  = appliedRate + 3.5
+  const stressPmt   = r > 0 ? (() => { const sr=(stressRate/100)/12; return loanAmt*sr*Math.pow(1+sr,n)/(Math.pow(1+sr,n)-1); })() : monthlyPmt
+  const stressDbr   = salary > 0 ? Math.round((stressPmt / salary) * 100 * 10) / 10 : null
+  const stressPassed = stressDbr !== null ? stressDbr <= 60 : true
+
   const esgStatus = {
     gsas: {
       status: gsasDoc?.validation_status || 'pending',
       confidence: gsasDoc?.ai_confidence || 0,
       score: gsasData.overall_score || app_.gsas_score,
-      rating: gsasData.rating || 'Unknown',
+      rating: gsasData.rating || (app_.gsas_score >= 90 ? 'Platinum' : app_.gsas_score >= 75 ? 'Gold' : app_.gsas_score >= 60 ? 'Silver' : 'Unknown'),
       certificate_number: gsasData.certificate_number || 'N/A',
       expiry: gsasData.expiry_date || 'N/A',
       color: gsasDoc?.validation_status === 'auto_verified' ? 'green' : gsasDoc?.validation_status === 'manual_review' ? 'amber' : 'red'
@@ -42,6 +67,9 @@ app.get('/esg/:appId', async (c) => {
       rating: epcData.rating || app_.epc_rating || 'A',
       expiry: epcData.expiry_date || 'N/A',
       notes: epcDoc?.validation_notes || '',
+      filename: epcDoc?.filename || null,
+      file_url: epcDoc?.file_url || null,
+      doc_id: epcDoc?.id || null,
       color: epcDoc?.validation_status === 'auto_verified' || epcDoc?.validation_status === 'approved' ? 'green' : epcDoc?.validation_status === 'manual_review' ? 'amber' : 'red'
     },
     eia: {
@@ -55,12 +83,14 @@ app.get('/esg/:appId', async (c) => {
     overall_esg_status: getOverallEsgStatus(gsasDoc, epcDoc, eiaDoc)
   }
   
-  // Credit metrics
+  // Credit metrics — real values from application record, computed where missing
   const creditMetrics = {
-    dbr: { value: app_.dbr, max: 55, status: app_.dbr <= 55 ? 'pass' : 'fail', label: `${app_.dbr}% (Max: 55% for green products)` },
-    ltv: { value: app_.ltv, max: 90, status: app_.ltv <= 90 ? 'pass' : 'fail', label: `${app_.ltv}% (Max: 90%)` },
-    malaa_score: { value: app_.malaa_score, min: 650, status: (app_.malaa_score || 750) >= 650 ? 'pass' : 'fail', label: `${app_.malaa_score || 750} (Min: 650)` },
-    stress_test: { passed: app_.stress_test_passed, rate: app_.stress_test_rate, label: `Passed at ${app_.stress_test_rate}% (+350bps)` }
+    dbr:          { value: dbr,        max: 55,  status: dbr  !== null ? (dbr  <= 55  ? 'pass' : 'fail') : 'pass', label: `Max 55% for green products` },
+    ltv:          { value: ltv,        max: 90,  status: ltv  !== null ? (ltv  <= 90  ? 'pass' : 'fail') : 'pass', label: `Max 90%` },
+    malaa_score:  { value: malaaScore, min: 650, status: malaaScore ? (malaaScore >= 650 ? 'pass' : 'fail') : 'pass', label: `Min 650` },
+    stress_test:  { passed: stressPassed, rate: parseFloat(stressRate.toFixed(2)), stress_dbr: stressDbr, label: `Rate +350bps scenario: ${stressRate.toFixed(2)}%` },
+    monthly_payment: Math.round(monthlyPmt),
+    property_value:  Math.round(propVal)
   }
   
   return c.json({ esg_status: esgStatus, credit_metrics: creditMetrics, application: app_ })

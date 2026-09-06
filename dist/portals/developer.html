@@ -2970,8 +2970,8 @@ function renderPipeline(apps) {
   tbody.innerHTML = apps.map(a => `<tr>
     <td><strong style="font-family:monospace;font-size:12px">${a.reference||a.id}</strong></td>
     <td>${a.customer_name||'—'}</td>
-    <td>${a.unit_id||'—'}</td>
-    <td>${a.project_id||'—'}</td>
+    <td>${a.unit_number||a.unit_id||'—'}</td>
+    <td>${a.project_name||a.project_id||'—'}</td>
     <td>${a.loan_amount ? 'OMR '+Number(a.loan_amount).toLocaleString() : '—'}</td>
     <td>${a.interest_rate ? Number(a.interest_rate).toFixed(2)+'%' : '—'}</td>
     <td><span class="chip ${statusColor[a.status]||'amber'}">${statusLabel[a.status]||'In Progress'}</span></td>
