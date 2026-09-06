@@ -29,6 +29,8 @@ const MIGRATION_FILES = [
   './migrations/0004_project_images.sql',
   './migrations/0005_pge_foundation.sql',
   './migrations/0006_align_existing_products.sql',
+  './migrations/0007_demo_flags_contractors.sql',
+  './migrations/0008_eco_product_seed.sql',
 ]
 
 function runMigrations() {
