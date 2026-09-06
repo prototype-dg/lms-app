@@ -2957,15 +2957,24 @@ function renderPipeline(apps) {
     tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--gray-500)">${isAr?'لا توجد طلبات تمويل مرتبطة بعد.':'No loan applications linked yet.'}</td></tr>`;
     return;
   }
-  const statusColor = {approved:'green',pending:'amber',rejected:'gray'};
+  const statusColor = {
+    submitted:'amber', credit_scoring:'amber', esg_review:'amber',
+    credit_review:'amber', approved:'green', disbursed:'green',
+    completed:'green', rejected:'gray'
+  };
+  const statusLabel = {
+    submitted:'In Progress', credit_scoring:'In Progress', esg_review:'ESG Review',
+    credit_review:'Credit Review', approved:'Approved', disbursed:'Disbursed',
+    completed:'Completed', rejected:'Rejected'
+  };
   tbody.innerHTML = apps.map(a => `<tr>
-    <td><strong>${a.id}</strong></td>
-    <td>${a.applicant_name||a.customer_name||'—'}</td>
+    <td><strong style="font-family:monospace;font-size:12px">${a.reference||a.id}</strong></td>
+    <td>${a.customer_name||'—'}</td>
     <td>${a.unit_id||'—'}</td>
     <td>${a.project_id||'—'}</td>
     <td>${a.loan_amount ? 'OMR '+Number(a.loan_amount).toLocaleString() : '—'}</td>
     <td>${a.interest_rate ? Number(a.interest_rate).toFixed(2)+'%' : '—'}</td>
-    <td><span class="chip ${statusColor[a.status]||'gray'}">${a.status||'—'}</span></td>
+    <td><span class="chip ${statusColor[a.status]||'amber'}">${statusLabel[a.status]||'In Progress'}</span></td>
     <td style="font-size:11px;color:var(--gray-500)">${a.created_at?a.created_at.slice(0,10):'—'}</td>
   </tr>`).join('');
 }

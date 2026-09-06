@@ -154,14 +154,36 @@ app.get('/projects/:id/contractor', async (c) => {
   return c.json({ contractor })
 })
 
+// ── Consumer Portal: List applications (for developer portal pipeline) ─────
+app.get('/applications', async (c) => {
+  const { results } = await c.env.DB.prepare(`
+    SELECT a.id, a.reference, a.customer_name, a.unit_id, a.project_id,
+           a.loan_amount, a.applied_rate as interest_rate, a.status,
+           a.gsas_score, a.created_at, p.name as product_name
+    FROM applications a
+    LEFT JOIN products p ON a.product_id = p.id
+    ORDER BY a.created_at DESC
+    LIMIT 200
+  `).all() as any
+  return c.json({ applications: results || [] })
+})
+
 // ── Consumer Portal: Submit application ───────────────────────────────────
 app.post('/applications', async (c) => {
   const body = await c.req.json()
   const { product_id, customer_name, unit_id, project_id, loan_amount, loan_term,
-    property_address, property_source, gsas_score, epc_rating, salary, civil_id } = body
+    property_address, property_source, gsas_score, epc_rating, salary, civil_id,
+    applied_rate } = body
 
-  const product = await c.env.DB.prepare('SELECT * FROM products WHERE id = ? AND status = ?')
+  // Allow product lookup by code as well as id (for backwards compat)
+  let product = await c.env.DB.prepare('SELECT * FROM products WHERE id = ? AND status = ?')
     .bind(product_id, 'active').first() as any
+  // Fallback: any active home loan (prefer demo/green)
+  if (!product) {
+    product = await c.env.DB.prepare(
+      "SELECT * FROM products WHERE category='home_loan' AND status='active' ORDER BY is_demo_product DESC LIMIT 1"
+    ).first() as any
+  }
   if (!product) return c.json({ error: 'Product not found or not active' }, 404)
 
   // Calculate rate and payments

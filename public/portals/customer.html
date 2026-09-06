@@ -1953,6 +1953,10 @@ function openWizardFromUnit(unitId, projectId){
     unitId, projectId, projectName: proj?.name||'',
     propertyValue: unit?.price||0,
     gsasScore:     unit?.gsas_score||proj?.gsas_overall_score||proj?.gsas_score||0,
+    unitNumber:    unit?.unit_number||unitId,
+    unitType:      unit?.type||'',
+    unitAreaSqm:   unit?.area_sqm||0,
+    unitBedrooms:  unit?.bedrooms||0,
   };
   const wt = document.getElementById('wiz-title');
   if(wt) wt.textContent = 'Home Loan Application';
@@ -2456,10 +2460,19 @@ async function loadUnitPicker(projId){
 
 function selectWizUnit(uid, unitNum, price, gsas, silent){
   wizUnitId = uid;
-  // Store GSAS score from unit — critical for Issue 3 fix
+  // Find full unit data from panel cache
+  const unitData = (window._panelUnits||[]).find(u=>u.id===uid)||null;
+  // Store GSAS score from unit — critical for rate calc
   if(gsas) wizState.gsasScore = parseInt(gsas)||0;
   const hidden = document.getElementById('prop-unit');
   if(hidden) hidden.value = uid;
+  // Store rich unit info for review display
+  wizState.unitId          = uid;
+  wizState.unitNumber      = unitData?.unit_number || unitNum || uid;
+  wizState.unitType        = unitData?.type || '';
+  wizState.unitAreaSqm     = unitData?.area_sqm || 0;
+  wizState.unitBedrooms    = unitData?.bedrooms || 0;
+  if(price || unitData?.price) wizState.propertyValue = parseFloat(price||unitData?.price)||0;
   // Visual selection
   document.querySelectorAll('.unit-pick-card').forEach(c=>c.classList.toggle('selected', c.id==='upc-'+uid));
   // Update price and GSAS fields in the form
@@ -2492,36 +2505,94 @@ function simUpload(statusId, label){
 function stepFinancing(){
   const propVal  = wizState.propertyValue||200000;
   const gsas     = wizState.gsasScore||0;
-  // Home-loan products only, demo product first
+  // Home-loan products only, demo/green product first
   const homeProds = allProducts.filter(p=>p.category==='home_loan'&&p.status==='active');
   homeProds.sort((a,b)=>(b.is_demo_product||0)-(a.is_demo_product||0));
   if(!wizProductId && homeProds.length) wizProductId = homeProds[0].id;
-  const bestProd = homeProds.find(p=>p.id===wizProductId)||homeProds[0]||null;
-  const minRate  = bestProd?.base_rate||4.75;
-  const maxLtv   = bestProd?.max_ltv||80;
-  const dpPct    = Math.round((1-(maxLtv/100))*100); // e.g. 20 if LTV=80
-  const defaultDp = Math.round(propVal*(dpPct/100));
+  const selProd  = homeProds.find(p=>p.id===wizProductId)||homeProds[0]||null;
+  const maxLtv   = selProd?.max_ltv||80;
+  const dpPct    = Math.round((1-(maxLtv/100))*100);
+  const defaultDp= Math.round(propVal*(dpPct/100));
   const tenure   = wizState.tenure||25;
-  const rate     = gsas>=85?minRate:(gsas>=70?(minRate+0.25):(minRate+0.5));
-  const gsasLabel = gsas>=85?'GSAS Gold — Premium Rate 🌿':gsas>=70?'GSAS Standard Rate':gsas>0?'Below GSAS — Standard Rate':'No GSAS score';
-  return `
-    <div class="step-title">Loan Calculator</div>
-    <div class="step-sub">Drag the sliders to find the right loan for you. All values update live.</div>
 
-    <!-- Product picker (compact) -->
-    <label class="fl" style="margin-bottom:8px">Financing Product</label>
+  // ── Recommendation logic (data-driven, no hardcoding) ──
+  // Find the best product for the user's GSAS score: prefer demo/green, then any home loan
+  const recProd = homeProds.find(p=>{
+    const premGs = p.gsas_premium_score||85;
+    const minGs  = p.gsas_min_score||60;
+    const hasPremDisc = parseFloat(p.green_discount_premium||0) > 0;
+    return (gsas>=premGs && hasPremDisc) || (gsas>=minGs && parseFloat(p.green_discount_standard||0)>0);
+  }) || homeProds.find(p=>p.is_demo_product===1||p.is_demo_product===true) || homeProds[0] || null;
+
+  // Effective rate for selected product driven by product's GSAS discount fields
+  function calcRate(prod, score){
+    const base    = parseFloat(prod?.base_rate||5.5);
+    const premGs  = parseInt(prod?.gsas_premium_score||85);
+    const minGs   = parseInt(prod?.gsas_min_score||60);
+    const discP   = parseFloat(prod?.green_discount_premium||0);
+    const discS   = parseFloat(prod?.green_discount_standard||0);
+    const disc    = score>=premGs ? discP : score>=minGs ? discS : 0;
+    return parseFloat((base - disc).toFixed(3));
+  }
+  const effRate  = calcRate(selProd, gsas);
+
+  // Banner text driven by product fields
+  let recBanner = '';
+  if(recProd && gsas>0){
+    const premGs  = parseInt(recProd.gsas_premium_score||85);
+    const minGs   = parseInt(recProd.gsas_min_score||60);
+    const discP   = parseFloat(recProd.green_discount_premium||0);
+    const recRate  = calcRate(recProd, gsas);
+    const saving   = discP > 0 ? discP.toFixed(2) : null;
+    const isRec    = selProd?.id !== recProd.id;
+    if(gsas >= premGs && discP > 0){
+      recBanner = `<div class="info-strip eco-strip" style="margin-bottom:14px;cursor:${isRec?'pointer':'default'}" ${isRec?`onclick="selectWizProduct('${recProd.id}')"`:''}">
+        🏆 <strong>Green Premium Eligible!</strong> Your GSAS score of <strong>${gsas}</strong> qualifies for
+        <strong>${recProd.name}</strong> at <strong>${recRate.toFixed(2)}% p.a.</strong>
+        — saving <strong>${saving}%</strong> vs. standard rate.
+        ${isRec?`<span style="text-decoration:underline;cursor:pointer;color:var(--teal)">Switch to this product →</span>`:'<span style="color:var(--ok)">✅ Already selected</span>'}
+      </div>`;
+    } else if(gsas >= minGs && parseFloat(recProd.green_discount_standard||0) > 0){
+      const discS = parseFloat(recProd.green_discount_standard||0);
+      recBanner = `<div class="info-strip" style="margin-bottom:14px;cursor:${isRec?'pointer':'default'}" ${isRec?`onclick="selectWizProduct('${recProd.id}')"`:''}">
+        🌿 <strong>Green Standard Eligible</strong> — GSAS ${gsas} qualifies for
+        <strong>${recProd.name}</strong> at <strong>${recRate.toFixed(2)}% p.a.</strong>
+        (${discS.toFixed(2)}% green discount).
+        ${isRec?`<span style="text-decoration:underline;cursor:pointer;color:var(--teal)">Switch →</span>`:'<span style="color:var(--ok)">✅ Already selected</span>'}
+      </div>`;
+    }
+  }
+
+  return `
+    <div class="step-title">Select Product &amp; Financing</div>
+    <div class="step-sub">Choose the home loan product that best fits your needs. Your GSAS score unlocks special green rates.</div>
+
+    ${recBanner}
+
+    <!-- Product picker (full cards) -->
+    <label class="fl" style="margin-bottom:8px">Available Home Loan Products</label>
     <div class="prod-pick-grid" style="margin-bottom:16px">
       ${homeProds.length ? homeProds.map(p=>{
         const isDemoProd = p.is_demo_product===1||p.is_demo_product===true;
-        const sel = p.id===(wizProductId||homeProds[0]?.id);
+        const sel = p.id===wizProductId;
+        const pPremGs = parseInt(p.gsas_premium_score||85);
+        const pMinGs  = parseInt(p.gsas_min_score||60);
+        const pDiscP  = parseFloat(p.green_discount_premium||0);
+        const pDiscS  = parseFloat(p.green_discount_standard||0);
+        const pEffRate = calcRate(p, gsas);
+        let rateTag = '';
+        if(gsas>=pPremGs && pDiscP>0) rateTag = `<span class="ppc-tag green">🏆 ${pEffRate.toFixed(2)}% your rate</span>`;
+        else if(gsas>=pMinGs && pDiscS>0) rateTag = `<span class="ppc-tag green">🌿 ${pEffRate.toFixed(2)}% your rate</span>`;
         return `<div class="prod-pick-card${isDemoProd?' demo-prod':''}${sel?' selected':''}" id="ppc-${p.id}" onclick="selectWizProduct('${p.id}')">
           <div class="ppc-icon">${isDemoProd?'🌿':'💼'}</div>
           <div class="ppc-body">
             <div class="ppc-name">${p.name}</div>
-            <div class="ppc-desc">Rate from ${p.base_rate}% · LTV ${p.max_ltv}% · Up to OMR ${Number(p.max_amount).toLocaleString()}</div>
+            <div class="ppc-desc">Base ${p.base_rate}% · LTV ${p.max_ltv}% · Up to OMR ${Number(p.max_amount).toLocaleString()}</div>
+            ${pDiscP>0||pDiscS>0?`<div class="ppc-desc" style="color:var(--ok)">Green discount: ${pDiscP>0?pDiscP+'% premium':''}${pDiscP>0&&pDiscS>0?' / ':''}${pDiscS>0?pDiscS+'% standard':''}</div>`:''}
             <div class="ppc-tags">
               ${isDemoProd?'<span class="ppc-tag green">🌱 Green Mortgage</span>':''}
               <span class="ppc-tag">Max ${p.max_term} yr</span>
+              ${rateTag}
             </div>
           </div>
           <div class="ppc-chk">${sel?'✓':''}</div>
@@ -2529,9 +2600,14 @@ function stepFinancing(){
       }).join('') : '<div style="font-size:12px;color:var(--g500);padding:12px">No home loan products found.</div>'}
     </div>
 
-    <!-- GSAS rate badge -->
-    ${gsas?`<div class="info-strip${gsas>=85?' eco-strip':''}" style="margin-bottom:14px">
-      ${gsas>=85?'🏆':'📊'} <strong>GSAS ${gsas}</strong> — ${gsasLabel} · <strong>${rate.toFixed(2)}% p.a.</strong>
+    <!-- Applied rate badge for selected product -->
+    ${gsas&&selProd?`<div class="info-strip${gsas>=parseInt(selProd.gsas_premium_score||85)&&parseFloat(selProd.green_discount_premium||0)>0?' eco-strip':''}" style="margin-bottom:14px">
+      ${gsas>=parseInt(selProd.gsas_premium_score||85)?'🏆':'📊'}
+      <strong>GSAS ${gsas}</strong> with <em>${selProd.name}</em> → effective rate
+      <strong>${effRate.toFixed(2)}% p.a.</strong>
+      ${parseFloat(selProd.green_discount_premium||0)>0||parseFloat(selProd.green_discount_standard||0)>0
+        ? `<span style="color:var(--ok);font-size:11px">(${(parseFloat(selProd.base_rate||5.5)-effRate).toFixed(2)}% green discount applied)</span>`
+        : ''}
     </div>`:''}
 
     <!-- Live calculator section -->
@@ -2540,7 +2616,7 @@ function stepFinancing(){
       <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--g200)">
         <div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Estimated Monthly Payment</div>
         <div class="calc-main-out" id="wa-m">—</div>
-        <div class="calc-sub-out" id="wa-rate-disp">${rate.toFixed(2)}% p.a. · ${gsas>=85?'Green Premium':'Standard'}</div>
+        <div class="calc-sub-out" id="wa-rate-disp">${effRate.toFixed(2)}% p.a. · ${gsas>=parseInt(selProd?.gsas_premium_score||85)&&parseFloat(selProd?.green_discount_premium||0)>0?'Green Premium':'Standard'}</div>
       </div>
 
       <!-- Down Payment slider -->
@@ -2561,7 +2637,7 @@ function stepFinancing(){
       <input type="hidden" id="wa-propval" value="${propVal}"/>
       <input type="hidden" id="wa-dp" value="${defaultDp}"/>
       <input type="hidden" id="wa-amt" value="${propVal-defaultDp}"/>
-      <input type="hidden" id="wa-rate" value="${rate}"/>
+      <input type="hidden" id="wa-rate" value="${effRate}"/>
 
       <!-- Output chips -->
       <div class="calc-grid-out">
@@ -2587,7 +2663,7 @@ function stepFinancing(){
         </div>
         <div class="calc-out-chip">
           <div class="lbl">GSAS Score</div>
-          <div class="v" style="color:${gsas>=85?'var(--ok)':gsas>=70?'var(--warn)':'var(--g500)'}">${gsas||'—'}</div>
+          <div class="v" style="color:${gsas>=parseInt(selProd?.gsas_premium_score||85)?'var(--ok)':gsas>=parseInt(selProd?.gsas_min_score||60)?'var(--warn)':'var(--g500)'}">${gsas||'—'}</div>
         </div>
       </div>
 
@@ -2603,20 +2679,33 @@ function wizCalcFinance(){
   const dpPctEl = document.getElementById('wa-dp-slider');
   const dpPct   = parseFloat(dpPctEl?.value||20);
   const ten     = parseInt(document.getElementById('wa-ten')?.value||25);
-  const bestProd= (wizProductId ? allProducts.find(p=>p.id===wizProductId) : null)
-                  || allProducts.find(p=>p.category==='home_loan'&&p.is_demo_product===1)
+  const selProd = (wizProductId ? allProducts.find(p=>p.id===wizProductId) : null)
+                  || allProducts.find(p=>p.category==='home_loan'&&(p.is_demo_product===1||p.is_demo_product===true))
                   || allProducts.find(p=>p.category==='home_loan')
                   || null;
-  const minRate = bestProd?.base_rate||4.75;
-  const maxLtv  = bestProd?.max_ltv||80;
-  const rate    = gsas>=85?minRate:(gsas>=70?minRate+0.25:minRate+0.5);
+
+  // Data-driven rate: use actual product GSAS discount fields (no hardcoding)
+  const baseRate = parseFloat(selProd?.base_rate||5.5);
+  const premGs   = parseInt(selProd?.gsas_premium_score||85);
+  const minGs    = parseInt(selProd?.gsas_min_score||60);
+  const discP    = parseFloat(selProd?.green_discount_premium||0);
+  const discS    = parseFloat(selProd?.green_discount_standard||0);
+  const disc     = gsas>=premGs ? discP : gsas>=minGs ? discS : 0;
+  const rate     = parseFloat((baseRate - disc).toFixed(3));
+  const maxLtv   = parseFloat(selProd?.max_ltv||80);
+
   const dp      = Math.round(propVal*(dpPct/100));
   const amt     = propVal-dp;
   const m       = pmt(amt,rate,ten*12);
   const dbr     = salary>0?(m/salary)*100:0;
   const ltv     = propVal>0?(amt/propVal)*100:0;
-  const stdBase = 5.50;
-  const sv      = Math.max(0, pmt(amt,stdBase,ten*12)*ten*12 - m*ten*12);
+  // Lifetime saving vs standard (undiscounted) rate
+  const sv      = Math.max(0, pmt(amt,baseRate,ten*12)*ten*12 - m*ten*12);
+
+  const isPrem  = gsas>=premGs && discP>0;
+  const isGreen = gsas>=minGs  && (discP>0||discS>0);
+  const rateLbl = isPrem ? 'Green Premium 🌿' : isGreen ? 'Green Standard 🌿' : 'Standard';
+
   const el = id=>document.getElementById(id);
   // Update slider labels
   if(el('wa-dp-pct'))  el('wa-dp-pct').textContent  = dpPct+'%';
@@ -2625,7 +2714,7 @@ function wizCalcFinance(){
   // Update outputs
   if(el('wa-m'))       el('wa-m').textContent        = fmtOMR(m);
   if(el('wa-loan-amt'))el('wa-loan-amt').textContent = 'OMR '+Math.round(amt).toLocaleString();
-  if(el('wa-rate-disp'))el('wa-rate-disp').textContent = `${rate.toFixed(2)}% p.a. · ${gsas>=85?'Green Premium':'Standard'}`;
+  if(el('wa-rate-disp'))el('wa-rate-disp').textContent = `${rate.toFixed(2)}% p.a. · ${rateLbl}`;
   if(el('wa-dbr'))   { el('wa-dbr').textContent=dbr.toFixed(1)+'%'; el('wa-dbr').style.color=dbr>40?'var(--err)':'var(--ok)'; }
   if(el('wa-ltv'))   { el('wa-ltv').textContent=ltv.toFixed(1)+'%'; el('wa-ltv').style.color=ltv>maxLtv?'var(--err)':'var(--ok)'; }
   if(el('wa-sv'))      el('wa-sv').textContent       = fmtOMR(sv);
@@ -2636,7 +2725,8 @@ function wizCalcFinance(){
   el('dbr-warn') && (el('dbr-warn').style.display = dbr>40?'block':'none');
   el('ltv-warn') && (el('ltv-warn').style.display = ltv>maxLtv?'block':'none');
   // Persist state
-  wizState.loanAmount = amt; wizState.downPayment = dp; wizState.tenure = ten; wizState.appliedRate = rate;
+  wizState.loanAmount = amt; wizState.downPayment = dp; wizState.tenure = ten;
+  wizState.appliedRate = rate; wizState.productId = selProd?.id||wizProductId||'';
 }
 
 function selectWizProduct(id){
@@ -3364,21 +3454,50 @@ function processDocUpload(cardId, name, input){
 function stepReview(){
   const name   = wizState.fullName||'Salim Mohammed Al-Harthy';
   const proj   = allProjects.find(p=>p.id===wizProjectId);
-  const prop   = wizSource==='partner'
-    ? `${wizState.unitFld||wizUnitId||'—'}, ${proj?.name||wizState.projectNameFld||'Partner Project'}`
-    : wizState.propertyType||'Custom Property';
+
+  // ── Property display — formatted, not raw ID ──
+  let prop = '';
+  if(wizSource==='partner'){
+    const parts = [];
+    if(wizState.unitNumber && wizState.unitNumber !== wizState.unitId) parts.push('Unit ' + wizState.unitNumber);
+    if(wizState.unitType)   parts.push(wizState.unitType);
+    if(wizState.unitAreaSqm) parts.push(wizState.unitAreaSqm + ' m²');
+    if(wizState.unitBedrooms) parts.push(wizState.unitBedrooms + ' bed');
+    const projName = proj?.name || wizState.projectName || wizState.projectNameFld || 'Partner Project';
+    prop = (parts.length ? parts.join(' · ') : '—') + ', ' + projName;
+  } else {
+    prop = wizState.propertyType||'Custom Property';
+    if(wizState.propAddress) prop += ' — ' + wizState.propAddress;
+  }
+
   const amt    = wizState.loanAmount||200000;
   const dp     = wizState.downPayment||40000;
   const ten    = wizState.tenure||25;
   const gsas   = wizState.gsasScore||0;
-  const rate   = wizState.appliedRate||(gsas>=85?4.75:5.0);
+
+  // Product-driven rate (same logic as wizCalcFinance)
+  const selProd = (wizState.productId ? allProducts.find(p=>p.id===wizState.productId) : null)
+                || allProducts.find(p=>p.category==='home_loan'&&(p.is_demo_product===1||p.is_demo_product===true))
+                || allProducts.find(p=>p.category==='home_loan') || null;
+  const baseRate = parseFloat(selProd?.base_rate||5.5);
+  const premGs   = parseInt(selProd?.gsas_premium_score||85);
+  const minGs    = parseInt(selProd?.gsas_min_score||60);
+  const discP    = parseFloat(selProd?.green_discount_premium||0);
+  const discS    = parseFloat(selProd?.green_discount_standard||0);
+  const disc     = gsas>=premGs ? discP : gsas>=minGs ? discS : 0;
+  const rate     = wizState.appliedRate || parseFloat((baseRate - disc).toFixed(3));
+  const isPrem   = gsas>=premGs && discP>0;
+  const isGreen  = !isPrem && gsas>=minGs && (discP>0||discS>0);
+  const rateNote = isPrem ? '(Green Premium 🌿 ✅)' : isGreen ? '(Green Standard 🌿)' : '(Standard)';
+
   const m      = pmt(amt,rate,ten*12);
   const sal    = wizState.salary||3200;
   const dbr    = sal>0?(m/sal)*100:0;
   const ltv    = (amt/(amt+dp))*100;
-  const sv     = Math.max(0,pmt(amt,5.5,ten*12)*ten*12 - m*ten*12);
+  const sv     = Math.max(0,pmt(amt,baseRate,ten*12)*ten*12 - m*ten*12);
   const srcLabel = wizSource==='partner'?'🤝 Partner Property':'🏠 BYO Custom Property';
   const rows=[
+    ['Product',        selProd?.name || 'Home Loan'],
     ['Applicant',      name],
     ['Civil ID',       wizState.civilId||'8827364'],
     ['Property',       prop],
@@ -3386,13 +3505,13 @@ function stepReview(){
     ['Contractor',     wizState.contractorName||'Al Jazeera Constructions LLC'],
     ['Loan Amount',    fmtOMR(amt)],
     ['Down Payment',   fmtOMR(dp)],
-    ['Interest Rate',  rate.toFixed(2)+'% '+(gsas>=85?'(Green Premium ✅)':'(Standard)')],
+    ['Interest Rate',  rate.toFixed(2)+'% '+rateNote],
     ['Tenure',         ten+' Years'],
     ['Monthly Payment',fmtOMR(m)],
     ['DBR Ratio',      dbr.toFixed(1)+'%'+(dbr<=40?' ✅':' ⚠️')],
     ['LTV Ratio',      ltv.toFixed(1)+'%'],
-    ['GSAS Score',     gsas+' / 100'+(gsas>=85?' 🏆':'')],
-    ['Lifetime Saving',fmtOMR(sv)+' vs Standard'],
+    ['GSAS Score',     gsas ? gsas+' / 100'+(gsas>=premGs?' 🏆':gsas>=minGs?' 🌿':'') : '—'],
+    ['Lifetime Saving',sv>0?fmtOMR(sv)+' vs standard rate':'—'],
     ['Credit Bureau',  "MALA'A — Clear ✅"],
     ['ID Verified',    wizState.idVerified?'✅ Yes':'⚠️ Pending'],
     ['Liveness Check', wizState.livenessPassed?'✅ Passed':'⚠️ Pending'],
@@ -3415,69 +3534,163 @@ async function submitApp(){
   if(consent&&!consent.checked){showToast('Please accept the consent checkbox.','warn');return;}
   const btn=document.getElementById('wiz-next');
   if(btn){btn.disabled=true;btn.textContent='Submitting\u2026';}
-  // Flat payload matching POST /api/v1/portal/applications contract
+
+  // Build property address string from stored unit fields
+  const addrParts=[];
+  if(wizState.unitNumber && wizState.unitNumber!==wizState.unitId) addrParts.push('Unit '+wizState.unitNumber);
+  if(wizState.unitType)   addrParts.push(wizState.unitType);
+  const projName = (allProjects.find(p=>p.id===wizProjectId))?.name || wizState.projectName || '';
+  if(projName) addrParts.push(projName);
+  const propertyAddress = wizState.propAddress || (addrParts.length?addrParts.join(', '):'EcoVillage Muscat, Unit '+(wizState.unitNumber||wizState.unitId||'V-01'));
+
+  const gsas  = parseInt(wizState.gsasScore)||0;
   const loanAmt = parseFloat(wizState.loanAmount)||148000;
-  const propVal  = parseFloat(wizState.propertyValue)||185000;
-  const sal      = parseFloat(wizState.salary)||3200;
+  const sal   = parseFloat(wizState.salary)||3200;
+
+  // Determine EPC rating from GSAS score
+  const selProd = (wizState.productId ? allProducts.find(p=>p.id===wizState.productId) : null)
+                || allProducts.find(p=>p.category==='home_loan'&&(p.is_demo_product===1||p.is_demo_product===true))
+                || allProducts.find(p=>p.category==='home_loan') || null;
+  const premGs  = parseInt(selProd?.gsas_premium_score||85);
+  const epcRating = gsas>=premGs ? 'A' : gsas>=60 ? 'B' : 'C';
+
   const payload={
-    product_id:       wizState.productId||'prod_eco_home_001',
-    project_id:       wizState.projectId||null,
-    unit_id:          wizState.unitId||null,
-    customer_name:    wizState.fullName||'Ahmed Al-Rashidi',
+    product_id:       wizState.productId || selProd?.id || 'prod_eco_home_001',
+    project_id:       wizState.projectId || wizProjectId || null,
+    unit_id:          wizState.unitId || wizUnitId || null,
+    customer_name:    wizState.fullName||'Salim Mohammed Al-Harthy',
     civil_id:         wizState.civilId||'8827364',
     loan_amount:      loanAmt,
-    loan_term:        parseInt(wizState.tenure)||20,
-    property_address: wizState.propAddress||'EcoVillage Muscat, Unit '+(wizState.unitId||'V-01'),
-    property_source:  wizState.propSource||'partner',
-    gsas_score:       parseInt(wizState.gsasScore)||91,
+    loan_term:        parseInt(wizState.tenure)||25,
+    property_address: propertyAddress,
+    property_source:  wizSource||'partner',
+    gsas_score:       gsas||null,
     salary:           sal,
-    epc_rating:       wizState.gsasScore>=85?'A':'B',
+    epc_rating:       epcRating,
+    applied_rate:     wizState.appliedRate||null,
   };
+
   try{
     const r=await fetch('/api/v1/portal/applications',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(payload)
     });
-    const j=await r.json();
-    if(!r.ok) throw new Error(j.error||'Submission failed');
-    wizState.appRef=j.reference||j.application_id||'APP-'+Date.now();
+    let j={};
+    try{ j=await r.json(); }catch(pe){ throw new Error('Server returned invalid response — please try again'); }
+    if(!r.ok) throw new Error(j.error||'Submission failed ('+r.status+')');
+
+    const ref = j.reference || j.application_id || ('APP-'+Date.now());
+    wizState.appRef = ref;
+    wizState.submittedApp = j;
+
+    // Close wizard and show acknowledgement screen
     closeWizard();
-    showToast('\u2705 Application submitted! Ref: '+wizState.appRef,'ok');
-    showPage('tracking');
-    setTimeout(()=>loadTracking(),400);
+    showAppAcknowledgement(j, payload);
   }catch(e){
-    showToast('\u26a0\ufe0f Error: '+e.message,'error');
-    if(btn){btn.disabled=false;btn.textContent='Submit Application';}
+    showToast('\u26a0\ufe0f '+e.message,'error');
+    if(btn){btn.disabled=false;btn.textContent='🚀 Submit Application';}
+  }
+}
+
+function showAppAcknowledgement(resp, payload){
+  // Navigate to tracking page and inject acknowledgement banner
+  showPage('tracking');
+  const ref   = resp.reference || wizState.appRef;
+  const rate  = resp.applied_rate || wizState.appliedRate;
+  const mp    = resp.monthly_payment;
+  const sv    = resp.lifetime_saving;
+
+  const wrap = document.getElementById('tracking-content');
+  if(wrap){
+    wrap.innerHTML = `
+      <div style="text-align:center;padding:28px 16px 8px">
+        <div style="font-size:52px;margin-bottom:12px">✅</div>
+        <div style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:6px">Application Submitted!</div>
+        <div style="font-size:13px;color:var(--g500);margin-bottom:20px">Your home loan application has been received and is now under review.</div>
+        <div style="background:linear-gradient(135deg,#003B5C,#007F86);color:#fff;border-radius:16px;padding:20px;margin-bottom:20px;text-align:left">
+          <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Application Reference</div>
+          <div style="font-size:24px;font-weight:800;letter-spacing:1px;margin-bottom:4px">${ref}</div>
+          <div style="font-size:12px;opacity:.8">Submitted ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>
+        </div>
+        ${rate||mp?`<div style="display:grid;grid-template-columns:1fr 1fr${sv?` 1fr`:''};gap:12px;margin-bottom:20px">
+          ${rate?`<div style="background:var(--g50);border-radius:12px;padding:14px">
+            <div style="font-size:11px;color:var(--g500);margin-bottom:4px">Applied Rate</div>
+            <div style="font-size:18px;font-weight:800;color:var(--ok)">${Number(rate).toFixed(2)}%</div>
+          </div>`:''}
+          ${mp?`<div style="background:var(--g50);border-radius:12px;padding:14px">
+            <div style="font-size:11px;color:var(--g500);margin-bottom:4px">Monthly Payment</div>
+            <div style="font-size:18px;font-weight:800;color:var(--navy)">${fmtOMR(mp)}</div>
+          </div>`:''}
+          ${sv?`<div style="background:rgba(22,132,91,.06);border:1px solid rgba(22,132,91,.15);border-radius:12px;padding:14px">
+            <div style="font-size:11px;color:var(--g500);margin-bottom:4px">Lifetime Saving 🌿</div>
+            <div style="font-size:18px;font-weight:800;color:var(--ok)">${fmtOMR(sv)}</div>
+          </div>`:''}
+        </div>`:''}
+      </div>
+      <div class="info-strip" style="margin:0 0 16px">
+        📋 <strong>What happens next?</strong><br/>
+        <span style="font-size:12px;color:var(--g600)">
+          Our compliance and risk teams have been notified and will review your application.
+          You can track the status here at any time. We aim to complete the initial review within <strong>2–3 business days</strong>.
+          You may receive a call or email if additional documents are required.
+        </span>
+      </div>
+      <div id="tracking-timeline-wrap">
+        <div style="text-align:center;color:var(--g400);padding:20px"><span class="spin spin-teal"></span> Loading status…</div>
+      </div>`;
+    // Load live timeline after a moment
+    setTimeout(()=>loadTracking(ref), 600);
   }
 }
 
 // ── loadTracking ───────────────────────────────────────────────────────────
-async function loadTracking(){
-  const wrap=document.getElementById('tracking-content');
+async function loadTracking(forceRef){
+  // If called after acknowledgement, render into inner div not overwrite the whole page
+  const isPostSubmit = !!forceRef;
+  const wrap = isPostSubmit
+    ? document.getElementById('tracking-timeline-wrap')
+    : document.getElementById('tracking-content');
   if(!wrap) return;
-  wrap.innerHTML='<div style="text-align:center;padding:40px;color:var(--g500)"><i class="fa fa-spinner fa-spin"></i> Loading…</div>';
+  if(!isPostSubmit) wrap.innerHTML='<div style="text-align:center;padding:40px;color:var(--g500)"><i class="fa fa-spinner fa-spin"></i> Loading…</div>';
 
-  // Demo application data
-  const ref=wizState.appRef||'APP-2025-00142';
+  const ref = forceRef || wizState.appRef || null;
+
+  // Try to load live status from API if we have a reference
+  if(ref){
+    try{
+      const r = await fetch('/api/v1/portal/applications/'+ref+'/status');
+      if(r.ok){
+        const d = await r.json();
+        wrap.innerHTML = renderTrackingHTML(d, ref);
+        return;
+      }
+    }catch(e){}
+  }
+
+  // Fallback: demo timeline
+  const demoRef = ref || 'APP-2025-00142';
+  const today = new Date();
+  const fmt = (d,n)=>{const dt=new Date(d);dt.setDate(dt.getDate()+n);return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});};
   const steps=[
-    {label:'Application Received', date:'06 Sep 2025', done:true,  active:false},
-    {label:'Initial Review',        date:'07 Sep 2025', done:true,  active:false},
-    {label:'Credit Assessment',     date:'08 Sep 2025', done:false, active:true},
-    {label:'Property Valuation',    date:'Pending',     done:false, active:false},
-    {label:'Final Approval',        date:'Pending',     done:false, active:false},
-    {label:'Disbursement',          date:'Pending',     done:false, active:false},
+    {label:'Application Received', date:today.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}), done:true,  active:false},
+    {label:'Initial Review',       date:fmt(today,1),   done:false, active:true},
+    {label:'Credit Assessment',    date:'Pending',       done:false, active:false},
+    {label:'Property Valuation',   date:'Pending',       done:false, active:false},
+    {label:'Final Approval',       date:'Pending',       done:false, active:false},
+    {label:'Disbursement',         date:'Pending',       done:false, active:false},
   ];
+  const loanAmt = wizState.loanAmount||148000;
   const tranches=[
-    {label:'Foundation',       pct:30, status:'disbursed', date:'15 Sep 2025', amount:44400},
-    {label:'Structural Frame', pct:25, status:'pending',   date:'Pending',     amount:37000},
-    {label:'Roofing & MEP',    pct:25, status:'pending',   date:'Pending',     amount:37000},
-    {label:'Finishing',        pct:20, status:'pending',   date:'Pending',     amount:29600},
+    {label:'Foundation',       pct:25, status:'pending', date:'Pending', amount:Math.round(loanAmt*.25)},
+    {label:'Structural Frame', pct:30, status:'pending', date:'Pending', amount:Math.round(loanAmt*.30)},
+    {label:'Roofing & MEP',    pct:25, status:'pending', date:'Pending', amount:Math.round(loanAmt*.25)},
+    {label:'Finishing',        pct:20, status:'pending', date:'Pending', amount:Math.round(loanAmt*.20)},
   ];
 
-  let html=`
-  <div class="track-ref">Reference: <strong>${ref}</strong>
-    <span class="track-badge">In Progress</span>
+  wrap.innerHTML=`
+  <div class="track-ref">Reference: <strong>${demoRef}</strong>
+    <span class="track-badge">In Review</span>
   </div>
   <div class="track-timeline">
     ${steps.map((s,i)=>`
@@ -3495,12 +3708,49 @@ async function loadTracking(){
         <div class="tc-label">${t.label}</div>
         <div class="tc-pct">${t.pct}%</div>
         <div class="tc-amount">${fmtOMR(t.amount)}</div>
-        <div class="tc-status ${t.status}">${t.status==='disbursed'?'✅ Disbursed':'⏳ Pending'}</div>
+        <div class="tc-status ${t.status}">⏳ Pending</div>
         <div class="tc-date">${t.date}</div>
       </div>`).join('')}
     </div>
   </div>`;
-  wrap.innerHTML=html;
+}
+
+function renderTrackingHTML(data, ref){
+  const app = data.application || data;
+  const stages = data.stages || [];
+  const statusLabel = {submitted:'Application Received',credit_scoring:'Credit Assessment',esg_review:'ESG Verification',credit_review:'Final Credit Review',approved:'Approved ✅',disbursed:'Funds Disbursed',completed:'Completed',rejected:'Rejected'};
+  const statusBadge = {submitted:'In Review',credit_scoring:'Under Assessment',credit_review:'In Review',approved:'Approved',disbursed:'Disbursed',completed:'Completed',rejected:'Rejected'};
+  const stMap=['submitted','credit_scoring','esg_review','credit_review','approved','disbursed'];
+  const stIdx = stMap.indexOf(app.status||'submitted');
+  const steps = [
+    'Application Received','Credit Assessment','ESG Verification',
+    'Credit Review','Approved','Funds Disbursed'
+  ].map((lbl,i)=>({label:lbl, done:i<stIdx, active:i===stIdx}));
+
+  let html=`<div class="track-ref">Reference: <strong>${ref}</strong>
+    <span class="track-badge">${statusBadge[app.status]||'In Review'}</span>
+  </div>
+  <div class="track-timeline">
+    ${steps.map((s,i)=>`<div class="track-step ${s.done?'done':''} ${s.active?'active':''}">
+      <div class="track-dot">${s.done?'<i class="fa fa-check"></i>':s.active?'<i class="fa fa-circle-notch fa-spin"></i>':'<span>'+(i+1)+'</span>'}</div>
+      <div class="track-label">${s.label}</div>
+    </div>`).join('')}
+  </div>`;
+
+  if(stages.length){
+    html+=`<div style="margin-top:24px">
+      <div class="seg-title" style="margin-bottom:14px">Disbursement Tranches</div>
+      <div class="tranche-grid">
+        ${stages.map(t=>`<div class="tranche-card ${t.status||'pending'}">
+          <div class="tc-label">${t.stage_name||t.label}</div>
+          <div class="tc-pct">${t.tranche_percentage||t.pct||0}%</div>
+          <div class="tc-amount">${fmtOMR(t.tranche_amount||0)}</div>
+          <div class="tc-status ${t.status||'pending'}">${t.status==='completed'?'✅ Released':t.status==='active'?'⏳ Active':'🔒 Locked'}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  return html;
 }
 
 // ── DOMContentLoaded init ──────────────────────────────────────────────────

@@ -133,4 +133,44 @@ function getOverallEsgStatus(gsas: any, epc: any, eia: any) {
   return 'pending'
 }
 
+// ── Compliance & Risk Task Queue ──────────────────────────────────────────
+// Returns all applications in states that require human review, enriched with
+// product name, GSAS info, and a derived priority flag.
+app.get('/queue', async (c) => {
+  const { results } = await c.env.DB.prepare(`
+    SELECT a.*, p.name as product_name, p.base_rate, p.gsas_premium_score,
+           p.green_discount_premium
+    FROM applications a
+    LEFT JOIN products p ON a.product_id = p.id
+    ORDER BY a.created_at DESC
+    LIMIT 100
+  `).all() as any
+
+  const enriched = (results || []).map((a: any) => {
+    // Flag high priority: high loan, ESG pending, or submitted today
+    const isHighPriority = (a.loan_amount >= 200000) ||
+      (a.esg_verification_status === 'pending' && a.gsas_score) ||
+      (a.created_at && a.created_at.startsWith(new Date().toISOString().slice(0,10)))
+    return {
+      ...a,
+      priority: isHighPriority ? 'high' : 'normal',
+      customer_display_name: a.customer_name,
+      manual_checks: buildManualChecks(a),
+    }
+  })
+
+  return c.json({ applications: enriched, total: enriched.length })
+})
+
+function buildManualChecks(app: any): string[] {
+  const checks: string[] = []
+  if (!app.gsas_score)                                    checks.push('GSAS score not provided — manual verification required')
+  if (app.esg_verification_status === 'pending')          checks.push('ESG documents pending review')
+  if (app.dbr && parseFloat(app.dbr) > 40)                checks.push(`DBR ${app.dbr}% exceeds 40% threshold — credit officer sign-off needed`)
+  if (app.loan_amount >= 200000)                          checks.push('High-value loan (≥OMR 200k) — senior credit approval required')
+  if (app.gsas_score && app.gsas_score >= (app.gsas_premium_score || 85) && app.green_discount_premium > 0)
+    checks.push(`GSAS ${app.gsas_score} qualifies for ${app.green_discount_premium}% green premium discount — verify certificate`)
+  return checks
+}
+
 export { app as complianceApi }
