@@ -1463,6 +1463,13 @@ async function initPropMap(){
     attribution:'© OpenStreetMap contributors', maxZoom:19
   }).addTo(propMap);
 
+  // Custom pane for project name labels — z:650 sits above markerPane (z:600)
+  // so label divs always receive clicks before unit dot markers beneath them.
+  // The pane wrapper itself is pointer-events:none; each label div opts back in.
+  propMap.createPane('labelPane');
+  propMap.getPane('labelPane').style.zIndex = 650;
+  propMap.getPane('labelPane').style.pointerEvents = 'none';
+
   try{
     const r = await fetch('/api/v1/portal/projects');
     const d = await r.json();
@@ -1510,7 +1517,7 @@ async function initPropMap(){
         const centre = projBounds.getCenter();
         const labelIcon = L.divIcon({
           className: '',
-          html: `<div onclick="(function(){var b=propMapProjectBounds['${proj.id}'];if(b&&propMap)propMap.flyToBounds(b,{padding:[30,30],maxZoom:19,duration:0.75});})()" style="
+          html: `<div onclick="event.stopPropagation();(function(){var b=propMapProjectBounds['${proj.id}'];if(b&&propMap)propMap.flyToBounds(b,{padding:[30,30],maxZoom:19,duration:0.75});})()" style="
             transform:translate(-50%,-50%);
             background:#fff;
             border:1.5px solid ${pcol};
@@ -1528,8 +1535,8 @@ async function initPropMap(){
           iconSize:   [0, 0],
           iconAnchor: [0, 0],
         });
-        const labelMarker = L.marker(centre, {icon:labelIcon, interactive:true, zIndexOffset:500}).addTo(propMap);
-        labelMarker.on('click', flyToProj);
+        const labelMarker = L.marker(centre, {icon:labelIcon, interactive:true, pane:'labelPane'}).addTo(propMap);
+        labelMarker.on('click', (e)=>{ L.DomEvent.stopPropagation(e); flyToProj(); });
       }
 
       units.forEach(u=>{
