@@ -28,6 +28,66 @@
 
     bus.on('requestSave', doSave);
     bus.on('langChanged', () => renderFull());
+
+    // ── aiRulesDraft: fired by pge-ai-drawer when server returns rules_draft ──
+    // The AI emits a full set of eligibility rules (typically 14–17 rules) at stage 3.
+    // We bulk-POST each rule to the rules table, refresh the local array + UI,
+    // then call doSave() to write the rule count/IDs into the product's configuration field.
+    bus.on('aiRulesDraft', async ({ rules }) => {
+      if (!Array.isArray(rules) || rules.length === 0) return;
+      let applied = 0;
+      for (const rule of rules) {
+        try {
+          const body = {
+            ...rule,
+            source:     'ai_generated',
+            user_id:    'u001',
+            product_id: _productId,
+          };
+          const r = await fetch(`/api/v1/products/${_productId}/rules`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(body),
+          });
+          if (r.ok) {
+            const d = await r.json();
+            _rules.push({ id: d.id, product_id: _productId, is_active: 1, ...body });
+            applied++;
+          }
+        } catch (_) { /* skip individual failed rule, continue with rest */ }
+      }
+      if (applied > 0) {
+        renderFull();   // refresh tab count badge and rules list
+        toast(t(`${applied} AI rules applied.`, `تم تطبيق ${applied} قاعدة من الذكاء الاصطناعي.`), 'success');
+        await doSave({ silent: true });   // persist rule_count + rule_ids to product record
+      }
+    });
+
+    // ── aiEvent: forward individual AI ui_events to stage-level handlers ──
+    // The AI drawer emits 'aiEvent' for each item in ui_events[]. For stage 3
+    // we handle 'add_rule' to apply a single rule without opening the modal.
+    bus.on('aiEvent', async (evt) => {
+      if (evt.type === 'add_rule' && evt.rule) {
+        try {
+          const body = {
+            ...evt.rule,
+            source:     'ai_generated',
+            user_id:    'u001',
+            product_id: _productId,
+          };
+          const r = await fetch(`/api/v1/products/${_productId}/rules`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(body),
+          });
+          if (r.ok) {
+            const d = await r.json();
+            _rules.push({ id: d.id, product_id: _productId, is_active: 1, ...body });
+            renderFull();
+          }
+        } catch (_) { /* non-fatal */ }
+      }
+    });
   }
 
   async function loadRules() {
@@ -840,6 +900,21 @@
   /* ─────────── Save / snapshot ─────────── */
   async function doSave(opts = {}) {
     try {
+      // Always PATCH the product with the current rule state — regardless of prevStage.
+      // Previously this was gated by `prevStage < 3`, making it a complete no-op on any
+      // re-save or re-entry (the save toast would fire but nothing would be written to DB).
+      // Now we always persist the rule count, IDs, and matrix count into the product's
+      // configuration field so the product record stays in sync with the rules table.
+      await API.patchProduct(_productId, {
+        configuration: JSON.stringify({
+          rule_count:   _rules.length,
+          matrix_count: _matrices.length,
+          rule_ids:     _rules.map(r => r.id),
+          stage3_saved_at: new Date().toISOString(),
+        }),
+      });
+
+      // Snapshot (version record) only on first stage completion — don't duplicate versions
       const prevStage = _product.pge_stage || 0;
       if (prevStage < 3) {
         await API.snapshot(_productId, 3, { rule_count: _rules.length, matrix_count: _matrices.length });

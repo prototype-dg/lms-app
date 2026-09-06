@@ -171,12 +171,30 @@
 
     try {
       const d = await API.aiChat(state.productId, msg, thread);
-      const reply = d.response || d.message || t('No response','لا توجد استجابة');
+      const reply = d.reply || d.response || d.message || t('No response','لا توجد استجابة');
       removeMsg(thinkId);
       appendMsg('assistant', md(reply));
       thread.push({ role: 'assistant', content: reply });
       // Keep thread ≤ 20 turns
       if (thread.length > 20) thread = thread.slice(-20);
+
+      // ── Process ui_events: forward to stage modules via bus ──────────────
+      // The server emits add_rule, set_field, set_workflow, highlight_field, set_tab
+      // events inside ui_events[]. Each stage module listens to 'aiEvent' on the bus
+      // and handles events relevant to its own stage.
+      if (Array.isArray(d.ui_events) && d.ui_events.length > 0) {
+        for (const evt of d.ui_events) {
+          bus.emit('aiEvent', evt);
+        }
+      }
+
+      // ── Auto-apply rules_draft when AI completes stage 3 ─────────────────
+      // rules_draft is emitted by the server at stage 3 (eligibility rules stage).
+      // The drawer was previously discarding this — now we forward it to stage3
+      // via the bus so it can bulk-insert into the rules table and patch the product.
+      if (Array.isArray(d.rules_draft) && d.rules_draft.length > 0 && d.current_stage === 3) {
+        bus.emit('aiRulesDraft', { rules: d.rules_draft, stage: d.current_stage });
+      }
     } catch (e) {
       removeMsg(thinkId);
       appendMsg('assistant', `<span style="color:#BD3B4B"><i class="fas fa-triangle-exclamation"></i> ${e.message}</span>`);
