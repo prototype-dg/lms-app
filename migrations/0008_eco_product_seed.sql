@@ -31,8 +31,8 @@ INSERT OR IGNORE INTO products (
   0, 'u001', '2025-09-01', '2025-09-01'
 );
 
--- Mark Green Home Finance as demo product
-UPDATE products SET is_demo_product = 1 WHERE id = 'prod_eco_home_001';
+-- Mark Green Home Finance as demo product and make it portal-visible
+UPDATE products SET is_demo_product = 1, portal_visible = 1 WHERE id = 'prod_eco_home_001';
 
 -- ── 2. EcoVillage Muscat project (activate + mark demo) ───
 -- Ensure proj004 exists (may not if project seeds are elsewhere)
