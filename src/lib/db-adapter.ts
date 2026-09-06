@@ -31,6 +31,7 @@ const MIGRATION_FILES = [
   './migrations/0006_align_existing_products.sql',
   './migrations/0007_demo_flags_contractors.sql',
   './migrations/0008_eco_product_seed.sql',
+  './migrations/0009_eco_units_seed.sql',
 ]
 
 function runMigrations() {
