@@ -722,7 +722,8 @@ Product: ${name}. Description: ${product_draft.description || ''}. Base rate: ${
 
   await c.env.DB.prepare(
     `UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,
-     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, pge_stage=?, updated_at=? WHERE id=?`
+     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?,
+     pge_stage=?, is_demo_product=1, updated_at=? WHERE id=?`
   ).bind(isGreen ? 1 : 0, portalHeroTitle, JSON.stringify(portalHighlights), portalBadge, ts, finalPgeStage, ts, id).run()
 
   // Mark thread as completed

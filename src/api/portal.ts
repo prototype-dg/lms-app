@@ -4,6 +4,21 @@ import { generateId, now, logAudit } from '../lib/db'
 const app = new Hono<{ Bindings: NodeBindings }>()
 
 
+// ── Consumer Portal: All published products (segmented) ───────────────────
+app.get('/products', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, name, name_ar, code, description, category, base_rate,
+     min_amount, max_amount, min_term, max_term, max_ltv, max_dbr,
+     gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,
+     portal_hero_title, portal_hero_subtitle, portal_card_badge, portal_highlights,
+     portal_calculator_enabled, esg_required_docs, configuration,
+     is_demo_product, published_at
+     FROM products WHERE portal_visible = 1 AND status = 'active'
+     ORDER BY is_demo_product DESC, category, published_at ASC`
+  ).all()
+  return c.json({ products: results, total: results.length })
+})
+
 // ── Consumer Portal: Single product detail ────────────────────────────────
 app.get('/products/:id', async (c) => {
   const id = c.req.param('id')
@@ -90,19 +105,19 @@ app.get('/projects', async (c) => {
     `SELECT p.id, p.name, p.code, p.location, p.governorate, p.type,
      p.total_units, p.available_units, p.reserved_units, p.sold_units,
      p.gsas_score, p.gsas_rating, p.epc_rating, p.status, p.green_eligible,
-     p.premium_tier, p.geo_json,
+     p.premium_tier, p.geo_json, p.hero_image_url, p.is_demo_project,
      p.listing_visible, p.marketing_tagline, p.price_from, p.price_to,
      p.completion_date, p.amenities, p.created_at,
      d.company_name as developer_name
      FROM projects p
      LEFT JOIN developers d ON p.developer_id = d.id
      WHERE p.listing_visible = 1 AND p.status = 'active'
-     ORDER BY p.premium_tier DESC, p.created_at DESC`
+     ORDER BY p.is_demo_project DESC, p.premium_tier DESC, p.created_at DESC`
   ).all()
   return c.json({ projects: results, total: results.length })
 })
 
-// ── Consumer Portal: Project detail + units ───────────────────────────────
+// ── Consumer Portal: Project detail + units with contractor ───────────────
 app.get('/projects/:id', async (c) => {
   const id = c.req.param('id')
   const project = await c.env.DB.prepare(
@@ -113,10 +128,28 @@ app.get('/projects/:id', async (c) => {
   if (!project) return c.json({ error: 'Not found' }, 404)
 
   const { results: units } = await c.env.DB.prepare(
-    'SELECT * FROM units WHERE project_id = ? ORDER BY unit_number'
+    `SELECT u.*, c.company_name as contractor_name, c.cr_number as contractor_cr,
+     c.contact_name as contractor_contact, c.contact_phone as contractor_phone,
+     c.is_green_certified as contractor_green_certified, c.green_cert_ref as contractor_green_cert_ref
+     FROM units u
+     LEFT JOIN contractors c ON u.contractor_id = c.id
+     WHERE u.project_id = ? ORDER BY u.unit_number`
   ).bind(id).all()
 
   return c.json({ project, units })
+})
+
+// ── Consumer Portal: Contractor lookup by project ─────────────────────────
+app.get('/projects/:id/contractor', async (c) => {
+  const id = c.req.param('id')
+  // Get the primary contractor for this project (from its units)
+  const contractor = await c.env.DB.prepare(
+    `SELECT c.* FROM contractors c
+     INNER JOIN units u ON u.contractor_id = c.id
+     WHERE u.project_id = ? LIMIT 1`
+  ).bind(id).first()
+  if (!contractor) return c.json({ contractor: null })
+  return c.json({ contractor })
 })
 
 // ── Consumer Portal: Submit application ───────────────────────────────────
@@ -264,6 +297,65 @@ app.get('/applications/:ref/status', async (c) => {
     documents: docs,
     created_at: app.created_at,
   })
+})
+
+// ── Consumer Portal: OCR proxy (Google Vision — keeps API key server-side) ──
+app.post('/ocr', async (c) => {
+  const body = await c.req.json().catch(() => ({})) as any
+  const { image_base64, doc_type } = body
+  if (!image_base64) return c.json({ error: 'image_base64 required' }, 400)
+
+  const VISION_KEY = 'AIzaSyBqQ4THcUG8wpRZbB2olfZqvR9mI1e-88E'
+  try {
+    const resp = await fetch(
+      `https://vision.googleapis.com/v1/images:annotate?key=${VISION_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [{
+            image: { content: image_base64 },
+            features: [{ type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }]
+          }]
+        })
+      }
+    )
+    const vdata = await resp.json() as any
+    const fullText: string = vdata?.responses?.[0]?.fullTextAnnotation?.text || ''
+
+    // Parse structured fields from OCR text based on doc_type
+    const extracted: Record<string, string> = {}
+    const lines = fullText.split('\n').map((l: string) => l.trim()).filter(Boolean)
+
+    if (doc_type === 'salary_cert' || doc_type === 'hr_letter') {
+      // Try to extract salary-related fields
+      for (const line of lines) {
+        const ll = line.toLowerCase()
+        if (!extracted.employer && (ll.includes('company') || ll.includes('employer') || ll.includes('organisation'))) {
+          extracted.employer = line.replace(/^[^:]+:\s*/,'').trim() || line
+        }
+        if (!extracted.basic_salary && (ll.includes('basic') || ll.includes('salary') || ll.includes('راتب'))) {
+          const m = line.match(/[\d,]+(?:\.\d+)?/)
+          if (m) extracted.basic_salary = m[0].replace(/,/g,'')
+        }
+        if (!extracted.housing && (ll.includes('housing') || ll.includes('house') || ll.includes('سكن'))) {
+          const m = line.match(/[\d,]+(?:\.\d+)?/)
+          if (m) extracted.housing_allowance = m[0].replace(/,/g,'')
+        }
+        if (!extracted.start_date && (ll.includes('join') || ll.includes('start') || ll.includes('appointed') || ll.includes('تعيين'))) {
+          const m = line.match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-]\d{2}[\/\-]\d{2}/)
+          if (m) extracted.employment_start_date = m[0]
+        }
+        if (!extracted.employment_type && (ll.includes('permanent') || ll.includes('contract') || ll.includes('دائم'))) {
+          extracted.employment_type = ll.includes('permanent') ? 'Government' : 'Private Sector'
+        }
+      }
+    }
+
+    return c.json({ success: true, full_text: fullText, extracted, doc_type })
+  } catch (e: any) {
+    return c.json({ success: false, error: e.message, extracted: {} }, 500)
+  }
 })
 
 // ── Developer Portal: List products accepting developer inventory ──────────
@@ -444,6 +536,7 @@ app.post('/developer/projects/:id/publish', async (c) => {
   // Enrich project with marketing info
   await c.env.DB.prepare(`
     UPDATE projects SET status = 'active', listing_visible = 1, green_eligible = 1, premium_tier = 1,
+    is_demo_project = 1,
     marketing_tagline = ?, price_from = ?, price_to = ?, amenities = ?,
     completion_date = ?, updated_at = ? WHERE id = ?
   `).bind(
