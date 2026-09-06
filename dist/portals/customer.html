@@ -1117,6 +1117,7 @@ let hasDemoProject = false;
 let propMap = null;
 let propMapMarkers = [];   // [{mk, status, projectId}]
 let propMapAllUnits = [];
+let propMapProjectBounds = {};  // projectId → L.LatLngBounds, for external fly-to
 
 // Liveness
 let livenessStream = null;
@@ -1422,9 +1423,12 @@ function renderProjectList(){
             <span class="gsas-badge">${isDemo?'🏆 Demo':'GSAS '+gsas}</span>
             <span class="rate-badge" style="${isDemo?'background:rgba(22,132,91,.12);color:#16845B':''}">${rate}% p.a.</span>
           </div>
-          <button class="prop-btn${isDemo?' eco-btn':''}" onclick="event.stopPropagation();openProjectPanel('${p.id}')">
-            ${isDemo?'View Eco Units →':'View Units →'}
-          </button>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <button class="prop-btn" style="flex:0 0 auto;background:var(--g200);color:var(--navy);padding:9px 12px;margin-top:0;font-size:12px" onclick="event.stopPropagation();flyToProjectOnMap('${p.id}')" title="View on map">🗺️</button>
+            <button class="prop-btn${isDemo?' eco-btn':''}" style="flex:1;margin-top:0" onclick="event.stopPropagation();openProjectPanel('${p.id}')">
+              ${isDemo?'View Eco Units →':'View Units →'}
+            </button>
+          </div>
         </div>
       </div>`;
     }).join('')}
@@ -1478,16 +1482,37 @@ async function initPropMap(){
       if(geoUnits.length){
         const lats=geoUnits.map(u=>parseFloat(u.lat));
         const lngs=geoUnits.map(u=>parseFloat(u.lng));
-        const pad=0.001;
-        const projBounds = [[Math.min(...lats)-pad,Math.min(...lngs)-pad],[Math.max(...lats)+pad,Math.max(...lngs)+pad]];
-        const rectLabel = `<b>${isDemo?'🌿 ':''}${proj.name}</b><br/><span style="font-size:10px;font-weight:400;color:#666">Click to zoom in</span>`;
+        const pad=0.0003; // tight pad — just enough to clear unit dots at the edge
+        const sw = L.latLng(Math.min(...lats)-pad, Math.min(...lngs)-pad);
+        const ne = L.latLng(Math.max(...lats)+pad, Math.max(...lngs)+pad);
+        const projBounds = L.latLngBounds(sw, ne);
+
+        // Store for external fly-to (e.g. from project list cards)
+        propMapProjectBounds[proj.id] = projBounds;
+
+        // flyToProj: compute the tightest zoom that still shows the full rectangle
+        // We use padding [30,30] so the rectangle fills ~80% of the map viewport
+        const flyToProj = () => {
+          propMap.flyToBounds(projBounds, {
+            padding: [30, 30],   // px inset on each side
+            maxZoom: 19,         // allow all the way to street level
+            duration: 0.75,
+          });
+        };
+
+        const rectLabel = `<b style="cursor:pointer" onclick="(function(){var b=propMapProjectBounds['${proj.id}'];if(b)propMap.flyToBounds(b,{padding:[30,30],maxZoom:19,duration:0.75});})()">${isDemo?'🌿 ':''}${proj.name}</b>`;
         const rect = L.rectangle(projBounds,
           {color:pcol,weight:2.5,fillColor:pcol,fillOpacity:0.08,dashArray:'6,4',interactive:true}
         ).addTo(propMap)
-         .bindTooltip(rectLabel,{permanent:true,direction:'center',opacity:0.92,className:'proj-tooltip'});
-        // Click on rectangle → fly to project bounds at close zoom
-        const flyToProj = () => propMap.flyToBounds(projBounds, {maxZoom:16, padding:[40,40], duration:0.7});
+         .bindTooltip(rectLabel,{permanent:true,direction:'center',opacity:0.95,className:'proj-tooltip'});
+
+        // Clicks on the rectangle body AND on the tooltip label both zoom in
         rect.on('click', flyToProj);
+        // Also make the tooltip element itself forward clicks to flyToProj
+        rect.on('tooltipopen', () => {
+          const tooltipEl = rect.getTooltip()?.getElement();
+          if(tooltipEl) tooltipEl.addEventListener('click', flyToProj);
+        });
       }
 
       units.forEach(u=>{
@@ -1535,6 +1560,26 @@ async function initPropMap(){
   }catch(e){
     console.error('initPropMap',e);
     toast('Could not load property map','err');
+  }
+}
+
+/* ── Fly to a specific project on the map ── */
+function flyToProjectOnMap(projectId){
+  // Switch to map tab first
+  switchPropView('map');
+  // Wait for map to render/resize, then fly
+  const doFly = () => {
+    const bounds = propMapProjectBounds[projectId];
+    if(bounds && propMap){
+      propMap.flyToBounds(bounds, { padding:[30,30], maxZoom:19, duration:0.75 });
+    }
+  };
+  if(!propMap){
+    // Map not yet initialised — init it, then fly after it loads
+    setTimeout(()=>{ initPropMap().then ? initPropMap().then(doFly) : setTimeout(doFly, 2500); }, 200);
+  } else {
+    // Map exists — give invalidateSize a tick then fly
+    setTimeout(()=>{ propMap.invalidateSize(); doFly(); }, 150);
   }
 }
 
@@ -2977,7 +3022,7 @@ function stepReview(){
   const amt    = wizState.loanAmount||200000;
   const dp     = wizState.downPayment||40000;
   const ten    = wizState.tenure||25;
-  const gsas   = wizState.gsasScore||89;
+  const gsas   = wizState.gsasScore||0;
   const rate   = wizState.appliedRate||(gsas>=85?4.75:5.0);
   const m      = pmt(amt,rate,ten*12);
   const sal    = wizState.salary||3200;
