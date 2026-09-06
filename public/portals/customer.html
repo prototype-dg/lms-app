@@ -960,8 +960,8 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 <div id="liveness-overlay" class="liveness-overlay">
   <div class="liveness-modal">
     <div class="liveness-header">
-      <div style="font-size:16px;font-weight:700;color:var(--navy)">Identity Liveness Check</div>
-      <div style="font-size:12px;color:var(--g500);margin-top:2px">Follow the on-screen instructions</div>
+      <div style="font-size:16px;font-weight:700;color:#e6edf3">Identity Liveness Check</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px">Follow the on-screen instructions</div>
     </div>
     <div class="liveness-camera-wrap">
       <video id="liveness-video" class="liveness-video" autoplay muted playsinline></video>
@@ -1710,13 +1710,14 @@ function collectStepData(step){
     propertyValue: parseFloat(get('prop-val').replace(/,/g,''))||0,
     propertyType:  get('prop-type'),
     projectNameFld: get('prop-project'),
-    unitFld:       get('prop-unit'),
+    unitFld:       get('prop-unit')||wizUnitId||'',
+    unitId:        wizUnitId||get('prop-unit')||'',
     gsasScore:     parseInt(get('prop-gsas'))||0,
     contractorName: get('cont-name'),
     contractorCR:   get('cont-cr'),
     contractorLic:  get('cont-lic'),
   });
-  if(step===3) Object.assign(wizState,{ loanAmount: parseFloat(get('wa-amt').replace(/,/g,''))||0, tenure: parseInt(get('wa-ten'))||25, downPayment: parseFloat(get('wa-dp').replace(/,/g,''))||0 });
+  if(step===3) Object.assign(wizState,{ loanAmount: parseFloat(get('wa-amt').replace(/,/g,''))||0, tenure: parseInt(get('wa-ten'))||25, downPayment: parseFloat(get('wa-dp').replace(/,/g,''))||0, productId: wizProductId||'' });
   if(step===5) Object.assign(wizState,{ ocrEmployer: get('inc-employer'), basicSalary: parseFloat(get('inc-basic'))||0, housingAllow: parseFloat(get('inc-housing'))||0, empType: get('inc-emptype') });
 }
 
@@ -2235,7 +2236,10 @@ function wizCalcFinance(){
   const ten     = parseInt(document.getElementById('wa-ten')?.value||25);
   const gsas    = wizState.gsasScore||89;
   const salary  = wizState.salary||3200;
-  const bestProd= allProducts.find(p=>p.category==='home_loan')||null;
+  const bestProd= (wizProductId ? allProducts.find(p=>p.id===wizProductId) : null)
+                  || allProducts.find(p=>p.category==='home_loan'&&p.is_demo_product===1)
+                  || allProducts.find(p=>p.category==='home_loan')
+                  || null;
   const minRate = bestProd?.base_rate||4.75;
   const maxLtv  = bestProd?.max_ltv||80;
   const rate    = gsas>=85?minRate:(gsas>=70?minRate+0.25:minRate+0.5);
@@ -2256,86 +2260,154 @@ function wizCalcFinance(){
   wizState.loanAmount = amt; wizState.downPayment = dp; wizState.tenure = ten; wizState.appliedRate = rate;
 }
 
+function selectWizProduct(id){
+  wizProductId = id;
+  // Highlight selected card, uncheck others
+  document.querySelectorAll('.prod-pick-card').forEach(card=>{
+    const sel = card.id === 'ppc-'+id;
+    card.classList.toggle('selected', sel);
+    const chk = card.querySelector('.ppc-chk');
+    if(chk) chk.textContent = sel ? '✓' : '';
+  });
+  // Re-derive rate from selected product and refresh calculator
+  const prod = allProducts.find(p=>p.id===id);
+  if(prod){
+    const gsas = wizState.gsasScore||89;
+    const rate  = gsas>=85?prod.base_rate:(gsas>=70?prod.base_rate+0.25:prod.base_rate+0.5);
+    const rateEl = document.getElementById('wa-rate');
+    if(rateEl) rateEl.value = `${rate.toFixed(2)}% ${gsas>=85?'(Green Premium)':'(Standard)'}`;
+    const ltvEl = document.getElementById('ltv-warn');
+    if(ltvEl) ltvEl.innerHTML = `⚠️ LTV exceeds maximum ${prod.max_ltv}% — increase down payment.`;
+  }
+  wizCalcFinance();
+  toast('Product selected: '+(prod?.name||id), 'ok');
+}
+
 /* ── STEP 4: Identity + Liveness ── */
 function stepIdentity(){
-  const idVerified  = wizState.idVerified||false;
-  const livePassed  = wizState.livenessPassed||false;
+  const idVerified = wizState.idVerified||false;
+  const livePassed = wizState.livenessPassed||false;
+  const frontOk    = wizState.idFrontFile||false;
+  const backOk     = wizState.idBackFile||false;
   return `
     <div class="step-title">Identity Verification</div>
-    <div class="step-sub">Upload your Civil ID and complete the liveness check. ID validation is automated — takes 15–30 seconds.</div>
+    <div class="step-sub">Upload both sides of your Civil ID, then complete the liveness check.</div>
 
-    <!-- Civil ID upload -->
-    <div class="doc-upload-area" id="id-upload-area">
-      <div style="font-size:24px;margin-bottom:8px">🪪</div>
-      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px">Upload Civil ID (Both Sides)</div>
-      <div style="font-size:11px;color:var(--g500);margin-bottom:12px">JPEG, PNG or PDF · Max 5MB per file</div>
-      <label style="cursor:pointer">
-        <input type="file" id="id-front-file" accept=".jpg,.jpeg,.png,.pdf" multiple style="display:none" onchange="triggerIdValidation()"/>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('id-front-file').click();event.preventDefault()">📎 Choose Files</button>
-      </label>
-      <div id="id-file-names" style="font-size:11px;color:var(--g500);margin-top:8px"></div>
-    </div>
+    <!-- Dual upload grid: Front + Back -->
+    <div class="id-upload-grid">
+      <!-- Front side -->
+      <div class="id-upload-zone${frontOk?' has-file':''}" id="id-zone-front" onclick="document.getElementById('id-front-file').click()">
+        <input type="file" id="id-front-file" accept=".jpg,.jpeg,.png,.pdf" style="display:none" onchange="handleIdUpload('front')"/>
+        <div id="id-front-thumb" style="display:${frontOk?'block':'none'}">
+          <img id="id-front-img" src="" alt="Front" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-bottom:6px"/>
+        </div>
+        <div id="id-front-placeholder" style="display:${frontOk?'none':'flex'};flex-direction:column;align-items:center;gap:4px">
+          <div style="font-size:26px">🪪</div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy)">Front Side</div>
+          <div style="font-size:10px;color:var(--g500)">Tap to upload</div>
+        </div>
+        <div id="id-front-name" style="font-size:10px;color:${frontOk?'var(--ok)':'var(--g500)'};margin-top:4px;word-break:break-all">${frontOk?'✅ '+wizState.idFrontName:'JPG · PNG · PDF'}</div>
+      </div>
 
-    <!-- ID validation status -->
-    <div id="id-val-status" style="margin-top:12px;display:${idVerified?'block':'none'}">
-      <div class="info-strip" style="background:var(--ok-bg);border-color:rgba(22,132,91,.25)">
-        ✅ <strong>Identity Verified</strong> — Civil ID authenticated · OIEC database matched · Expiry valid
+      <!-- Back side -->
+      <div class="id-upload-zone${backOk?' has-file':''}" id="id-zone-back" onclick="document.getElementById('id-back-file').click()">
+        <input type="file" id="id-back-file" accept=".jpg,.jpeg,.png,.pdf" style="display:none" onchange="handleIdUpload('back')"/>
+        <div id="id-back-thumb" style="display:${backOk?'block':'none'}">
+          <img id="id-back-img" src="" alt="Back" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-bottom:6px"/>
+        </div>
+        <div id="id-back-placeholder" style="display:${backOk?'none':'flex'};flex-direction:column;align-items:center;gap:4px">
+          <div style="font-size:26px">🔄</div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy)">Back Side</div>
+          <div style="font-size:10px;color:var(--g500)">Tap to upload</div>
+        </div>
+        <div id="id-back-name" style="font-size:10px;color:${backOk?'var(--ok)':'var(--g500)'};margin-top:4px;word-break:break-all">${backOk?'✅ '+wizState.idBackName:'JPG · PNG · PDF'}</div>
       </div>
     </div>
-    <div id="id-val-progress" style="display:none;margin-top:12px">
+    <div style="font-size:10px;color:var(--g500);margin-bottom:12px;text-align:center">Max 5 MB per file · Files are processed locally and not stored</div>
+
+    <!-- Validation progress + status -->
+    <div id="id-val-progress" style="display:none;margin-top:4px">
       <div style="font-size:12px;color:var(--g700);margin-bottom:6px" id="id-val-label">Scanning document…</div>
-      <div class="ocr-progress-wrap">
-        <div class="ocr-bar" id="id-val-bar" style="width:0%"></div>
+      <div class="ocr-progress-wrap"><div class="ocr-bar" id="id-val-bar" style="width:0%"></div></div>
+    </div>
+    <div id="id-val-status" style="margin-top:10px;display:${idVerified?'block':'none'}">
+      <div class="info-strip" style="background:var(--ok-bg);border-color:rgba(22,132,91,.25)">
+        ✅ <strong>Identity Verified</strong> — Civil ID authenticated · OIEC database matched · Expiry valid
       </div>
     </div>
 
     <div style="border-top:1px solid var(--g200);margin:20px 0"></div>
 
     <!-- Liveness check -->
-    <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:8px">Face Liveness Check</div>
-    <div style="font-size:12px;color:var(--g500);margin-bottom:14px">We need to verify you're a real person. Your camera will be used for a guided facial recognition check — data is not stored.</div>
+    <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px">Face Liveness Check</div>
+    <div style="font-size:12px;color:var(--g500);margin-bottom:14px">We need to verify you're a real person. Guided facial recognition — data is not stored.</div>
 
     <div id="liveness-status-box" style="display:${livePassed?'block':'none'};margin-bottom:12px">
       <div class="info-strip" style="background:var(--ok-bg);border-color:rgba(22,132,91,.25)">
         ✅ <strong>Liveness Verified</strong> — Face matched to Civil ID · Score 98.4% · Session: LV-${Date.now().toString(36).toUpperCase()}
       </div>
     </div>
-
     <button class="btn btn-teal" id="liveness-btn" onclick="startLiveness()" style="${livePassed?'background:var(--ok);':''}">
       ${livePassed?'✅ Re-run Liveness Check':'📸 Start Liveness Check'}
     </button>
-    <div style="font-size:11px;color:var(--g500);margin-top:8px">Requires camera access · Process takes ~20 seconds</div>
+    <div style="font-size:11px;color:var(--g500);margin-top:8px">Requires camera access · ~20 seconds</div>
 
-    <!-- Continue button guard -->
     <div id="id-gate-msg" style="display:none;margin-top:12px" class="warn-strip">
       ⚠️ Please complete both Identity Verification and Liveness Check before continuing.
     </div>`;
 }
 
-function triggerIdValidation(){
-  const inp = document.getElementById('id-front-file');
-  const names = Array.from(inp?.files||[]).map(f=>f.name).join(', ');
-  const nameEl = document.getElementById('id-file-names');
-  if(nameEl&&names) nameEl.textContent='Selected: '+names;
-  if(!inp?.files?.length) return;
+/* handleIdUpload: per-side upload with thumbnail preview, then triggers validation when both sides present */
+function handleIdUpload(side){
+  const inp   = document.getElementById(side==='front'?'id-front-file':'id-back-file');
+  const file  = inp?.files?.[0];
+  if(!file) return;
 
+  const isImg = file.type.startsWith('image/');
+  const thumb = document.getElementById('id-'+side+'-thumb');
+  const img   = document.getElementById('id-'+side+'-img');
+  const ph    = document.getElementById('id-'+side+'-placeholder');
+  const lbl   = document.getElementById('id-'+side+'-name');
+  const zone  = document.getElementById('id-zone-'+side);
+
+  if(isImg && img){
+    const reader = new FileReader();
+    reader.onload = e=>{ img.src=e.target.result; };
+    reader.readAsDataURL(file);
+    if(thumb) thumb.style.display='block';
+  }
+  if(ph) ph.style.display='none';
+  if(lbl){ lbl.textContent='✅ '+file.name; lbl.style.color='var(--ok)'; }
+  if(zone) zone.classList.add('has-file');
+
+  if(side==='front'){ wizState.idFrontFile=true; wizState.idFrontName=file.name; }
+  else              { wizState.idBackFile=true;  wizState.idBackName=file.name;  }
+
+  // Trigger ID validation once both sides uploaded
+  if(wizState.idFrontFile && wizState.idBackFile) triggerIdValidation();
+  else toast(side==='front'?'Front uploaded — now upload back side':'Back uploaded — now upload front side','ok');
+}
+
+function triggerIdValidation(){
   const prog   = document.getElementById('id-val-progress');
   const label  = document.getElementById('id-val-label');
   const bar    = document.getElementById('id-val-bar');
   const status = document.getElementById('id-val-status');
-  if(prog) prog.style.display='block';
+  if(prog)   prog.style.display='block';
   if(status) status.style.display='none';
+  toast('Both sides uploaded — scanning ID…','ok');
 
   const steps=[
-    {t:500,  pct:15, msg:'Reading document…'},
-    {t:1200, pct:35, msg:'Extracting ID data…'},
-    {t:2200, pct:55, msg:'Verifying against OIEC database…'},
-    {t:3500, pct:75, msg:'Checking expiry date…'},
-    {t:4800, pct:90, msg:'Finalising authentication…'},
-    {t:6000, pct:100,msg:'Verified ✅'},
+    {t:500,  pct:15, msg:'Reading front of Civil ID…'},
+    {t:1200, pct:30, msg:'Reading back of Civil ID…'},
+    {t:2200, pct:50, msg:'Extracting MRZ data…'},
+    {t:3200, pct:65, msg:'Verifying against OIEC database…'},
+    {t:4400, pct:80, msg:'Checking expiry date…'},
+    {t:5600, pct:95, msg:'Finalising authentication…'},
+    {t:6800, pct:100,msg:'Verified ✅'},
   ];
   steps.forEach(s=>setTimeout(()=>{
-    if(bar)  bar.style.width=s.pct+'%';
+    if(bar)   bar.style.width=s.pct+'%';
     if(label) label.textContent=s.msg;
     if(s.pct===100){
       setTimeout(()=>{

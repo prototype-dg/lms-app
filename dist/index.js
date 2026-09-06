@@ -882,7 +882,9 @@ var Be = [
 	"./migrations/0003_portal_columns.sql",
 	"./migrations/0004_project_images.sql",
 	"./migrations/0005_pge_foundation.sql",
-	"./migrations/0006_align_existing_products.sql"
+	"./migrations/0006_align_existing_products.sql",
+	"./migrations/0007_demo_flags_contractors.sql",
+	"./migrations/0008_eco_product_seed.sql"
 ];
 function Ve() {
 	let e = r.resolve("./migrations");
@@ -5654,7 +5656,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await I.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "96841a7";
+var at = "b530269";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
