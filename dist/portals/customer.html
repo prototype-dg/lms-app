@@ -382,11 +382,11 @@ body.rtl .ps-badge{margin-left:0;margin-right:auto}
 .liveness-brand-dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#35C6C4,#2ECC71);box-shadow:0 0 8px rgba(53,198,196,.6);animation:pulseDot 2s ease-in-out infinite}
 @keyframes pulseDot{0%,100%{box-shadow:0 0 8px rgba(53,198,196,.6)}50%{box-shadow:0 0 16px rgba(53,198,196,.9),0 0 24px rgba(53,198,196,.4)}}
 
-/* Camera viewport */
-.liveness-camera-wrap{position:relative;width:100%;aspect-ratio:3/4;max-height:44vh;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0a0f1a}
-.liveness-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
+/* Camera viewport — taller for bigger oval, clips anything outside */
+.liveness-camera-wrap{position:relative;width:100%;aspect-ratio:3/4;max-height:58vh;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0a0f1a}
+.liveness-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
 
-/* SVG overlay takes full viewport */
+/* SVG overlay: slice fills the box completely — no letterbox gaps at sides */
 .liveness-oval-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 
 /* Instruction pill at bottom of camera */
@@ -1109,47 +1109,26 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
     <div class="liveness-camera-wrap">
       <video id="liveness-video" class="liveness-video" autoplay muted playsinline></video>
 
-      <!-- Full-viewport SVG: gradient background + oval cutout + clock-tick ring + scan line -->
-      <svg id="liveness-ring-svg" class="liveness-oval-svg" viewBox="0 0 360 480" xmlns="http://www.w3.org/2000/svg">
+      <!-- Full-viewport SVG: slice preserveAspectRatio fills box — ZERO letterbox gaps -->
+      <!-- viewBox 360×480 matches 3:4 camera aspect ratio exactly -->
+      <svg id="liveness-ring-svg" class="liveness-oval-svg" viewBox="0 0 360 480"
+           preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <!-- Oval cutout mask -->
+          <!-- Oval cutout mask — oval cx=180 cy=240 covers 88% width, 83% height -->
           <mask id="liveness-oval-mask">
             <rect width="360" height="480" fill="white"/>
-            <ellipse cx="180" cy="228" rx="118" ry="152" fill="black"/>
+            <ellipse cx="180" cy="240" rx="155" ry="200" fill="black"/>
           </mask>
           <!-- Soft vignette gradient for edges -->
           <radialGradient id="liveness-vignette" cx="50%" cy="50%" r="60%">
             <stop offset="0%" stop-color="transparent"/>
-            <stop offset="100%" stop-color="rgba(5,15,30,.6)"/>
+            <stop offset="100%" stop-color="rgba(5,15,30,.5)"/>
           </radialGradient>
           <!-- Glow filter for active ticks -->
           <filter id="tickGlow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="1.5" result="blur"/>
             <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
-        </defs>
-
-        <!-- Solid dark fill outside oval — opaque so raw camera NEVER leaks at sides -->
-        <rect width="360" height="480" fill="#0a0f1a" mask="url(#liveness-oval-mask)"/>
-
-        <!-- Subtle vignette inside the oval for depth feel -->
-        <ellipse cx="180" cy="228" rx="118" ry="152" fill="url(#liveness-vignette)" opacity=".4"/>
-
-        <!-- Subtle inner glow on oval edge (always visible) -->
-        <ellipse cx="180" cy="228" rx="118" ry="152" fill="none" stroke="rgba(53,198,196,.15)" stroke-width="8"/>
-
-        <!-- Base oval ring (thin, dim) -->
-        <ellipse cx="180" cy="228" rx="118" ry="152" fill="none" stroke="rgba(53,198,196,.25)" stroke-width="2"/>
-
-        <!-- Clock-tick marks around the oval — 48 ticks, animated via JS -->
-        <g id="liveness-ticks"></g>
-
-        <!-- Animated face scan line (horizontal sweep) -->
-        <g id="liveness-scanline-group" opacity="0">
-          <line id="liveness-scanline" x1="62" y1="228" x2="298" y2="228" stroke="rgba(53,198,196,.6)" stroke-width="1"/>
-          <rect x="62" y="224" width="236" height="8" fill="url(#scanGrad)" opacity=".3"/>
-        </g>
-        <defs>
           <linearGradient id="scanGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#35C6C4" stop-opacity=".0"/>
             <stop offset="50%" stop-color="#35C6C4" stop-opacity=".8"/>
@@ -1157,16 +1136,33 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
           </linearGradient>
         </defs>
 
-        <!-- Corner bracket marks at oval quadrants for targeting feel -->
+        <!-- Solid dark fill OUTSIDE oval — slice guarantees no raw-camera gaps at sides -->
+        <rect width="360" height="480" fill="#0a0f1a" mask="url(#liveness-oval-mask)"/>
+
+        <!-- Subtle vignette inside oval for depth -->
+        <ellipse cx="180" cy="240" rx="155" ry="200" fill="url(#liveness-vignette)" opacity=".35"/>
+
+        <!-- Soft inner glow on oval edge -->
+        <ellipse cx="180" cy="240" rx="155" ry="200" fill="none" stroke="rgba(53,198,196,.12)" stroke-width="10"/>
+
+        <!-- Base oval ring -->
+        <ellipse cx="180" cy="240" rx="155" ry="200" fill="none" stroke="rgba(53,198,196,.28)" stroke-width="2"/>
+
+        <!-- Clock-tick marks — 48 ticks, JS-driven -->
+        <g id="liveness-ticks"></g>
+
+        <!-- Scan line sweep -->
+        <g id="liveness-scanline-group" opacity="0">
+          <line id="liveness-scanline" x1="25" y1="240" x2="335" y2="240" stroke="rgba(53,198,196,.55)" stroke-width="1"/>
+          <rect x="25" y="236" width="310" height="8" fill="url(#scanGrad)" opacity=".3"/>
+        </g>
+
+        <!-- Corner bracket marks at oval quadrants -->
         <g stroke="#35C6C4" stroke-width="2.5" stroke-linecap="round" opacity=".7">
-          <!-- Top -->
-          <line x1="174" y1="74" x2="186" y2="74"/>
-          <!-- Bottom -->
-          <line x1="174" y1="382" x2="186" y2="382"/>
-          <!-- Left -->
-          <line x1="62" y1="222" x2="62" y2="234"/>
-          <!-- Right -->
-          <line x1="298" y1="222" x2="298" y2="234"/>
+          <line x1="173" y1="38" x2="187" y2="38"/>
+          <line x1="173" y1="442" x2="187" y2="442"/>
+          <line x1="23" y1="234" x2="23" y2="246"/>
+          <line x1="337" y1="234" x2="337" y2="246"/>
         </g>
       </svg>
 
@@ -2800,7 +2796,7 @@ function triggerIdValidation(){
 ══════════════════════════════════════════════════════ */
 
 const TICK_COUNT  = 48;
-const LV_OX=180, LV_OY=228, LV_RX=130, LV_RY=166;
+const LV_OX=180, LV_OY=240, LV_RX=155, LV_RY=200; // matches SVG ellipse cx/cy/rx/ry
 
 // State
 let lvTicksFilled   = 0;          // ticks currently lit (0–TICK_COUNT)
@@ -2860,35 +2856,44 @@ function paintTicks(filled){
   }
 }
 
-/* ── Face-centre estimation: weighted brightness X in oval band ──
-   The video is mirror-flipped (scaleX(-1)). When user turns head right
-   (clockwise from front), the bright face mass shifts LEFT in the raw
-   pixel data → weighted X decreases. We accumulate that leftward shift
-   as clockwise progress.
+/* ── Motion detection via frame-differencing ──
+   Strategy: compare each frame to the previous frame pixel-by-pixel.
+   Sum of absolute differences (SAD) measures how much the image changed.
+   Any real head movement produces a large SAD; stillness = small SAD.
+   We accumulate SAD scores above a noise floor → drives tick progress.
+   This works regardless of lighting, skin tone, or background.
+   Canvas is sampled at 96×72 (4:3) to match video aspect ratio.
 */
-function getFaceCentreX(video){
-  if(!video.videoWidth) return null;
+const LV_SW=96, LV_SH=72;               // sample canvas size
+let lvPrevPixels=null;                   // Uint8Array of previous frame greyscale
+
+function getMotionScore(video){
+  if(!video.videoWidth||!video.videoHeight) return 0;
   if(!lvCanvas){
     lvCanvas=document.createElement('canvas');
-    lvCanvas.width=LV_W; lvCanvas.height=LV_H;
+    lvCanvas.width=LV_SW; lvCanvas.height=LV_SH;
     lvCtx=lvCanvas.getContext('2d',{willReadFrequently:true});
   }
-  lvCtx.drawImage(video,0,0,LV_W,LV_H);
-  const d=lvCtx.getImageData(0,0,LV_W,LV_H).data;
-  let weightX=0, totalBrightness=0;
-  // Sample only centre vertical strip (rows 10–50 of LV_H=60 → focus on face)
-  for(let y=10;y<50;y++){
-    for(let x=0;x<LV_W;x++){
-      const i=(y*LV_W+x)*4;
-      const bright=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)/255;
-      // Weight brighter pixels more (skin is lighter than background)
-      const w=bright*bright;
-      weightX+=x*w;
-      totalBrightness+=w;
+  lvCtx.drawImage(video,0,0,LV_SW,LV_SH);
+  const rgba=lvCtx.getImageData(0,0,LV_SW,LV_SH).data;
+  // Convert to greyscale array
+  const grey=new Uint8Array(LV_SW*LV_SH);
+  for(let i=0;i<grey.length;i++) grey[i]=(rgba[i*4]*77+rgba[i*4+1]*150+rgba[i*4+2]*29)>>8;
+
+  if(!lvPrevPixels){ lvPrevPixels=grey; return 0; }
+
+  // Sum of absolute differences — only centre region (ignore outer 12px border = background)
+  let sad=0, count=0;
+  for(let y=12;y<LV_SH-12;y++){
+    for(let x=12;x<LV_SW-12;x++){
+      const idx=y*LV_SW+x;
+      sad+=Math.abs(grey[idx]-lvPrevPixels[idx]);
+      count++;
     }
   }
-  if(totalBrightness<1) return 0.5;
-  return weightX/totalBrightness/LV_W; // 0 (left) → 1 (right)
+  lvPrevPixels=grey;
+  // Normalise to 0–1 range where ~0.02 = clear head movement
+  return sad/(count*255);
 }
 
 /* ── Main tracking loop — runs every animation frame ── */
@@ -2896,6 +2901,7 @@ function startFaceTracking(){
   lvFaceXHistory=[];
   lvTotalArc=0;
   lvPrevFaceX=null;
+  lvPrevPixels=null;
   lvPhase='init';
   lvInitFrames=0;
 
@@ -2904,61 +2910,57 @@ function startFaceTracking(){
   const lbl=document.getElementById('liveness-progress-label');
   const instr=document.getElementById('liveness-instr');
 
+  // Throttle: run detection every 3rd rAF (~50fps → ~17fps) to reduce jitter noise
+  let frameCount=0;
+
   function frame(){
     lvTrackRaf=requestAnimationFrame(frame);
     if(!video||!video.videoWidth) return;
-
-    const rawX=getFaceCentreX(video);
-    // Smooth with ring buffer
-    lvFaceXHistory.push(rawX);
-    if(lvFaceXHistory.length>LV_HISTORY) lvFaceXHistory.shift();
-    const faceX=lvFaceXHistory.reduce((a,v)=>a+v,0)/lvFaceXHistory.length;
+    frameCount++;
 
     if(lvPhase==='init'){
-      // Collect baseline for ~20 frames then switch to rotate phase
       lvInitFrames++;
-      lvPrevFaceX=faceX;
-      if(lvInitFrames>=10){
+      // Warm up pixel buffer for 15 frames, then transition
+      getMotionScore(video); // prime lvPrevPixels
+      if(lvInitFrames>=15){
         lvPhase='rotate';
-        if(instr){ instr.textContent='Rotate your head clockwise ↻'; instr.style.background=''; }
-        // Activate step 2 pill (Rotating)
+        lvPrevPixels=null; // reset so first rotate frame doesn't get a huge diff
+        if(instr){ instr.textContent='Slowly rotate your head ↻'; instr.style.background=''; }
         document.querySelectorAll('.lv-step').forEach((el,i)=>{
           el.className='lv-step'+(i===0?' done':i===1?' active':'');
         });
-        if(lbl) lbl.textContent='Rotate clockwise — 0% complete';
+        if(lbl) lbl.textContent='Rotate your head — 0% complete';
       }
       return;
     }
 
     if(lvPhase==='rotate'){
-      // Delta: track face-centre X movement.
-      // Mirrored video: turning head right (CW from front) shifts bright mass LEFT → dx positive.
-      // We accept both directions of change to accumulate the full sweep gesture.
-      if(lvPrevFaceX!==null){
-        const dx=Math.abs(faceX-lvPrevFaceX); // magnitude of any lateral shift
-        // Ignore micro-jitter (< 0.002 ≈ stillness noise)
-        if(dx>0.002){
-          // Each rAF ~16ms; head turn sweeps centroid ~0.3 units total.
-          // 0.3 units / 70 target = need ~0.3 per completion. Multiplier 250 gives 0.3×250=75.
-          lvTotalArc+=dx*250;
-        }
+      // Only sample every 3rd frame to avoid accumulating noise from stable frames
+      if(frameCount%3!==0) return;
+
+      const score=getMotionScore(video);
+      // Noise floor: ignore scores below 0.008 (camera noise / breathing)
+      // Clear head movement typically produces score 0.015–0.05
+      const NOISE_FLOOR=0.008;
+      const MAX_SCORE=0.06; // clamp runaway values (e.g. scene change)
+      if(score>NOISE_FLOOR){
+        const effective=Math.min(score,MAX_SCORE)-NOISE_FLOOR;
+        // Scale: need LV_ARC_NEEDED total.
+        // A slow head turn produces ~0.02 effective per sample × 300 multiplier = 6 units/sample.
+        // At 17fps÷3 = ~5.7 samples/sec → ~34 units/sec → 70 units in ~2 seconds.
+        lvTotalArc+=effective*300;
       }
-      lvPrevFaceX=faceX;
 
       const progress=Math.min(lvTotalArc/LV_ARC_NEEDED,1);
 
-      // Update tick ring directly — no interpolation, instant response
       const targetTicks=Math.round(progress*TICK_COUNT);
       if(targetTicks!==lvTicksFilled){
         lvTicksFilled=targetTicks;
         paintTicks(targetTicks);
       }
-
-      // Update bar and label
       if(bar) bar.style.width=(progress*100)+'%';
-      if(lbl) lbl.textContent='Rotate clockwise — '+Math.round(progress*100)+'% complete';
+      if(lbl) lbl.textContent='Rotate your head — '+Math.round(progress*100)+'% complete';
 
-      // Done when full ring filled
       if(progress>=1){
         lvPhase='done';
         finishLiveness();
@@ -2971,6 +2973,7 @@ function startFaceTracking(){
 function stopFaceTracking(){
   cancelAnimationFrame(lvTrackRaf);
   lvTrackRaf=null;
+  lvPrevPixels=null;
 }
 
 /* ── Scan-line animation (cosmetic) ── */
@@ -2979,12 +2982,12 @@ function startScanLine(){
   const line=document.getElementById('liveness-scanline');
   if(!grp||!line) return;
   grp.setAttribute('opacity','1');
-  lvScanY=76; lvScanDir=1;
+  lvScanY=40; lvScanDir=1; // top of new oval: cy-ry = 240-200 = 40
   function f(){
     lvScanRaf=requestAnimationFrame(f);
     lvScanY+=lvScanDir*2;
-    if(lvScanY>380) lvScanDir=-1;
-    if(lvScanY<76)  lvScanDir=1;
+    if(lvScanY>440) lvScanDir=-1; // bottom of oval: cy+ry = 240+200 = 440
+    if(lvScanY<40)  lvScanDir=1;
     line.setAttribute('y1',lvScanY.toFixed(0));
     line.setAttribute('y2',lvScanY.toFixed(0));
   }
@@ -2998,7 +3001,7 @@ function stopScanLine(){
 
 /* ── Public API ── */
 async function startLiveness(){
-  lvTicksFilled=0; lvTotalArc=0; lvPhase='init'; lvInitFrames=0;
+  lvTicksFilled=0; lvTotalArc=0; lvPhase='init'; lvInitFrames=0; lvPrevPixels=null; lvCanvas=null; lvCtx=null;
   const overlay=document.getElementById('liveness-overlay');
   overlay.style.display='flex';
   buildLivenessTicks();
