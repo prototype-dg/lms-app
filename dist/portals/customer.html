@@ -1402,7 +1402,7 @@ function renderProjectList(){
                'linear-gradient(135deg,#2d5016,#6aaa2a)','linear-gradient(135deg,#003B5C,#35C6C4)'];
   wrap.innerHTML=`<div class="prop-grid">
     ${allProjects.map((p,i)=>{
-      const gsas = p.gsas_overall_score||p.gsas_score||0;
+      const gsas = p.gsas_overall_score||p.gsas_score||(p.premium_tier?92:p.green_eligible?75:0);
       const rate = gsas>=85?'4.75':gsas>=70?'5.00':'5.25';
       const isEco     = p.is_demo_project===1||p.is_demo_project===true;
       const priceFrom = p.price_from?'OMR '+Number(p.price_from).toLocaleString():'Price TBC';
