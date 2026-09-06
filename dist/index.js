@@ -3795,10 +3795,20 @@ Qe.post("/run", async (e) => {
 		"p008"
 	];
 	try {
+		await t.prepare("PRAGMA foreign_keys = OFF").run();
 		let r = n.map(() => "?").join(",");
 		await t.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run(), await t.prepare("UPDATE construction_stages SET invoice_doc_id=NULL WHERE invoice_doc_id IS NOT NULL").run(), await t.prepare("DELETE FROM documents WHERE entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')").run(), await t.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run(), await t.prepare(`DELETE FROM rules WHERE product_id IS NOT NULL AND product_id NOT IN (${r})`).bind(...n).run(), await t.prepare(`DELETE FROM audit_logs WHERE entity_type='product' AND entity_id NOT IN (${r})`).bind(...n).run();
 		try {
 			await t.prepare(`DELETE FROM ai_threads WHERE product_id IS NOT NULL AND product_id NOT IN (${r})`).bind(...n).run();
+		} catch {}
+		try {
+			await t.prepare(`DELETE FROM product_versions WHERE product_id NOT IN (${r})`).bind(...n).run();
+		} catch {}
+		try {
+			await t.prepare(`DELETE FROM compliance_tag_mappings WHERE product_id NOT IN (${r})`).bind(...n).run();
+		} catch {}
+		try {
+			await t.prepare(`DELETE FROM market_product_mappings WHERE product_id NOT IN (${r})`).bind(...n).run();
 		} catch {}
 		await t.prepare(`DELETE FROM products WHERE id NOT IN (${r})`).bind(...n).run();
 		for (let [e, n] of [
@@ -3815,7 +3825,43 @@ Qe.post("/run", async (e) => {
 		try {
 			await t.prepare("DELETE FROM ai_threads").run();
 		} catch {}
-		await t.prepare("UPDATE applications SET unit_id=NULL, project_id=NULL WHERE id IN ('app001','app002')").run(), await t.prepare("DELETE FROM units").run(), await t.prepare("DELETE FROM projects WHERE id NOT IN ('proj001','proj002','proj003','proj004')").run(), await t.prepare("DELETE FROM documents WHERE entity_type='project' AND entity_id NOT IN ('proj001','proj002','proj003','proj004')").run(), await t.prepare("INSERT OR REPLACE INTO projects VALUES\n      ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',\n       36,12,8,16,78,'Gold','B','EIA/2024/201',\n       '{\"type\":\"FeatureCollection\",\"features\":[]}',\n       'active',1,0,'2024-06-15','2025-11-30',\n       1,'/static/img/proj001_hero.jpg',\n       'Waterfront living with premium amenities in the heart of Muscat',\n       95000,185000,NULL,\n       '[\"Swimming Pool\",\"Gym\",\"24/7 Security\",\"Covered Parking\",\"Children''s Play Area\"]')").run(), await t.prepare("INSERT OR REPLACE INTO projects VALUES\n      ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',\n       18,18,0,0,82,'Gold','A',NULL,\n       '{\"type\":\"FeatureCollection\",\"features\":[]}',\n       'active',1,0,'2025-01-10','2025-12-01',\n       1,'/static/img/proj002_hero.jpg',\n       'Spacious villas with panoramic views near Muscat International Airport',\n       145000,220000,NULL,\n       '[\"Private Garden\",\"Rooftop Terrace\",\"Central A/C\",\"Smart Home\",\"Visitor Parking\"]')").run(), await t.prepare("INSERT OR REPLACE INTO projects VALUES\n      ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',\n       60,0,0,60,NULL,NULL,NULL,NULL,\n       '{\"type\":\"FeatureCollection\",\"features\":[]}',\n       'archived',0,0,'2023-05-01','2025-06-30',\n       0,'/static/img/proj003_hero.jpg',\n       NULL,NULL,NULL,NULL,'[]')").run(), await t.prepare("INSERT OR REPLACE INTO projects VALUES\n      ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',\n       24,0,0,0,NULL,NULL,NULL,NULL,\n       '{\"type\":\"FeatureCollection\",\"features\":[]}',\n       'draft',0,0,'2026-08-31','2026-08-31',\n       0,'/static/img/proj004_hero.jpg',\n       NULL,NULL,NULL,NULL,'[]')").run();
+		await t.prepare("UPDATE applications SET unit_id=NULL, project_id=NULL WHERE id IN ('app001','app002')").run(), await t.prepare("DELETE FROM units").run(), await t.prepare("DELETE FROM projects WHERE id NOT IN ('proj001','proj002','proj003','proj004')").run(), await t.prepare("DELETE FROM documents WHERE entity_type='project' AND entity_id NOT IN ('proj001','proj002','proj003','proj004')").run();
+		let i = "(id,developer_id,name,code,location,governorate,type,\n      total_units,available_units,reserved_units,sold_units,\n      gsas_score,gsas_rating,epc_rating,eia_reference,geo_json,\n      status,green_eligible,premium_tier,created_at,updated_at,\n      listing_visible,hero_image_url,marketing_tagline,\n      price_from,price_to,completion_date,amenities,\n      is_demo_project,gsas_overall_score,green_features)";
+		await t.prepare(`INSERT OR REPLACE INTO projects ${i} VALUES
+      ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',
+       36,12,8,16,78,'Gold','B','EIA/2024/201',
+       '{"type":"FeatureCollection","features":[]}',
+       'active',1,0,'2024-06-15','2025-11-30',
+       1,'/static/img/proj001_hero.jpg',
+       'Waterfront living with premium amenities in the heart of Muscat',
+       95000,185000,NULL,
+       '["Swimming Pool","Gym","24/7 Security","Covered Parking","Children''s Play Area"]',
+       0,NULL,NULL)`).run(), await t.prepare(`INSERT OR REPLACE INTO projects ${i} VALUES
+      ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',
+       18,18,0,0,82,'Gold','A',NULL,
+       '{"type":"FeatureCollection","features":[]}',
+       'active',1,0,'2025-01-10','2025-12-01',
+       1,'/static/img/proj002_hero.jpg',
+       'Spacious villas with panoramic views near Muscat International Airport',
+       145000,220000,NULL,
+       '["Private Garden","Rooftop Terrace","Central A/C","Smart Home","Visitor Parking"]',
+       0,NULL,NULL)`).run(), await t.prepare(`INSERT OR REPLACE INTO projects ${i} VALUES
+      ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',
+       60,0,0,60,NULL,NULL,NULL,NULL,
+       '{"type":"FeatureCollection","features":[]}',
+       'archived',0,0,'2023-05-01','2025-06-30',
+       0,'/static/img/proj003_hero.jpg',
+       NULL,NULL,NULL,NULL,'[]',
+       0,NULL,NULL)`).run(), await t.prepare(`INSERT OR REPLACE INTO projects ${i} VALUES
+      ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',
+       6,4,1,1,89,'Gold','A',NULL,
+       '{"type":"FeatureCollection","features":[]}',
+       'active',1,1,'2026-08-31','2026-08-31',
+       1,'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80',
+       'Sustainable living in the heart of Muscat',
+       180000,248000,NULL,
+       '["Solar PV 8.5kWp","Greywater Recycling","Green Roof","EV Charging","Smart Metering"]',
+       1,89,'["Solar PV 8.5kWp","Greywater Recycling","Green Roof","HVAC SEER 18.2","EV Charging Ready","Smart Metering"]')`).run();
 		for (let e of [
 			[
 				"unit-a001",
@@ -4602,6 +4648,92 @@ Qe.post("/run", async (e) => {
 				"sold"
 			]
 		]) await t.prepare("INSERT OR IGNORE INTO units\n        (id,project_id,unit_number,type,area_sqm,bedrooms,bathrooms,price,lat,lng,status,features,gsas_score,created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))").bind(e[0], e[1], e[2], e[3], e[4], e[5], e[6], e[7], e[8], e[9], e[10], "[]", null).run();
+		for (let e of [
+			[
+				"eco-v01",
+				"proj004",
+				"EV-101",
+				"villa",
+				210,
+				3,
+				2,
+				185e3,
+				"available",
+				89,
+				"con001",
+				"[\"Solar PV\",\"Greywater Recycling\",\"Green Roof\",\"EV Charging\"]"
+			],
+			[
+				"eco-v02",
+				"proj004",
+				"EV-102",
+				"villa",
+				225,
+				3,
+				2,
+				195e3,
+				"available",
+				89,
+				"con001",
+				"[\"Solar PV\",\"Greywater Recycling\",\"Green Roof\",\"EV Charging\"]"
+			],
+			[
+				"eco-v03",
+				"proj004",
+				"EV-103",
+				"villa",
+				245,
+				4,
+				3,
+				21e4,
+				"reserved",
+				89,
+				"con001",
+				"[\"Solar PV\",\"Greywater Recycling\",\"HVAC SEER 18\",\"EV Charging\"]"
+			],
+			[
+				"eco-v04",
+				"proj004",
+				"EV-201",
+				"villa",
+				258,
+				4,
+				3,
+				22e4,
+				"available",
+				91,
+				"con001",
+				"[\"Solar PV 8.5kWp\",\"Greywater Recycling\",\"Smart Metering\",\"EV Charging\"]"
+			],
+			[
+				"eco-v05",
+				"proj004",
+				"EV-202",
+				"villa",
+				272,
+				4,
+				3,
+				235e3,
+				"sold",
+				91,
+				"con001",
+				"[\"Solar PV 8.5kWp\",\"Greywater Recycling\",\"Smart Metering\",\"EV Charging\"]"
+			],
+			[
+				"eco-v06",
+				"proj004",
+				"EV-203",
+				"villa",
+				290,
+				5,
+				4,
+				248e3,
+				"available",
+				91,
+				"con001",
+				"[\"Solar PV 8.5kWp\",\"Green Roof\",\"Smart Metering\",\"EV Charging\"]"
+			]
+		]) await t.prepare("INSERT OR IGNORE INTO units\n        (id,project_id,unit_number,type,area_sqm,bedrooms,bathrooms,price,status,gsas_score,contractor_id,features,floor_number,created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1,datetime('now'))").bind(e[0], e[1], e[2], e[3], e[4], e[5], e[6], e[7], e[8], e[9], e[10], e[11]).run();
 		return await t.prepare("INSERT OR REPLACE INTO applications VALUES\n      ('app001','HL-240892','p001','c002','Mariam Al-Siyabi',NULL,'proj001',\n       250000,20,'Al Mouj Residences, Unit A12, Muscat','partner',142,NULL,NULL,\n       5.5,5.5,1608.82,1608.82,0,46,78,9.0,1,780,'approved','verified',\n       'u002','2024-09-15','u003','2024-09-16',250000,0,NULL,NULL,\n       '2024-09-14','2024-09-16')").run(), await t.prepare("INSERT OR REPLACE INTO applications VALUES\n      ('app002','HL-241156','p001','c003','Hassan Al-Amri',NULL,NULL,\n       120000,15,'Plot 45, Al Ghubra North, Muscat','byop',200,NULL,NULL,\n       5.5,5.5,980.12,980.12,0,36,72,9.0,1,710,'credit_review','pending',\n       NULL,NULL,NULL,NULL,120000,0,NULL,NULL,\n       '2024-12-01','2024-12-03')").run(), await t.prepare("DELETE FROM audit_logs WHERE id NOT IN ('al001','al002','al003','al004')").run(), await t.prepare("INSERT OR REPLACE INTO audit_logs VALUES\n      ('al001','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p001','{\"status\":\"active\",\"product_name\":\"Standard Home Loan\"}','manual',NULL,NULL,'10.10.50.15','2024-01-10 09:00:00')").run(), await t.prepare("INSERT OR REPLACE INTO audit_logs VALUES\n      ('al002','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p002','{\"status\":\"active\",\"product_name\":\"Auto Finance – Personal\"}','manual',NULL,NULL,'10.10.50.15','2023-06-01 10:00:00')").run(), await t.prepare("INSERT OR REPLACE INTO audit_logs VALUES\n      ('al003','u002','Aisha Al-Balushi','compliance_officer','APPLICATION_APPROVED','application','app001','{\"reference\":\"HL-240892\",\"customer\":\"Mariam Al-Siyabi\",\"amount\":250000}','manual',NULL,'CBO Circular 2024-01','10.10.50.22','2024-09-15 14:30:00')").run(), await t.prepare("INSERT OR REPLACE INTO audit_logs VALUES\n      ('al004','u003','Omar Al-Mantheri','risk_officer','CREDIT_REVIEW_APPROVED','application','app001','{\"reference\":\"HL-240892\",\"dbr\":46,\"ltv\":78,\"stress_test\":\"passed\"}','manual',NULL,'CBO Circular 2024-01','10.10.50.33','2024-09-16 11:00:00')").run(), await t.prepare("PRAGMA foreign_keys = ON").run(), e.json({
 			success: !0,
 			message: "System fully reset to template state. All demo-created products, applications, threads, and live data removed. Ready for a fresh run."
@@ -5657,7 +5789,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await I.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var at = "089dc78";
+var at = "bd186c0";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
