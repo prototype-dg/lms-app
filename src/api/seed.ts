@@ -456,8 +456,10 @@ app.post('/reset-demo', async (c) => {
     // ── 5. Reset projects + units to template state ─────────────────────
     const TEMPLATE_PROJECT_IDS = ['proj001','proj002','proj003','proj004']
 
-    // Null out unit_id on seed applications before deleting any units
-    await db.prepare("UPDATE applications SET unit_id=NULL WHERE id IN ('app001','app002')").run()
+    // Null out unit_id AND project_id on seed applications before replacing projects/units.
+    // INSERT OR REPLACE deletes then re-inserts the row, triggering FK violations on any
+    // child rows (applications.unit_id→units.id, applications.project_id→projects.id).
+    await db.prepare("UPDATE applications SET unit_id=NULL, project_id=NULL WHERE id IN ('app001','app002')").run()
 
     // Delete ALL units (template projects get re-seeded below; user projects are purged)
     await db.prepare("DELETE FROM units").run()
