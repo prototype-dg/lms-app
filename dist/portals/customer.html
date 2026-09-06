@@ -2549,9 +2549,10 @@ function stepFinancing(){
   const gsas     = wizState.gsasScore || 0;
   const salary   = wizState.salary || 3200;
 
-  // All active home-loan products from DB — demo/green product first
+  // All home-loan products from DB — API already filters status='active' server-side,
+  // so don't re-filter on status here (status is not in the SELECT list → always null)
   const homeProds = allProducts
-    .filter(p => p.category === 'home_loan' && p.status === 'active')
+    .filter(p => p.category === 'home_loan')
     .sort((a,b) => (b.is_demo_product||0) - (a.is_demo_product||0));
 
   if(!homeProds.length){
