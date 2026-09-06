@@ -3936,15 +3936,49 @@ function renderTrackingHTML(data, ref){
   const app = data.application || data;
   const stages = data.stages || [];
   const statusLabel = {submitted:'Application Received',credit_scoring:'Credit Assessment',esg_review:'ESG Verification',credit_review:'Final Credit Review',approved:'Approved ✅',disbursed:'Funds Disbursed',completed:'Completed',rejected:'Rejected'};
-  const statusBadge = {submitted:'In Review',credit_scoring:'Under Assessment',credit_review:'In Review',approved:'Approved',disbursed:'Disbursed',completed:'Completed',rejected:'Rejected'};
-  const stMap=['submitted','credit_scoring','esg_review','credit_review','approved','disbursed'];
-  const stIdx = stMap.indexOf(app.status||'submitted');
-  const steps = [
-    'Application Received','Credit Assessment','ESG Verification',
-    'Credit Review','Approved','Funds Disbursed'
-  ].map((lbl,i)=>({label:lbl, done:i<stIdx, active:i===stIdx}));
+  const statusBadge = {submitted:'In Review',credit_scoring:'Under Assessment',esg_review:'ESG Review',credit_review:'In Review',approved:'Approved ✅',disbursed:'Disbursed',completed:'Completed',rejected:'Rejected'};
 
-  let html=`<div class="track-ref">Reference: <strong>${ref}</strong>
+  // Use the API timeline if present (already has correct done flags),
+  // otherwise compute from status index — use <= so the current step is also marked done
+  let steps;
+  if(data.timeline && data.timeline.length){
+    const tlLabels = {submitted:'Application Received',credit_scoring:'Credit Assessment',esg_review:'ESG Verification',credit_review:'Maker-Checker Approval',approved:'Approved',disbursed:'Funds Disbursed'};
+    steps = data.timeline.map(t=>({
+      label: tlLabels[t.key]||t.label||t.key,
+      done:  t.done,
+      active: false   // timeline already handles done/not-done; no spinner for completed stages
+    }));
+    // Mark the first not-done step as active (spinner) only if not fully approved/disbursed
+    if(!['approved','disbursed','completed'].includes(app.status)){
+      const firstPending = steps.findIndex(s=>!s.done);
+      if(firstPending !== -1) steps[firstPending].active = true;
+    }
+  } else {
+    const stMap=['submitted','credit_scoring','esg_review','credit_review','approved','disbursed'];
+    const stIdx = stMap.indexOf(app.status||'submitted');
+    const isTerminal = ['approved','disbursed','completed','rejected'].includes(app.status);
+    steps = [
+      'Application Received','Credit Assessment','ESG Verification',
+      'Maker-Checker Approval','Approved','Funds Disbursed'
+    ].map((lbl,i)=>({
+      label:lbl,
+      done: isTerminal ? i<=stIdx : i<stIdx,
+      active: !isTerminal && i===stIdx
+    }));
+  }
+
+  // Celebration banner for approved status
+  const approvedBanner = (app.status==='approved')
+    ? `<div style="background:linear-gradient(135deg,#d1fae5,#a7f3d0);border:1.5px solid #10b981;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:28px">🎉</span>
+        <div>
+          <div style="font-weight:700;color:#065f46;font-size:15px">Congratulations — Your Loan is Approved!</div>
+          <div style="color:#047857;font-size:12.5px;margin-top:3px">Disbursement of OMR ${fmtOMR(app.loan_amount||0)} will begin once construction milestones are reached.</div>
+        </div>
+      </div>`
+    : '';
+
+  let html=`${approvedBanner}<div class="track-ref">Reference: <strong>${ref}</strong>
     <span class="track-badge">${statusBadge[app.status]||'In Review'}</span>
   </div>
   <div class="track-timeline">
