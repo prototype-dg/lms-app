@@ -501,7 +501,17 @@ app.post('/reset-demo', async (c) => {
 
     // ── 5a. Restore/re-seed ALL template project rows (INSERT OR REPLACE) ──
     // proj001 – Al Mouj Residences (active, 36 units, 12 available, 8 reserved, 16 sold)
-    await db.prepare(`INSERT OR REPLACE INTO projects VALUES
+    // Use explicit column list so the INSERT works regardless of how many
+    // columns migrations have added (avoids "N columns but M values" errors).
+    const projCols = `(id,developer_id,name,code,location,governorate,type,
+      total_units,available_units,reserved_units,sold_units,
+      gsas_score,gsas_rating,epc_rating,eia_reference,geo_json,
+      status,green_eligible,premium_tier,created_at,updated_at,
+      listing_visible,hero_image_url,marketing_tagline,
+      price_from,price_to,completion_date,amenities,
+      is_demo_project,gsas_overall_score,green_features)`
+
+    await db.prepare(`INSERT OR REPLACE INTO projects ${projCols} VALUES
       ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',
        36,12,8,16,78,'Gold','B','EIA/2024/201',
        '{"type":"FeatureCollection","features":[]}',
@@ -509,10 +519,11 @@ app.post('/reset-demo', async (c) => {
        1,'/static/img/proj001_hero.jpg',
        'Waterfront living with premium amenities in the heart of Muscat',
        95000,185000,NULL,
-       '["Swimming Pool","Gym","24/7 Security","Covered Parking","Children''s Play Area"]')`).run()
+       '["Swimming Pool","Gym","24/7 Security","Covered Parking","Children''s Play Area"]',
+       0,NULL,NULL)`).run()
 
     // proj002 – Seeb Heights Villas (active, 18 units all available)
-    await db.prepare(`INSERT OR REPLACE INTO projects VALUES
+    await db.prepare(`INSERT OR REPLACE INTO projects ${projCols} VALUES
       ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',
        18,18,0,0,82,'Gold','A',NULL,
        '{"type":"FeatureCollection","features":[]}',
@@ -520,25 +531,30 @@ app.post('/reset-demo', async (c) => {
        1,'/static/img/proj002_hero.jpg',
        'Spacious villas with panoramic views near Muscat International Airport',
        145000,220000,NULL,
-       '["Private Garden","Rooftop Terrace","Central A/C","Smart Home","Visitor Parking"]')`).run()
+       '["Private Garden","Rooftop Terrace","Central A/C","Smart Home","Visitor Parking"]',
+       0,NULL,NULL)`).run()
 
     // proj003 – Mabella View Apartments (archived, 60 sold)
-    await db.prepare(`INSERT OR REPLACE INTO projects VALUES
+    await db.prepare(`INSERT OR REPLACE INTO projects ${projCols} VALUES
       ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',
        60,0,0,60,NULL,NULL,NULL,NULL,
        '{"type":"FeatureCollection","features":[]}',
        'archived',0,0,'2023-05-01','2025-06-30',
        0,'/static/img/proj003_hero.jpg',
-       NULL,NULL,NULL,NULL,'[]')`).run()
+       NULL,NULL,NULL,NULL,'[]',
+       0,NULL,NULL)`).run()
 
-    // proj004 – EcoVillage Muscat Phase 1 (draft, upcoming — reset to blank)
-    await db.prepare(`INSERT OR REPLACE INTO projects VALUES
+    // proj004 – EcoVillage Muscat (active demo — reset restores portal state)
+    await db.prepare(`INSERT OR REPLACE INTO projects ${projCols} VALUES
       ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',
-       24,0,0,0,NULL,NULL,NULL,NULL,
+       6,4,1,1,89,'Gold','A',NULL,
        '{"type":"FeatureCollection","features":[]}',
-       'draft',0,0,'2026-08-31','2026-08-31',
-       0,'/static/img/proj004_hero.jpg',
-       NULL,NULL,NULL,NULL,'[]')`).run()
+       'active',1,1,'2026-08-31','2026-08-31',
+       1,'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80',
+       'Sustainable living in the heart of Muscat',
+       180000,248000,NULL,
+       '["Solar PV 8.5kWp","Greywater Recycling","Green Roof","EV Charging","Smart Metering"]',
+       1,89,'["Solar PV 8.5kWp","Greywater Recycling","Green Roof","HVAC SEER 18.2","EV Charging Ready","Smart Metering"]')`).run()
 
     // ── 5b. Re-seed units for template projects ──────────────────────────
     // proj001 – Al Mouj Residences: 36 units, spread across Al Mouj waterfront area
