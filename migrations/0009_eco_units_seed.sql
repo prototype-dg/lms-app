@@ -28,8 +28,8 @@ INSERT OR IGNORE INTO contractors (
   'active'
 );
 
--- Seed 6 EcoVillage Muscat units
-INSERT OR IGNORE INTO units (id, project_id, unit_number, type, status, price, bedrooms, bathrooms, area_sqm, floor, gsas_score, contractor_id) VALUES
+-- Seed 6 EcoVillage Muscat units (floor_number is the column name in 0001_initial.sql)
+INSERT OR IGNORE INTO units (id, project_id, unit_number, type, status, price, bedrooms, bathrooms, area_sqm, floor_number, gsas_score, contractor_id) VALUES
   ('eco-v01','proj004','EV-101','villa','available',185000,3,2,210,1,89,'con001'),
   ('eco-v02','proj004','EV-102','villa','available',195000,3,2,225,1,89,'con001'),
   ('eco-v03','proj004','EV-103','villa','reserved',210000,4,3,245,1,89,'con001'),
