@@ -3813,6 +3813,21 @@ $e.post("/run", async (e) => {
 			error: t.message
 		}, 500);
 	}
+}), $e.post("/purge-applications", async (e) => {
+	let t = e.env.DB;
+	try {
+		await t.prepare("PRAGMA foreign_keys = OFF").run(), await t.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run(), await t.prepare("DELETE FROM documents WHERE entity_type='application' AND entity_id NOT IN ('app001','app002')").run(), await t.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run(), await t.prepare("PRAGMA foreign_keys = ON").run();
+		let { results: n } = await t.prepare("SELECT id, reference, customer_name FROM applications ORDER BY created_at").all();
+		return e.json({
+			success: !0,
+			remaining_applications: n
+		});
+	} catch (n) {
+		return await t.prepare("PRAGMA foreign_keys = ON").run(), e.json({
+			success: !1,
+			error: n.message
+		}, 500);
+	}
 }), $e.post("/reset-demo", async (e) => {
 	let t = e.env.DB, n = [
 		"p001",
@@ -5944,7 +5959,7 @@ $.use("/api/*", Le()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await I.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var ot = "7a7366a";
+var ot = "b4f6942";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
