@@ -445,42 +445,106 @@ app.post('/ocr', async (c) => {
       }
 
       // ── Salary / remuneration fields ──
-      // Strategy: when the label is found, grab the LAST number on the same line
-      // (salary tables: "Basic Salary   Monthly   3,700.000").
-      // If same-line has no valid amount, look ahead up to 3 lines (some OCR splits rows).
-      // Guard: skip lines that are clearly deductions/totals when looking for allowances.
+      // Two-pass strategy:
+      //   Pass A (inline): label and amount appear on the SAME line → grab lastAmount immediately.
+      //   Pass B (block):  triggered when we hit the remuneration section header.
+      //                    OCR sometimes outputs all labels first, then all amounts in order.
+      //                    We collect ordered labels then pair them positionally with ordered amounts.
 
+      // ── Pass A: inline rows (e.g. "Basic Salary  Monthly  3,700.000") ──
+      // Only use if a valid amount is on the SAME line (no lookahead).
       if (!extracted.basic_salary &&
           /basic\s+salary/i.test(line) &&
           !/less|deduction|social/i.test(ll)) {
-        const n = findAmount(lines, i, 3)
+        const n = lastAmount(line)  // same-line only
         if (n && parseFloat(n) > 100 && parseFloat(n) < 50000) extracted.basic_salary = parseFloat(n).toFixed(0)
       }
-
       if (!extracted.housing_allowance &&
           /housing\s+allowance|house\s+allowance/i.test(line)) {
-        const n = findAmount(lines, i, 3)
+        const n = lastAmount(line)
         if (n && parseFloat(n) > 0 && parseFloat(n) < 20000) extracted.housing_allowance = parseFloat(n).toFixed(0)
       }
-
       if (!extracted.transport_allowance &&
-          /transport(?:ation)?\s+allowance/i.test(line) &&
-          !/car\s+rental/i.test(ll)) {
-        const n = findAmount(lines, i, 3)
+          /transport(?:ation)?\s+allowance/i.test(line) && !/car\s+rental/i.test(ll)) {
+        const n = lastAmount(line)
         if (n && parseFloat(n) > 0 && parseFloat(n) < 5000) extracted.transport_allowance = parseFloat(n).toFixed(0)
       }
-
       if (!extracted.car_rental_allowance &&
           /car\s+rental|vehicle\s+allowance|car\s+allowance/i.test(line)) {
-        const n = findAmount(lines, i, 3)
+        const n = lastAmount(line)
         if (n && parseFloat(n) > 0 && parseFloat(n) < 10000) extracted.car_rental_allowance = parseFloat(n).toFixed(0)
       }
-
-      // Net monthly salary — must have both "net" and "salary/monthly" keywords
-      if (!extracted.net_salary &&
-          /net\s+(?:monthly\s+)?salary|net\s+pay/i.test(line)) {
-        const n = findAmount(lines, i, 3)
+      if (!extracted.net_salary && /net\s+(?:monthly\s+)?salary|net\s+pay/i.test(line)) {
+        const n = lastAmount(line)
         if (n && parseFloat(n) > 100) extracted.net_salary = parseFloat(n).toFixed(0)
+      }
+
+      // ── Pass B: block mode — triggered by remuneration section header ──
+      // When we see the section header, scan forward to build an ordered list of
+      // (label → amount) pairs by positional matching: labels first, then amounts in same order.
+      if (/remuneration\s+schedule|remuneration\s+component|monthly\s+salary\s+breakdown/i.test(line)) {
+        // Collect label→slot mapping in document order
+        const SLOTS: Array<{ key: string; re: RegExp; min: number; max: number }> = [
+          { key: 'basic_salary',         re: /basic\s+salary/i,                             min: 100,   max: 50000 },
+          { key: 'housing_allowance',    re: /housing\s+allowance|house\s+allowance/i,       min: 0,     max: 20000 },
+          { key: 'car_rental_allowance', re: /car\s+rental|vehicle\s+allowance|car\s+allow/i,min: 0,     max: 10000 },
+          { key: 'transport_allowance',  re: /transport(?:ation)?\s+allowance/i,             min: 0,     max: 5000  },
+          { key: 'net_salary',           re: /net\s+(?:monthly\s+)?salary|net\s+pay/i,       min: 100,   max: 100000},
+        ]
+
+        // Scan the next 60 lines for the section
+        const section = lines.slice(i, i + 60)
+        const orderedLabels: typeof SLOTS = []
+        const orderedAmounts: number[] = []
+
+        for (const sl of section) {
+          const sll = sl.toLowerCase()
+          // Skip deduction lines when collecting amounts
+          const isDeduction = /less|deduction|social\s+insur/i.test(sl)
+
+          // Check if this line is a known label
+          for (const slot of SLOTS) {
+            if (slot.re.test(sl) && !orderedLabels.find(s => s.key === slot.key)) {
+              // For transport, exclude lines that also say "car rental"
+              if (slot.key === 'transport_allowance' && /car\s+rental/i.test(sll)) continue
+              orderedLabels.push(slot)
+            }
+          }
+
+          // Check if this line is a pure amount (no label keywords) — e.g. "3,700.000" or "925.000"
+          if (!isDeduction) {
+            const isLabelLine = SLOTS.some(s => s.re.test(sl)) ||
+              /frequency|component|schedule|monthly|annual|telecommunication|performance|bonus/i.test(sl)
+            if (!isLabelLine) {
+              const amt = lastAmount(sl)
+              if (amt) {
+                const v = parseFloat(amt)
+                if (v > 0 && v < 100000) orderedAmounts.push(v)
+              }
+            }
+          }
+        }
+
+        // Now pair orderedLabels[k] → orderedAmounts[k] positionally
+        orderedLabels.forEach((slot, k) => {
+          const v = orderedAmounts[k]
+          if (v === undefined) return
+          if (v < slot.min || v > slot.max) return
+          if (!extracted[slot.key]) extracted[slot.key] = v.toFixed(0)
+        })
+      }
+
+      // Net salary: also try lookahead in case amount is on next line
+      if (!extracted.net_salary && /net\s+(?:monthly\s+)?salary|net\s+pay/i.test(line)) {
+        const n = findAmount(lines, i, 2)
+        if (n && parseFloat(n) > 100) extracted.net_salary = parseFloat(n).toFixed(0)
+      }
+
+      // Basic salary fallback: if block mode didn't catch it, try wider lookahead
+      // (handles "Basic Salary\nFREQUENCY\nAMOUNT (OMR)\nMonthly\n3,700.000" — 4 lines gap)
+      if (!extracted.basic_salary && /basic\s+salary/i.test(line) && !/less|deduction/i.test(ll)) {
+        const n = findAmount(lines, i, 5)
+        if (n && parseFloat(n) > 100 && parseFloat(n) < 50000) extracted.basic_salary = parseFloat(n).toFixed(0)
       }
     }
 
