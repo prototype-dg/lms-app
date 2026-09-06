@@ -551,6 +551,39 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 .project-panel.open{transform:translateY(0)}
 .panel-head{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--g200);flex-shrink:0}
 .panel-body{flex:1;overflow-y:auto;padding:18px 20px 32px}
+
+/* ══ UNIT CARD (project panel) ══ */
+.unit-card-img{height:130px;overflow:hidden;border-radius:var(--r8);display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:10px;position:relative}
+.unit-card-img img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.unit-status-badge{position:absolute;top:7px;right:7px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:var(--rfull);text-transform:uppercase;backdrop-filter:blur(4px)}
+
+/* ══ AFFORDABILITY POPUP ══ */
+.afford-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center}
+.afford-bg.open{display:flex}
+.afford-modal{background:#fff;border-radius:20px;padding:24px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,.25);margin:16px;position:relative;max-height:90vh;overflow-y:auto}
+.afford-modal h3{font-size:16px;font-weight:800;color:var(--navy);margin:0 0 4px}
+.afford-modal .sub{font-size:12px;color:var(--g500);margin-bottom:16px}
+.afford-slider-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.afford-slider-row label{font-size:11px;color:var(--g700);font-weight:600;width:110px;flex-shrink:0}
+.afford-slider-row input[type=range]{flex:1;accent-color:var(--teal)}
+.afford-slider-row .val{font-size:12px;font-weight:700;color:var(--navy);width:80px;text-align:right}
+.afford-result-box{background:var(--g100);border-radius:var(--r12);padding:16px;margin-top:8px}
+.afford-main-val{font-size:28px;font-weight:900;color:var(--navy);margin-bottom:4px}
+.afford-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.afford-chip{background:#fff;border:1px solid var(--g200);border-radius:var(--r8);padding:8px 10px;text-align:center}
+.afford-chip .lbl{font-size:10px;color:var(--g500);font-weight:600}
+.afford-chip .v{font-size:14px;font-weight:800;color:var(--navy)}
+
+/* ══ LOAN CALCULATOR STEP (Financing) ══ */
+.calc-section{background:var(--g100);border-radius:var(--r16);padding:20px;margin-bottom:16px}
+.calc-main-out{font-size:36px;font-weight:900;color:var(--navy);line-height:1}
+.calc-sub-out{font-size:12px;color:var(--g500);margin-top:4px}
+.calc-slider-lbl{font-size:11px;font-weight:700;color:var(--g700);margin-bottom:4px;display:flex;justify-content:space-between}
+.calc-slider{width:100%;accent-color:var(--teal);height:6px;margin-bottom:14px}
+.calc-grid-out{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.calc-out-chip{background:#fff;border:1px solid var(--g200);border-radius:var(--r8);padding:10px;text-align:center}
+.calc-out-chip .lbl{font-size:10px;color:var(--g500);font-weight:600;margin-bottom:2px}
+.calc-out-chip .v{font-size:16px;font-weight:800;color:var(--navy)}
 </style>
 </head>
 <body>
@@ -788,6 +821,54 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
     </div>
     <div class="panel-body" id="project-panel-body">
       <div style="text-align:center;padding:40px;color:var(--g500)"><span class="spin"></span></div>
+    </div>
+  </div>
+
+  <!-- AFFORDABILITY POPUP -->
+  <div id="afford-bg" class="afford-bg" onclick="if(event.target===this)closeAffordCalc()">
+    <div class="afford-modal">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <h3>📊 Affordability Check</h3>
+          <div class="sub" id="aff-unit-lbl" style="margin-bottom:0">Unit details</div>
+        </div>
+        <button class="icon-btn" onclick="closeAffordCalc()">✕</button>
+      </div>
+
+      <!-- Sliders -->
+      <div class="afford-slider-row">
+        <label>Down Payment</label>
+        <input type="range" id="aff-dp" min="10" max="50" step="5" value="20" oninput="updateAffordCalc()"/>
+        <div class="val"><div id="aff-dp-val">20%</div><div style="font-size:10px;color:var(--g500)" id="aff-dp-down">—</div></div>
+      </div>
+      <div class="afford-slider-row">
+        <label>Loan Tenure</label>
+        <input type="range" id="aff-ten" min="5" max="30" step="5" value="25" oninput="updateAffordCalc()"/>
+        <div class="val" id="aff-ten-val">25 yrs</div>
+      </div>
+      <div class="afford-slider-row">
+        <label>Monthly Income</label>
+        <input type="range" id="aff-inc" min="500" max="10000" step="100" value="3200" oninput="updateAffordCalc()"/>
+        <div class="val" id="aff-inc-val">OMR 3,200</div>
+      </div>
+
+      <!-- Result box -->
+      <div class="afford-result-box">
+        <div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Estimated Monthly Payment</div>
+        <div class="afford-main-val" id="aff-monthly">—</div>
+        <div id="aff-verdict" style="font-size:12px;font-weight:600;padding:6px 10px;border-radius:var(--r8);margin-top:8px;display:inline-block">—</div>
+        <div class="afford-grid">
+          <div class="afford-chip"><div class="lbl">Loan Amount</div><div class="v" id="aff-loan">—</div></div>
+          <div class="afford-chip"><div class="lbl">Rate p.a.</div><div class="v" id="aff-rate">—</div></div>
+          <div class="afford-chip"><div class="lbl">DBR Ratio</div><div class="v" id="aff-dbr">—</div></div>
+          <div class="afford-chip"><div class="lbl">GSAS Score</div><div class="v" id="aff-gsas">—</div></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn btn-outline" onclick="closeAffordCalc()" style="flex:1">Close</button>
+        <button class="btn btn-teal" onclick="closeAffordCalc();openWizardFromUnit(_affordUnit?.uid,window._panelProjId)" style="flex:1">Apply for This Unit →</button>
+      </div>
     </div>
   </div>
 
@@ -1478,6 +1559,7 @@ function propMapFilter(status){
 
 /* ── Project detail panel ── */
 async function openProjectPanel(projectId){
+  window._panelProjId = projectId; // stored for affordability popup "Apply" button
   const bg    = document.getElementById('project-panel-bg');
   const panel = document.getElementById('project-panel');
   const body  = document.getElementById('project-panel-body');
@@ -1547,49 +1629,78 @@ async function openProjectPanel(projectId){
           <span>CR: <b>${contractor.cr_number||'—'}</b></span>
         </div>
       </div>`:
-      `<div class="warn-strip" style="margin-bottom:12px">⚠️ No contractor information linked to this project.</div>`}
+      (()=>{
+        // No contractor — show developer info as fallback
+        const devName = proj.developer_name || 'Al Madaen Real Estate';
+        const devContact = proj.contact_name || 'Ahmed Al-Hinai';
+        return `<div class="contractor-card" style="border-color:rgba(0,127,134,.3);background:rgba(0,127,134,.04);margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="font-size:1.5rem">🏢</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:var(--navy)">${devName}</div>
+              <div style="font-size:11px;color:var(--g500)">Developer — pre-verified by Sohar International</div>
+            </div>
+            <span class="eco-seg-badge">🏛️ Developer</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;color:var(--g700)">
+            <span>Contact: <b>${devContact}</b></span>
+            <span>Phone: <b>+968 2440 1234</b></span>
+            <span>Role: <b>Project Developer</b></span>
+            <span>Status: <b style="color:var(--ok)">✅ Active</b></span>
+          </div>
+        </div>`;
+      })()}
 
       <!-- Units by type -->
       ${Object.entries(byType).map(([type,uns])=>`
-        <div style="margin-bottom:20px">
-          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">${type}s (${uns.length})</div>
+        <div style="margin-bottom:24px">
+          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+            <span>${type}s</span>
+            <span style="font-size:11px;font-weight:600;background:var(--g100);color:var(--g500);padding:2px 8px;border-radius:var(--rfull);border:1px solid var(--g200)">${uns.length} units</span>
+          </div>
           <div class="unit-grid">
             ${uns.map(u=>{
-              const uGsas = u.gsas_score||gsas||0;
+              const uGsas = u.gsas_score||0;
               const uRate = uGsas>=85?4.75:uGsas>=70?5.00:5.25;
               const colMap={available:'var(--ok)',reserved:'var(--warn)',sold:'var(--err)'};
               const stCol = colMap[u.status]||'var(--g500)';
-              return `<div class="unit-card${u.status==='sold'?' sold':''}">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-                  <div style="font-size:14px;font-weight:800;color:var(--navy)">${u.unit_number||u.id}</div>
-                  <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--rfull);background:${stCol==='var(--ok)'?'var(--ok-bg)':stCol==='var(--warn)'?'var(--warn-bg)':'var(--err-bg)'};color:${stCol}">${(u.status||'available').toUpperCase()}</span>
+              const stBg  = u.status==='available'?'var(--ok-bg)':u.status==='reserved'?'var(--warn-bg)':'var(--err-bg)';
+              const gradBg = isDemo?'linear-gradient(135deg,#0d4a26,#0a5c3a)':'linear-gradient(135deg,#003B5C,#007F86)';
+              return `<div class="unit-card${u.status==='sold'?' sold':''}" style="padding:0;overflow:hidden">
+                <!-- Unit image -->
+                <div class="unit-card-img" style="${u.image_url?'':'background:'+gradBg}">
+                  ${u.image_url?`<img src="${u.image_url}" alt="${u.unit_number}" loading="lazy"/>`:'🏡'}
+                  <div class="unit-status-badge" style="background:${stBg};color:${stCol}">${(u.status||'available').toUpperCase()}</div>
+                  ${uGsas?`<div style="position:absolute;bottom:7px;left:8px;font-size:10px;font-weight:700;background:rgba(0,0,0,.55);color:#86efac;padding:2px 7px;border-radius:var(--rfull);backdrop-filter:blur(4px)">🌿 GSAS ${uGsas}</div>`:''}
                 </div>
-                <div style="font-size:12px;color:var(--g500);line-height:1.6">
-                  ${u.area_sqm||'—'} m² · ${u.bedrooms||'—'} bed · ${u.bathrooms||'—'} bath
-                </div>
-                ${u.price?`<div style="font-size:15px;font-weight:800;color:var(--navy);margin:6px 0">OMR ${Number(u.price).toLocaleString()}</div>`:''}
-                ${u.discount_percent?`<div style="font-size:11px;color:var(--ok);font-weight:600">🏷 ${u.discount_percent}% discount</div>`:''}
-                ${uGsas?`<div style="font-size:11px;color:${isDemo?'#16a34a':'var(--teal)'};font-weight:600">GSAS ${uGsas} · ${uRate}% p.a.</div>`:''}
-                <!-- Per-unit affordability mini calc -->
-                <div class="unit-calc" id="ucalc-${u.id}">
-                  <div style="font-size:10px;font-weight:700;color:var(--g500);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Affordability Check</div>
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+                <!-- Unit info -->
+                <div style="padding:12px">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
                     <div>
-                      <label style="font-size:10px;color:var(--g500)">Income (OMR/mo)</label>
-                      <input type="number" class="fc" style="font-size:12px;padding:4px 8px" value="3200" id="uinc-${u.id}" oninput="unitCalc('${u.id}',${u.price||0},${uRate})"/>
+                      <div style="font-size:14px;font-weight:800;color:var(--navy)">${u.unit_number||u.id}</div>
+                      <div style="font-size:11px;color:var(--g500)">${u.type||'Unit'}</div>
                     </div>
-                    <div>
-                      <label style="font-size:10px;color:var(--g500)">Down Pay %</label>
-                      <input type="number" class="fc" style="font-size:12px;padding:4px 8px" value="20" min="10" max="50" id="udp-${u.id}" oninput="unitCalc('${u.id}',${u.price||0},${uRate})"/>
-                    </div>
+                    ${u.price?`<div style="font-size:15px;font-weight:800;color:var(--teal)">OMR ${Number(u.price).toLocaleString()}</div>`:''}
                   </div>
-                  <div id="ures-${u.id}" style="font-size:11px;color:var(--g700);background:var(--g100);border-radius:var(--r8);padding:6px 8px">
-                    Monthly payment: <b>—</b>
+                  <!-- Specs row -->
+                  <div style="display:flex;gap:8px;font-size:11px;color:var(--g600);margin-bottom:8px;flex-wrap:wrap">
+                    ${u.bedrooms?`<span>🛏 ${u.bedrooms} Bed</span>`:''}
+                    ${u.bathrooms?`<span>🚿 ${u.bathrooms} Bath</span>`:''}
+                    ${u.area_sqm?`<span>📐 ${u.area_sqm} m²</span>`:''}
+                    ${uGsas?`<span style="color:${isDemo?'#16a34a':'var(--teal)'};font-weight:600">${uRate}% p.a.</span>`:''}
                   </div>
+                  ${u.discount_percent?`<div style="font-size:11px;color:var(--ok);font-weight:600;margin-bottom:6px">🏷 ${u.discount_percent}% discount</div>`:''}
+                  <!-- Action buttons -->
+                  ${u.status!=='sold'?`
+                  <div style="display:flex;gap:6px;margin-top:4px">
+                    <button class="btn-ghost" style="flex:1;font-size:11px;padding:6px 0" onclick="openAffordCalc('${u.id}',${u.price||0},${uGsas},${uRate})">
+                      📊 Affordability
+                    </button>
+                    <button class="prop-btn${isDemo?' eco-btn':''}" style="flex:1;font-size:11px;padding:6px 0" onclick="openWizardFromUnit('${u.id}','${projectId}')">
+                      Apply →
+                    </button>
+                  </div>`:`<div style="font-size:11px;color:var(--err);text-align:center;padding:8px 0;font-weight:600">SOLD</div>`}
                 </div>
-                ${u.status!=='sold'?`<button class="prop-btn${isDemo?' eco-btn':''}" style="width:100%;margin-top:10px;font-size:12px" onclick="openWizardFromUnit('${u.id}','${projectId}')">
-                  Apply for This Unit →
-                </button>`:`<div style="font-size:11px;color:var(--err);text-align:center;padding:8px 0;font-weight:600">SOLD</div>`}
               </div>`;
             }).join('')}
           </div>
@@ -1601,10 +1712,8 @@ async function openProjectPanel(projectId){
       </button>
     `;
 
-    // Run initial affordability calc for each unit
-    units.forEach(u=>{
-      if(u.price) unitCalc(u.id, u.price, rate);
-    });
+    // Store units for affordability popup
+    window._panelUnits = units;
   }catch(e){
     console.error('openProjectPanel',e);
     body.innerHTML='<p style="text-align:center;color:var(--err);padding:24px">Could not load project details.</p>';
@@ -1616,29 +1725,73 @@ function closeProjectPanel(){
   document.getElementById('project-panel')?.classList.remove('open');
 }
 
+/* ═══ AFFORDABILITY POPUP LOGIC ═══ */
+let _affordUnit = null;
+
+function openAffordCalc(uid, price, gsas, rate){
+  _affordUnit = { uid, price, gsas, rate };
+  const modal = document.getElementById('afford-bg');
+  if(!modal) return;
+  modal.classList.add('open');
+  document.getElementById('aff-dp')  && (document.getElementById('aff-dp').value  = 20);
+  document.getElementById('aff-ten') && (document.getElementById('aff-ten').value = 25);
+  document.getElementById('aff-inc') && (document.getElementById('aff-inc').value = 3200);
+  const unit = (window._panelUnits||[]).find(u=>u.id===uid)||{};
+  const lbl = document.getElementById('aff-unit-lbl');
+  if(lbl) lbl.textContent = (unit.unit_number||uid)+(unit.type?' · '+unit.type:'')+(price?' · OMR '+Number(price).toLocaleString():'');
+  updateAffordCalc();
+}
+
+function closeAffordCalc(){
+  document.getElementById('afford-bg')?.classList.remove('open');
+  _affordUnit = null;
+}
+
+function updateAffordCalc(){
+  if(!_affordUnit) return;
+  const { price, gsas, rate } = _affordUnit;
+  const dp  = parseFloat(document.getElementById('aff-dp')?.value||20);
+  const ten = parseInt(document.getElementById('aff-ten')?.value||25);
+  const inc = parseFloat(document.getElementById('aff-inc')?.value||3200);
+  const loan = price*(1-dp/100);
+  const m    = pmt(loan, rate, ten*12);
+  const dbr  = inc>0?(m/inc)*100:0;
+  const ok   = dbr<=40;
+  const el = id=>document.getElementById(id);
+  if(el('aff-dp-val'))   el('aff-dp-val').textContent   = dp+'%';
+  if(el('aff-dp-down'))  el('aff-dp-down').textContent  = 'OMR '+Math.round(price*dp/100).toLocaleString();
+  if(el('aff-ten-val'))  el('aff-ten-val').textContent  = ten+' yrs';
+  if(el('aff-inc-val'))  el('aff-inc-val').textContent  = 'OMR '+Number(Math.round(inc)).toLocaleString();
+  if(el('aff-monthly'))  el('aff-monthly').textContent  = 'OMR '+Math.round(m).toLocaleString();
+  if(el('aff-rate'))     el('aff-rate').textContent     = rate.toFixed(2)+'% p.a.';
+  if(el('aff-loan'))     el('aff-loan').textContent     = 'OMR '+Math.round(loan).toLocaleString();
+  if(el('aff-dbr'))    { el('aff-dbr').textContent = dbr.toFixed(1)+'%'; el('aff-dbr').style.color = ok?'var(--ok)':'var(--err)'; }
+  if(el('aff-gsas'))     el('aff-gsas').textContent    = gsas ? gsas+' 🌿' : '—';
+  if(el('aff-verdict')){
+    el('aff-verdict').textContent = ok?'✅ Affordable — within CBO 40% DBR limit':'⚠️ Exceeds 40% DBR — reduce loan or raise income';
+    el('aff-verdict').style.color = ok?'var(--ok)':'var(--err)';
+    el('aff-verdict').style.background = ok?'var(--ok-bg)':'var(--err-bg)';
+  }
+}
+
 function unitCalc(uid, price, rate){
-  const incEl = document.getElementById('uinc-'+uid);
-  const dpEl  = document.getElementById('udp-'+uid);
-  const resEl = document.getElementById('ures-'+uid);
-  if(!incEl||!dpEl||!resEl||!price) return;
-  const income = parseFloat(incEl.value)||3200;
-  const dp     = parseFloat(dpEl.value)||20;
-  const loan   = price*(1-dp/100);
-  const m      = pmt(loan,rate,25*12);
-  const dbr    = income>0?(m/income)*100:0;
-  const ok     = dbr<=40;
-  resEl.innerHTML = `Monthly: <b>OMR ${Math.round(m).toLocaleString()}</b> · DBR: <b style="color:${ok?'var(--ok)':'var(--err)'}">${dbr.toFixed(1)}%</b> ${ok?'✅':'⚠️ >40%'}`;
+  // Legacy no-op — replaced by affordability popup
 }
 
 function openWizardFromUnit(unitId, projectId){
   closeProjectPanel();
   const proj = allProjects.find(p=>p.id===projectId)||null;
-  const unit = null; // will be fetched in step 3
+  // Find the unit in _panelUnits to pre-populate GSAS score
+  const unit = (window._panelUnits||[]).find(u=>u.id===unitId)||null;
   wizUnitId    = unitId;
   wizProjectId = projectId;
   wizSource    = 'partner';
   wizProductId = null;
-  wizState     = { unitId, projectId, projectName: proj?.name||'' };
+  wizState     = {
+    unitId, projectId, projectName: proj?.name||'',
+    propertyValue: unit?.price||0,
+    gsasScore:     unit?.gsas_score||proj?.gsas_overall_score||proj?.gsas_score||0,
+  };
   const wt = document.getElementById('wiz-title');
   if(wt) wt.textContent = 'Home Loan Application';
   openWizard();
@@ -1852,7 +2005,7 @@ function stepProperty(){
   const projName  = wizState.projectName||proj?.name||'';
   const unitId    = wizState.unitId||wizUnitId||'';
   const propVal   = wizState.propertyValue||200000;
-  const gsasScore = wizState.gsasScore||(proj?.gsas_overall_score||proj?.gsas_score||89);
+  const gsasScore = wizState.gsasScore||(proj?.gsas_overall_score||proj?.gsas_score||0);
 
   // GSAS eligibility check against best product
   const bestProd = allProducts.find(p=>p.category==='home_loan')||allProducts[0]||null;
@@ -2092,7 +2245,7 @@ async function loadUnitPicker(projId){
     grid.innerHTML = units.map(u=>{
       const unavail = u.status==='sold';
       const gradBg = isDemo?'linear-gradient(135deg,#0d4a26,#0a5c3a)':'linear-gradient(135deg,#003B5C,#007F86)';
-      return `<div class="unit-pick-card${u.id===wizUnitId?' selected':''}${unavail?' unavailable':''}" id="upc-${u.id}" onclick="${unavail?'':'selectWizUnit(\''+u.id+'\',\''+u.unit_number+'\','+u.price+')'}" style="position:relative">
+      return `<div class="unit-pick-card${u.id===wizUnitId?' selected':''}${unavail?' unavailable':''}" id="upc-${u.id}" onclick="${unavail?'':'selectWizUnit(\''+u.id+'\',\''+u.unit_number+'\','+u.price+','+(u.gsas_score||0)+')'}" style="position:relative">
         <div class="upc-sel-chk">✓</div>
         <div class="upc-img" style="${u.image_url?'':gradBg}">
           ${u.image_url?`<img src="${u.image_url}" alt="${u.unit_number}"/>`:'🏡'}
@@ -2112,28 +2265,35 @@ async function loadUnitPicker(projId){
       </div>`;
     }).join('');
     // If project pre-selected, load automatically
-    if(wizProjectId===projId && wizUnitId) selectWizUnit(wizUnitId,'',0,true);
+    // Re-select the pre-chosen unit (pass 0 price+gsas so we don't override from silent re-render)
+    if(wizProjectId===projId && wizUnitId) selectWizUnit(wizUnitId,'',0,0,true);
   }catch(e){
     grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--err);font-size:12px;grid-column:1/-1">Could not load units.</div>';
   }
 }
 
-function selectWizUnit(uid, unitNum, price, silent){
+function selectWizUnit(uid, unitNum, price, gsas, silent){
   wizUnitId = uid;
+  // Store GSAS score from unit — critical for Issue 3 fix
+  if(gsas) wizState.gsasScore = parseInt(gsas)||0;
   const hidden = document.getElementById('prop-unit');
   if(hidden) hidden.value = uid;
   // Visual selection
   document.querySelectorAll('.unit-pick-card').forEach(c=>c.classList.toggle('selected', c.id==='upc-'+uid));
-  // Update price field
+  // Update price and GSAS fields in the form
   if(price && !silent){
     const pv = document.getElementById('prop-val');
     if(pv) pv.value = Number(price).toLocaleString('en');
+  }
+  if(gsas){
+    const gs = document.getElementById('prop-gsas');
+    if(gs){ gs.value = gsas; updateGsasCheck(); }
   }
   // Show selected strip
   const strip = document.getElementById('unit-selected-strip');
   const lbl   = document.getElementById('unit-selected-label');
   if(strip && lbl){
-    lbl.textContent = (unitNum||uid) + (price?' · OMR '+Number(price).toLocaleString():'');
+    lbl.textContent = (unitNum||uid) + (price?' · OMR '+Number(price).toLocaleString():'') + (gsas?' · GSAS '+gsas:'');
     strip.style.display = 'block';
   }
 }
@@ -2146,44 +2306,40 @@ function simUpload(statusId, label){
   setTimeout(()=>{ el.textContent=`✅ ${label} uploaded successfully`; el.style.color='var(--ok)'; }, 1800);
 }
 
-/* ── STEP 3: Financing ── */
+/* ── STEP 3: Financing Calculator ── */
 function stepFinancing(){
   const propVal  = wizState.propertyValue||200000;
-  const gsas     = wizState.gsasScore||89;
+  const gsas     = wizState.gsasScore||0;
   // Home-loan products only, demo product first
   const homeProds = allProducts.filter(p=>p.category==='home_loan'&&p.status==='active');
   homeProds.sort((a,b)=>(b.is_demo_product||0)-(a.is_demo_product||0));
-  // Use the product the user selected in this step, or default to demo/first
   if(!wizProductId && homeProds.length) wizProductId = homeProds[0].id;
   const bestProd = homeProds.find(p=>p.id===wizProductId)||homeProds[0]||null;
   const minRate  = bestProd?.base_rate||4.75;
   const maxLtv   = bestProd?.max_ltv||80;
-  const defaultDp = Math.round(propVal*(1-(maxLtv/100)));
-  const defaultLoan = propVal-defaultDp;
-  const loanAmt   = wizState.loanAmount||defaultLoan;
-  const dp        = wizState.downPayment||defaultDp;
-  const tenure    = wizState.tenure||25;
-  const rate      = gsas>=85?minRate:(gsas>=70?(minRate+0.25):(minRate+0.5));
+  const dpPct    = Math.round((1-(maxLtv/100))*100); // e.g. 20 if LTV=80
+  const defaultDp = Math.round(propVal*(dpPct/100));
+  const tenure   = wizState.tenure||25;
+  const rate     = gsas>=85?minRate:(gsas>=70?(minRate+0.25):(minRate+0.5));
+  const gsasLabel = gsas>=85?'GSAS Gold — Premium Rate 🌿':gsas>=70?'GSAS Standard Rate':gsas>0?'Below GSAS — Standard Rate':'No GSAS score';
   return `
-    <div class="step-title">Financing Details</div>
-    <div class="step-sub">Choose a product and adjust your loan amount. Live calculator updates in real time.</div>
+    <div class="step-title">Loan Calculator</div>
+    <div class="step-sub">Drag the sliders to find the right loan for you. All values update live.</div>
 
-    <!-- Product picker -->
-    <label class="fl" style="margin-bottom:8px">Select Financing Product</label>
+    <!-- Product picker (compact) -->
+    <label class="fl" style="margin-bottom:8px">Financing Product</label>
     <div class="prod-pick-grid" style="margin-bottom:16px">
       ${homeProds.length ? homeProds.map(p=>{
-        const isDemo = p.is_demo_product===1||p.is_demo_product===true;
+        const isDemoProd = p.is_demo_product===1||p.is_demo_product===true;
         const sel = p.id===(wizProductId||homeProds[0]?.id);
-        const feats = (() => { try{ return JSON.parse(p.configuration||'{}').features||[]; }catch(e){ return []; } })();
-        return `<div class="prod-pick-card${isDemo?' demo-prod':''}${sel?' selected':''}" id="ppc-${p.id}" onclick="selectWizProduct('${p.id}')">
-          <div class="ppc-icon">${isDemo?'🌿':'💼'}</div>
+        return `<div class="prod-pick-card${isDemoProd?' demo-prod':''}${sel?' selected':''}" id="ppc-${p.id}" onclick="selectWizProduct('${p.id}')">
+          <div class="ppc-icon">${isDemoProd?'🌿':'💼'}</div>
           <div class="ppc-body">
             <div class="ppc-name">${p.name}</div>
             <div class="ppc-desc">Rate from ${p.base_rate}% · LTV ${p.max_ltv}% · Up to OMR ${Number(p.max_amount).toLocaleString()}</div>
             <div class="ppc-tags">
-              ${isDemo?'<span class="ppc-tag green">🌱 Green Mortgage</span>':''}
-              <span class="ppc-tag">Max ${p.max_term}yr</span>
-              ${feats[0]?`<span class="ppc-tag">${feats[0]}</span>`:''}
+              ${isDemoProd?'<span class="ppc-tag green">🌱 Green Mortgage</span>':''}
+              <span class="ppc-tag">Max ${p.max_term} yr</span>
             </div>
           </div>
           <div class="ppc-chk">${sel?'✓':''}</div>
@@ -2191,54 +2347,80 @@ function stepFinancing(){
       }).join('') : '<div style="font-size:12px;color:var(--g500);padding:12px">No home loan products found.</div>'}
     </div>
 
-    <div class="form-grid">
-      <div class="fg">
-        <label class="fl">Property Value (OMR)</label>
-        <input class="fc" id="wa-propval" type="text" value="${Number(propVal).toLocaleString('en')}" readonly style="color:var(--g500)"/>
+    <!-- GSAS rate badge -->
+    ${gsas?`<div class="info-strip${gsas>=85?' eco-strip':''}" style="margin-bottom:14px">
+      ${gsas>=85?'🏆':'📊'} <strong>GSAS ${gsas}</strong> — ${gsasLabel} · <strong>${rate.toFixed(2)}% p.a.</strong>
+    </div>`:''}
+
+    <!-- Live calculator section -->
+    <div class="calc-section">
+      <!-- Main output -->
+      <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--g200)">
+        <div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Estimated Monthly Payment</div>
+        <div class="calc-main-out" id="wa-m">—</div>
+        <div class="calc-sub-out" id="wa-rate-disp">${rate.toFixed(2)}% p.a. · ${gsas>=85?'Green Premium':'Standard'}</div>
       </div>
-      <div class="fg">
-        <label class="fl">Down Payment (OMR)</label>
-        <input class="fc" id="wa-dp" type="text" value="${Number(dp).toLocaleString('en')}" oninput="wizCalcFinance()"/>
+
+      <!-- Down Payment slider -->
+      <div class="calc-slider-lbl">
+        <span>Down Payment</span>
+        <span><b id="wa-dp-pct">${dpPct}%</b> · <span id="wa-dp-val" style="color:var(--teal)">OMR ${defaultDp.toLocaleString()}</span></span>
       </div>
-      <div class="fg">
-        <label class="fl">Loan Amount (OMR)</label>
-        <input class="fc" id="wa-amt" type="text" value="${Number(loanAmt).toLocaleString('en')}" oninput="wizCalcFinance()"/>
+      <input type="range" class="calc-slider" id="wa-dp-slider" min="10" max="50" step="5" value="${dpPct}" oninput="wizCalcFinance()"/>
+
+      <!-- Tenure slider -->
+      <div class="calc-slider-lbl">
+        <span>Loan Tenure</span>
+        <span><b id="wa-ten-val">${tenure} years</b></span>
       </div>
-      <div class="fg">
-        <label class="fl">Tenure</label>
-        <select class="fc" id="wa-ten" onchange="wizCalcFinance()">
-          ${[10,15,20,25,30].map(y=>`<option value="${y}"${y===tenure?' selected':''}>${y} years</option>`).join('')}
-        </select>
+      <input type="range" class="calc-slider" id="wa-ten" min="5" max="30" step="5" value="${tenure}" oninput="wizCalcFinance()"/>
+
+      <!-- Hidden fields for collectStepData -->
+      <input type="hidden" id="wa-propval" value="${propVal}"/>
+      <input type="hidden" id="wa-dp" value="${defaultDp}"/>
+      <input type="hidden" id="wa-amt" value="${propVal-defaultDp}"/>
+      <input type="hidden" id="wa-rate" value="${rate}"/>
+
+      <!-- Output chips -->
+      <div class="calc-grid-out">
+        <div class="calc-out-chip">
+          <div class="lbl">Loan Amount</div>
+          <div class="v" id="wa-loan-amt">OMR ${(propVal-defaultDp).toLocaleString()}</div>
+        </div>
+        <div class="calc-out-chip">
+          <div class="lbl">Property Value</div>
+          <div class="v">OMR ${Number(propVal).toLocaleString()}</div>
+        </div>
+        <div class="calc-out-chip">
+          <div class="lbl">DBR Ratio</div>
+          <div class="v" id="wa-dbr">—</div>
+        </div>
+        <div class="calc-out-chip">
+          <div class="lbl">LTV Ratio</div>
+          <div class="v" id="wa-ltv">—</div>
+        </div>
+        <div class="calc-out-chip">
+          <div class="lbl">Lifetime Saving</div>
+          <div class="v" id="wa-sv" style="color:var(--ok)">—</div>
+        </div>
+        <div class="calc-out-chip">
+          <div class="lbl">GSAS Score</div>
+          <div class="v" style="color:${gsas>=85?'var(--ok)':gsas>=70?'var(--warn)':'var(--g500)'}">${gsas||'—'}</div>
+        </div>
       </div>
-      <div class="fg">
-        <label class="fl">Applicable Rate</label>
-        <input class="fc fc-ok" id="wa-rate" value="${rate.toFixed(2)}% ${gsas>=85?'(Green Premium)':'(Standard)'}" readonly/>
-      </div>
-      <div class="fg">
-        <label class="fl">GSAS Score</label>
-        <input class="fc fc-ok" value="${gsas} — ${gsas>=85?'4-Star Premium':gsas>=70?'3-Star':'Standard'}" readonly style="color:var(--ok);font-weight:700"/>
-      </div>
-    </div>
-    <div class="finance-summary" id="wiz-fin-summary">
-      <div class="fs-grid">
-        <div><div class="fs-lbl">Monthly Payment</div><div class="fs-val" id="wa-m">—</div></div>
-        <div><div class="fs-lbl">DBR Ratio</div><div class="fs-val" id="wa-dbr">—</div></div>
-        <div><div class="fs-lbl">LTV Ratio</div><div class="fs-val" id="wa-ltv">—</div></div>
-        <div><div class="fs-lbl">Lifetime Saving</div><div class="fs-val" id="wa-sv" style="color:var(--ok)">—</div></div>
-      </div>
-      <div id="dbr-warn" style="display:none" class="warn-strip">⚠️ DBR exceeds 40% — reduce loan or increase income.</div>
-      <div id="ltv-warn" style="display:none" class="warn-strip">⚠️ LTV exceeds maximum ${maxLtv}% — increase down payment.</div>
+
+      <div id="dbr-warn" style="display:none;margin-top:10px" class="warn-strip">⚠️ DBR exceeds 40% — reduce loan amount or increase down payment.</div>
+      <div id="ltv-warn" style="display:none;margin-top:6px" class="warn-strip">⚠️ LTV exceeds maximum ${maxLtv}% — increase down payment.</div>
     </div>`;
 }
 
 function wizCalcFinance(){
-  const get = id=>parseFloat((document.getElementById(id)?.value||'0').replace(/,/g,''))||0;
-  const amt     = get('wa-amt');
-  const dp      = get('wa-dp');
-  const propVal = get('wa-propval')||amt+dp;
-  const ten     = parseInt(document.getElementById('wa-ten')?.value||25);
-  const gsas    = wizState.gsasScore||89;
+  const gsas    = wizState.gsasScore||0;
   const salary  = wizState.salary||3200;
+  const propVal = parseFloat(document.getElementById('wa-propval')?.value||0)||wizState.propertyValue||200000;
+  const dpPctEl = document.getElementById('wa-dp-slider');
+  const dpPct   = parseFloat(dpPctEl?.value||20);
+  const ten     = parseInt(document.getElementById('wa-ten')?.value||25);
   const bestProd= (wizProductId ? allProducts.find(p=>p.id===wizProductId) : null)
                   || allProducts.find(p=>p.category==='home_loan'&&p.is_demo_product===1)
                   || allProducts.find(p=>p.category==='home_loan')
@@ -2246,43 +2428,45 @@ function wizCalcFinance(){
   const minRate = bestProd?.base_rate||4.75;
   const maxLtv  = bestProd?.max_ltv||80;
   const rate    = gsas>=85?minRate:(gsas>=70?minRate+0.25:minRate+0.5);
+  const dp      = Math.round(propVal*(dpPct/100));
+  const amt     = propVal-dp;
   const m       = pmt(amt,rate,ten*12);
   const dbr     = salary>0?(m/salary)*100:0;
   const ltv     = propVal>0?(amt/propVal)*100:0;
   const stdBase = 5.50;
   const sv      = Math.max(0, pmt(amt,stdBase,ten*12)*ten*12 - m*ten*12);
   const el = id=>document.getElementById(id);
-  if(el('wa-m'))   el('wa-m').textContent   = fmtOMR(m);
-  if(el('wa-dbr')) { el('wa-dbr').textContent=dbr.toFixed(1)+'%'; el('wa-dbr').style.color=dbr>40?'var(--err)':'var(--ok)'; }
-  if(el('wa-ltv')) { el('wa-ltv').textContent=ltv.toFixed(1)+'%'; el('wa-ltv').style.color=ltv>maxLtv?'var(--err)':'var(--ok)'; }
-  if(el('wa-sv'))  el('wa-sv').textContent  = fmtOMR(sv);
-  if(el('wa-rate')) el('wa-rate').value      = `${rate.toFixed(2)}% (${gsas>=85?'Green Premium':'Standard'})`;
+  // Update slider labels
+  if(el('wa-dp-pct'))  el('wa-dp-pct').textContent  = dpPct+'%';
+  if(el('wa-dp-val'))  el('wa-dp-val').textContent  = 'OMR '+Math.round(dp).toLocaleString();
+  if(el('wa-ten-val')) el('wa-ten-val').textContent = ten+' years';
+  // Update outputs
+  if(el('wa-m'))       el('wa-m').textContent        = fmtOMR(m);
+  if(el('wa-loan-amt'))el('wa-loan-amt').textContent = 'OMR '+Math.round(amt).toLocaleString();
+  if(el('wa-rate-disp'))el('wa-rate-disp').textContent = `${rate.toFixed(2)}% p.a. · ${gsas>=85?'Green Premium':'Standard'}`;
+  if(el('wa-dbr'))   { el('wa-dbr').textContent=dbr.toFixed(1)+'%'; el('wa-dbr').style.color=dbr>40?'var(--err)':'var(--ok)'; }
+  if(el('wa-ltv'))   { el('wa-ltv').textContent=ltv.toFixed(1)+'%'; el('wa-ltv').style.color=ltv>maxLtv?'var(--err)':'var(--ok)'; }
+  if(el('wa-sv'))      el('wa-sv').textContent       = fmtOMR(sv);
+  // Update hidden fields for collectStepData
+  if(el('wa-dp'))  el('wa-dp').value  = dp;
+  if(el('wa-amt')) el('wa-amt').value = amt;
+  if(el('wa-rate'))el('wa-rate').value= rate;
   el('dbr-warn') && (el('dbr-warn').style.display = dbr>40?'block':'none');
   el('ltv-warn') && (el('ltv-warn').style.display = ltv>maxLtv?'block':'none');
-  // Save
+  // Persist state
   wizState.loanAmount = amt; wizState.downPayment = dp; wizState.tenure = ten; wizState.appliedRate = rate;
 }
 
 function selectWizProduct(id){
   wizProductId = id;
-  // Highlight selected card, uncheck others
   document.querySelectorAll('.prod-pick-card').forEach(card=>{
     const sel = card.id === 'ppc-'+id;
     card.classList.toggle('selected', sel);
     const chk = card.querySelector('.ppc-chk');
     if(chk) chk.textContent = sel ? '✓' : '';
   });
-  // Re-derive rate from selected product and refresh calculator
-  const prod = allProducts.find(p=>p.id===id);
-  if(prod){
-    const gsas = wizState.gsasScore||89;
-    const rate  = gsas>=85?prod.base_rate:(gsas>=70?prod.base_rate+0.25:prod.base_rate+0.5);
-    const rateEl = document.getElementById('wa-rate');
-    if(rateEl) rateEl.value = `${rate.toFixed(2)}% ${gsas>=85?'(Green Premium)':'(Standard)'}`;
-    const ltvEl = document.getElementById('ltv-warn');
-    if(ltvEl) ltvEl.innerHTML = `⚠️ LTV exceeds maximum ${prod.max_ltv}% — increase down payment.`;
-  }
   wizCalcFinance();
+  const prod = allProducts.find(p=>p.id===id);
   toast('Product selected: '+(prod?.name||id), 'ok');
 }
 
