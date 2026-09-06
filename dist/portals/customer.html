@@ -4,10 +4,12 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Sohar International – Customer Portal</title>
+<link rel="icon" href="data:,"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root{
   --navy:#003B5C;--navy-d:#002540;--teal:#007F86;--teal-d:#006169;
@@ -106,6 +108,7 @@ body.rtl{font-family:'Noto Sans Arabic',system-ui,sans-serif;direction:rtl}
 .prod-card.demo{border-color:var(--ok);background:linear-gradient(160deg,#f0faf5,#e6f7ef)}
 .prod-card.demo:hover{border-color:var(--ok);box-shadow:0 8px 32px rgba(22,132,91,.18);transform:translateY(-3px)}
 .demo-ribbon{position:absolute;top:0;right:0;background:linear-gradient(135deg,var(--ok),#2aa88e);color:#fff;font-size:10px;font-weight:800;padding:5px 13px 5px 11px;border-radius:0 var(--r16) 0 var(--r16);letter-spacing:.4px;display:flex;align-items:center;gap:4px;box-shadow:0 3px 10px rgba(22,132,91,.35)}
+.esg-card-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(5,150,105,.12);border:1px solid rgba(5,150,105,.3);color:#059669;border-radius:var(--rfull);padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.4px;margin-bottom:8px}
 .prod-cat-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:5px}
 .prod-name{font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px}
 .prod-desc{font-size:12px;color:var(--g500);line-height:1.55;margin-bottom:14px}
@@ -1476,12 +1479,6 @@ function openWizardFromProject(projectId){
   wizState     = { projectId };
   openWizard();
 }
-
-<!-- ════════════════════════════════════════════════════ -->
-<!-- TOAST NOTIFICATIONS                                 -->
-<!-- ════════════════════════════════════════════════════ -->
-<div id="toast-wrap" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px"></div>
-
 
 /* ══════════════════════════════════════════════════════
    WIZARD — open / close / render
