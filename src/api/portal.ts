@@ -309,10 +309,30 @@ app.post('/ocr', async (c) => {
 
   const VISION_KEY = 'AIzaSyBqQ4THcUG8wpRZbB2olfZqvR9mI1e-88E'
 
-  // Helper: extract first number from a line
-  const firstNum = (line: string): string | null => {
-    const m = line.match(/[\d,]+\.\d{3}|[\d,]+\.\d{1,2}|[\d,]{3,}/)
-    return m ? m[0].replace(/,/g, '') : null
+  // ── Helper: extract the LAST/rightmost currency amount from a line ──
+  // Salary tables always put amounts at the END of the row.
+  // Matches: 3,700.000 | 925.000 | 350 | 5,224 — ignores leading ref/date numbers.
+  // Also strips trailing sign text like "− 259.000" correctly (keeps 259).
+  const lastAmount = (text: string): string | null => {
+    const clean = text.replace(/[\u2212\u2013\-]\s*/, '') // strip leading minus/dash chars
+    const all = [...clean.matchAll(/\b(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d{4,}(?:\.\d+)?)\b/g)]
+    if (!all.length) return null
+    // Take the last match — rightmost number is the amount column
+    const raw = all[all.length - 1][1].replace(/,/g, '')
+    const v = parseFloat(raw)
+    // Reject 4-digit years (1990–2099) and reference numbers > 100000
+    if (v >= 1900 && v <= 2099) return null
+    if (v > 100000) return null
+    return raw
+  }
+
+  // Scan up to `lookahead` following lines for an amount (handles multi-line table rows)
+  const findAmount = (lines: string[], startIdx: number, lookahead = 3): string | null => {
+    for (let k = 0; k <= lookahead; k++) {
+      const n = lastAmount(lines[startIdx + k] || '')
+      if (n && parseFloat(n) > 0) return n
+    }
+    return null
   }
 
   try {
@@ -335,17 +355,22 @@ app.post('/ocr', async (c) => {
 
     const extracted: Record<string, any> = {}
     const lines = fullText.split('\n').map((l: string) => l.trim()).filter(Boolean)
+    const MONTHS: Record<string,string> = {
+      january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',
+      july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'
+    }
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
       const ll   = line.toLowerCase()
-      const next = (lines[i+1] || '').toLowerCase()
 
-      // ── Employer name: look for org name line after letterhead keywords ──
+      // ── Employer name ──
+      // Match the first line that contains the company name
       if (!extracted.employer) {
-        if (ll.includes('company s.a.o.c') || ll.includes('company saoc') || ll.includes('oman oil')) {
-          // grab the whole company name, strip trailing registry numbers
-          extracted.employer = line.replace(/\s+cr.*$/i,'').replace(/\s+tel.*$/i,'').trim()
+        if (/oman oil company/i.test(line)) {
+          extracted.employer = 'Oman Oil Company S.A.O.C'
+        } else if (/company\s+s\.?a\.?o\.?c/i.test(line) || /company\s+saoc/i.test(line)) {
+          extracted.employer = line.replace(/\s*(cr|tel|fax|p\.?o\.?).*$/i, '').trim()
         } else if ((ll.includes('employer') || ll.includes('company name')) && ll.includes(':')) {
           extracted.employer = line.split(':').slice(1).join(':').trim()
         }
@@ -353,52 +378,74 @@ app.post('/ocr', async (c) => {
 
       // ── Employment type ──
       if (!extracted.employment_type) {
-        if (ll.includes('government') || ll.includes('civil service')) extracted.employment_type = 'government'
-        else if (ll.includes('private sector') || ll.includes('private company')) extracted.employment_type = 'private'
-        else if (ll.includes('self-employed') || ll.includes('self employed')) extracted.employment_type = 'self_employed'
+        if (/government\s+civil\s+service|government\s+sector|civil\s+service/i.test(line)) {
+          extracted.employment_type = 'government'
+        } else if (/private\s+sector|private\s+company/i.test(line)) {
+          extracted.employment_type = 'private'
+        } else if (/self[\s-]employed/i.test(line)) {
+          extracted.employment_type = 'self_employed'
+        }
       }
 
       // ── Employment start date ──
+      // Prefer a line that contains "since", "start", "april", a month name, etc.
       if (!extracted.employment_start_date) {
-        if (ll.includes('since') || ll.includes('start') || ll.includes('employed') || ll.includes('april') || ll.includes('joined')) {
-          const dm = line.match(/\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i)
-               || line.match(/\d{4}-\d{2}-\d{2}/)
-               || line.match(/\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/)
-          if (dm) {
-            // normalise to YYYY-MM-DD
-            const raw = dm[0]
-            const months: Record<string,string> = {january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'}
-            const wp = raw.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/i)
-            if (wp) {
-              const mm = months[wp[2].toLowerCase()] || '01'
-              extracted.employment_start_date = `${wp[3]}-${mm}-${wp[1].padStart(2,'0')}`
-            } else {
-              extracted.employment_start_date = raw
+        const dm = line.match(/(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/i)
+                || line.match(/\d{4}-\d{2}-\d{2}/)
+                || line.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/)
+        if (dm) {
+          const raw = dm[0]
+          const wp = raw.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/i)
+          if (wp) {
+            const mm = MONTHS[wp[2].toLowerCase()] || '01'
+            const yyyy = wp[3], dd = wp[1].padStart(2,'0')
+            // Only use as start date if it looks like a historical date (year < current)
+            if (parseInt(yyyy) >= 2000 && parseInt(yyyy) <= 2025) {
+              extracted.employment_start_date = `${yyyy}-${mm}-${dd}`
             }
+          } else {
+            extracted.employment_start_date = raw
           }
         }
       }
 
-      // ── Salary fields — match label then grab number from same or next line ──
-      if (!extracted.basic_salary && (ll.includes('basic salary') || (ll.includes('basic') && ll.includes('salary')))) {
-        const n = firstNum(line) || firstNum(lines[i+1] || '')
-        if (n && parseFloat(n) > 100 && parseFloat(n) < 50000) extracted.basic_salary = n
+      // ── Salary / remuneration fields ──
+      // Strategy: when the label is found, grab the LAST number on the same line
+      // (salary tables: "Basic Salary   Monthly   3,700.000").
+      // If same-line has no valid amount, look ahead up to 3 lines (some OCR splits rows).
+      // Guard: skip lines that are clearly deductions/totals when looking for allowances.
+
+      if (!extracted.basic_salary &&
+          /basic\s+salary/i.test(line) &&
+          !/less|deduction|social/i.test(ll)) {
+        const n = findAmount(lines, i, 3)
+        if (n && parseFloat(n) > 100 && parseFloat(n) < 50000) extracted.basic_salary = parseFloat(n).toFixed(0)
       }
-      if (!extracted.housing_allowance && (ll.includes('housing allowance') || ll.includes('house allowance'))) {
-        const n = firstNum(line) || firstNum(lines[i+1] || '')
-        if (n && parseFloat(n) > 0) extracted.housing_allowance = n
+
+      if (!extracted.housing_allowance &&
+          /housing\s+allowance|house\s+allowance/i.test(line)) {
+        const n = findAmount(lines, i, 3)
+        if (n && parseFloat(n) > 0 && parseFloat(n) < 20000) extracted.housing_allowance = parseFloat(n).toFixed(0)
       }
-      if (!extracted.transport_allowance && (ll.includes('transport allowance') || ll.includes('transportation allowance'))) {
-        const n = firstNum(line) || firstNum(lines[i+1] || '')
-        if (n && parseFloat(n) > 0) extracted.transport_allowance = n
+
+      if (!extracted.transport_allowance &&
+          /transport(?:ation)?\s+allowance/i.test(line) &&
+          !/car\s+rental/i.test(ll)) {
+        const n = findAmount(lines, i, 3)
+        if (n && parseFloat(n) > 0 && parseFloat(n) < 5000) extracted.transport_allowance = parseFloat(n).toFixed(0)
       }
-      if (!extracted.car_rental_allowance && (ll.includes('car rental') || ll.includes('vehicle allowance') || ll.includes('car allowance'))) {
-        const n = firstNum(line) || firstNum(lines[i+1] || '')
-        if (n && parseFloat(n) > 0) extracted.car_rental_allowance = n
+
+      if (!extracted.car_rental_allowance &&
+          /car\s+rental|vehicle\s+allowance|car\s+allowance/i.test(line)) {
+        const n = findAmount(lines, i, 3)
+        if (n && parseFloat(n) > 0 && parseFloat(n) < 10000) extracted.car_rental_allowance = parseFloat(n).toFixed(0)
       }
-      if (!extracted.net_salary && (ll.includes('net') && (ll.includes('salary') || ll.includes('monthly')))) {
-        const n = firstNum(line) || firstNum(lines[i+1] || '')
-        if (n && parseFloat(n) > 100) extracted.net_salary = n
+
+      // Net monthly salary — must have both "net" and "salary/monthly" keywords
+      if (!extracted.net_salary &&
+          /net\s+(?:monthly\s+)?salary|net\s+pay/i.test(line)) {
+        const n = findAmount(lines, i, 3)
+        if (n && parseFloat(n) > 100) extracted.net_salary = parseFloat(n).toFixed(0)
       }
     }
 
