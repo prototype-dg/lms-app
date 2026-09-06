@@ -781,7 +781,11 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
   <!-- Map view -->
   <div id="prop-map-view">
     <div class="sec-inner" style="padding:0 40px">
-      <div id="customer-map" style="height:460px;border-radius:var(--r16);overflow:hidden;border:1px solid var(--g300);box-shadow:var(--sh2)"></div>
+      <div style="position:relative;display:inline-block;width:100%">
+        <div id="customer-map" style="height:460px;border-radius:var(--r16);overflow:hidden;border:1px solid var(--g300);box-shadow:var(--sh2)"></div>
+        <!-- Project zoom buttons: plain HTML above Leaflet, populated by initPropMap() -->
+        <div id="map-proj-btns" style="position:absolute;top:10px;right:10px;z-index:1000;display:flex;flex-direction:column;gap:6px;pointer-events:none"></div>
+      </div>
       <div class="map-legend-strip">
         <span class="map-leg-item"><span class="leg-dot" style="background:#2ECC71"></span><span id="leg-available">Available</span></span>
         <span class="map-leg-item"><span class="leg-dot" style="background:#F39C12"></span><span id="leg-reserved">Reserved</span></span>
@@ -1417,7 +1421,7 @@ function renderProjectList(){
           <div class="prop-tags">
             <span class="tag">${p.total_units||0} units</span>
             ${gsas?`<span class="tag">GSAS ${gsas}</span>`:''}
-            ${p.epc_rating?`<span class="tag">EPC ${p.epc_rating}`:''}
+            ${p.epc_rating?`<span class="tag">EPC ${p.epc_rating}</span>`:''}
           </div>
           <div class="prop-foot">
             <span class="gsas-badge">${isDemo?'🏆 Demo':'GSAS '+gsas}</span>
@@ -1511,7 +1515,7 @@ async function initPropMap(){
         if(btnPanel){
           const btn = document.createElement('button');
           btn.title = `Zoom to ${proj.name}`;
-          btn.style.cssText = `display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid ${pcol};border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#003B5C;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.18);transition:background .15s,color .15s`;
+          btn.style.cssText = `display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid ${pcol};border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#003B5C;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.18);transition:background .15s,color .15s;pointer-events:auto`;
           btn.innerHTML = `<span style="font-size:14px">🔍</span>${isDemo?'🌿 ':''}${proj.name}`;
           btn.onmouseenter = ()=>{ btn.style.background=pcol; btn.style.color='#fff'; };
           btn.onmouseleave = ()=>{ btn.style.background='#fff'; btn.style.color='#003B5C'; };
