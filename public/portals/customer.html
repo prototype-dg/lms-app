@@ -2534,20 +2534,22 @@ function prodEffRate(prod, gsasScore){
   return parseFloat((base - disc).toFixed(3));
 }
 
-/* ── STEP 3: Financing — Product selection + Live calculator ── */
+/* ── STEP 3: Financing — Product selection (dropdown) + Live calculator ── */
 function stepFinancing(){
   const propVal  = wizState.propertyValue || 200000;
   const gsas     = wizState.gsasScore || 0;
   const salary   = wizState.salary || 3200;
 
-  // All active home-loan products from DB, demo product first
+  // All active home-loan products from DB — demo/green product first
   const homeProds = allProducts
     .filter(p => p.category === 'home_loan' && p.status === 'active')
     .sort((a,b) => (b.is_demo_product||0) - (a.is_demo_product||0));
 
-  // Auto-select: prefer best rate for user's GSAS score
+  if(!homeProds.length)
+    return `<div class="step-title">Financing</div><div class="step-sub">No home loan products available.</div>`;
+
+  // Auto-select on first entry: pick lowest effective rate for user's GSAS score
   if(!wizProductId){
-    // Find the product that gives the lowest effective rate for this GSAS score
     let best = null, bestRate = 999;
     for(const p of homeProds){
       const r = prodEffRate(p, gsas);
@@ -2556,175 +2558,233 @@ function stepFinancing(){
     wizProductId = best?.id || homeProds[0]?.id || null;
   }
 
-  const selProd  = homeProds.find(p => p.id === wizProductId) || homeProds[0] || null;
-  if(!selProd) return `<div class="step-title">Financing</div><div class="step-sub">No home loan products available.</div>`;
+  const selProd = homeProds.find(p => p.id === wizProductId) || homeProds[0];
+  const tenure  = wizState.tenure || 25;
+  const maxLtv  = parseFloat(selProd.max_ltv || 80);
+  const dpPct   = Math.round((1 - maxLtv/100) * 100);
+  const defaultDp = Math.round(propVal * dpPct / 100);
+  const effRate = prodEffRate(selProd, gsas);
 
-  const tenure   = wizState.tenure || 25;
-  const maxLtv   = parseFloat(selProd.max_ltv || 80);
-  const dpPct    = Math.round((1 - maxLtv/100) * 100);
-  const defaultDp= Math.round(propVal * dpPct / 100);
-  const effRate  = prodEffRate(selProd, gsas);
+  // ── Identify the green/demo product in the list ──
+  const greenProd = homeProds.find(p => p.is_demo_product === 1 || p.is_demo_product === true);
 
-  // ── Recommendation banner ──
-  // Find the product with the lowest effective rate (may differ from selected)
-  let recProd = null, recRate = 999;
-  for(const p of homeProds){
-    const r = prodEffRate(p, gsas);
-    if(r < recRate){ recRate = r; recProd = p; }
-  }
-  const isAlreadyBest = recProd?.id === selProd.id;
-  const rateDiff = parseFloat((effRate - recRate).toFixed(3)); // positive = selected is worse
-
+  // ── Recommendation banner (driven by is_demo_product flag from DB) ──
   let recBanner = '';
-  if(recProd && recProd.id !== selProd.id && rateDiff > 0){
-    const discP  = parseFloat(recProd.green_discount_premium || 0);
-    const premGs = parseInt(recProd.gsas_premium_score || 0);
-    const isGold = premGs > 0 && gsas >= premGs && discP > 0;
-    recBanner = `
-    <div class="info-strip eco-strip" style="margin-bottom:14px;cursor:pointer" onclick="selectWizProduct('${recProd.id}')">
-      ${isGold ? '🏆' : '🌿'} <strong>Better deal available!</strong>
-      Switch to <strong>${recProd.name}</strong> for <strong>${recRate.toFixed(2)}% p.a.</strong>
-      — <strong>${rateDiff.toFixed(2)}% lower</strong> than your current selection.
-      <span style="float:right;text-decoration:underline;color:var(--ok);font-weight:700">Select →</span>
-    </div>`;
-  } else if(isAlreadyBest && recRate < 99){
-    const discP  = parseFloat(selProd.green_discount_premium || 0);
-    const premGs = parseInt(selProd.gsas_premium_score || 0);
-    if(premGs > 0 && gsas >= premGs && discP > 0){
+  if(greenProd){
+    const gRate   = prodEffRate(greenProd, gsas);
+    const gDiscP  = parseFloat(greenProd.green_discount_premium || 0);
+    const gDiscS  = parseFloat(greenProd.green_discount_standard || 0);
+    const gPremGs = parseInt(greenProd.gsas_premium_score || 0);
+    const gMinGs  = parseInt(greenProd.gsas_min_score || 0);
+    const isSelected = selProd.id === greenProd.id;
+
+    if(isSelected){
+      // User already picked the green product — confirm it's the best choice
+      const appliedDisc = gRate < parseFloat(greenProd.base_rate)
+        ? parseFloat((parseFloat(greenProd.base_rate) - gRate).toFixed(3))
+        : 0;
+      const discLabel = gPremGs > 0 && gsas >= gPremGs && gDiscP > 0
+        ? `🏆 ${gDiscP}% GSAS Premium discount`
+        : gMinGs > 0 && gsas >= gMinGs && gDiscS > 0
+          ? `🌿 ${gDiscS}% GSAS Standard discount`
+          : '';
       recBanner = `
-    <div class="info-strip eco-strip" style="margin-bottom:14px">
-      🏆 <strong>Best available rate selected!</strong>
-      Your GSAS score of <strong>${gsas}</strong> qualifies for
-      <strong>${selProd.name}</strong> at <strong>${effRate.toFixed(2)}% p.a.</strong>
-      (${discP.toFixed(2)}% green premium discount from DB applied).
-    </div>`;
-    }
-  }
-
-  // ── Product card renderer (all data from DB) ──
-  function renderCard(p){
-    const isDemo  = p.is_demo_product === 1 || p.is_demo_product === true;
-    const sel     = p.id === wizProductId;
-    const pRate   = prodEffRate(p, gsas);
-    const pBase   = parseFloat(p.base_rate || 5.5);
-    const pPremGs = parseInt(p.gsas_premium_score || 0);
-    const pMinGs  = parseInt(p.gsas_min_score || 0);
-    const pDiscP  = parseFloat(p.green_discount_premium || 0);
-    const pDiscS  = parseFloat(p.green_discount_standard || 0);
-
-    // What discount tier applies for this user
-    let discTag = '';
-    if(pPremGs > 0 && gsas >= pPremGs && pDiscP > 0){
-      discTag = `<span class="ppc-disc-badge">🏆 −${pDiscP}% GSAS Premium</span>`;
-    } else if(pMinGs > 0 && gsas >= pMinGs && pDiscS > 0){
-      discTag = `<span class="ppc-disc-badge">🌿 −${pDiscS}% GSAS Standard</span>`;
-    } else if(pPremGs > 0 && gsas < pPremGs){
-      discTag = `<span class="ppc-tag" style="color:var(--g400)">GSAS ${pPremGs}+ for discount</span>`;
-    }
-
-    const yourRateNote = pRate < pBase
-      ? `<span style="font-size:10px;color:var(--ok);font-weight:600">(base ${pBase}% − ${parseFloat((pBase-pRate).toFixed(3))}% discount)</span>`
-      : `<span style="font-size:10px;color:var(--g400)">no green discount</span>`;
-
-    return `<div class="prod-pick-card${isDemo?' demo-prod':''}${sel?' selected':''}" id="ppc-${p.id}"
-        onclick="selectWizProduct('${p.id}')">
-      <div class="ppc-icon">${isDemo ? '🌿' : '💼'}</div>
-      <div class="ppc-body">
-        <div class="ppc-name">${p.name}${isDemo ? ' <span style="font-size:9px;color:var(--ok)">★ RECOMMENDED</span>' : ''}</div>
-        <div class="ppc-rate-big">${pRate.toFixed(2)}%</div>
-        <div class="ppc-rate-label">Your effective APR &nbsp;${yourRateNote}</div>
-        <div class="ppc-spec-row">
-          <span class="ppc-spec">LTV ≤${p.max_ltv}%</span>
-          <span class="ppc-spec">DBR ≤${p.max_dbr}%</span>
-          <span class="ppc-spec">${p.min_term}–${p.max_term} yrs</span>
-          <span class="ppc-spec">OMR ${Number(p.min_amount).toLocaleString()}–${Number(p.max_amount).toLocaleString()}</span>
-        </div>
-        <div class="ppc-tags">
-          ${discTag}
-          ${isDemo ? '<span class="ppc-tag green">🌱 Green Mortgage</span>' : ''}
-        </div>
-      </div>
-      <div class="ppc-chk">${sel ? '✓' : ''}</div>
-    </div>`;
-  }
-
-  // ── Savings comparison panel (only if ≥2 products) ──
-  let comparePanel = '';
-  if(homeProds.length >= 2){
-    const amt   = propVal - defaultDp;
-    const ten   = tenure;
-    // Compare all products against each other for this user's params
-    const rows  = homeProds.map(p => {
-      const r   = prodEffRate(p, gsas);
-      const m   = pmt(amt, r, ten*12);
-      return { p, r, m, total: m * ten * 12 };
-    });
-    rows.sort((a,b) => a.r - b.r); // best first
-    const bestRow = rows[0];
-    const selRow  = rows.find(r => r.p.id === wizProductId) || rows[0];
-
-    const svVsBest = Math.max(0, selRow.total - bestRow.total);
-    const svVsWorst= Math.max(0, rows[rows.length-1].total - selRow.total);
-
-    // Savings hero (only show if selected is best)
-    if(selRow.p.id === bestRow.p.id && svVsWorst > 0){
-      comparePanel += `
-      <div class="saving-hero">
-        <div style="font-size:12px;opacity:.8;margin-bottom:8px">💰 With ${selRow.p.name} vs. Standard Loan over ${ten} years</div>
-        <div class="saving-hero-amt">${fmtOMR(svVsWorst)}</div>
-        <div class="saving-hero-lbl">estimated lifetime saving based on real DB rates</div>
-        <div style="font-size:11px;opacity:.7;margin-top:8px">Monthly: ${fmtOMR(selRow.m)} vs ${fmtOMR(rows[rows.length-1].m)} (${fmtOMR(Math.abs(selRow.m - rows[rows.length-1].m))}/month less)</div>
+      <div class="info-strip eco-strip" style="margin-bottom:14px">
+        🌿 <strong>Green product selected — excellent choice!</strong>
+        ${discLabel ? `Your GSAS score of <strong>${gsas}</strong> unlocks a <strong>${discLabel}</strong>, bringing your rate to <strong>${gRate.toFixed(2)}% p.a.</strong>` : `Effective rate: <strong>${gRate.toFixed(2)}% p.a.</strong>`}
+      </div>`;
+    } else {
+      // Green product exists but user hasn't selected it — recommend it
+      const stdRate = prodEffRate(selProd, gsas);
+      const diff    = parseFloat((stdRate - gRate).toFixed(3));
+      const betterMsg = diff > 0
+        ? ` — <strong>${diff.toFixed(2)}% lower</strong> than your current selection`
+        : '';
+      recBanner = `
+      <div class="info-strip eco-strip" style="margin-bottom:14px;cursor:pointer" onclick="selectWizProduct('${greenProd.id}')">
+        🌿 <strong>Recommended: ${greenProd.name}</strong>
+        Effective rate <strong>${gRate.toFixed(2)}% p.a.</strong>${betterMsg}.
+        Your property's GSAS score qualifies for a green mortgage discount.
+        <span style="float:right;text-decoration:underline;color:var(--ok);font-weight:700">Select →</span>
       </div>`;
     }
+  }
 
-    // Side-by-side comparison table
-    const col1 = rows[0];  // best
-    const col2 = rows.find(r => r.p.id !== col1.p.id && !(r.p.is_demo_product)) || rows[rows.length-1]; // standard
+  // ── Build dropdown options ──
+  const dropdownOpts = homeProds.map(p => {
+    const isDemo  = p.is_demo_product === 1 || p.is_demo_product === true;
+    const pRate   = prodEffRate(p, gsas);
+    const suffix  = isDemo ? '  ★ Recommended' : '';
+    return `<option value="${p.id}" ${p.id === wizProductId ? 'selected' : ''}>
+      ${p.name}${suffix}  —  ${pRate.toFixed(2)}% p.a.
+    </option>`;
+  }).join('');
 
-    comparePanel += `
-    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">📊 Product Comparison</div>
-    <div class="prod-compare">
-      <div class="prod-compare-head">
-        <div></div>
-        <div class="col-sel">🌿 ${col1.p.name}</div>
-        <div>${col2.p.name}</div>
+  // ── Selected product spec panel (all fields from DB) ──
+  const sBase   = parseFloat(selProd.base_rate || 5.5);
+  const sPremGs = parseInt(selProd.gsas_premium_score || 0);
+  const sMinGs  = parseInt(selProd.gsas_min_score || 0);
+  const sDiscP  = parseFloat(selProd.green_discount_premium || 0);
+  const sDiscS  = parseFloat(selProd.green_discount_standard || 0);
+  const sIsDemo = selProd.is_demo_product === 1 || selProd.is_demo_product === true;
+
+  // Determine which discount tier applies
+  let discApplied = 0, discTierLabel = 'None';
+  if(sPremGs > 0 && gsas >= sPremGs && sDiscP > 0){
+    discApplied = sDiscP;
+    discTierLabel = `−${sDiscP}% (GSAS Premium ≥${sPremGs})`;
+  } else if(sMinGs > 0 && gsas >= sMinGs && sDiscS > 0){
+    discApplied = sDiscS;
+    discTierLabel = `−${sDiscS}% (GSAS Standard ≥${sMinGs})`;
+  } else if(sPremGs > 0 || sMinGs > 0){
+    discTierLabel = `None (GSAS ${gsas} — need ≥${sMinGs||sPremGs} for discount)`;
+  }
+
+  const gsasScoreColor = gsas >= sPremGs && sPremGs > 0 ? 'var(--ok)'
+                       : gsas >= sMinGs  && sMinGs  > 0 ? 'var(--warn)' : 'var(--g400)';
+
+  const specPanel = `
+  <div class="prod-spec-panel" style="background:var(--g50);border:1px solid var(--g200);border-radius:var(--r12);padding:14px 16px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="font-size:18px">${sIsDemo ? '🌿' : '💼'}</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--navy)">${selProd.name}${sIsDemo ? ' <span style="font-size:9px;font-weight:700;color:var(--ok);background:rgba(22,132,91,.12);padding:2px 6px;border-radius:var(--rfull)">★ GREEN</span>' : ''}</div>
+        ${selProd.description ? `<div style="font-size:11px;color:var(--g500);margin-top:2px">${selProd.description}</div>` : ''}
       </div>
-      ${[
-        ['Your APR',   col1.r.toFixed(2)+'%', col2.r.toFixed(2)+'%', col1.r < col2.r],
-        ['Max LTV',    col1.p.max_ltv+'%',     col2.p.max_ltv+'%',     parseFloat(col1.p.max_ltv)>=parseFloat(col2.p.max_ltv)],
-        ['Max DBR',    col1.p.max_dbr+'%',     col2.p.max_dbr+'%',     parseFloat(col1.p.max_dbr)>=parseFloat(col2.p.max_dbr)],
-        ['Max Tenure', col1.p.max_term+' yrs', col2.p.max_term+' yrs', parseInt(col1.p.max_term)>=parseInt(col2.p.max_term)],
-        ['Max Amount', 'OMR '+Number(col1.p.max_amount).toLocaleString(), 'OMR '+Number(col2.p.max_amount).toLocaleString(), parseFloat(col1.p.max_amount)>=parseFloat(col2.p.max_amount)],
-        ['Green Discount', col1.r<parseFloat(col1.p.base_rate)?'−'+(parseFloat(col1.p.base_rate)-col1.r).toFixed(2)+'%':'None',
-                           col2.r<parseFloat(col2.p.base_rate)?'−'+(parseFloat(col2.p.base_rate)-col2.r).toFixed(2)+'%':'None',
-                           col1.r<parseFloat(col1.p.base_rate)],
-        ['Monthly Payment',fmtOMR(col1.m), fmtOMR(col2.m), col1.m < col2.m],
-        ['Total over '+ten+'yr', fmtOMR(col1.total), fmtOMR(col2.total), col1.total < col2.total],
-        ['Lifetime Saving', fmtOMR(Math.max(0,col2.total-col1.total))+' 🌿', '—', true],
-      ].map(([lbl, v1, v2, c1Better]) => `
-      <div class="prod-compare-row">
-        <div class="row-lbl">${lbl}</div>
-        <div class="col-sel ${c1Better?'val-better':''}">${v1}</div>
-        <div class="${c1Better?'val-worse':''}">${v2}</div>
-      </div>`).join('')}
-    </div>`;
+    </div>
+
+    <!-- Rate highlight -->
+    <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--g200)">
+      <div style="font-size:28px;font-weight:800;color:var(--navy);line-height:1">${effRate.toFixed(2)}%</div>
+      <div style="font-size:11px;color:var(--g500)">
+        p.a. effective APR
+        ${discApplied > 0
+          ? `<br><span style="color:var(--ok);font-weight:600">Base ${sBase.toFixed(2)}% − ${discApplied.toFixed(2)}% green discount</span>`
+          : `<br><span style="color:var(--g400)">Base rate (no discount applied)</span>`}
+      </div>
+      ${discApplied > 0 ? `<span style="margin-left:auto;font-size:10px;font-weight:700;color:#065f46;background:rgba(5,150,105,.1);padding:3px 8px;border-radius:var(--rfull)">${discTierLabel}</span>` : ''}
+    </div>
+
+    <!-- Key specs grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="font-size:11px;color:var(--g500)">Base Rate
+        <div style="font-size:13px;font-weight:600;color:var(--navy)">${sBase.toFixed(2)}% p.a.</div>
+      </div>
+      <div style="font-size:11px;color:var(--g500)">Max Loan-to-Value
+        <div style="font-size:13px;font-weight:600;color:var(--navy)">${selProd.max_ltv}%</div>
+      </div>
+      <div style="font-size:11px;color:var(--g500)">Max Debt Burden Ratio
+        <div style="font-size:13px;font-weight:600;color:var(--navy)">${selProd.max_dbr}%</div>
+      </div>
+      <div style="font-size:11px;color:var(--g500)">Tenure Range
+        <div style="font-size:13px;font-weight:600;color:var(--navy)">${selProd.min_term}–${selProd.max_term} years</div>
+      </div>
+      <div style="font-size:11px;color:var(--g500)">Min Amount
+        <div style="font-size:13px;font-weight:600;color:var(--navy)">OMR ${Number(selProd.min_amount).toLocaleString()}</div>
+      </div>
+      <div style="font-size:11px;color:var(--g500)">Max Amount
+        <div style="font-size:13px;font-weight:600;color:var(--navy)">OMR ${Number(selProd.max_amount).toLocaleString()}</div>
+      </div>
+    </div>
+
+    <!-- GSAS discount breakdown (only if product has GSAS fields) -->
+    ${(sPremGs > 0 || sMinGs > 0) ? `
+    <div style="padding-top:10px;border-top:1px solid var(--g200)">
+      <div style="font-size:10px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">GSAS Green Discounts</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${sDiscP > 0 ? `
+        <div style="flex:1;min-width:120px;background:${gsas>=sPremGs?'rgba(5,150,105,.08)':'var(--g100)'};border:1px solid ${gsas>=sPremGs?'rgba(5,150,105,.3)':'var(--g200)'};border-radius:8px;padding:7px 10px">
+          <div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase">Premium Tier</div>
+          <div style="font-size:13px;font-weight:700;color:${gsas>=sPremGs?'var(--ok)':'var(--g400)'};margin:2px 0">−${sDiscP}%</div>
+          <div style="font-size:10px;color:var(--g500)">GSAS ≥ ${sPremGs}</div>
+          <div style="font-size:10px;font-weight:600;color:${gsas>=sPremGs?'var(--ok)':'var(--g400)'}">${gsas>=sPremGs?'✓ You qualify':'Score: '+gsas+' / need '+sPremGs}</div>
+        </div>` : ''}
+        ${sDiscS > 0 ? `
+        <div style="flex:1;min-width:120px;background:${gsas>=sMinGs&&gsas<sPremGs?'rgba(5,150,105,.05)':gsas>=sMinGs?'rgba(5,150,105,.05)':'var(--g100)'};border:1px solid ${gsas>=sMinGs?'rgba(5,150,105,.2)':'var(--g200)'};border-radius:8px;padding:7px 10px">
+          <div style="font-size:9px;font-weight:700;color:var(--g500);text-transform:uppercase">Standard Tier</div>
+          <div style="font-size:13px;font-weight:700;color:${gsas>=sMinGs?'var(--ok)':'var(--g400)'};margin:2px 0">−${sDiscS}%</div>
+          <div style="font-size:10px;color:var(--g500)">GSAS ≥ ${sMinGs}</div>
+          <div style="font-size:10px;font-weight:600;color:${gsas>=sMinGs?'var(--ok)':'var(--g400)'}">${gsas>=sMinGs?'✓ You qualify':'Score: '+gsas+' / need '+sMinGs}</div>
+        </div>` : ''}
+      </div>
+      <div style="font-size:10px;color:var(--g500);margin-top:6px">Your GSAS: <strong style="color:${gsasScoreColor}">${gsas || '—'}</strong> · Applied discount: <strong style="color:${discApplied>0?'var(--ok)':'var(--g400)'}">${discApplied > 0 ? '−'+discApplied+'%' : 'None'}</strong></div>
+    </div>` : ''}
+  </div>`;
+
+  // ── Savings comparison vs standard (shown when green product selected) ──
+  let comparePanel = '';
+  if(sIsDemo && homeProds.length >= 2){
+    // Find the standard (non-demo) product to compare against
+    const stdProd = homeProds.find(p => !(p.is_demo_product === 1 || p.is_demo_product === true));
+    if(stdProd){
+      const loanAmt  = propVal - defaultDp;
+      const ten      = tenure;
+      const gRate    = effRate;
+      const sRate    = prodEffRate(stdProd, gsas);
+      const gMthly   = pmt(loanAmt, gRate, ten*12);
+      const sMthly   = pmt(loanAmt, sRate, ten*12);
+      const gTotal   = gMthly * ten * 12;
+      const sTotal   = sMthly * ten * 12;
+      const lifeSave = Math.max(0, sTotal - gTotal);
+      const mthSave  = Math.max(0, sMthly - gMthly);
+
+      if(lifeSave > 0){
+        comparePanel = `
+        <div class="saving-hero" style="margin-bottom:16px">
+          <div style="font-size:12px;opacity:.8;margin-bottom:8px">💰 ${selProd.name} vs. ${stdProd.name} over ${ten} years</div>
+          <div class="saving-hero-amt">${fmtOMR(lifeSave)}</div>
+          <div class="saving-hero-lbl">estimated lifetime saving (all rates from DB)</div>
+          <div style="font-size:11px;opacity:.75;margin-top:8px">${fmtOMR(mthSave)} less per month · ${gRate.toFixed(2)}% vs ${sRate.toFixed(2)}%</div>
+        </div>
+
+        <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">📊 vs. Standard Offering</div>
+        <div class="prod-compare">
+          <div class="prod-compare-head">
+            <div></div>
+            <div class="col-sel">🌿 ${selProd.name}</div>
+            <div>${stdProd.name}</div>
+          </div>
+          ${[
+            ['Effective APR',    gRate.toFixed(2)+'%',                          sRate.toFixed(2)+'%',                          gRate < sRate],
+            ['Base Rate',        parseFloat(selProd.base_rate).toFixed(2)+'%',  parseFloat(stdProd.base_rate).toFixed(2)+'%',  parseFloat(selProd.base_rate)<=parseFloat(stdProd.base_rate)],
+            ['Green Discount',   discApplied>0?'−'+discApplied.toFixed(2)+'%':'None', prodEffRate(stdProd,gsas)<parseFloat(stdProd.base_rate)?'−'+(parseFloat(stdProd.base_rate)-prodEffRate(stdProd,gsas)).toFixed(2)+'%':'None', discApplied>0],
+            ['Max LTV',          selProd.max_ltv+'%',                           stdProd.max_ltv+'%',                           parseFloat(selProd.max_ltv)>=parseFloat(stdProd.max_ltv)],
+            ['Max DBR',          selProd.max_dbr+'%',                           stdProd.max_dbr+'%',                           parseFloat(selProd.max_dbr)>=parseFloat(stdProd.max_dbr)],
+            ['Max Tenure',       selProd.max_term+' yrs',                       stdProd.max_term+' yrs',                       parseInt(selProd.max_term)>=parseInt(stdProd.max_term)],
+            ['Monthly Payment',  fmtOMR(gMthly),                                fmtOMR(sMthly),                                gMthly < sMthly],
+            ['Total Interest',   fmtOMR(gTotal - loanAmt),                      fmtOMR(sTotal - loanAmt),                      gTotal < sTotal],
+            ['Lifetime Saving',  fmtOMR(lifeSave)+' 🌿',                        '—',                                           true],
+          ].map(([lbl, v1, v2, c1Better]) => `
+          <div class="prod-compare-row">
+            <div class="row-lbl">${lbl}</div>
+            <div class="col-sel ${c1Better?'val-better':''}">${v1}</div>
+            <div class="${c1Better?'val-worse':''}">${v2}</div>
+          </div>`).join('')}
+        </div>`;
+      }
+    }
   }
 
   return `
     <div class="step-title">Select Product &amp; Calculate</div>
-    <div class="step-sub">All rates, LTV, DBR limits and green discounts loaded live from the product database.</div>
+    <div class="step-sub">All rates, limits, and green discounts are loaded live from the product database.</div>
 
     ${recBanner}
 
-    <!-- Product selection list -->
-    <label class="fl" style="margin-bottom:8px">Available Home Loan Products</label>
-    <div class="prod-pick-grid" style="margin-bottom:16px">
-      ${homeProds.map(p => renderCard(p)).join('') || '<div style="padding:12px;color:var(--g500)">No active home loan products.</div>'}
-    </div>
+    <!-- Product dropdown -->
+    <label class="fl" style="margin-bottom:6px">Home Loan Product</label>
+    <select id="wa-product-sel" class="finp" style="width:100%;margin-bottom:16px;font-size:13px;padding:10px 12px;border-radius:var(--r8);border:1px solid var(--g300);background:#fff;cursor:pointer"
+      onchange="selectWizProduct(this.value)">
+      ${dropdownOpts}
+    </select>
 
+    <!-- Selected product full spec panel -->
+    ${specPanel}
+
+    <!-- Savings comparison vs standard (green product only) -->
     ${comparePanel}
 
-    <!-- Live calculator section -->
+    <!-- Live calculator -->
     <div class="calc-section">
       <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--g200)">
         <div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Estimated Monthly Payment</div>
@@ -2740,9 +2800,9 @@ function stepFinancing(){
 
       <div class="calc-slider-lbl">
         <span>Loan Tenure</span>
-        <span><b id="wa-ten-val">${tenure} years</b></span>
+        <span><b id="wa-ten-val">${Math.min(tenure, selProd.max_term||30)} years</b></span>
       </div>
-      <input type="range" class="calc-slider" id="wa-ten" min="5" max="${selProd.max_term||30}" step="5" value="${Math.min(tenure, selProd.max_term||30)}" oninput="wizCalcFinance()"/>
+      <input type="range" class="calc-slider" id="wa-ten" min="${selProd.min_term||5}" max="${selProd.max_term||30}" step="5" value="${Math.min(tenure, selProd.max_term||30)}" oninput="wizCalcFinance()"/>
 
       <input type="hidden" id="wa-propval" value="${propVal}"/>
       <input type="hidden" id="wa-dp"      value="${defaultDp}"/>
@@ -2755,7 +2815,7 @@ function stepFinancing(){
         <div class="calc-out-chip"><div class="lbl">DBR Ratio</div><div class="v" id="wa-dbr">—</div></div>
         <div class="calc-out-chip"><div class="lbl">LTV Ratio</div><div class="v" id="wa-ltv">—</div></div>
         <div class="calc-out-chip"><div class="lbl">vs. Std. Loan</div><div class="v" id="wa-sv" style="color:var(--ok)">—</div></div>
-        <div class="calc-out-chip"><div class="lbl">GSAS Score</div><div class="v" style="color:${gsas>=(parseInt(selProd.gsas_premium_score)||0)&&(parseInt(selProd.gsas_premium_score)||0)>0?'var(--ok)':gsas>=(parseInt(selProd.gsas_min_score)||0)&&(parseInt(selProd.gsas_min_score)||0)>0?'var(--warn)':'var(--g500)'}">${gsas||'—'}</div></div>
+        <div class="calc-out-chip"><div class="lbl">GSAS Score</div><div class="v" style="color:${gsasScoreColor}">${gsas||'—'}</div></div>
       </div>
 
       <div id="dbr-warn" style="display:none;margin-top:10px" class="warn-strip">⚠️ DBR exceeds ${selProd.max_dbr||40}% — reduce loan amount or increase down payment.</div>
@@ -2822,12 +2882,14 @@ function wizCalcFinance(){
 
 function selectWizProduct(id){
   wizProductId = id;
-  document.querySelectorAll('.prod-pick-card').forEach(card=>{
-    const sel = card.id === 'ppc-'+id;
-    card.classList.toggle('selected', sel);
-    const chk = card.querySelector('.ppc-chk');
-    if(chk) chk.textContent = sel ? '✓' : '';
-  });
+  // Re-render the whole financing step so the spec panel, GSAS discount breakdown,
+  // savings comparison and slider constraints all update for the new selection
+  const wrap = document.getElementById('wiz-body');
+  if(wrap) wrap.innerHTML = stepFinancing();
+  // Sync the dropdown value in case we were called programmatically (e.g. from rec banner)
+  const sel = document.getElementById('wa-product-sel');
+  if(sel && sel.value !== id) sel.value = id;
+  // Run the live calculator immediately so payment outputs populate
   wizCalcFinance();
   const prod = allProducts.find(p=>p.id===id);
   toast('Product selected: '+(prod?.name||id), 'ok');
