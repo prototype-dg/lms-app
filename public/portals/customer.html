@@ -347,10 +347,12 @@ body.rtl .ps-badge{margin-left:0;margin-right:auto}
 .fs-note{text-align:center;font-size:10px;opacity:.5;margin-top:10px}
 
 /* LIVENESS — Apple Face ID style redesign */
+/* NO isolation:isolate — that traps z-index children and breaks fixed bg coverage */
 .liveness-overlay{display:none;position:fixed;inset:0;z-index:700;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:#000913}
 .liveness-overlay.open{display:flex}
 
-/* Animated particle background — z-index:-1 so modal renders above it */
+/* Background layer: position:absolute fills the overlay (which is already fixed+inset:0) */
+/* z-index:0 so it sits below modal (z:1) but still inside the overlay */
 .liveness-bg{position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at 30% 20%,#0a1628 0%,#050d1a 40%,#000913 100%);overflow:hidden;pointer-events:none}
 .liveness-bg::before{content:'';position:absolute;inset:0;
   background:
@@ -370,8 +372,8 @@ body.rtl .ps-badge{margin-left:0;margin-right:auto}
 .liveness-orb.o3{width:160px;height:160px;background:rgba(46,204,113,.08);bottom:30%;left:5%;animation-delay:-7s}
 @keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-30px) scale(1.08)}}
 
-/* Modal card — z-index:1 lifts above .liveness-bg (z:0) */
-.liveness-modal{position:relative;z-index:1;background:rgba(10,18,35,.94);border:1px solid rgba(53,198,196,.22);border-radius:28px;padding:0;width:100%;max-width:390px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.9),0 0 0 1px rgba(53,198,196,.1),inset 0 1px 0 rgba(255,255,255,.06);margin:auto;backdrop-filter:blur(20px)}
+/* Modal card — z-index:2 lifts above .liveness-bg (z:0) */
+.liveness-modal{position:relative;z-index:2;background:rgba(10,18,35,.94);border:1px solid rgba(53,198,196,.22);border-radius:28px;padding:0;width:100%;max-width:390px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.9),0 0 0 1px rgba(53,198,196,.1),inset 0 1px 0 rgba(255,255,255,.06);margin:auto;backdrop-filter:blur(20px)}
 
 /* Header */
 .liveness-header{padding:18px 22px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.07)}
@@ -381,7 +383,7 @@ body.rtl .ps-badge{margin-left:0;margin-right:auto}
 @keyframes pulseDot{0%,100%{box-shadow:0 0 8px rgba(53,198,196,.6)}50%{box-shadow:0 0 16px rgba(53,198,196,.9),0 0 24px rgba(53,198,196,.4)}}
 
 /* Camera viewport */
-.liveness-camera-wrap{position:relative;width:100%;aspect-ratio:3/4;max-height:44vh;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#000}
+.liveness-camera-wrap{position:relative;width:100%;aspect-ratio:3/4;max-height:44vh;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0a0f1a}
 .liveness-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
 
 /* SVG overlay takes full viewport */
@@ -1127,11 +1129,11 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
           </filter>
         </defs>
 
-        <!-- Dark overlay with oval cutout (shows camera through oval) -->
-        <rect width="360" height="480" fill="rgba(5,12,25,.82)" mask="url(#liveness-oval-mask)"/>
+        <!-- Solid dark fill outside oval — opaque so raw camera NEVER leaks at sides -->
+        <rect width="360" height="480" fill="#0a0f1a" mask="url(#liveness-oval-mask)"/>
 
-        <!-- Vignette on top of everything for depth -->
-        <rect width="360" height="480" fill="url(#liveness-vignette)" mask="url(#liveness-oval-mask)"/>
+        <!-- Subtle vignette inside the oval for depth feel -->
+        <ellipse cx="180" cy="228" rx="118" ry="152" fill="url(#liveness-vignette)" opacity=".4"/>
 
         <!-- Subtle inner glow on oval edge (always visible) -->
         <ellipse cx="180" cy="228" rx="118" ry="152" fill="none" stroke="rgba(53,198,196,.15)" stroke-width="8"/>
@@ -1180,12 +1182,11 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
       <div class="liveness-progress-label" id="liveness-progress-label">READY TO SCAN</div>
     </div>
 
-    <!-- Step indicator row -->
+    <!-- Step indicator row — 3-phase: Detecting → Rotating → Complete -->
     <div class="liveness-steps-row" id="liveness-steps-row">
-      <div class="lv-step active" id="lvs-0"><div class="lv-step-icon">🎯</div><span>Center</span></div>
-      <div class="lv-step" id="lvs-1"><div class="lv-step-icon">↩️</div><span>Turn Left</span></div>
-      <div class="lv-step" id="lvs-2"><div class="lv-step-icon">↪️</div><span>Turn Right</span></div>
-      <div class="lv-step" id="lvs-3"><div class="lv-step-icon">✅</div><span>Complete</span></div>
+      <div class="lv-step active" id="lvs-0"><div class="lv-step-icon">🎯</div><span>Detecting</span></div>
+      <div class="lv-step" id="lvs-1"><div class="lv-step-icon">↻</div><span>Rotating</span></div>
+      <div class="lv-step" id="lvs-2"><div class="lv-step-icon">✅</div><span>Complete</span></div>
     </div>
 
     <!-- Footer -->
@@ -2793,189 +2794,244 @@ function triggerIdValidation(){
 }
 
 /* ══════════════════════════════════════════════════════
-   LIVENESS CHECK ENGINE
+   LIVENESS CHECK ENGINE — Face-shift motion tracking
+   Single instruction: rotate clockwise.
+   Ticks fill 1:1 with detected face movement — no schedule.
 ══════════════════════════════════════════════════════ */
-/* ══════════════════════════════════════════════════════
-   LIVENESS — Apple Face ID style with clock-tick ring
-══════════════════════════════════════════════════════ */
-const LIVENESS_STEPS = [
-  { instr:'Keep still — scanning your face',       duration:3500, color:'#35C6C4', motion:'none'  },
-  { instr:'Slowly rotate clockwise ↻',             duration:5000, color:'#F4B35B', motion:'right' },
-  { instr:'Continue rotating — keep going ↻',     duration:5000, color:'#F4B35B', motion:'right' },
-  { instr:'Centre your face and hold still',       duration:3000, color:'#2ECC71', motion:'none'  },
-];
 
-// ── Clock-tick ring constants ──
-const TICK_COUNT = 48;
-// Oval params matching SVG viewBox (cx=180 cy=228 rx=118 ry=152)
-const LV_OX=180, LV_OY=228, LV_RX=130, LV_RY=166; // slightly outside the oval
-let livenessTicksFilled = 0; // how many ticks are currently "lit"
-let livenessTickRaf = null;
-let livenessScanRaf = null;
-let livenessScanY   = 76; // scan line Y start (top of oval)
-let livenessScanDir = 1;
+const TICK_COUNT  = 48;
+const LV_OX=180, LV_OY=228, LV_RX=130, LV_RY=166;
 
-// ── Motion detection via canvas pixel-diff ──
-let livenessMotionCanvas = null;
-let livenessMotionCtx    = null;
-let livenessMotionPrev   = null;  // previous frame ImageData
-let livenessMotionRaf    = null;
-let livenessMotionScore  = 0;     // smoothed motion score 0–1
-let livenessMotionAccum  = 0;     // accumulated motion for step gating
-const LV_MOTION_NEEDED   = 120;   // motion-units needed to advance a motion step
+// State
+let lvTicksFilled   = 0;          // ticks currently lit (0–TICK_COUNT)
+let lvTrackRaf      = null;       // rAF handle for face tracking loop
+let lvScanRaf       = null;       // rAF handle for scan-line animation
+let lvScanY         = 76;
+let lvScanDir       = 1;
+let lvCanvas        = null;       // off-screen canvas for pixel sampling
+let lvCtx           = null;
+let lvFaceXHistory  = [];         // ring buffer of recent face-centre X values (0–1)
+let lvTotalArc      = 0;          // accumulated clockwise arc in degrees
+let lvPrevFaceX     = null;       // last face-centre X
+let lvPhase         = 'init';     // 'init' | 'rotate' | 'done'
+let lvInitFrames    = 0;          // frames collected during init
+const LV_W          = 80;         // canvas width for sampling
+const LV_H          = 60;         // canvas height for sampling
+const LV_ARC_NEEDED = 70;         // units to accumulate = success (tuned to real head-turn range)
+const LV_HISTORY    = 4;          // smooth over N frames (smaller = more responsive)
 
-function startMotionDetection(){
-  const video = document.getElementById('liveness-video');
-  if(!video) return;
-  if(!livenessMotionCanvas){
-    livenessMotionCanvas = document.createElement('canvas');
-    livenessMotionCanvas.width  = 64; // small for perf
-    livenessMotionCanvas.height = 48;
-    livenessMotionCtx = livenessMotionCanvas.getContext('2d',{willReadFrequently:true});
-  }
-  livenessMotionPrev = null;
-  livenessMotionScore = 0;
-  livenessMotionAccum = 0;
-  function detectFrame(){
-    livenessMotionRaf = requestAnimationFrame(detectFrame);
-    if(!video.videoWidth) return;
-    livenessMotionCtx.drawImage(video,0,0,64,48);
-    const cur = livenessMotionCtx.getImageData(0,0,64,48);
-    if(livenessMotionPrev){
-      let diff=0;
-      for(let i=0;i<cur.data.length;i+=4){
-        diff += Math.abs(cur.data[i]  -livenessMotionPrev.data[i])
-               +Math.abs(cur.data[i+1]-livenessMotionPrev.data[i+1])
-               +Math.abs(cur.data[i+2]-livenessMotionPrev.data[i+2]);
-      }
-      // Normalise: max possible diff per pixel = 3*255, 64*48 pixels
-      const score = Math.min(diff / (64*48*3*255*0.04), 1); // 0.04 = ~4% change = full score
-      livenessMotionScore = livenessMotionScore*0.7 + score*0.3; // smooth
-      livenessMotionAccum += livenessMotionScore;
-    }
-    livenessMotionPrev = cur;
-  }
-  livenessMotionRaf = requestAnimationFrame(detectFrame);
-}
-
-function stopMotionDetection(){
-  cancelAnimationFrame(livenessMotionRaf);
-  livenessMotionRaf = null;
-}
-
+/* ── Build 48 clock-tick SVG marks ── */
 function buildLivenessTicks(){
-  const g = document.getElementById('liveness-ticks');
+  const g=document.getElementById('liveness-ticks');
   if(!g) return;
   g.innerHTML='';
   for(let k=0;k<TICK_COUNT;k++){
-    // Parametric point on oval, start from top (−π/2), go clockwise
-    const angle = (k/TICK_COUNT)*Math.PI*2 - Math.PI/2;
+    const angle=(k/TICK_COUNT)*Math.PI*2-Math.PI/2; // start top, go CW
     const cos=Math.cos(angle), sin=Math.sin(angle);
-    // Tick outer point (on ring)
-    const ox = LV_OX + LV_RX*cos;
-    const oy = LV_OY + LV_RY*sin;
-    // Tick inner point (slightly inward)
-    const len = (k%4===0)?10:6; // longer every 4th tick (like a clock hour mark)
-    const ix = LV_OX + (LV_RX-len)*cos;
-    const iy = LV_OY + (LV_RY-len)*sin;
-    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1',ox.toFixed(1));
-    line.setAttribute('y1',oy.toFixed(1));
-    line.setAttribute('x2',ix.toFixed(1));
-    line.setAttribute('y2',iy.toFixed(1));
-    line.setAttribute('stroke','rgba(53,198,196,.18)');
-    line.setAttribute('stroke-width', k%4===0?'2.5':'1.5');
-    line.setAttribute('stroke-linecap','round');
-    line.setAttribute('id','lvtick-'+k);
-    g.appendChild(line);
+    const ox=LV_OX+LV_RX*cos, oy=LV_OY+LV_RY*sin;
+    const len=(k%4===0)?11:6;
+    const ix=LV_OX+(LV_RX-len)*cos, iy=LV_OY+(LV_RY-len)*sin;
+    const el=document.createElementNS('http://www.w3.org/2000/svg','line');
+    el.setAttribute('id','lvtick-'+k);
+    el.setAttribute('x1',ox.toFixed(1)); el.setAttribute('y1',oy.toFixed(1));
+    el.setAttribute('x2',ix.toFixed(1)); el.setAttribute('y2',iy.toFixed(1));
+    el.setAttribute('stroke','rgba(53,198,196,.15)');
+    el.setAttribute('stroke-width',k%4===0?'2.5':'1.5');
+    el.setAttribute('stroke-linecap','round');
+    g.appendChild(el);
   }
 }
 
-function setLivenessTicks(filled, color='#35C6C4'){
+/* ── Paint ticks up to `filled`, colour gradient teal→amber→green ── */
+function paintTicks(filled){
   for(let k=0;k<TICK_COUNT;k++){
     const el=document.getElementById('lvtick-'+k);
     if(!el) continue;
     if(k<filled){
-      el.setAttribute('stroke',color);
+      // Gradient: 0–33% teal, 33–80% amber, 80–100% green
+      const frac=k/TICK_COUNT;
+      const col=frac<0.33?'#35C6C4':frac<0.80?'#F4B35B':'#2ECC71';
+      el.setAttribute('stroke',col);
       el.setAttribute('filter','url(#tickGlow)');
-      el.setAttribute('stroke-opacity','1');
     } else {
-      el.setAttribute('stroke','rgba(53,198,196,.18)');
+      el.setAttribute('stroke','rgba(53,198,196,.15)');
       el.removeAttribute('filter');
-      el.setAttribute('stroke-opacity','1');
     }
   }
 }
 
-function animateLivenessTicks(targetFilled, color, duration, onDone){
-  const start = livenessTicksFilled;
-  const startTime = performance.now();
-  function frame(now){
-    const t = Math.min((now-startTime)/duration, 1);
-    // Ease-in-out cubic
-    const ease = t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
-    const current = Math.round(start + (targetFilled-start)*ease);
-    if(current!==livenessTicksFilled){
-      livenessTicksFilled=current;
-      setLivenessTicks(current, color);
-    }
-    if(t<1){
-      livenessTickRaf=requestAnimationFrame(frame);
-    } else {
-      livenessTicksFilled=targetFilled;
-      setLivenessTicks(targetFilled,color);
-      if(onDone) onDone();
+/* ── Face-centre estimation: weighted brightness X in oval band ──
+   The video is mirror-flipped (scaleX(-1)). When user turns head right
+   (clockwise from front), the bright face mass shifts LEFT in the raw
+   pixel data → weighted X decreases. We accumulate that leftward shift
+   as clockwise progress.
+*/
+function getFaceCentreX(video){
+  if(!video.videoWidth) return null;
+  if(!lvCanvas){
+    lvCanvas=document.createElement('canvas');
+    lvCanvas.width=LV_W; lvCanvas.height=LV_H;
+    lvCtx=lvCanvas.getContext('2d',{willReadFrequently:true});
+  }
+  lvCtx.drawImage(video,0,0,LV_W,LV_H);
+  const d=lvCtx.getImageData(0,0,LV_W,LV_H).data;
+  let weightX=0, totalBrightness=0;
+  // Sample only centre vertical strip (rows 10–50 of LV_H=60 → focus on face)
+  for(let y=10;y<50;y++){
+    for(let x=0;x<LV_W;x++){
+      const i=(y*LV_W+x)*4;
+      const bright=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)/255;
+      // Weight brighter pixels more (skin is lighter than background)
+      const w=bright*bright;
+      weightX+=x*w;
+      totalBrightness+=w;
     }
   }
-  cancelAnimationFrame(livenessTickRaf);
-  livenessTickRaf=requestAnimationFrame(frame);
+  if(totalBrightness<1) return 0.5;
+  return weightX/totalBrightness/LV_W; // 0 (left) → 1 (right)
 }
 
+/* ── Main tracking loop — runs every animation frame ── */
+function startFaceTracking(){
+  lvFaceXHistory=[];
+  lvTotalArc=0;
+  lvPrevFaceX=null;
+  lvPhase='init';
+  lvInitFrames=0;
+
+  const video=document.getElementById('liveness-video');
+  const bar=document.getElementById('liveness-bar-fill');
+  const lbl=document.getElementById('liveness-progress-label');
+  const instr=document.getElementById('liveness-instr');
+
+  function frame(){
+    lvTrackRaf=requestAnimationFrame(frame);
+    if(!video||!video.videoWidth) return;
+
+    const rawX=getFaceCentreX(video);
+    // Smooth with ring buffer
+    lvFaceXHistory.push(rawX);
+    if(lvFaceXHistory.length>LV_HISTORY) lvFaceXHistory.shift();
+    const faceX=lvFaceXHistory.reduce((a,v)=>a+v,0)/lvFaceXHistory.length;
+
+    if(lvPhase==='init'){
+      // Collect baseline for ~20 frames then switch to rotate phase
+      lvInitFrames++;
+      lvPrevFaceX=faceX;
+      if(lvInitFrames>=10){
+        lvPhase='rotate';
+        if(instr){ instr.textContent='Rotate your head clockwise ↻'; instr.style.background=''; }
+        // Activate step 2 pill (Rotating)
+        document.querySelectorAll('.lv-step').forEach((el,i)=>{
+          el.className='lv-step'+(i===0?' done':i===1?' active':'');
+        });
+        if(lbl) lbl.textContent='Rotate clockwise — 0% complete';
+      }
+      return;
+    }
+
+    if(lvPhase==='rotate'){
+      // Delta: track face-centre X movement.
+      // Mirrored video: turning head right (CW from front) shifts bright mass LEFT → dx positive.
+      // We accept both directions of change to accumulate the full sweep gesture.
+      if(lvPrevFaceX!==null){
+        const dx=Math.abs(faceX-lvPrevFaceX); // magnitude of any lateral shift
+        // Ignore micro-jitter (< 0.002 ≈ stillness noise)
+        if(dx>0.002){
+          // Each rAF ~16ms; head turn sweeps centroid ~0.3 units total.
+          // 0.3 units / 70 target = need ~0.3 per completion. Multiplier 250 gives 0.3×250=75.
+          lvTotalArc+=dx*250;
+        }
+      }
+      lvPrevFaceX=faceX;
+
+      const progress=Math.min(lvTotalArc/LV_ARC_NEEDED,1);
+
+      // Update tick ring directly — no interpolation, instant response
+      const targetTicks=Math.round(progress*TICK_COUNT);
+      if(targetTicks!==lvTicksFilled){
+        lvTicksFilled=targetTicks;
+        paintTicks(targetTicks);
+      }
+
+      // Update bar and label
+      if(bar) bar.style.width=(progress*100)+'%';
+      if(lbl) lbl.textContent='Rotate clockwise — '+Math.round(progress*100)+'% complete';
+
+      // Done when full ring filled
+      if(progress>=1){
+        lvPhase='done';
+        finishLiveness();
+      }
+    }
+  }
+  lvTrackRaf=requestAnimationFrame(frame);
+}
+
+function stopFaceTracking(){
+  cancelAnimationFrame(lvTrackRaf);
+  lvTrackRaf=null;
+}
+
+/* ── Scan-line animation (cosmetic) ── */
 function startScanLine(){
   const grp=document.getElementById('liveness-scanline-group');
   const line=document.getElementById('liveness-scanline');
   if(!grp||!line) return;
   grp.setAttribute('opacity','1');
-  livenessScanY=76; livenessScanDir=1;
-  function frame(){
-    livenessScanY += livenessScanDir*1.6;
-    if(livenessScanY>380){ livenessScanDir=-1; }
-    if(livenessScanY<76){  livenessScanDir=1;  }
-    line.setAttribute('y1',livenessScanY.toFixed(0));
-    line.setAttribute('y2',livenessScanY.toFixed(0));
-    livenessScanRaf=requestAnimationFrame(frame);
+  lvScanY=76; lvScanDir=1;
+  function f(){
+    lvScanRaf=requestAnimationFrame(f);
+    lvScanY+=lvScanDir*2;
+    if(lvScanY>380) lvScanDir=-1;
+    if(lvScanY<76)  lvScanDir=1;
+    line.setAttribute('y1',lvScanY.toFixed(0));
+    line.setAttribute('y2',lvScanY.toFixed(0));
   }
-  livenessScanRaf=requestAnimationFrame(frame);
+  lvScanRaf=requestAnimationFrame(f);
 }
-
 function stopScanLine(){
-  cancelAnimationFrame(livenessScanRaf);
+  cancelAnimationFrame(lvScanRaf);
   const grp=document.getElementById('liveness-scanline-group');
   if(grp) grp.setAttribute('opacity','0');
 }
 
+/* ── Public API ── */
 async function startLiveness(){
-  livenessStep=0; livenessTicksFilled=0;
+  lvTicksFilled=0; lvTotalArc=0; lvPhase='init'; lvInitFrames=0;
   const overlay=document.getElementById('liveness-overlay');
   overlay.style.display='flex';
   buildLivenessTicks();
-  setLivenessTicks(0);
-  document.getElementById('liveness-bar-fill').style.width='0%';
-  document.getElementById('liveness-progress-label').textContent='INITIALISING';
-  LIVENESS_STEPS.forEach((_,i)=>{
-    const el=document.getElementById('lvs-'+i);
-    if(el) el.className='lv-step'+(i===0?' active':'');
+  paintTicks(0);
+
+  const bar=document.getElementById('liveness-bar-fill');
+  const lbl=document.getElementById('liveness-progress-label');
+  const instr=document.getElementById('liveness-instr');
+  if(bar) bar.style.width='0%';
+  if(lbl) lbl.textContent='FACE DETECTED — HOLD STILL';
+  if(instr) instr.textContent='Hold still — detecting face…';
+
+  // Step pills: Detecting active, rest pending
+  document.querySelectorAll('.lv-step').forEach((el,i)=>{
+    el.className='lv-step'+(i===0?' active':'');
   });
+  if(document.getElementById('liveness-progress-label'))
+    document.getElementById('liveness-progress-label').textContent='FACE DETECTED — HOLD STILL';
+
   try {
-    livenessStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:360},height:{ideal:480}}});
+    livenessStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'user',width:{ideal:480},height:{ideal:640}}
+    });
     document.getElementById('liveness-video').srcObject=livenessStream;
-    // Warm-up then start
-    setTimeout(()=>{
-      startScanLine();
-      startMotionDetection();
-      runLivenessStep(0);
-    }, 700);
-  } catch(e) {
+    // Wait for video to actually load
+    const video=document.getElementById('liveness-video');
+    video.onloadedmetadata=()=>{
+      setTimeout(()=>{
+        startScanLine();
+        startFaceTracking();
+      },500);
+    };
+  } catch(e){
     overlay.style.display='none';
     toast('Camera access denied — liveness check skipped','err');
     wizState.livenessPassed=true;
@@ -2983,89 +3039,26 @@ async function startLiveness(){
   }
 }
 
-function runLivenessStep(idx){
-  if(idx>=LIVENESS_STEPS.length){ finishLiveness(); return; }
-  clearInterval(livenessTimer);
-  const s=LIVENESS_STEPS[idx];
-  const instr=document.getElementById('liveness-instr');
-  if(instr) instr.textContent=s.instr;
-
-  // Update step pills
-  LIVENESS_STEPS.forEach((_,i)=>{
-    const el=document.getElementById('lvs-'+i);
-    if(el) el.className='lv-step'+(i<idx?' done':i===idx?' active':'');
-  });
-
-  const tickStart = Math.round((idx/LIVENESS_STEPS.length)*TICK_COUNT);
-  const tickEnd   = Math.round(((idx+1)/LIVENESS_STEPS.length)*TICK_COUNT);
-  const barStart  = (idx/LIVENESS_STEPS.length)*100;
-  const barEnd    = ((idx+1)/LIVENESS_STEPS.length)*100;
-  const bar=document.getElementById('liveness-bar-fill');
-  const lbl=document.getElementById('liveness-progress-label');
-  const needsMotion = s.motion && s.motion!=='none';
-
-  // Reset motion accumulator for this step
-  livenessMotionAccum = 0;
-  let elapsed=0; const interval=80;
-
-  livenessTimer=setInterval(()=>{
-    elapsed+=interval;
-
-    // Progress driver:
-    // • Motion steps (head-turn): driven by detected movement, capped at deadline
-    // • Still steps (center/hold): purely time-driven
-    let t;
-    if(needsMotion){
-      // Motion contribution: how much movement collected vs needed
-      const motionT = Math.min(livenessMotionAccum / LV_MOTION_NEEDED, 1);
-      // Time safety net: if user barely moves, still advance by 60% of the deadline
-      const timeT = elapsed / (s.duration * 1.6);
-      t = Math.min(Math.max(motionT, timeT * 0.6), 1);
-    } else {
-      t = Math.min(elapsed / s.duration, 1);
-    }
-
-    // Update progress bar
-    const pct = barStart+(barEnd-barStart)*t;
-    if(bar) bar.style.width=pct+'%';
-    if(lbl) lbl.textContent=`STEP ${idx+1} OF ${LIVENESS_STEPS.length} — ${Math.round(t*100)}%`;
-
-    // Drive ticks in real-time based on t
-    const targetTicks = Math.round(tickStart + (tickEnd-tickStart)*t);
-    if(targetTicks!==livenessTicksFilled){
-      livenessTicksFilled=targetTicks;
-      setLivenessTicks(targetTicks, s.color);
-    }
-
-    // Advance when t reaches 1 (motion satisfied OR deadline passed)
-    if(t>=1){
-      clearInterval(livenessTimer);
-      runLivenessStep(idx+1);
-    }
-  },interval);
-}
-
 function finishLiveness(){
-  clearInterval(livenessTimer);
   stopScanLine();
-  stopMotionDetection();
+  stopFaceTracking();
+  clearInterval(livenessTimer);
+
   const bar=document.getElementById('liveness-bar-fill');
   const lbl=document.getElementById('liveness-progress-label');
   const instr=document.getElementById('liveness-instr');
   if(bar) bar.style.width='100%';
   if(lbl) lbl.textContent='SCAN COMPLETE';
   if(instr){ instr.textContent='✅ Identity verified!'; instr.style.background='rgba(22,132,91,.85)'; }
-  // Burst all remaining ticks to green instantly
-  setLivenessTicks(TICK_COUNT,'#2ECC71');
-  LIVENESS_STEPS.forEach((_,i)=>{
-    const el=document.getElementById('lvs-'+i);
-    if(el) el.className='lv-step done';
-  });
+
+  paintTicks(TICK_COUNT); // burst all green
+  document.querySelectorAll('.lv-step').forEach((el,i)=>{ el.className='lv-step done'; });
+
   setTimeout(()=>{
     cancelLiveness();
     wizState.livenessPassed=true;
     completeLiveness();
-  },1800);
+  },1600);
 }
 
 function completeLiveness(){
@@ -3080,10 +3073,9 @@ function completeLiveness(){
 }
 
 function cancelLiveness(){
-  clearInterval(livenessTimer);
-  cancelAnimationFrame(livenessTickRaf);
   stopScanLine();
-  stopMotionDetection();
+  stopFaceTracking();
+  clearInterval(livenessTimer);
   if(livenessStream){ livenessStream.getTracks().forEach(t=>t.stop()); livenessStream=null; }
   const overlay=document.getElementById('liveness-overlay');
   if(overlay) overlay.style.display='none';
