@@ -270,7 +270,7 @@ body.rtl .tl-chip{margin-left:0;margin-right:6px}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px}
 .modal-bg.open{display:flex}
 .wizard{background:#fff;border-radius:var(--r24);width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.3);overflow:hidden}
-.wiz-head{background:linear-gradient(135deg,var(--navy),var(--teal-d));padding:22px 28px;color:#fff;flex-shrink:0}
+.wiz-head{background:linear-gradient(135deg,var(--navy),var(--teal-d));padding:18px 22px 14px;color:#fff;flex-shrink:0;display:flex;flex-direction:column;gap:12px}
 .wiz-head.eco-wiz{background:linear-gradient(135deg,#0d4a26,#0a5c3a)}
 .wiz-head-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
 .wiz-title{font-size:17px;font-weight:700}
@@ -443,6 +443,111 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 .map-filter-btn{background:var(--g100);border:1.5px solid var(--g200);color:var(--g700);border-radius:var(--rfull);padding:6px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:var(--transition)}
 .map-filter-btn:hover{border-color:var(--teal);color:var(--teal)}
 .map-filter-btn.active-filter{background:var(--teal);border-color:var(--teal);color:#fff}
+
+/* ══ ICON BUTTON (close buttons on panels & wizard) ══ */
+.icon-btn{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.25);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition);line-height:1;flex-shrink:0}
+.icon-btn:hover{background:rgba(255,255,255,.28)}
+.icon-btn.dark{background:var(--g100);border-color:var(--g300);color:var(--g700)}
+.icon-btn.dark:hover{background:var(--g200)}
+
+/* ══ STAT CHIPS (project panel stats row) ══ */
+.stat-chip{background:var(--g100);border-radius:var(--r12);padding:10px;text-align:center;border:1px solid var(--g200)}
+.sc-val{font-size:18px;font-weight:800;color:var(--navy)}
+.sc-lbl{font-size:10px;color:var(--g500);margin-top:3px;font-weight:600}
+
+/* ══ ECO STRIP (green info bar) ══ */
+.eco-strip{background:rgba(5,150,105,.07)!important;border-color:rgba(134,239,172,.3)!important;color:#065f46}
+
+/* ══ CONTRACTOR CARD ══ */
+.contractor-card{background:var(--g100);border:1.5px solid var(--g300);border-radius:var(--r12);padding:16px;margin-top:12px}
+.contractor-card.green-cert{background:rgba(5,150,105,.05);border-color:rgba(134,239,172,.35)}
+
+/* ══ ECO SEG BADGE ══ */
+.eco-seg-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(5,150,105,.12);color:var(--ok);font-size:10px;font-weight:700;padding:3px 9px;border-radius:var(--rfull);border:1px solid rgba(134,239,172,.4)}
+
+/* ══ DOC UPLOAD AREA ══ */
+.doc-upload-area{border:2px dashed var(--g300);border-radius:var(--r16);padding:24px;text-align:center;transition:var(--transition);background:#fafafa}
+.doc-upload-area:hover{border-color:var(--teal);background:rgba(0,127,134,.03)}
+.doc-upload-area.verified{border-color:var(--ok);border-style:solid;background:var(--ok-bg)}
+
+/* ══ ID DUAL UPLOAD ZONES ══ */
+.id-upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:520px){.id-upload-grid{grid-template-columns:1fr}}
+.id-upload-zone{border:2px dashed var(--g300);border-radius:var(--r12);padding:18px;text-align:center;cursor:pointer;transition:var(--transition);position:relative;background:#fafafa;min-height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.id-upload-zone:hover{border-color:var(--teal);background:rgba(0,127,134,.03)}
+.id-upload-zone.has-file{border-color:var(--ok);border-style:solid;background:var(--ok-bg)}
+.id-upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.id-thumb{width:80px;height:52px;object-fit:cover;border-radius:var(--r8);margin-top:4px;border:2px solid var(--ok)}
+.id-zone-label{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.3px}
+.id-zone-status{font-size:10px;color:var(--g500);margin-top:2px}
+.id-zone-status.ok{color:var(--ok);font-weight:600}
+
+/* ══ UNIT PICKER CARDS (wizard step 3) ══ */
+.unit-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:10px;max-height:340px;overflow-y:auto}
+.unit-pick-card{border:2px solid var(--g200);border-radius:var(--r12);overflow:hidden;cursor:pointer;transition:var(--transition);background:#fff}
+.unit-pick-card:hover{border-color:var(--teal);box-shadow:var(--sh1);transform:translateY(-1px)}
+.unit-pick-card.selected{border-color:var(--ok);background:var(--ok-bg);box-shadow:0 0 0 3px rgba(22,132,91,.15)}
+.unit-pick-card.unavailable{opacity:.55;cursor:not-allowed}
+.upc-img{height:90px;background:linear-gradient(135deg,#003B5C,#007F86);display:flex;align-items:center;justify-content:center;font-size:32px;position:relative;overflow:hidden}
+.upc-img img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.upc-status-badge{position:absolute;top:6px;right:6px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:var(--rfull);text-transform:uppercase}
+.upc-body{padding:10px}
+.upc-num{font-size:11px;font-weight:700;color:var(--navy);margin-bottom:1px}
+.upc-type{font-size:10px;color:var(--g500);margin-bottom:5px}
+.upc-price{font-size:14px;font-weight:800;color:var(--teal)}
+.upc-meta{display:flex;gap:8px;margin-top:4px;font-size:10px;color:var(--g500)}
+.upc-sel-chk{display:none;position:absolute;top:6px;left:6px;width:20px;height:20px;background:var(--ok);border-radius:50%;align-items:center;justify-content:center;font-size:11px;color:#fff}
+.unit-pick-card.selected .upc-sel-chk{display:flex}
+
+/* ══ PRODUCT PICKER CARDS (wizard step 4) ══ */
+.prod-pick-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+.prod-pick-card{border:2px solid var(--g200);border-radius:var(--r12);padding:14px 16px;cursor:pointer;transition:var(--transition);background:#fff;display:flex;align-items:flex-start;gap:12px}
+.prod-pick-card:hover{border-color:var(--teal);box-shadow:var(--sh1)}
+.prod-pick-card.selected{border-color:var(--ok);background:var(--ok-bg)}
+.prod-pick-card.demo-prod{border-color:rgba(134,239,172,.4);background:rgba(5,150,105,.04)}
+.prod-pick-card.demo-prod.selected{border-color:var(--ok);background:var(--ok-bg)}
+.ppc-icon{font-size:28px;flex-shrink:0;line-height:1;margin-top:2px}
+.ppc-body{flex:1}
+.ppc-name{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.ppc-desc{font-size:11px;color:var(--g500);line-height:1.5;margin-bottom:6px}
+.ppc-tags{display:flex;gap:6px;flex-wrap:wrap}
+.ppc-tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:var(--rfull);background:var(--g100);color:var(--g700)}
+.ppc-tag.green{background:rgba(5,150,105,.1);color:var(--ok)}
+.ppc-chk{width:22px;height:22px;border-radius:50%;border:2px solid var(--g300);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:var(--transition);margin-top:2px}
+.prod-pick-card.selected .ppc-chk{background:var(--ok);border-color:var(--ok);color:#fff}
+
+/* ══ LIVENESS OVERLAY — Apple FaceID style ══ */
+.liveness-modal{background:#0d1117;border-radius:24px;padding:0;width:100%;max-width:420px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.7)}
+.liveness-header{background:#161b22;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08)}
+.liveness-camera-wrap{position:relative;background:#000;aspect-ratio:3/4;max-height:52vh;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.liveness-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.liveness-oval-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.liveness-instruction{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);backdrop-filter:blur(8px);color:#fff;font-size:14px;font-weight:600;padding:8px 20px;border-radius:var(--rfull);white-space:nowrap;text-align:center}
+.liveness-corner{position:absolute;width:22px;height:22px;border-color:#35C6C4;border-style:solid;pointer-events:none}
+.liveness-corner.tl{top:12px;left:12px;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
+.liveness-corner.tr{top:12px;right:12px;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
+.liveness-corner.bl{bottom:12px;left:12px;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
+.liveness-corner.br{bottom:12px;right:12px;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
+.liveness-progress-wrap{padding:12px 20px 4px}
+.liveness-bar-track{width:100%;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden}
+.liveness-bar-fill{height:100%;background:linear-gradient(90deg,#35C6C4,#2ECC71);border-radius:3px;transition:width .3s ease}
+.liveness-progress-label{font-size:11px;color:rgba(255,255,255,.5);text-align:center;margin-top:5px}
+.liveness-steps-row{display:flex;justify-content:center;gap:20px;padding:10px 20px 14px}
+.lv-step{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:18px;opacity:.4;transition:var(--transition)}
+.lv-step span{font-size:9px;color:rgba(255,255,255,.5);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.lv-step.active{opacity:1;transform:scale(1.15)}
+.lv-step.active span{color:#35C6C4}
+.lv-step.done{opacity:.7}
+.lv-step.done span{color:#2ECC71}
+.liveness-footer{display:flex;align-items:center;gap:12px;padding:10px 20px 14px;border-top:1px solid rgba(255,255,255,.08)}
+
+/* ══ PANEL (project slide-up panel) ══ */
+.panel-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400}
+.panel-bg.open{display:block}
+.project-panel{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.18);z-index:401;max-height:85vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,1,.32,1)}
+.project-panel.open{transform:translateY(0)}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--g200);flex-shrink:0}
+.panel-body{flex:1;overflow-y:auto;padding:18px 20px 32px}
 </style>
 </head>
 <body>
@@ -813,14 +918,16 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 
     <!-- Wizard header -->
     <div class="wiz-head">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:16px" id="wiz-icon">📋</div>
-        <div>
-          <div style="font-size:15px;font-weight:700;color:#fff" id="wiz-title">Loan Application</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.6)" id="wiz-step-lbl">Step 1 of 8</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0" id="wiz-icon">📋</div>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#fff" id="wiz-title">Loan Application</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.6)" id="wiz-step-lbl">Step 1 of 8</div>
+          </div>
         </div>
+        <button class="icon-btn" onclick="closeWizard()" title="Close" aria-label="Close wizard">✕</button>
       </div>
-      <button class="icon-btn" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)" onclick="closeWizard()">✕</button>
     </div>
 
     <!-- Step progress dots -->
@@ -1289,14 +1396,14 @@ async function initPropMap(){
         const lngs=geoUnits.map(u=>parseFloat(u.lng));
         const pad=0.001;
         const projBounds = [[Math.min(...lats)-pad,Math.min(...lngs)-pad],[Math.max(...lats)+pad,Math.max(...lngs)+pad]];
+        const rectLabel = `<b>${isDemo?'🌿 ':''}${proj.name}</b><br/><span style="font-size:10px;font-weight:400;color:#666">Click to zoom in</span>`;
         const rect = L.rectangle(projBounds,
-          {color:pcol,weight:2,fillColor:pcol,fillOpacity:0.07,dashArray:'5,4'}
+          {color:pcol,weight:2.5,fillColor:pcol,fillOpacity:0.08,dashArray:'6,4',interactive:true}
         ).addTo(propMap)
-         .bindTooltip(`<b>${isDemo?'🌿 ':' '}${proj.name}</b>`,{permanent:true,direction:'center',opacity:0.9});
-        // Click on rectangle → zoom in to max level centered on this project
-        rect.on('click', ()=>{
-          propMap.flyToBounds(projBounds, {maxZoom:16, padding:[40,40], duration:0.8});
-        });
+         .bindTooltip(rectLabel,{permanent:true,direction:'center',opacity:0.92,className:'proj-tooltip'});
+        // Click on rectangle → fly to project bounds at close zoom
+        const flyToProj = () => propMap.flyToBounds(projBounds, {maxZoom:16, padding:[40,40], duration:0.7});
+        rect.on('click', flyToProj);
       }
 
       units.forEach(u=>{
@@ -1356,7 +1463,13 @@ function propMapFilter(status){
          : (propMap.hasLayer(mk)&&propMap.removeLayer(mk));
   });
   if(visible.length>0){
-    propMap.fitBounds(L.featureGroup(visible).getBounds().pad(0.15));
+    const bounds = L.featureGroup(visible).getBounds();
+    // For specific-status filters, zoom in tight so the filtered project fills the view
+    if(status==='all'){
+      propMap.flyToBounds(bounds.pad(0.15), {duration:0.6});
+    } else {
+      propMap.flyToBounds(bounds, {maxZoom:16, padding:[60,60], duration:0.8});
+    }
   }
 }
 
@@ -1369,6 +1482,8 @@ async function openProjectPanel(projectId){
   bg.classList.add('open');
   panel.classList.add('open');
   body.innerHTML='<div style="text-align:center;padding:48px"><span class="spin"></span></div>';
+  // Scroll the panel into view (important when called from list-view cards)
+  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'end'}), 50);
 
   try{
     const r = await fetch(`/api/v1/portal/projects/${projectId}`);
@@ -1573,6 +1688,7 @@ function renderWiz(){
   body.appendChild(div);
 
   // Post-render hooks
+  if(wizStep===2 && wizProjectId) setTimeout(()=>loadUnitPicker(wizProjectId), 80);
   if(wizStep===3) setTimeout(wizCalcFinance,80);
   if(wizStep===5) setTimeout(prefillIncome,80);
 }
@@ -1767,16 +1883,12 @@ function stepProperty(){
       </div>
       ${isDemo?`<div class="info-strip eco-strip" style="margin-top:8px">🌿 <strong>Eco-Certified Project</strong> — eligible for Green Home Loan premium rate.</div>`:''}
       <div class="form-grid" style="margin-top:12px">
-        <div class="fg">
+        <div class="fg fg-full">
           <label class="fl">Project</label>
           <select class="fc" id="prop-project" onchange="onProjectChange()">
             <option value=""${!projName?' selected':''}>— Select project —</option>
             ${allProjects.map(p=>`<option value="${p.id}"${p.id===wizProjectId?' selected':''}>${p.name}</option>`).join('')}
           </select>
-        </div>
-        <div class="fg">
-          <label class="fl">Unit Number</label>
-          <input class="fc" id="prop-unit" value="${unitId}" placeholder="e.g. Villa B1"/>
         </div>
         <div class="fg">
           <label class="fl">Property Value (OMR)</label>
@@ -1785,6 +1897,19 @@ function stepProperty(){
         <div class="fg">
           <label class="fl">GSAS Score</label>
           <input class="fc${gsasOk?' fc-ok':' fc-err'}" id="prop-gsas" value="${gsasScore}" readonly style="color:${gsasColor};font-weight:700"/>
+        </div>
+        <input type="hidden" id="prop-unit" value="${unitId}"/>
+      </div>
+      <!-- Unit visual picker -->
+      <div style="margin-top:4px">
+        <label class="fl" style="margin-bottom:6px">Select Unit</label>
+        <div class="unit-picker-grid" id="unit-picker-grid">
+          <div style="text-align:center;padding:20px;color:var(--g500);font-size:12px;grid-column:1/-1">
+            ${wizProjectId ? '<span class="spin spin-teal"></span> Loading units…' : 'Select a project above to see available units.'}
+          </div>
+        </div>
+        <div id="unit-selected-strip" style="display:none;margin-top:10px;padding:10px 14px;background:var(--ok-bg);border:1px solid rgba(22,132,91,.3);border-radius:var(--r8);font-size:12px;font-weight:600;color:var(--ok)">
+          ✅ Selected: <span id="unit-selected-label">—</span>
         </div>
       </div>
       ${!gsasOk?`<div class="warn-strip">⚠️ GSAS score ${gsasScore} is below the minimum ${minGsas} required for this product. Application cannot proceed without a qualifying property.</div>`:''}
@@ -1929,6 +2054,10 @@ function onProjectChange(){
   const projId = sel.value;
   if(!projId) return;
   wizProjectId = projId;
+  // Clear any previously selected unit
+  wizUnitId = null;
+  document.getElementById('prop-unit') && (document.getElementById('prop-unit').value='');
+  document.getElementById('unit-selected-strip') && (document.getElementById('unit-selected-strip').style.display='none');
   const proj = allProjects.find(p=>p.id===projId);
   if(proj){
     const gs = proj.gsas_overall_score||proj.gsas_score||0;
@@ -1936,6 +2065,72 @@ function onProjectChange(){
     if(gsEl){ gsEl.value=gs; updateGsasCheck(); }
     const priceEl = document.getElementById('prop-val');
     if(priceEl&&proj.price_from) priceEl.value=Number(proj.price_from).toLocaleString('en');
+  }
+  loadUnitPicker(projId);
+}
+
+async function loadUnitPicker(projId){
+  const grid = document.getElementById('unit-picker-grid');
+  if(!grid) return;
+  grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--g500);font-size:12px;grid-column:1/-1"><span class="spin spin-teal"></span> Loading units…</div>';
+  try{
+    const r = await fetch(`/api/v1/portal/projects/${projId}`);
+    const d = await r.json();
+    const units = d.units||[];
+    const proj = d.project||{};
+    const isDemo = proj.is_demo_project===1||proj.is_demo_project===true;
+    if(!units.length){
+      grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--g500);font-size:12px;grid-column:1/-1">No units available for this project.</div>';
+      return;
+    }
+    const statusColor={available:'var(--ok)',reserved:'var(--warn)',sold:'var(--g500)'};
+    const statusBg={available:'var(--ok-bg)',reserved:'var(--warn-bg)',sold:'var(--g200)'};
+    grid.innerHTML = units.map(u=>{
+      const unavail = u.status==='sold';
+      const gradBg = isDemo?'linear-gradient(135deg,#0d4a26,#0a5c3a)':'linear-gradient(135deg,#003B5C,#007F86)';
+      return `<div class="unit-pick-card${u.id===wizUnitId?' selected':''}${unavail?' unavailable':''}" id="upc-${u.id}" onclick="${unavail?'':'selectWizUnit(\''+u.id+'\',\''+u.unit_number+'\','+u.price+')'}" style="position:relative">
+        <div class="upc-sel-chk">✓</div>
+        <div class="upc-img" style="${u.image_url?'':gradBg}">
+          ${u.image_url?`<img src="${u.image_url}" alt="${u.unit_number}"/>`:'🏡'}
+          <div class="upc-status-badge" style="background:${statusBg[u.status]||'var(--g200)'};color:${statusColor[u.status]||'var(--g700)'}">
+            ${(u.status||'').toUpperCase()}
+          </div>
+        </div>
+        <div class="upc-body">
+          <div class="upc-num">${u.unit_number||u.id}</div>
+          <div class="upc-type">${(u.type||'unit').replace(/_/g,' ')}</div>
+          <div class="upc-price">${u.price?'OMR '+Number(u.price).toLocaleString():'TBC'}</div>
+          <div class="upc-meta">
+            ${u.bedrooms?`<span>🛏 ${u.bedrooms}BR</span>`:''}
+            ${u.area_sqm?`<span>📐 ${u.area_sqm}m²</span>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    // If project pre-selected, load automatically
+    if(wizProjectId===projId && wizUnitId) selectWizUnit(wizUnitId,'',0,true);
+  }catch(e){
+    grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--err);font-size:12px;grid-column:1/-1">Could not load units.</div>';
+  }
+}
+
+function selectWizUnit(uid, unitNum, price, silent){
+  wizUnitId = uid;
+  const hidden = document.getElementById('prop-unit');
+  if(hidden) hidden.value = uid;
+  // Visual selection
+  document.querySelectorAll('.unit-pick-card').forEach(c=>c.classList.toggle('selected', c.id==='upc-'+uid));
+  // Update price field
+  if(price && !silent){
+    const pv = document.getElementById('prop-val');
+    if(pv) pv.value = Number(price).toLocaleString('en');
+  }
+  // Show selected strip
+  const strip = document.getElementById('unit-selected-strip');
+  const lbl   = document.getElementById('unit-selected-label');
+  if(strip && lbl){
+    lbl.textContent = (unitNum||uid) + (price?' · OMR '+Number(price).toLocaleString():'');
+    strip.style.display = 'block';
   }
 }
 
@@ -1951,7 +2146,12 @@ function simUpload(statusId, label){
 function stepFinancing(){
   const propVal  = wizState.propertyValue||200000;
   const gsas     = wizState.gsasScore||89;
-  const bestProd = allProducts.find(p=>p.category==='home_loan')||null;
+  // Home-loan products only, demo product first
+  const homeProds = allProducts.filter(p=>p.category==='home_loan'&&p.status==='active');
+  homeProds.sort((a,b)=>(b.is_demo_product||0)-(a.is_demo_product||0));
+  // Use the product the user selected in this step, or default to demo/first
+  if(!wizProductId && homeProds.length) wizProductId = homeProds[0].id;
+  const bestProd = homeProds.find(p=>p.id===wizProductId)||homeProds[0]||null;
   const minRate  = bestProd?.base_rate||4.75;
   const maxLtv   = bestProd?.max_ltv||80;
   const defaultDp = Math.round(propVal*(1-(maxLtv/100)));
@@ -1962,10 +2162,31 @@ function stepFinancing(){
   const rate      = gsas>=85?minRate:(gsas>=70?(minRate+0.25):(minRate+0.5));
   return `
     <div class="step-title">Financing Details</div>
-    <div class="step-sub">Adjust your loan amount and tenure. Live calculator updates in real time.</div>
-    ${bestProd?`<div class="info-strip" style="background:rgba(0,127,134,.06);border-color:rgba(0,127,134,.2);margin-bottom:14px">
-      💼 Product: <strong>${bestProd.portal_hero_title||bestProd.name}</strong> · Max LTV ${maxLtv}% · Rate from ${minRate}%
-    </div>`:''}
+    <div class="step-sub">Choose a product and adjust your loan amount. Live calculator updates in real time.</div>
+
+    <!-- Product picker -->
+    <label class="fl" style="margin-bottom:8px">Select Financing Product</label>
+    <div class="prod-pick-grid" style="margin-bottom:16px">
+      ${homeProds.length ? homeProds.map(p=>{
+        const isDemo = p.is_demo_product===1||p.is_demo_product===true;
+        const sel = p.id===(wizProductId||homeProds[0]?.id);
+        const feats = (() => { try{ return JSON.parse(p.configuration||'{}').features||[]; }catch(e){ return []; } })();
+        return `<div class="prod-pick-card${isDemo?' demo-prod':''}${sel?' selected':''}" id="ppc-${p.id}" onclick="selectWizProduct('${p.id}')">
+          <div class="ppc-icon">${isDemo?'🌿':'💼'}</div>
+          <div class="ppc-body">
+            <div class="ppc-name">${p.name}</div>
+            <div class="ppc-desc">Rate from ${p.base_rate}% · LTV ${p.max_ltv}% · Up to OMR ${Number(p.max_amount).toLocaleString()}</div>
+            <div class="ppc-tags">
+              ${isDemo?'<span class="ppc-tag green">🌱 Green Mortgage</span>':''}
+              <span class="ppc-tag">Max ${p.max_term}yr</span>
+              ${feats[0]?`<span class="ppc-tag">${feats[0]}</span>`:''}
+            </div>
+          </div>
+          <div class="ppc-chk">${sel?'✓':''}</div>
+        </div>`;
+      }).join('') : '<div style="font-size:12px;color:var(--g500);padding:12px">No home loan products found.</div>'}
+    </div>
+
     <div class="form-grid">
       <div class="fg">
         <label class="fl">Property Value (OMR)</label>
