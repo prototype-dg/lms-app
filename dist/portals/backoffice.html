@@ -2520,7 +2520,12 @@ function renderCompliancePanel(fullD) {
               ['GSAS Score',      `<strong style="color:var(--success)">${app.gsas_score||'—'} / 100${app.gsas_score>=gsasPremium?' 🏆 Premium':app.gsas_score>=gsasMin?' ✓ Qualifies':' ⚠ Below Min'}</strong>`],
               ['EPC Rating',      `<strong>${app.epc_rating||esg.epc?.rating||'—'}</strong> <span style="font-size:.72rem;color:var(--grey-500)">(from project record)</span>`],
               ['Applied Rate',    `<strong style="color:var(--navy)">${app.applied_rate||'—'}%</strong> <span style="color:var(--success);font-size:.75rem">(−${discount}% green discount)</span>`],
+              ['Base Rate',       `${prod.base_rate||'—'}%`],
+              ['Green Discount',  `<span style="color:var(--success)">−${discount}%</span>`],
+              ['Loan Term',       `${app.loan_term||25} years`],
               ['Monthly Payment', mp ? `OMR ${Number(mp).toLocaleString()}` : '—'],
+              ['Down Payment (20%)', app.loan_amount ? `OMR ${Math.round(app.loan_amount*0.2).toLocaleString()}` : '—'],
+              ['Lifetime Saving', app.lifetime_saving ? `<span style="color:var(--success)">OMR ${Number(app.lifetime_saving).toLocaleString()}</span>` : '—'],
               ['Property Value',  pv ? `OMR ${Number(pv).toLocaleString()}` : '—'],
               ['Submitted',       new Date(app.created_at||Date.now()).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})]
             ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--grey-100)"><span style="color:var(--grey-500)">${k}</span><span>${v}</span></div>`).join('')}
@@ -2680,6 +2685,55 @@ Include: ESG rule checklist, document status, credit metrics, AI recommendation.
             </button>` : ''}
           </div>
         </div>
+
+        <!-- Customer Identity & Income Documents -->
+        ${(() => {
+          const custDocs = (fullD.documents?.all_app || []).filter(d =>
+            ['civil_id_front','civil_id_back','salary_cert','bank_statements','noc',
+             'property_valuation','gsas_cert','epc_report'].includes(d.doc_type)
+          );
+          if (!custDocs.length) return '';
+          const docLabels = {
+            civil_id_front: {ic:'🪪', label:'Civil ID — Front'},
+            civil_id_back:  {ic:'🪪', label:'Civil ID — Back'},
+            salary_cert:    {ic:'💼', label:'Salary Certificate'},
+            bank_statements:{ic:'🏦', label:'Bank Statements'},
+            noc:            {ic:'📋', label:'No-Objection Certificate'},
+            property_valuation:{ic:'🏠', label:'Property Valuation Report'},
+            gsas_cert:      {ic:'🏆', label:'GSAS Certificate'},
+            epc_report:     {ic:'⚡', label:'EPC Report'},
+          };
+          return `<div class="card" style="margin-bottom:1rem">
+            <div class="card-header" style="background:linear-gradient(135deg,rgba(79,70,229,.06),rgba(79,70,229,.02));border-bottom:1px solid rgba(79,70,229,.15)">
+              <h4 style="color:#4f46e5;display:flex;align-items:center;gap:.5rem">
+                <i class="fas fa-id-card"></i>
+                Customer-Uploaded Documents
+                <span style="font-size:.65rem;font-weight:400;color:var(--grey-500);margin-left:auto">${custDocs.length} document${custDocs.length!==1?'s':''}</span>
+              </h4>
+            </div>
+            <div class="card-body">
+              <div style="display:grid;grid-template-columns:1fr;gap:.5rem">
+                ${custDocs.map(d => {
+                  const meta = docLabels[d.doc_type] || {ic:'📄', label: d.doc_type};
+                  const stMap = {pending:'⏳ Pending',auto_verified:'✅ Auto-Verified',manual_review:'⚠️ Review',approved:'✅ Approved',rejected:'❌ Rejected',not_applicable:'—'};
+                  const stColor = {pending:'var(--amber)',auto_verified:'var(--success)',manual_review:'var(--amber)',approved:'var(--success)',rejected:'var(--danger)',not_applicable:'var(--grey-400)'};
+                  const st = d.validation_status || 'pending';
+                  return `<div style="display:flex;align-items:center;gap:.75rem;padding:.5rem;border:1px solid var(--grey-200);border-radius:var(--radius-md);background:white">
+                    <span style="font-size:1.2rem">${meta.ic}</span>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:.8rem;font-weight:600;color:var(--navy)">${meta.label}</div>
+                      <div style="font-size:.72rem;color:var(--grey-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.filename||d.doc_type}</div>
+                    </div>
+                    <div style="text-align:right;white-space:nowrap">
+                      <div style="font-size:.72rem;font-weight:600;color:${stColor[st]||'var(--grey-500)'}">${stMap[st]||st}</div>
+                      ${d.file_url ? `<a href="${d.file_url}" target="_blank" style="font-size:.65rem;color:var(--teal)"><i class="fas fa-download"></i> Download</a>` : '<span style="font-size:.65rem;color:var(--grey-400)">No file</span>'}
+                    </div>
+                  </div>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>`;
+        })()}
 
         <!-- Product ESG Rule Checklist -->
         <h4 style="margin-bottom:.6rem">ESG Rule Checklist
@@ -2921,7 +2975,11 @@ function renderRiskPanel(fullD) {
               ['Monthly Salary',  salary ? fmtOMR(salary) : '—'],
               ['Monthly Payment', fmtOMR(mp)],
               ['Loan Term',       `${loanTerm} years`],
-              ['Applied Rate',    `${rate}%`]
+              ['Base Rate',       `${prod.base_rate||'—'}%`],
+              ['Applied Rate',    `${rate}% <span style="color:var(--success);font-size:.72rem">(green discount applied)</span>`],
+              ['Down Payment',    loanAmt ? fmtOMR(Math.round(loanAmt * 0.2)) : '—'],
+              ['Lifetime Saving', app.lifetime_saving ? `<span style="color:var(--success)">${fmtOMR(app.lifetime_saving)}</span>` : '—'],
+              ['EPC Rating',      app.epc_rating || '—']
             ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--grey-100)"><span style="color:var(--grey-500)">${k}</span><span>${v}</span></div>`).join('')}
           </div>
         </div>
@@ -3054,6 +3112,42 @@ function renderRiskPanel(fullD) {
             </div>
           </div>
         </div>
+
+        <!-- Customer Documents (for risk review) -->
+        ${(() => {
+          const custDocs = (fullD.documents?.all_app || []).filter(d =>
+            ['civil_id_front','civil_id_back','salary_cert','bank_statements','noc',
+             'property_valuation','gsas_cert','epc_report'].includes(d.doc_type)
+          );
+          if (!custDocs.length) return '';
+          const docLabels = {
+            civil_id_front: {ic:'🪪', label:'Civil ID — Front'},
+            civil_id_back:  {ic:'🪪', label:'Civil ID — Back'},
+            salary_cert:    {ic:'💼', label:'Salary Certificate'},
+            bank_statements:{ic:'🏦', label:'Bank Statements'},
+            noc:            {ic:'📋', label:'NOC'},
+            property_valuation:{ic:'🏠', label:'Property Valuation'},
+            gsas_cert:      {ic:'🏆', label:'GSAS Cert'},
+            epc_report:     {ic:'⚡', label:'EPC Report'},
+          };
+          return `<h4 style="margin-bottom:.75rem">Customer Documents</h4>
+          <div class="card" style="margin-bottom:1rem">
+            <div class="card-body">
+              <div style="display:grid;grid-template-columns:1fr;gap:.4rem">
+                ${custDocs.map(d => {
+                  const meta = docLabels[d.doc_type] || {ic:'📄', label:d.doc_type};
+                  const stColor = {pending:'var(--amber)',auto_verified:'var(--success)',manual_review:'var(--amber)',approved:'var(--success)',rejected:'var(--danger)'}[d.validation_status] || 'var(--grey-400)';
+                  return `<div style="display:flex;align-items:center;gap:.6rem;padding:.4rem .6rem;border:1px solid var(--grey-200);border-radius:var(--radius-md)">
+                    <span>${meta.ic}</span>
+                    <span style="flex:1;font-size:.78rem;font-weight:500;color:var(--navy)">${meta.label}</span>
+                    ${d.file_url ? `<a href="${d.file_url}" target="_blank" style="font-size:.7rem;color:var(--teal)"><i class="fas fa-download"></i></a>` : '<span style="font-size:.65rem;color:var(--grey-400)">—</span>'}
+                    <span style="font-size:.68rem;color:${stColor}">●</span>
+                  </div>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>`;
+        })()}
 
         <!-- Risk Report Generation -->
         <div class="card" style="margin-bottom:1rem">

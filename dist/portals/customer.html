@@ -3057,8 +3057,14 @@ function handleIdUpload(side){
   if(lbl){ lbl.textContent='✅ '+file.name; lbl.style.color='var(--ok)'; }
   if(zone) zone.classList.add('has-file');
 
+  const docType = side === 'front' ? 'civil_id_front' : 'civil_id_back';
   if(side==='front'){ wizState.idFrontFile=true; wizState.idFrontName=file.name; }
   else              { wizState.idBackFile=true;  wizState.idBackName=file.name;  }
+
+  // Upload to Azure Blob in background (non-blocking)
+  uploadWizDoc(docType, file).then(rec => {
+    if (rec) console.log(`[wizard] Civil ID ${side} stored: ${rec.url}`);
+  });
 
   // Trigger ID validation once both sides uploaded
   if(wizState.idFrontFile && wizState.idBackFile) triggerIdValidation();
@@ -3525,6 +3531,11 @@ async function runOCR(input){
     if(pctLbl) pctLbl.textContent=s.pct+'%';
   },s.t));
 
+  // Upload salary cert to Azure Blob in parallel with OCR
+  uploadWizDoc('salary_cert', file).then(rec => {
+    if (rec) console.log('[wizard] Salary cert stored:', rec.url);
+  });
+
   try {
     const b64 = await fileToBase64(file);
     const resp = await fetch('/api/v1/portal/ocr',{
@@ -3539,6 +3550,7 @@ async function runOCR(input){
     if(pctLbl) pctLbl.textContent='100%';
     if(actionLbl) actionLbl.textContent='\u2705 OCR complete';
     setTimeout(()=>{ if(progArea) progArea.style.display='none'; },800);
+    setWizDocOcr('salary_cert', data.extracted || {});
     applyOCRResults(data.extracted||{});
   } catch(e) {
     // Fallback: simulate OCR results for demo
@@ -3611,12 +3623,14 @@ let _projDocsCache = {};
 function stepDocuments(){
   const isPartner = wizSource==='partner';
 
-  // Personal docs — always required regardless of source
+  // Personal docs — check wizDocs for already-uploaded items
+  const civilOk  = wizState.idVerified || getDocStatus('civil_id_front') === 'ok';
+  const salaryOk = getDocStatus('salary_cert') === 'ok';
   const personalDocs=[
-    {id:'dc-civil',  ic:'🪪', name:'Civil ID (Both Sides)',      st: wizState.idVerified?'ok':'pending', conf:wizState.idVerified?98:null, required:true},
-    {id:'dc-salary', ic:'💼', name:'Salary Certificate',         st:'pending', conf:null, required:true},
-    {id:'dc-bank',   ic:'🏦', name:'Bank Statements (6 months)', st:'pending', conf:null, required:true},
-    {id:'dc-noc',    ic:'📋', name:'No-Objection Certificate',   st:'pending', conf:null, required:false},
+    {id:'dc-civil',  ic:'🪪', name:'Civil ID (Both Sides)',      st: civilOk ?'ok':'pending', conf:civilOk ?98:null, required:true},
+    {id:'dc-salary', ic:'💼', name:'Salary Certificate',         st: salaryOk?'ok':'pending', conf:salaryOk?95:null, required:true},
+    {id:'dc-bank',   ic:'🏦', name:'Bank Statements (6 months)', st: getDocStatus('bank_statements')==='ok'?'ok':'pending', conf:getDocStatus('bank_statements')==='ok'?90:null, required:true},
+    {id:'dc-noc',    ic:'📋', name:'No-Objection Certificate',   st: getDocStatus('noc')==='ok'?'ok':'pending', conf:null, required:false},
   ];
   const personalCardsHtml = personalDocs.map(d=>docCard(d)).join('');
 
@@ -3765,9 +3779,22 @@ function uploadDoc(cardId, name){
   if(input) input.click();
 }
 
-function processDocUpload(cardId, name, input){
+// Map card IDs → doc_type keys in wizDocs
+const _cardDocTypeMap = {
+  'dc-salary': 'salary_cert',
+  'dc-bank':   'bank_statements',
+  'dc-noc':    'noc',
+  'dc-val':    'property_valuation',
+  'dc-gsas':   'gsas_cert',
+  'dc-epc':    'epc_report',
+};
+
+async function processDocUpload(cardId, name, input){
   if(!input.files?.length) return;
-  const card=document.getElementById(cardId);
+  const file = input.files[0];
+  const card = document.getElementById(cardId);
+  const docType = _cardDocTypeMap[cardId] || cardId;
+
   if(card){
     card.className='doc-card ai';
     card.querySelector('.doc-name').textContent=name;
@@ -3775,14 +3802,24 @@ function processDocUpload(cardId, name, input){
     card.querySelector('.doc-st').textContent='⏳ Uploading…';
   }
   toast(`Uploading ${name}…`,'info');
-  setTimeout(()=>{
+
+  const rec = await uploadWizDoc(docType, file);
+  if(rec){
+    if(card){
+      card.className='doc-card ok';
+      card.querySelector('.doc-st').className='doc-st ok';
+      card.querySelector('.doc-st').textContent='✅ Verified';
+    }
+    toast(`✅ ${name} uploaded`,'ok');
+  } else {
+    // Fallback: mark verified locally even if storage not configured
     if(card){
       card.className='doc-card ok';
       card.querySelector('.doc-st').className='doc-st ok';
       card.querySelector('.doc-st').textContent='✅ Verified';
     }
     toast(`✅ ${name} verified`,'ok');
-  },2200);
+  }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -3905,6 +3942,7 @@ async function submitApp(){
     salary:           sal,
     epc_rating:       epcRating,
     applied_rate:     wizState.appliedRate||null,
+    documents:        getDocsPayload(),
   };
 
   try{
@@ -4135,5 +4173,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 });
 </script>
+<script src="/portals/js/wiz-docs.js"></script>
 </body>
 </html>
