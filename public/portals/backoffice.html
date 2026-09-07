@@ -174,12 +174,32 @@ window.onload = async () => {
   // Store session user for nav restriction
   window._sessionUser = sessionUser;
 
+  // Hide role-switcher tabs that don't match this user's session role
+  // (admin with portal_access='all' sees all tabs)
+  if (sessionUser.portal_access !== 'all') {
+    const ROLE_TO_TAB = {
+      product_manager:    'role-pm',
+      compliance_officer: 'role-co',
+      risk_officer:       'role-ro',
+      operations:         'role-ops',
+    };
+    // Hide all tabs first, then show only the one matching session role
+    document.querySelectorAll('.portal-switch-btn').forEach(btn => {
+      btn.style.display = 'none';
+    });
+    const myTabId = ROLE_TO_TAB[sessionUser.role];
+    if (myTabId) {
+      const myTab = document.getElementById(myTabId);
+      if (myTab) { myTab.style.display = ''; myTab.classList.add('active'); }
+    }
+  }
+
   await Promise.all([ loadUsers(), loadMarket() ]);
   renderSidebar();
   renderMarketBadge();
   updateUserBadge();
   await loadProducts();
-  const defaultPage = ROLES[currentRole].nav.find(k => hasSection(k)) || 'products';
+  const defaultPage = ROLES[currentRole].nav[0] || 'products';
   renderPage(defaultPage);
 };
 
@@ -255,7 +275,7 @@ function switchRole(role) {
   if (btnId) document.getElementById(btnId)?.classList.add('active');
   updateUserBadge();
   renderSidebar();
-  const firstNav = ROLES[role].nav.find(k => hasSection(k)) || ROLES[role].nav[0];
+  const firstNav = ROLES[role].nav[0];
   renderPage(firstNav);
 }
 
@@ -277,8 +297,9 @@ function setLang(lang) {
 
 function renderSidebar() {
   const nav = document.getElementById('sidebarNav');
-  const allItems = ROLES[currentRole].nav;
-  const items = allItems.filter(key => hasSection(key));
+  // Show ALL nav items for the role — ROLES[role].nav is already role-appropriate.
+  // hasSection() is only used to control which top-level tabs are visible, NOT individual nav items.
+  const items = ROLES[currentRole].nav;
   nav.innerHTML = items.map(key => {
     const item = NAV_ITEMS[key];
     return `<div class="sidebar-item" onclick="renderPage('${key}')" id="nav-${key}">
@@ -3905,7 +3926,7 @@ async function renderUsers() {
   const main = document.getElementById('mainContent');
   main.innerHTML = '<div class="page"><div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--grey-300)"></i></div></div>';
 
-  const r = await fetch('/api/v1/users/portal');
+  const r = await fetch('/api/v1/users/portal', authHeaders());
   const d = await r.json();
   const users = d.users || [];
 

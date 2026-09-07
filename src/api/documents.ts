@@ -195,19 +195,36 @@ app.get('/serve', async (c) => {
     const { createHmac } = await import('node:crypto')
 
     const start   = new Date(Date.now() - 60_000).toISOString().replace(/\.\d+Z$/, 'Z')
-    const expiry  = new Date(Date.now() + 5 * 60_000).toISOString().replace(/\.\d+Z$/, 'Z')
+    const expiry  = new Date(Date.now() + 15 * 60_000).toISOString().replace(/\.\d+Z$/, 'Z')
     const perms   = 'r'
-    const service = 'b'
-    const restype = 'b'
     const version = '2020-08-04'
+    // sr=b means "blob" (signedResource)
+    const signedResource = 'b'
 
-    // Canonicalised string-to-sign for service SAS (blob)
+    // Correct string-to-sign for Azure Blob service SAS, version 2018-11-09 → 2020-12-05
+    // Reference: https://learn.microsoft.com/en-us/rest/api/storageservices/create-service-sas
+    // Fields (each separated by \n, empty string for optional fields not used):
+    //   signedPermissions, signedStart, signedExpiry, canonicalizedResource,
+    //   signedIdentifier, signedIP, signedProtocol, signedVersion,
+    //   signedResource (sr), signedSnapshotTime,
+    //   rscc, rscd, rsce, rscl, rsct  (response header overrides — all empty here)
+    const canonicalizedResource = `/blob/${accountName}/${container}/${blobName}`
     const strToSign = [
-      perms, start, expiry,
-      `/blob/${accountName}/${container}/${blobName}`,
-      '', '', '', version,
-      service, restype,
-      '', '', '', '', '', '', '', '', ''
+      perms,               // signedPermissions
+      start,               // signedStart
+      expiry,              // signedExpiry
+      canonicalizedResource,
+      '',                  // signedIdentifier
+      '',                  // signedIP
+      '',                  // signedProtocol
+      version,             // signedVersion
+      signedResource,      // signedResource (sr=b)
+      '',                  // signedSnapshotTime
+      '',                  // rscc (Cache-Control override)
+      '',                  // rscd (Content-Disposition override)
+      '',                  // rsce (Content-Encoding override)
+      '',                  // rscl (Content-Language override)
+      '',                  // rsct (Content-Type override) — NO trailing \n
     ].join('\n')
 
     const sig = createHmac('sha256', Buffer.from(accountKey, 'base64'))
@@ -216,7 +233,7 @@ app.get('/serve', async (c) => {
 
     const sas = new URLSearchParams({
       sv: version, st: start, se: expiry,
-      sr: restype, sp: perms, sig,
+      sr: signedResource, sp: perms, sig,
     }).toString()
 
     const sasUrl = `${blobUrl}?${sas}`

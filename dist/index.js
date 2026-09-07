@@ -3954,7 +3954,7 @@ Je.get("/serve", async (e) => {
 	try {
 		let i = r.match(/AccountName=([^;]+)/), a = r.match(/AccountKey=([^;]+)/);
 		if (!i || !a) return e.json({ error: "Storage misconfigured" }, 500);
-		let o = i[1], s = a[1], c = process.env.AZURE_STORAGE_CONTAINER || "lms-documents", l = new URL(t), u = decodeURIComponent(l.pathname.replace(`/${c}/`, "")), { createHmac: d } = await import("node:crypto"), f = (/* @__PURE__ */ new Date(Date.now() - 6e4)).toISOString().replace(/\.\d+Z$/, "Z"), p = new Date(Date.now() + 3e5).toISOString().replace(/\.\d+Z$/, "Z"), m = "2020-08-04", h = [
+		let o = i[1], s = a[1], c = process.env.AZURE_STORAGE_CONTAINER || "lms-documents", l = new URL(t), u = decodeURIComponent(l.pathname.replace(`/${c}/`, "")), { createHmac: d } = await import("node:crypto"), f = (/* @__PURE__ */ new Date(Date.now() - 6e4)).toISOString().replace(/\.\d+Z$/, "Z"), p = new Date(Date.now() + 9e5).toISOString().replace(/\.\d+Z$/, "Z"), m = "2020-08-04", h = [
 			"r",
 			f,
 			p,
@@ -3964,10 +3964,6 @@ Je.get("/serve", async (e) => {
 			"",
 			m,
 			"b",
-			"b",
-			"",
-			"",
-			"",
 			"",
 			"",
 			"",
@@ -4104,17 +4100,6 @@ var q = new L();
 q.get("/", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT id, name, name_ar, email, role, department, avatar_initials, status\n     FROM users WHERE status != 'inactive' ORDER BY id").all();
 	return e.json({ users: t });
-}), q.get("/:id", async (e) => {
-	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(t).first();
-	return n ? e.json({ user: n }) : e.json({ error: "Not found" }, 404);
-}), q.get("/customer/:customerId", async (e) => {
-	let t = e.req.param("customerId"), n = await e.env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
-	if (!n) return e.json({ error: "Not found" }, 404);
-	let { results: r } = await e.env.DB.prepare("SELECT a.*, p.name as product_name FROM applications a LEFT JOIN products p ON a.product_id = p.id WHERE a.customer_id = ? ORDER BY a.created_at DESC").bind(t).all();
-	return e.json({
-		customer: n,
-		applications: r
-	});
 }), q.get("/portal", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT id, login, display_name, role, portal_access, allowed_sections, status, created_at, last_login\n     FROM portal_users ORDER BY role, login").all();
 	return e.json({ users: t || [] });
@@ -4136,6 +4121,17 @@ q.get("/", async (e) => {
 }), q.delete("/portal/:id", async (e) => {
 	let t = e.req.param("id");
 	return await e.env.DB.prepare("UPDATE portal_users SET status = 'inactive' WHERE id = ?").bind(t).run(), e.json({ success: !0 });
+}), q.get("/:id", async (e) => {
+	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(t).first();
+	return n ? e.json({ user: n }) : e.json({ error: "Not found" }, 404);
+}), q.get("/customer/:customerId", async (e) => {
+	let t = e.req.param("customerId"), n = await e.env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
+	if (!n) return e.json({ error: "Not found" }, 404);
+	let { results: r } = await e.env.DB.prepare("SELECT a.*, p.name as product_name FROM applications a LEFT JOIN products p ON a.product_id = p.id WHERE a.customer_id = ? ORDER BY a.created_at DESC").bind(t).all();
+	return e.json({
+		customer: n,
+		applications: r
+	});
 });
 async function Qe(e) {
 	let t = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(e));
@@ -6547,7 +6543,7 @@ $.use("/api/*", Ne()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Be.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var bt = "1159ec0";
+var bt = "80aaafb";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

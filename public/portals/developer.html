@@ -1278,6 +1278,8 @@ body.ar .toast-container{right:auto;left:24px}
   </div>
 </div>
 
+<!-- auth-guard must load before the inline script that calls authGuard() -->
+<script src="/portals/js/auth-guard.js"></script>
 <script>
 // ═══════════════════════════════════════════════════
 // STATE & DATA
@@ -3391,6 +3393,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 .ud-row span { color:var(--gray-500); }
 .inv-row:hover { background:rgba(0,127,134,.05); }
 </style>
-<script src="/portals/js/auth-guard.js"></script>
 </body>
 </html>
