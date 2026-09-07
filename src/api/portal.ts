@@ -1,6 +1,7 @@
 import type { NodeBindings } from '../lib/types'
 import { Hono } from 'hono'
 import { generateId, now, logAudit } from '../lib/db'
+import { uploadBlob, isStorageConfigured } from '../lib/blob-storage'
 const app = new Hono<{ Bindings: NodeBindings }>()
 
 
@@ -663,13 +664,40 @@ app.post('/developer/projects', async (c) => {
   return c.json({ id, code, success: true })
 })
 
-// ── Developer Portal: Upload project documents (simulate AI validation) ───
+// ── Developer Portal: Upload project documents ────────────────────────────
+// Accepts EITHER:
+//   multipart/form-data  { file: <binary>, doc_type, user_id }   ← real upload
+//   application/json     { doc_type, filename, user_id }         ← fallback/demo
+// Real uploads are stored in Azure Blob Storage; file_url is persisted to DB.
 app.post('/developer/projects/:id/documents', async (c) => {
   const projectId = c.req.param('id')
-  const body = await c.req.json()
-  const { doc_type, filename, user_id = 'u010' } = body
+  const contentType = c.req.header('content-type') || ''
 
-  // Return pre-configured AI validation results per doc type
+  let doc_type: string
+  let filename: string
+  let user_id: string = 'u010'
+  let fileBuffer: Buffer | null = null
+  let mimeType: string = 'application/octet-stream'
+
+  if (contentType.includes('multipart/form-data')) {
+    // ── Real file upload ──────────────────────────────────────────────────
+    const formData = await c.req.formData()
+    doc_type  = (formData.get('doc_type')  as string) || 'other'
+    user_id   = (formData.get('user_id')   as string) || 'u010'
+    const fileEntry = formData.get('file') as File | null
+    if (!fileEntry) return c.json({ success: false, error: 'No file in request' }, 400)
+    filename  = fileEntry.name
+    mimeType  = fileEntry.type || 'application/octet-stream'
+    fileBuffer = Buffer.from(await fileEntry.arrayBuffer())
+  } else {
+    // ── JSON fallback (filename-only, used by legacy wizard path) ─────────
+    const body = await c.req.json()
+    doc_type  = body.doc_type
+    filename  = body.filename || `${doc_type}.pdf`
+    user_id   = body.user_id || 'u010'
+  }
+
+  // ── AI validation simulation (keyed on doc_type) ──────────────────────
   const validations: Record<string, any> = {
     gsas_cert: {
       extracted_data: { certificate_number: 'GSAS-2026-078', issuer: 'GORD', issue_date: '2026-02-15', expiry_date: '2028-12-31', overall_score: 89, rating: 'Gold', property: 'EcoVillage Muscat' },
@@ -687,24 +715,38 @@ app.post('/developer/projects/:id/documents', async (c) => {
       validation_notes: 'Auto-verified: EIA clearance confirmed for 24 units. Issuer accredited.',
     },
   }
-
   const result = validations[doc_type] || {
     extracted_data: {}, ai_confidence: 80, validation_status: 'pending',
     validation_notes: 'Awaiting manual review.',
   }
 
+  // ── Upload file bytes to Azure Blob Storage (when available) ─────────
+  let file_url: string | null = null
+  if (fileBuffer && fileBuffer.length > 0) {
+    file_url = await uploadBlob({
+      entityType: 'project',
+      entityId:   projectId,
+      docType:    doc_type,
+      filename,
+      buffer:     fileBuffer,
+      mimeType,
+    })
+  }
+
+  // ── Persist document record ───────────────────────────────────────────
   const docId = generateId('doc')
   const ts = now()
   await c.env.DB.prepare(`
-    INSERT INTO documents (id, entity_type, entity_id, doc_type, filename,
+    INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, file_url,
     extracted_data, ai_confidence, validation_status, validation_notes, created_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?)
-  `).bind(docId, 'project', projectId, doc_type, filename || `${doc_type}.pdf`,
+    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+  `).bind(
+    docId, 'project', projectId, doc_type, filename, file_url,
     JSON.stringify(result.extracted_data), result.ai_confidence,
     result.validation_status, result.validation_notes, ts
   ).run()
 
-  // Update project's ESG scores from GSAS cert
+  // ── Update project ESG fields from validated doc data ─────────────────
   if (doc_type === 'gsas_cert' && result.extracted_data.overall_score) {
     await c.env.DB.prepare(
       'UPDATE projects SET gsas_score = ?, gsas_rating = ?, updated_at = ? WHERE id = ?'
@@ -723,11 +765,16 @@ app.post('/developer/projects/:id/documents', async (c) => {
     userId: user_id, userName: 'Ahmed Al-Hinai', userRole: 'developer',
     action: result.validation_status === 'auto_verified' ? 'DOCUMENT_AUTO_VERIFIED' : 'DOCUMENT_FLAGGED_REVIEW',
     entityType: 'document', entityId: docId,
-    details: { doc_type, confidence: result.ai_confidence, project_id: projectId },
+    details: { doc_type, confidence: result.ai_confidence, project_id: projectId, file_stored: !!file_url },
     source: 'ai_generated', aiConfidence: result.ai_confidence,
   })
 
-  return c.json({ doc_id: docId, success: true, ...result })
+  return c.json({
+    doc_id: docId, success: true,
+    file_url,
+    storage_configured: isStorageConfigured(),
+    ...result,
+  })
 })
 
 // ── Developer Portal: GET project documents ───────────────────────────────

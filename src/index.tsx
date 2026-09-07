@@ -29,6 +29,8 @@ export const env = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
   GOOGLE_VISION_API_KEY: process.env.GOOGLE_VISION_API_KEY || '',
   DEMO_MODE: process.env.DEMO_MODE || 'true',
+  AZURE_STORAGE_CONNECTION_STRING: process.env.AZURE_STORAGE_CONNECTION_STRING || '',
+  AZURE_STORAGE_CONTAINER: process.env.AZURE_STORAGE_CONTAINER || 'lms-documents',
 }
 
 const app = new Hono()

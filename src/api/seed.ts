@@ -1,5 +1,6 @@
 import type { NodeBindings } from '../lib/types'
 import { Hono } from 'hono'
+import { deleteBlob } from '../lib/blob-storage'
 const app = new Hono<{ Bindings: NodeBindings }>()
 
 
@@ -280,6 +281,13 @@ app.post('/purge-applications', async (c) => {
   try {
     await db.prepare("PRAGMA foreign_keys = OFF").run()
     await db.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run()
+    // Purge Azure blobs for application-level documents before deleting DB rows
+    const { results: appBlobRows } = await db.prepare(
+      `SELECT file_url FROM documents WHERE entity_type='application' AND entity_id NOT IN ('app001','app002') AND file_url IS NOT NULL`
+    ).all() as any
+    if (appBlobRows?.length) {
+      await Promise.allSettled((appBlobRows as any[]).map((r: any) => deleteBlob(r.file_url)))
+    }
     await db.prepare("DELETE FROM documents WHERE entity_type='application' AND entity_id NOT IN ('app001','app002')").run()
     await db.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run()
     await db.prepare("PRAGMA foreign_keys = ON").run()
@@ -321,6 +329,29 @@ app.post('/reset-demo', async (c) => {
     await db.prepare("UPDATE construction_stages SET invoice_doc_id=NULL WHERE invoice_doc_id IS NOT NULL").run()
 
     // 1b. documents attached to live applications or EcoVillage project
+    // First collect file_urls of all user-uploaded docs so we can purge blobs from Azure
+    const { results: docsToDelete } = await db.prepare(
+      `SELECT file_url FROM documents
+       WHERE file_url IS NOT NULL
+         AND entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')`
+    ).all() as any
+    // Also collect file_urls from application-level copies of project docs (entity_type='application')
+    const { results: appDocsToDelete } = await db.prepare(
+      `SELECT file_url FROM documents
+       WHERE file_url IS NOT NULL
+         AND entity_type = 'application'
+         AND entity_id NOT IN ('app001','app002')`
+    ).all() as any
+    // Delete blobs from Azure Blob Storage (non-blocking — log errors but don't fail reset)
+    const allBlobUrls: string[] = [
+      ...(docsToDelete  || []).map((r: any) => r.file_url).filter(Boolean),
+      ...(appDocsToDelete || []).map((r: any) => r.file_url).filter(Boolean),
+    ]
+    if (allBlobUrls.length > 0) {
+      console.log(`[reset] Purging ${allBlobUrls.length} blob(s) from Azure storage…`)
+      await Promise.allSettled(allBlobUrls.map(url => deleteBlob(url)))
+      console.log(`[reset] Blob purge complete`)
+    }
     await db.prepare("DELETE FROM documents WHERE entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')").run()
 
     // 1c. applications that reference non-template products (or any live app besides seed 2)

@@ -42,13 +42,16 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Ensure WEBSITE_RUN_FROM_PACKAGE is set
+      - name: Set Azure App Service application settings
         run: |
           az webapp config appsettings set \
             --name app-lms-portal \
             --resource-group Dima-Gibert-RG \
-            --settings WEBSITE_RUN_FROM_PACKAGE=1
-          echo "✅ WEBSITE_RUN_FROM_PACKAGE=1 confirmed"
+            --settings \
+              WEBSITE_RUN_FROM_PACKAGE=1 \
+              AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+              AZURE_STORAGE_CONTAINER="${{ secrets.AZURE_STORAGE_CONTAINER || 'lms-documents' }}"
+          echo "✅ App settings configured"
 
       - name: Create deployment zip (with node_modules)
         run: |
