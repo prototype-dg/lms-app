@@ -37,6 +37,18 @@ export default defineConfig({
         // Hono node server — loaded at runtime by server.js
         '@hono/node-server',
         '@hono/node-server/serve-static',
+        // Azure SDK — contains browser-only DOM XML parser; must NOT be bundled
+        // by Vite. Stays in node_modules and is require()'d at runtime.
+        '@azure/storage-blob',
+        '@azure/core-http',
+        '@azure/core-auth',
+        '@azure/core-rest-pipeline',
+        '@azure/core-tracing',
+        '@azure/core-xml',
+        '@azure/logger',
+        '@azure/abort-controller',
+        '@azure/core-util',
+        '@azure/core-client',
       ],
     },
   },
