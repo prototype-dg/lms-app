@@ -297,7 +297,7 @@ app.post('/purge-applications', async (c) => {
 // Template products (p001-p008) are restored to their seeded values.
 app.post('/reset-demo', async (c) => {
   const db = c.env.DB
-  const TEMPLATE_PRODUCT_IDS = ['p001','p002','p003','p004','p005','p006','p007','p008','prod_eco_home_001']
+  const TEMPLATE_PRODUCT_IDS = ['p001','p002','p003','p004','p005','p006','p007','p008']
   const TEMPLATE_PRODUCT_CODES = ['SHL-STANDARD','AFL-PERSONAL','PL-UNSECURED','SME-WORKCAP','HELOC-STANDARD','CPF-COMMERCIAL','EHL-EXPAT','EDU-FINANCE']
 
   try {
@@ -488,45 +488,6 @@ app.post('/reset-demo', async (c) => {
     for (const [sql, params] of productResets) {
       await db.prepare(sql).bind(...params).run()
     }
-
-    // ── 2b. Restore Green Home Finance (prod_eco_home_001) ───────────────
-    // This product is seeded by migration 0008 but is NOT a p00x product,
-    // so it must be explicitly restored after the DELETE above.
-    await db.prepare(`INSERT OR IGNORE INTO products (
-        id, name, code, description, category, status,
-        base_rate, max_ltv, max_dbr, green_dbr, min_term, max_term,
-        min_amount, max_amount, gsas_min_score, gsas_premium_score,
-        green_discount_premium, green_discount_standard, ai_confidence_threshold,
-        allow_byop, allow_partner_inventory,
-        required_docs, esg_required_docs, approved_materials, approved_vendors,
-        configuration, applications_ytd, is_demo_product, portal_visible,
-        created_by, created_at, updated_at
-      ) VALUES (
-        'prod_eco_home_001','Green Home Finance','GHL-ECO-001',
-        'Sohar International flagship green mortgage. Eligible for GSAS-certified properties only. Rates from 4.75% for 4-star and above. CBO-compliant, supports Al Jazeera Constructions and approved green builders. AI-assisted approval in 48 hours.',
-        'home_loan','active',
-        4.75, 80, 40, 45, 5, 25, 20000, 500000,
-        60, 85, 0.75, 0.5, 88,
-        1, 1,
-        '["civil_id","salary_certificate","gsas_certificate","property_deed","independent_valuation_report","bank_statements_3m","employer_letter","epc_report"]',
-        '["gsas_certificate","epc_report","green_contractor_license"]',
-        '[]','[]',
-        '{"features":["GSAS-certified properties only","AI-assisted 48h approval","Premium rate 4.75% for GSAS 85+","Standard green rate 5.25% for GSAS 60+","Partner contractor pre-verified","CBO green mortgage guidelines"]}',
-        0, 1, 1, 'u001', '2025-09-01', datetime('now')
-      )`).run()
-    await db.prepare(`UPDATE products SET
-        name='Green Home Finance', status='active', base_rate=4.75, max_ltv=80, max_dbr=40, green_dbr=45,
-        min_term=5, max_term=25, min_amount=20000, max_amount=500000,
-        gsas_min_score=60, gsas_premium_score=85,
-        green_discount_premium=0.75, green_discount_standard=0.5, ai_confidence_threshold=88,
-        allow_byop=1, allow_partner_inventory=1,
-        required_docs='["civil_id","salary_certificate","gsas_certificate","property_deed","independent_valuation_report","bank_statements_3m","employer_letter","epc_report"]',
-        esg_required_docs='["gsas_certificate","epc_report","green_contractor_license"]',
-        is_demo_product=1, portal_visible=1,
-        portal_hero_title=NULL, portal_hero_subtitle=NULL, portal_card_badge=NULL,
-        portal_highlights='["GSAS-certified properties only","AI-assisted 48h approval","Premium rate 4.75% for GSAS 85+","CBO green mortgage guidelines"]',
-        updated_at=datetime('now')
-      WHERE id='prod_eco_home_001'`).run()
 
     // ── 3. Remove all AI-generated and product-specific rules ────────────
     // Keep only the 14 global template rules (r001-r014, product_id IS NULL)
