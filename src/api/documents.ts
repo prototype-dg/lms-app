@@ -163,34 +163,22 @@ function getDemoAnalysis(docType: string, filename?: string) {
   return map[docType] || map.civil_id
 }
 
-// ── Blob download proxy — streams private Azure blobs through the server ───
-// Avoids PublicAccessNotPermitted by fetching the blob with the storage key
-// server-side and forwarding the bytes to the browser.
+// ── Blob download proxy — no Azure SDK, pure crypto SAS ──────────────────
+// Builds a SAS token using HMAC-SHA256 (Node crypto) so we never import
+// @azure/storage-blob (which has a DOM dependency that crashes Node at startup).
 // Usage: GET /api/v1/documents/serve?url=<encoded blob url>&filename=<name>
 app.get('/serve', async (c) => {
   const blobUrl  = c.req.query('url')
   const filename = c.req.query('filename') || 'document'
 
   if (!blobUrl) return c.json({ error: 'url query param required' }, 400)
-
-  // Validate it looks like an Azure Blob URL (basic safety check)
-  if (!blobUrl.includes('.blob.core.windows.net')) {
+  if (!blobUrl.includes('.blob.core.windows.net'))
     return c.json({ error: 'Invalid blob URL' }, 400)
-  }
 
   const connStr = process.env.AZURE_STORAGE_CONNECTION_STRING || ''
-  if (!connStr) {
-    // No storage configured — redirect directly (will fail with public-access error
-    // but is better than a 500; happens only in misconfigured envs)
-    return c.redirect(blobUrl)
-  }
+  if (!connStr) return c.redirect(blobUrl) // no storage — best-effort redirect
 
   try {
-    // Build a SAS token via the Azure Blob SDK so we can fetch it server-side
-    // We import dynamically to avoid the Vite bundle (externalized in vite.config)
-    const { BlobServiceClient, generateBlobSASQueryParameters, BlobSASPermissions, StorageSharedKeyCredential } = await import('@azure/storage-blob')
-
-    // Parse account name + key from connection string
     const acctMatch = connStr.match(/AccountName=([^;]+)/)
     const keyMatch  = connStr.match(/AccountKey=([^;]+)/)
     if (!acctMatch || !keyMatch) return c.json({ error: 'Storage misconfigured' }, 500)
@@ -199,17 +187,37 @@ app.get('/serve', async (c) => {
     const accountKey  = keyMatch[1]
     const container   = process.env.AZURE_STORAGE_CONTAINER || 'lms-documents'
 
-    // Extract blob name from URL
+    // Extract blob name: everything after "/{container}/"
     const urlObj   = new URL(blobUrl)
-    const blobName = urlObj.pathname.replace(`/${container}/`, '')
+    const blobName = decodeURIComponent(urlObj.pathname.replace(`/${container}/`, ''))
 
-    const cred = new StorageSharedKeyCredential(accountName, accountKey)
-    const sas  = generateBlobSASQueryParameters({
-      containerName: container,
-      blobName,
-      permissions: BlobSASPermissions.parse('r'),
-      expiresOn: new Date(Date.now() + 5 * 60 * 1000), // 5 min
-    }, cred).toString()
+    // Build SAS using pure Node crypto — no Azure SDK needed
+    const { createHmac } = await import('node:crypto')
+
+    const start   = new Date(Date.now() - 60_000).toISOString().replace(/\.\d+Z$/, 'Z')
+    const expiry  = new Date(Date.now() + 5 * 60_000).toISOString().replace(/\.\d+Z$/, 'Z')
+    const perms   = 'r'
+    const service = 'b'
+    const restype = 'b'
+    const version = '2020-08-04'
+
+    // Canonicalised string-to-sign for service SAS (blob)
+    const strToSign = [
+      perms, start, expiry,
+      `/blob/${accountName}/${container}/${blobName}`,
+      '', '', '', version,
+      service, restype,
+      '', '', '', '', '', '', '', '', ''
+    ].join('\n')
+
+    const sig = createHmac('sha256', Buffer.from(accountKey, 'base64'))
+      .update(strToSign, 'utf8')
+      .digest('base64')
+
+    const sas = new URLSearchParams({
+      sv: version, st: start, se: expiry,
+      sr: restype, sp: perms, sig,
+    }).toString()
 
     const sasUrl = `${blobUrl}?${sas}`
     const resp   = await fetch(sasUrl)
@@ -217,7 +225,6 @@ app.get('/serve', async (c) => {
 
     const contentType = resp.headers.get('Content-Type') || 'application/octet-stream'
     const body        = await resp.arrayBuffer()
-
     return new Response(body, {
       headers: {
         'Content-Type':        contentType,
