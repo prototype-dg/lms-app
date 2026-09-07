@@ -2639,17 +2639,13 @@ async function renderApplications() {
 async function openApplicationDetail(appId, appRef) {
   openPanel(`Loading ${appRef||appId}…`);
   try {
-    const [compR, appR] = await Promise.all([
-      fetch(`/api/v1/compliance/esg/${appId}`),
-      fetch(`/api/v1/applications/${appId}`)
-    ]);
-    const compD = await compR.json();
-    const appD  = await appR.json();
-    // Determine which view to show based on current role
+    const fullR = await fetch(`/api/v1/compliance/full/${appId}`);
+    const fullD = await fullR.json();
+    if (fullD.error) throw new Error(fullD.error);
     if (currentRole === 'risk_officer') {
-      renderRiskPanel(compD, appD);
+      renderRiskPanel(fullD);
     } else {
-      renderCompliancePanel(compD, appD);
+      renderCompliancePanel(fullD);
     }
   } catch(e) { document.getElementById('panelBody').innerHTML = '<p style="padding:1rem;color:var(--danger)">Error loading application details.</p>'; }
 }
@@ -2707,57 +2703,99 @@ async function renderComplianceTasks() {
 async function openComplianceDetail(appId) {
   openPanel('Loading application…');
   try {
-    const [compR, appR] = await Promise.all([
-      fetch(`/api/v1/compliance/esg/${appId}`),
-      fetch(`/api/v1/applications/${appId}`)
-    ]);
-    const compD = await compR.json();
-    const appD  = await appR.json();
-    // Compliance officer → ESG/compliance panel; Risk officer → credit risk panel
+    const fullR = await fetch(`/api/v1/compliance/full/${appId}`);
+    const fullD = await fullR.json();
+    if (fullD.error) throw new Error(fullD.error);
     if (currentRole === 'risk_officer') {
-      renderRiskPanel(compD, appD);
+      renderRiskPanel(fullD);
     } else {
-      renderCompliancePanel(compD, appD);
+      renderCompliancePanel(fullD);
     }
   } catch(e) { document.getElementById('panelBody').innerHTML = '<p style="padding:1rem;color:var(--danger)">Error loading application details.</p>'; }
 }
 
-function renderCompliancePanel(comp, appData) {
-  const app    = appData.application || {};
-  const esg    = comp.esg_status || {};
-  const credit = comp.credit_metrics || {};
+function renderCompliancePanel(fullD) {
+  // fullD is the product-enriched payload from /compliance/full/:appId
+  const app    = fullD.application  || {};
+  const prod   = fullD.product      || {};
+  const esg    = fullD.esg_status   || {};
+  const credit = fullD.credit_metrics || {};
+  const esgRules = (fullD.rules?.esg        || []);
+  const allRules = (fullD.rules?.all_evaluated || []);
   const rec    = esg.ai_recommendation || {};
-  document.getElementById('panelTitle').textContent = `Review: ${app.reference||'Application'}`;
 
-  const ragIcon    = { green:'🟢', amber:'🟡', red:'🔴' };
+  // Store fullD on window so generateReport can access it
+  window._lastComplianceData = fullD;
+
+  const ragIcon     = { green:'🟢', amber:'🟡', red:'🔴' };
   const statusLabel = { auto_verified:'Auto-Verified', manual_review:'Review Required', approved:'Approved', rejected:'Rejected', pending:'Pending' };
 
-  // Credit metric computed values (real or clearly labelled as estimated)
-  const dbr       = credit.dbr?.value;
-  const ltv       = credit.ltv?.value;
-  const malaa     = credit.malaa_score?.value;
+  const dbr        = credit.dbr?.value;
+  const ltv        = credit.ltv?.value;
+  const malaa      = credit.malaa_score?.value;
   const stressRate = credit.stress_test?.rate;
   const stressDbr  = credit.stress_test?.stress_dbr;
   const stressPast = credit.stress_test?.passed !== false;
+  const mp         = credit.monthly_payment;
+  const pv         = credit.property_value;
 
   const fmtPct = v => v !== null && v !== undefined ? `${Number(v).toFixed(1)}%` : '—';
   const fmtVal = v => v !== null && v !== undefined ? v : '—';
 
-  // EPC document — customer uploaded during wizard, stored in documents table
-  const epcFileUrl  = esg.epc?.file_url;
-  const epcFilename = esg.epc?.filename || 'EPC_Report.pdf';
-
-  // Monthly payment
-  const mp = credit.monthly_payment;
-  const pv = credit.property_value;
-
-  // Standard rate for green discount display
   const stdRate = 5.5;
   const discount = app.applied_rate ? (stdRate - app.applied_rate).toFixed(2) : '0.75';
 
+  // EPC document — traversed chain: application → unit → project
+  const epcDoc      = fullD.documents?.epc || null;
+  const epcFileUrl  = esg.epc?.file_url  || null;
+  const epcFilename = esg.epc?.filename  || (epcDoc?.filename) || 'EPC_Report.pdf';
+  const epcSource   = esg.epc?.doc_source; // 'application' | 'unit' | 'project' | null
+  const epcSourceLabel = { application:'Uploaded by applicant', unit:'Uploaded at unit level', project:'Uploaded at project level' };
+
+  // Product threshold thresholds for display
+  const maxDbr = prod.green_dbr || prod.max_dbr || 55;
+  const maxLtv = prod.max_ltv || 90;
+  const gsasMin = prod.gsas_min_score || 70;
+  const gsasPremium = prod.gsas_premium_score || 85;
+
+  // Build ESG rule checklist from actual product rules
+  const esgRuleRows = esgRules.length > 0
+    ? esgRules.map(r => {
+        const ev = allRules.find(ar => ar.id === r.id)?.evaluation || { status:'unknown', value:null };
+        const pass = ev.status === 'pass';
+        const unknown = ev.status === 'unknown';
+        const icon = unknown ? '⚪' : pass ? '✅' : '❌';
+        const badge = unknown ? 'amber' : pass ? 'success' : 'danger';
+        const valStr = ev.value !== null && ev.value !== undefined ? ` (${ev.value})` : '';
+        return `<tr>
+          <td style="padding:.4rem .6rem;font-size:.78rem;font-weight:500;color:var(--navy)">${r.name}</td>
+          <td style="padding:.4rem .6rem;font-size:.75rem;color:var(--grey-500)">${r.description||'—'}</td>
+          <td style="padding:.4rem .6rem;font-size:.75rem;text-align:center">${icon} <span style="font-size:.7rem;color:var(--${badge})">${ev.status==='unknown'?'N/A':ev.status.toUpperCase()}${valStr}</span></td>
+          <td style="padding:.4rem .6rem;font-size:.72rem;color:var(--grey-400)">${r.regulatory_reference||'—'}</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="4" style="padding:.75rem;color:var(--grey-400);font-size:.8rem;text-align:center">No ESG rules defined for this product</td></tr>`;
+
   document.getElementById('panelBody').innerHTML = `
+    <!-- Product context banner -->
+    <div style="background:linear-gradient(135deg,#0a1628,#1a3a5c);border-radius:var(--radius-lg);padding:.85rem 1.1rem;color:white;margin-bottom:1.25rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap">
+      <div style="flex:1;min-width:180px">
+        <div style="font-size:.68rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.2rem">Product Under Assessment</div>
+        <div style="font-size:1rem;font-weight:700;color:#a8edde">${prod.name || app.product_name || '—'}</div>
+      </div>
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+        ${[
+          ['Max DBR', `${maxDbr}%`],
+          ['Max LTV', `${maxLtv}%`],
+          ['GSAS Min', `${gsasMin}`],
+          ['GSAS Premium', `${gsasPremium}`]
+        ].map(([l,v])=>`<div style="text-align:center"><div style="font-size:.68rem;color:rgba(255,255,255,.45)">${l}</div><div style="font-size:.88rem;font-weight:700;color:white">${v}</div></div>`).join('')}
+      </div>
+      <span class="chip" style="background:rgba(168,237,222,.15);color:#a8edde;font-size:.7rem">${app.reference||'—'}</span>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
-      <!-- Left: Application Summary + Credit Metrics -->
+      <!-- Left: Summary + Credit Metrics + Report -->
       <div>
         <h4 style="margin-bottom:.75rem">Application Summary</h4>
         <div class="card">
@@ -2766,14 +2804,15 @@ function renderCompliancePanel(comp, appData) {
               <div class="avatar avatar-lg">${(app.customer_name||'SA').split(' ').map(w=>w[0]).join('').substring(0,2)}</div>
               <div>
                 <div style="font-weight:700;font-size:.95rem;color:var(--navy)">${app.customer_name||'–'}</div>
-                <div style="color:var(--grey-500)">OMR ${(app.loan_amount||0).toLocaleString()} · ${app.loan_term||25} yrs</div>
+                <div style="color:var(--grey-500)">OMR ${(app.loan_amount||0).toLocaleString()} · ${app.loan_term||25} yrs · ${prod.name||'—'}</div>
               </div>
             </div>
             ${[
               ['Application Ref', `<span style="font-family:monospace;color:var(--teal)">${app.reference||'–'}</span>`],
-              ['Product',         app.product_name||'—'],
-              ['Unit / Property', app.unit_number ? `${app.unit_number}${app.project_name?' — '+app.project_name:''}` : (app.property_address||'—')],
-              ['GSAS Score',      `<strong style="color:var(--success)">${app.gsas_score||'—'} / 100${app.gsas_score>=90?' (Platinum)':app.gsas_score>=75?' (Gold)':app.gsas_score>=60?' (Silver)':''}</strong>`],
+              ['Unit / Project',  app.unit_number ? `${app.unit_number}${app.project_name?' — '+app.project_name:''}` : (app.property_address||'—')],
+              ['Project Location',app.project_location||'—'],
+              ['GSAS Score',      `<strong style="color:var(--success)">${app.gsas_score||'—'} / 100${app.gsas_score>=gsasPremium?' 🏆 Premium':app.gsas_score>=gsasMin?' ✓ Qualifies':' ⚠ Below Min'}</strong>`],
+              ['EPC Rating',      `<strong>${app.epc_rating||esg.epc?.rating||'—'}</strong> <span style="font-size:.72rem;color:var(--grey-500)">(from project record)</span>`],
               ['Applied Rate',    `<strong style="color:var(--navy)">${app.applied_rate||'—'}%</strong> <span style="color:var(--success);font-size:.75rem">(−${discount}% green discount)</span>`],
               ['Monthly Payment', mp ? `OMR ${Number(mp).toLocaleString()}` : '—'],
               ['Property Value',  pv ? `OMR ${Number(pv).toLocaleString()}` : '—'],
@@ -2782,14 +2821,16 @@ function renderCompliancePanel(comp, appData) {
           </div>
         </div>
 
-        <h4 style="margin:1rem 0 .75rem">Credit Metrics <span style="font-size:.72rem;color:var(--grey-400);font-weight:400">(calculated from application data)</span></h4>
+        <h4 style="margin:1rem 0 .75rem">Credit Metrics
+          <span style="font-size:.72rem;color:var(--grey-400);font-weight:400"> — ${prod.name||'product'} thresholds</span>
+        </h4>
         <div class="card">
           <div class="card-body">
             ${[
-              ['DBR',           fmtPct(dbr),       credit.dbr?.status==='pass',         credit.dbr?.label    || `Max 55% for green products`],
-              ['LTV',           fmtPct(ltv),       credit.ltv?.status==='pass',         credit.ltv?.label    || `Max 90%`],
-              ['MALA\'A Score', fmtVal(malaa),     credit.malaa_score?.status==='pass', credit.malaa_score?.label || `Min 650`],
-              [`Stress Test (${stressRate||9}%)`, stressPast?'Passed':'⚠ Marginal', stressPast, stressDbr?`DBR at +350bps: ${fmtPct(stressDbr)}`:'Rate stress scenario']
+              ['DBR',            fmtPct(dbr),      credit.dbr?.status==='pass',          credit.dbr?.label    || `Max ${maxDbr}% — product green DBR`],
+              ['LTV',            fmtPct(ltv),      credit.ltv?.status==='pass',          credit.ltv?.label    || `Max ${maxLtv}%`],
+              ["MALA'A Score",   fmtVal(malaa),    credit.malaa_score?.status==='pass',  credit.malaa_score?.label || 'Min 650 — CBO Bureau minimum'],
+              [`Stress (${stressRate||9}%)`, stressPast?'Passed':'⚠ Marginal', stressPast, stressDbr?`DBR at +350bps: ${fmtPct(stressDbr)} (max 60%)`:'CBO rate-shock scenario']
             ].map(([label,value,pass,detail]) => `
               <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--grey-100)">
                 <div>
@@ -2807,8 +2848,12 @@ function renderCompliancePanel(comp, appData) {
         <!-- Generate Report inline -->
         <div class="card" style="margin-top:1rem">
           <div class="card-body" style="padding:.75rem">
-            <div style="font-size:.78rem;color:var(--grey-500);margin-bottom:.5rem">Generate Compliance Report</div>
-            <textarea id="reportPromptPanel" rows="2" style="width:100%;border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:.5rem;font-size:.78rem;resize:vertical" placeholder="Describe what to include in the report…">Generate compliance report for ${app.reference||'this application'}. Include GSAS score, DBR, LTV, EPC status and ESG recommendation.</textarea>
+            <div style="font-size:.78rem;font-weight:600;color:var(--navy);margin-bottom:.4rem">Generate Compliance Report</div>
+            <textarea id="reportPromptPanel" rows="3" style="width:100%;border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:.5rem;font-size:.78rem;resize:vertical">${`Generate ESG compliance report for ${app.reference||'this application'} (${prod.name||'Green Home Loan'}).
+Product thresholds: DBR ≤${maxDbr}%, LTV ≤${maxLtv}%, GSAS min ${gsasMin} / premium ${gsasPremium}.
+Actual values: DBR ${fmtPct(dbr)}, LTV ${fmtPct(ltv)}, GSAS ${app.gsas_score||'—'}, EPC ${esg.epc?.rating||'—'}.
+Stress test at +350bps: ${stressPast?'PASSED':'MARGINAL'}.
+Include: ESG rule checklist, document status, credit metrics, AI recommendation.`}</textarea>
             <button class="btn btn-amber btn-sm" style="margin-top:.5rem" onclick="generateReport('${app.reference||app.id}')">
               <i class="fas fa-bolt"></i> Generate Report
             </button>
@@ -2819,31 +2864,36 @@ function renderCompliancePanel(comp, appData) {
 
       <!-- Right: ESG Dashboard -->
       <div>
-        <h4 style="margin-bottom:.75rem">ESG Compliance Dashboard</h4>
+        <!-- RAG Status -->
+        <h4 style="margin-bottom:.75rem">ESG Document Status</h4>
         <div class="rag-panel" style="margin-bottom:1rem">
-          <div class="rag-item rag-${esg.gsas?.color||'green'}">
-            <div class="rag-icon">${ragIcon[esg.gsas?.color||'green']}</div>
+          <div class="rag-item rag-${esg.gsas?.color||'red'}">
+            <div class="rag-icon">${ragIcon[esg.gsas?.color||'red']}</div>
             <div class="rag-info">
               <div class="rag-title">GSAS Certificate</div>
-              <div class="rag-detail">${statusLabel[esg.gsas?.status]||'Pending'} · Score ${esg.gsas?.score||'—'} · ${esg.gsas?.rating||'—'} · #${esg.gsas?.certificate_number||'—'}</div>
+              <div class="rag-detail">${statusLabel[esg.gsas?.status]||'Pending'} · Score <strong>${esg.gsas?.score||'—'}</strong> / 100 · ${esg.gsas?.rating||'—'}
+                ${esg.gsas?.passes_premium ? ' <span style="color:var(--success);font-size:.7rem">⭐ Premium</span>' : esg.gsas?.passes_threshold ? ' <span style="color:var(--teal);font-size:.7rem">✓ Qualifies</span>' : ' <span style="color:var(--danger);font-size:.7rem">⚠ Below min ${gsasMin}</span>'}</div>
+              <div style="font-size:.7rem;color:var(--grey-400);margin-top:.15rem">Min ${gsasMin} / Premium ${gsasPremium} · ${esg.gsas?.rule_ref||'OS GSO 3000:2025'}</div>
               <div class="confidence-bar" style="width:120px;margin-top:.25rem"><div class="confidence-bar-fill confidence-high" style="width:${esg.gsas?.confidence||0}%"></div></div>
-              <div style="font-size:.7rem;color:var(--grey-500);margin-top:.1rem">${esg.gsas?.confidence||0}% AI confidence</div>
+              <div style="font-size:.7rem;color:var(--grey-500);margin-top:.1rem">${esg.gsas?.confidence||0}% AI confidence · #${esg.gsas?.certificate_number||'—'} · Exp ${esg.gsas?.expiry||'—'}</div>
             </div>
           </div>
           <div class="rag-item rag-${esg.epc?.color||'amber'}">
             <div class="rag-icon">${ragIcon[esg.epc?.color||'amber']}</div>
             <div class="rag-info">
               <div class="rag-title">Energy Performance Certificate</div>
-              <div class="rag-detail">${statusLabel[esg.epc?.status]||'Pending'} · Rating ${esg.epc?.rating||'—'} · Expires ${esg.epc?.expiry||'—'}</div>
+              <div class="rag-detail">${statusLabel[esg.epc?.status]||'Pending'} · Rating <strong>${esg.epc?.rating||'—'}</strong> · Min ${esg.epc?.min_rating||'C'} · ${esg.epc?.passes?'✓ Passes':'⚠ Fails'}</div>
+              <div style="font-size:.7rem;color:var(--grey-400);margin-top:.15rem">${esg.epc?.rule_ref||'OEESC §5.1'} · Source: ${epcSource ? epcSourceLabel[epcSource]||epcSource : 'not found'}</div>
               <div class="confidence-bar" style="width:120px;margin-top:.25rem"><div class="confidence-bar-fill confidence-med" style="width:${esg.epc?.confidence||0}%"></div></div>
-              <div style="font-size:.7rem;color:var(--grey-500);margin-top:.1rem">${esg.epc?.confidence||0}% AI confidence${esg.epc?.notes?' · '+esg.epc.notes:''}</div>
+              <div style="font-size:.7rem;color:var(--grey-500);margin-top:.1rem">${esg.epc?.confidence||0}% AI confidence · Exp ${esg.epc?.expiry||'—'}${esg.epc?.notes?' · '+esg.epc.notes:''}</div>
             </div>
           </div>
           <div class="rag-item rag-${esg.eia?.color||'green'}">
             <div class="rag-icon">${ragIcon[esg.eia?.color||'green']}</div>
             <div class="rag-info">
-              <div class="rag-title">Environmental Impact Assessment</div>
+              <div class="rag-title">Environmental Impact Assessment${esg.eia?.required?'':' <span style="font-size:.68rem;color:var(--grey-400)">(optional)</span>'}</div>
               <div class="rag-detail">${statusLabel[esg.eia?.status]||'Pending'} · Ref ${esg.eia?.reference||'—'} · ${esg.eia?.issuer||'—'}</div>
+              <div style="font-size:.7rem;color:var(--grey-400);margin-top:.15rem">${esg.eia?.rule_ref||'Env. Authority 107/2023'} · Units in project: ${esg.eia?.units||'—'}</div>
               <div class="confidence-bar" style="width:120px;margin-top:.25rem"><div class="confidence-bar-fill confidence-high" style="width:${esg.eia?.confidence||0}%"></div></div>
               <div style="font-size:.7rem;color:var(--grey-500);margin-top:.1rem">${esg.eia?.confidence||0}% AI confidence</div>
             </div>
@@ -2855,46 +2905,80 @@ function renderCompliancePanel(comp, appData) {
           <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
             <i class="fas fa-robot" style="color:var(--sea-glass)"></i>
             <span style="font-size:.78rem;color:rgba(255,255,255,.6)">AI Recommendation</span>
+            <span style="margin-left:auto;font-size:.7rem;color:rgba(255,255,255,.4)">${rec.confidence||0}% confidence</span>
           </div>
           <div style="font-weight:600;color:var(--sea-glass);font-size:.9rem;margin-bottom:.25rem">${rec.action||'Pending Review'}</div>
           <div style="font-size:.8rem;color:rgba(255,255,255,.7)">${rec.detail||'Review documents manually to complete ESG assessment.'}</div>
         </div>
 
-        <!-- EPC Document — customer-uploaded file from application wizard -->
+        <!-- EPC Document — traversed chain: application → unit → project -->
         <div class="card" style="margin-bottom:1rem">
           <div class="card-header" style="background:${esg.epc?.color==='green'?'var(--success-light)':'var(--warning-light)'}">
             <h4 style="color:${esg.epc?.color==='green'?'var(--success)':'var(--warning)'}">
               <i class="fas fa-${esg.epc?.color==='green'?'check-circle':'exclamation-triangle'}"></i>
-              EPC – ${statusLabel[esg.epc?.status]||'Manual Review Required'}
+              EPC Report – ${statusLabel[esg.epc?.status]||'Manual Review Required'}
             </h4>
           </div>
           <div class="card-body">
-            <div style="font-size:.72rem;color:var(--grey-500);margin-bottom:.75rem">
-              <i class="fas fa-info-circle"></i>
-              This document was uploaded by the customer during the loan application wizard (Step 5 – Documents).
-            </div>
+            ${epcSource ? `
+            <div style="font-size:.72rem;margin-bottom:.75rem;padding:.4rem .6rem;background:var(--grey-50);border-radius:var(--radius-sm);border-left:3px solid var(--teal)">
+              <i class="fas fa-sitemap" style="color:var(--teal)"></i>
+              <strong>Document chain resolved:</strong> ${epcSourceLabel[epcSource]||epcSource}
+              <span style="color:var(--grey-400);margin-left:.5rem">(application → unit → project)</span>
+            </div>` : `
+            <div style="font-size:.72rem;margin-bottom:.75rem;padding:.4rem .6rem;background:var(--warning-light);border-radius:var(--radius-sm);border-left:3px solid var(--amber)">
+              <i class="fas fa-search" style="color:var(--amber)"></i>
+              <strong>Document not found</strong> — searched application, unit, and project levels
+            </div>`}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-size:.8rem">
               <div style="background:var(--grey-100);border-radius:var(--radius-md);padding:.75rem;text-align:center">
                 <i class="fas fa-file-pdf" style="font-size:2rem;color:var(--danger);margin-bottom:.5rem;display:block"></i>
-                <div style="font-size:.75rem;color:var(--grey-700);margin-bottom:.5rem">${epcFilename}</div>
+                <div style="font-size:.75rem;color:var(--grey-700);margin-bottom:.5rem;word-break:break-all">${epcFilename}</div>
                 ${epcFileUrl
                   ? `<a href="${epcFileUrl}" target="_blank" download="${epcFilename}" class="btn btn-sm" style="background:var(--danger);color:white;text-decoration:none;font-size:.72rem;padding:.3rem .7rem">
-                       <i class="fas fa-download"></i> Download
+                       <i class="fas fa-download"></i> Download EPC
                      </a>`
-                  : `<span style="font-size:.72rem;color:var(--grey-400)">Not yet uploaded</span>`}
+                  : epcDoc
+                    ? `<div style="font-size:.7rem;color:var(--grey-500);margin-top:.25rem"><i class="fas fa-database"></i> Demo record — no physical file<br><span style="font-size:.65rem;color:var(--grey-400)">File stored as analysed metadata only</span></div>`
+                    : `<div style="font-size:.7rem;color:var(--danger)"><i class="fas fa-times-circle"></i> Document not found</div>`
+                }
               </div>
               <div>
-                <div style="font-size:.72rem;color:var(--grey-500);margin-bottom:.5rem">AI Extracted Data</div>
+                <div style="font-size:.72rem;color:var(--grey-500);margin-bottom:.5rem">Extracted Data</div>
                 ${[
-                  ['Rating',   esg.epc?.rating  || '—'],
-                  ['Expiry',   esg.epc?.expiry  || '—'],
+                  ['Rating',     esg.epc?.rating   || '—'],
+                  ['Min Required', esg.epc?.min_rating || 'C'],
+                  ['Expiry',     esg.epc?.expiry   || '—'],
+                  ['Assessor',   esg.epc?.assessor || '—'],
+                  ['Energy kWh', esg.epc?.energy_kwh !== 'N/A' ? esg.epc?.energy_kwh || '—' : '—'],
                   ['Confidence', `${esg.epc?.confidence||0}%`]
-                ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem 0;border-bottom:1px solid var(--grey-100);font-size:.78rem"><span style="color:var(--grey-500)">${k}</span><strong>${v}</strong></div>`).join('')}
+                ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem 0;border-bottom:1px solid var(--grey-100);font-size:.75rem"><span style="color:var(--grey-500)">${k}</span><strong>${v}</strong></div>`).join('')}
               </div>
             </div>
-            <button class="btn btn-ghost btn-sm" style="margin-top:.75rem" onclick="overrideDocConfidence('${esg.epc?.doc_id||'doc-epc'}')">
+            ${esg.epc?.doc_id ? `
+            <button class="btn btn-ghost btn-sm" style="margin-top:.75rem" onclick="overrideDocConfidence('${esg.epc.doc_id}')">
               <i class="fas fa-user-check"></i> Override AI Confidence – Accept & Trust
-            </button>
+            </button>` : ''}
+          </div>
+        </div>
+
+        <!-- Product ESG Rule Checklist -->
+        <h4 style="margin-bottom:.6rem">ESG Rule Checklist
+          <span style="font-size:.72rem;color:var(--grey-400);font-weight:400"> — ${prod.name||'product'} rules</span>
+        </h4>
+        <div class="card" style="margin-bottom:1rem">
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="background:var(--grey-50)">
+                  <th style="padding:.4rem .6rem;font-size:.7rem;color:var(--grey-500);font-weight:600;text-align:left">Rule</th>
+                  <th style="padding:.4rem .6rem;font-size:.7rem;color:var(--grey-500);font-weight:600;text-align:left">Description</th>
+                  <th style="padding:.4rem .6rem;font-size:.7rem;color:var(--grey-500);font-weight:600;text-align:center">Result</th>
+                  <th style="padding:.4rem .6rem;font-size:.7rem;color:var(--grey-500);font-weight:600;text-align:left">Regulatory Ref</th>
+                </tr>
+              </thead>
+              <tbody>${esgRuleRows}</tbody>
+            </table>
           </div>
         </div>
 
@@ -2909,7 +2993,7 @@ function renderCompliancePanel(comp, appData) {
         </div>
       </div>
     </div>`;
-  openPanel(`Review: ${app.reference||app.id||'Application'}`);
+  openPanel(`Compliance Review: ${app.reference||app.id||'Application'}`);
 }
 
 async function overrideDocConfidence(docId) {
@@ -2995,24 +3079,26 @@ async function renderCreditReview() {
 async function openRiskDetail(appId) {
   openPanel('Loading credit risk assessment…');
   try {
-    const [compR, appR] = await Promise.all([
-      fetch(`/api/v1/compliance/esg/${appId}`),
-      fetch(`/api/v1/applications/${appId}`)
-    ]);
-    const compD = await compR.json();
-    const appD  = await appR.json();
-    renderRiskPanel(compD, appD);
+    const fullR = await fetch(`/api/v1/compliance/full/${appId}`);
+    const fullD = await fullR.json();
+    if (fullD.error) throw new Error(fullD.error);
+    renderRiskPanel(fullD);
   } catch(e) { document.getElementById('panelBody').innerHTML = '<p style="padding:1rem;color:var(--danger)">Error loading risk assessment.</p>'; }
 }
 
-function renderRiskPanel(comp, appData) {
-  const app    = appData.application || {};
-  const credit = comp.credit_metrics || {};
-  const esg    = comp.esg_status || {};
+function renderRiskPanel(fullD) {
+  // fullD is the product-enriched payload from /compliance/full/:appId
+  const app          = fullD.application      || {};
+  const prod         = fullD.product          || {};
+  const credit       = fullD.credit_metrics   || {};
+  const esg          = fullD.esg_status       || {};
+  const creditRules  = (fullD.rules?.credit   || []);
+  const collRules    = (fullD.rules?.collateral|| []);
+  const allRules     = (fullD.rules?.all_evaluated || []);
 
-  document.getElementById('panelTitle').textContent = `Risk Assessment: ${app.reference||'Application'}`;
+  // Store fullD on window so generateReport can access it
+  window._lastComplianceData = fullD;
 
-  // Compute all metrics from real data
   const salary     = app.salary_omr || 0;
   const loanAmt    = app.loan_amount || 0;
   const loanTerm   = app.loan_term || 25;
@@ -3026,32 +3112,62 @@ function renderRiskPanel(comp, appData) {
   const stressDbr  = credit.stress_test?.stress_dbr;
   const stressPast = credit.stress_test?.passed !== false;
 
-  // Derived analytics
+  const maxDbr   = prod.green_dbr || prod.max_dbr || 55;
+  const maxLtv   = prod.max_ltv || 90;
+
   const fmtPct = v => (v !== null && v !== undefined) ? `${Number(v).toFixed(1)}%` : '—';
   const fmtOMR = v => v ? `OMR ${Number(v).toLocaleString(undefined,{maximumFractionDigits:0})}` : '—';
 
-  // Repayment capacity: free cash after payment
   const disposable = salary > 0 && mp > 0 ? salary - mp : null;
   const capacityRatio = salary > 0 && mp > 0 ? ((salary - mp) / salary * 100) : null;
-
-  // Collateral coverage ratio
   const collateralCoverage = propVal && loanAmt ? (propVal / loanAmt * 100) : null;
-
-  // Concentration risk: simple check — if loan > 500K flag as large exposure
   const largeExposure = loanAmt > 500000;
-  const sectorConc = 'Real Estate — Residential Green'; // always from this flow
+  const sectorConc = `Real Estate — Residential Green (${app.project_name||'—'})`;
 
-  // Risk rating: based on DBR, LTV, MALA'A
+  // Risk rating: uses product-specific thresholds
   const riskScore =
-    (dbr  !== null ? (dbr  <= 30 ? 0 : dbr  <= 40 ? 1 : dbr  <= 50 ? 2 : 3) : 1) +
-    (ltv  !== null ? (ltv  <= 60 ? 0 : ltv  <= 75 ? 1 : ltv  <= 85 ? 2 : 3) : 1) +
+    (dbr  !== null ? (dbr  <= 30 ? 0 : dbr  <= maxDbr*0.7 ? 1 : dbr  <= maxDbr ? 2 : 3) : 1) +
+    (ltv  !== null ? (ltv  <= 60 ? 0 : ltv  <= 75 ? 1 : ltv  <= maxLtv ? 2 : 3) : 1) +
     (malaa !== null ? (malaa >= 800 ? 0 : malaa >= 700 ? 1 : malaa >= 650 ? 2 : 3) : 1) +
     (stressPast ? 0 : 2);
-  const riskTier = riskScore <= 1 ? {label:'Low Risk', color:'var(--success)', icon:'fa-shield-check'} :
-                   riskScore <= 3 ? {label:'Moderate Risk', color:'var(--amber)', icon:'fa-shield'} :
-                   {label:'High Risk', color:'var(--danger)', icon:'fa-shield-exclamation'};
+  const riskTier = riskScore <= 1 ? {label:'Low Risk',      color:'var(--success)', icon:'fa-shield-check'}  :
+                   riskScore <= 3 ? {label:'Moderate Risk',  color:'var(--amber)',   icon:'fa-shield'}        :
+                                    {label:'High Risk',       color:'var(--danger)',  icon:'fa-shield-exclamation'};
+
+  // Build credit + collateral rule checklist
+  const ruleRows = ([...creditRules, ...collRules]).map(r => {
+    const ev = allRules.find(ar => ar.id === r.id)?.evaluation || { status:'unknown', value:null };
+    const pass = ev.status === 'pass';
+    const unknown = ev.status === 'unknown';
+    const icon = unknown ? '⚪' : pass ? '✅' : '❌';
+    const badge = unknown ? 'amber' : pass ? 'success' : 'danger';
+    const valStr = ev.value !== null && ev.value !== undefined ? ` (${ev.value})` : '';
+    return `<tr>
+      <td style="padding:.4rem .6rem;font-size:.78rem;font-weight:500;color:var(--navy)">${r.name}</td>
+      <td style="padding:.4rem .6rem;font-size:.75rem;color:var(--grey-500)">${r.description||'—'}</td>
+      <td style="padding:.4rem .6rem;font-size:.75rem;text-align:center">${icon} <span style="font-size:.7rem;color:var(--${badge})">${ev.status==='unknown'?'N/A':ev.status.toUpperCase()}${valStr}</span></td>
+      <td style="padding:.4rem .6rem;font-size:.72rem;color:var(--grey-400)">${r.regulatory_reference||'—'}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="4" style="padding:.75rem;color:var(--grey-400);font-size:.8rem;text-align:center">No credit/collateral rules defined for this product</td></tr>`;
 
   document.getElementById('panelBody').innerHTML = `
+    <!-- Product context banner -->
+    <div style="background:linear-gradient(135deg,#0a1628,#1a3a5c);border-radius:var(--radius-lg);padding:.85rem 1.1rem;color:white;margin-bottom:1.25rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap">
+      <div style="flex:1;min-width:180px">
+        <div style="font-size:.68rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.2rem">Credit Risk Review — Product</div>
+        <div style="font-size:1rem;font-weight:700;color:#a8edde">${prod.name || app.product_name || '—'}</div>
+      </div>
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+        ${[
+          ['Max DBR', `${maxDbr}%`],
+          ['Max LTV', `${maxLtv}%`],
+          ['Base Rate', `${prod.base_rate||'—'}%`],
+          ['Risk Score', `${riskScore}/8`]
+        ].map(([l,v])=>`<div style="text-align:center"><div style="font-size:.68rem;color:rgba(255,255,255,.45)">${l}</div><div style="font-size:.88rem;font-weight:700;color:${l==='Risk Score'?riskTier.color:'white'}">${v}</div></div>`).join('')}
+      </div>
+      <span class="chip" style="background:rgba(168,237,222,.15);color:#a8edde;font-size:.7rem">${app.reference||'—'}</span>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
       <!-- Left column -->
       <div>
@@ -3061,7 +3177,7 @@ function renderRiskPanel(comp, appData) {
           <div>
             <div style="font-size:.72rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px">Overall Risk Rating</div>
             <div style="font-size:1.2rem;font-weight:800;color:${riskTier.color}">${riskTier.label}</div>
-            <div style="font-size:.75rem;color:rgba(255,255,255,.6)">Composite score: ${riskScore}/8 · ${app.reference}</div>
+            <div style="font-size:.75rem;color:rgba(255,255,255,.6)">Score ${riskScore}/8 · ${prod.name||'—'} thresholds · ${app.reference}</div>
           </div>
         </div>
 
@@ -3078,7 +3194,9 @@ function renderRiskPanel(comp, appData) {
             </div>
             ${[
               ['App Reference',   `<span style="font-family:monospace;color:var(--teal)">${app.reference||'—'}</span>`],
-              ['Product',         app.product_name||'—'],
+              ['Product',         `<strong>${prod.name||app.product_name||'—'}</strong>`],
+              ['Unit / Project',  app.unit_number ? `${app.unit_number}${app.project_name?' — '+app.project_name:''}` : (app.property_address||'—')],
+              ['GSAS Score',      `<span style="color:var(--success)">${app.gsas_score||'—'}</span>`],
               ['Loan Amount',     fmtOMR(loanAmt)],
               ['Property Value',  fmtOMR(propVal)],
               ['Monthly Salary',  salary ? fmtOMR(salary) : '—'],
@@ -3089,14 +3207,16 @@ function renderRiskPanel(comp, appData) {
           </div>
         </div>
 
-        <!-- Credit Metrics -->
-        <h4 style="margin-bottom:.75rem">Credit Risk Metrics <span style="font-size:.72rem;color:var(--grey-400);font-weight:400">(calculated)</span></h4>
+        <!-- Credit Metrics — product-specific thresholds -->
+        <h4 style="margin-bottom:.75rem">Credit Risk Metrics
+          <span style="font-size:.72rem;color:var(--grey-400);font-weight:400"> — ${prod.name||'product'} limits</span>
+        </h4>
         <div class="card" style="margin-bottom:1rem">
           <div class="card-body">
             ${[
-              ['Debt-Burden Ratio (DBR)', fmtPct(dbr), dbr<=55, `${fmtOMR(mp)} monthly / ${fmtOMR(salary)} salary — Max 55%`],
-              ['Loan-to-Value (LTV)',     fmtPct(ltv), ltv<=90, `${fmtOMR(loanAmt)} / ${fmtOMR(propVal)} — Max 90%`],
-              ['MALA\'A Credit Score',   malaa||'—',  !malaa||(malaa>=650), `${malaa>=800?'Excellent':malaa>=700?'Good':malaa>=650?'Acceptable':'Below Threshold'} — Min 650`],
+              ['Debt-Burden Ratio (DBR)', fmtPct(dbr), dbr!==null&&dbr<=maxDbr, `${fmtOMR(mp)} monthly / ${fmtOMR(salary)} salary — Max ${maxDbr}% (${prod.name||'product'})`],
+              ['Loan-to-Value (LTV)',     fmtPct(ltv), ltv!==null&&ltv<=maxLtv, `${fmtOMR(loanAmt)} / ${fmtOMR(propVal)} — Max ${maxLtv}% (${prod.name||'product'})`],
+              ["MALA'A Credit Score",    malaa||'—',  !malaa||(malaa>=650),    `${malaa>=800?'Excellent':malaa>=700?'Good':malaa>=650?'Acceptable':'Below Threshold'} — Min 650 (CBO)`],
               ['Repayment Capacity',     capacityRatio!==null?`${fmtPct(capacityRatio)} free`:salary?'Low':'—', capacityRatio===null||capacityRatio>=20, disposable!==null?`${fmtOMR(disposable)}/mo disposable after payment`:'Salary data not on file']
             ].map(([label,value,pass,detail]) => `
               <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--grey-100)">
@@ -3111,6 +3231,26 @@ function renderRiskPanel(comp, appData) {
               </div>`).join('')}
           </div>
         </div>
+
+        <!-- Product Credit & Collateral Rule Checklist -->
+        <h4 style="margin-bottom:.6rem">Credit & Collateral Rules
+          <span style="font-size:.72rem;color:var(--grey-400);font-weight:400"> — ${prod.name||'product'}</span>
+        </h4>
+        <div class="card" style="margin-bottom:1rem">
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="background:var(--grey-50)">
+                  <th style="padding:.4rem .6rem;font-size:.7rem;color:var(--grey-500);font-weight:600;text-align:left">Rule</th>
+                  <th style="padding:.4rem .6rem;font-size:.7rem;color:var(--grey-500);font-weight:600;text-align:left">Description</th>
+                  <th style="padding:.4rem .6rem;font-size:.7rem;color:var(--grey-500);font-weight:600;text-align:center">Result</th>
+                  <th style="padding:.4rem .6rem;font-size:.7rem;color:var(--grey-500);font-weight:600;text-align:left">Ref</th>
+                </tr>
+              </thead>
+              <tbody>${ruleRows}</tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- Right column -->
@@ -3121,7 +3261,7 @@ function renderRiskPanel(comp, appData) {
           <div class="card-header" style="background:${stressPast?'var(--success-light)':'var(--warning-light)'}">
             <h4 style="color:${stressPast?'var(--success)':'var(--warning)'}">
               <i class="fas fa-${stressPast?'check-circle':'exclamation-triangle'}"></i>
-              Rate Shock +350bps: ${stressPast?'PASSED':'MARGINAL'}
+              CBO Rate Shock +350bps: ${stressPast?'PASSED':'MARGINAL'}
             </h4>
           </div>
           <div class="card-body" style="font-size:.82rem">
@@ -3129,16 +3269,18 @@ function renderRiskPanel(comp, appData) {
               <div style="background:var(--grey-50);border-radius:var(--radius-md);padding:.75rem;text-align:center">
                 <div style="font-size:.7rem;color:var(--grey-500);margin-bottom:.25rem">Current Rate</div>
                 <div style="font-size:1.3rem;font-weight:800;color:var(--navy)">${rate}%</div>
+                <div style="font-size:.65rem;color:var(--grey-400)">${prod.name||'product'} applied rate</div>
               </div>
               <div style="background:${stressPast?'rgba(22,132,91,.06)':'rgba(220,38,38,.06)'};border:1px solid ${stressPast?'rgba(22,132,91,.2)':'rgba(220,38,38,.2)'};border-radius:var(--radius-md);padding:.75rem;text-align:center">
                 <div style="font-size:.7rem;color:var(--grey-500);margin-bottom:.25rem">Stressed Rate</div>
-                <div style="font-size:1.3rem;font-weight:800;color:${stressPast?'var(--success)':'var(--danger)'}">${stressRate.toFixed(2)}%</div>
+                <div style="font-size:1.3rem;font-weight:800;color:${stressPast?'var(--success)':'var(--danger)'}">${typeof stressRate==='number'?stressRate.toFixed(2):stressRate}%</div>
+                <div style="font-size:.65rem;color:var(--grey-400)">+350bps CBO shock</div>
               </div>
             </div>
             ${[
-              ['DBR at Stressed Rate', stressDbr!==null?fmtPct(stressDbr):'—', stressPast, 'Threshold: 60% (stress buffer)'],
-              ['Applicant Salary',     fmtOMR(salary), true, 'Monthly gross salary on file'],
-              ['Assessment',           stressPast?'Repayment sustainable':'May breach stress limit', stressPast, 'Based on +350bps CBO standard shock']
+              ['DBR at Stressed Rate', stressDbr!==null?fmtPct(stressDbr):'—',  stressPast, 'Threshold: 60% stress buffer (CBO)'],
+              ['Applicant Salary',     fmtOMR(salary),                            true,       'Monthly gross salary on file'],
+              ['Assessment',           stressPast?'Repayment sustainable':'May breach limit', stressPast, '+350bps CBO standard rate-shock scenario']
             ].map(([k,v,ok,d])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--grey-100)">
               <div><div style="font-size:.8rem;font-weight:500">${k}</div><div style="font-size:.7rem;color:var(--grey-500)">${d}</div></div>
               <div style="display:flex;align-items:center;gap:.4rem">
@@ -3153,11 +3295,11 @@ function renderRiskPanel(comp, appData) {
         <div class="card" style="margin-bottom:1rem">
           <div class="card-body" style="font-size:.82rem">
             ${[
-              ['Property Value',          fmtOMR(propVal), true,  'Assessed market value at application date'],
-              ['Loan Amount',             fmtOMR(loanAmt), true,  'Principal financing amount'],
-              ['Collateral Coverage',     collateralCoverage!==null?`${collateralCoverage.toFixed(0)}%`:'—', !collateralCoverage||collateralCoverage>=111, 'Property value as % of loan (min 111%)'],
-              ['GSAS Green Premium',      app.gsas_score?`Score ${app.gsas_score} — estimated +5–8% value premium`:'—', true, 'Green-rated properties historically hold value better'],
-              ['Sector',                  sectorConc, true, 'Loan collateral sector classification']
+              ['Property Value',        fmtOMR(propVal), true,  'Assessed market value at application date'],
+              ['Loan Amount',           fmtOMR(loanAmt), true,  'Principal financing amount'],
+              ['Collateral Coverage',   collateralCoverage!==null?`${collateralCoverage.toFixed(0)}%`:'—', !collateralCoverage||collateralCoverage>=111, `Prop value / loan — min 111% (Max LTV ${maxLtv}%)`],
+              ['GSAS Green Premium',    app.gsas_score?`Score ${app.gsas_score} — est. +5–8% value uplift`:'—', true, 'Green-rated properties hold value better'],
+              ['Project',               app.project_name||'—', true, app.project_location||'Muscat Governorate, Oman']
             ].map(([k,v,ok,d])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--grey-100)">
               <div style="flex:1;padding-right:.5rem"><div style="font-size:.8rem;font-weight:500">${k}</div><div style="font-size:.7rem;color:var(--grey-500)">${d}</div></div>
               <div style="display:flex;align-items:center;gap:.4rem;white-space:nowrap">
@@ -3180,17 +3322,32 @@ function renderRiskPanel(comp, appData) {
             <div style="padding:.35rem 0;border-bottom:1px solid var(--grey-100);display:flex;justify-content:space-between">
               <div>
                 <div style="font-size:.8rem;font-weight:500">Single Obligor</div>
-                <div style="font-size:.7rem;color:var(--grey-500)">Individual retail mortgage</div>
+                <div style="font-size:.7rem;color:var(--grey-500)">Individual retail mortgage — ${app.customer_name||'—'}</div>
               </div>
               <span class="chip ${largeExposure?'amber':'green'}" style="font-size:.72rem">${largeExposure?'Large Exposure':'Normal'}</span>
             </div>
             <div style="padding:.35rem 0;display:flex;justify-content:space-between">
               <div>
                 <div style="font-size:.8rem;font-weight:500">Geographic</div>
-                <div style="font-size:.7rem;color:var(--grey-500)">Muscat Governorate, Oman</div>
+                <div style="font-size:.7rem;color:var(--grey-500)">${app.project_location||'Muscat Governorate, Oman'}</div>
               </div>
               <span class="chip green" style="font-size:.72rem">Acceptable</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Risk Report Generation -->
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-body" style="padding:.75rem">
+            <div style="font-size:.78rem;font-weight:600;color:var(--navy);margin-bottom:.4rem">Generate Risk Report</div>
+            <textarea id="reportPromptPanel" rows="3" style="width:100%;border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:.5rem;font-size:.78rem;resize:vertical">${`Generate credit risk report for ${app.reference||'this application'} (${prod.name||'Green Home Loan'}).
+Product thresholds: DBR ≤${maxDbr}%, LTV ≤${maxLtv}%, base rate ${prod.base_rate||'—'}%.
+Actual values: DBR ${fmtPct(dbr)}, LTV ${fmtPct(ltv)}, MALA'A ${malaa||'—'}, GSAS ${app.gsas_score||'—'}.
+Stress test at +350bps: ${stressPast?'PASSED':'MARGINAL'} (DBR ${fmtPct(stressDbr)}).
+Risk score: ${riskScore}/8 — ${riskTier.label}. Include: credit rules evaluation, collateral, stress test, concentration risk.`}</textarea>
+            <button class="btn btn-amber btn-sm" style="margin-top:.5rem" onclick="generateReport('${app.reference||app.id}')">
+              <i class="fas fa-bolt"></i> Generate Report
+            </button>
           </div>
         </div>
 
@@ -3198,9 +3355,6 @@ function renderRiskPanel(comp, appData) {
         <div style="display:flex;flex-direction:column;gap:.625rem">
           <button class="btn btn-success" onclick="approveRisk('${app.id}')">
             <i class="fas fa-shield-check"></i> Clear Risk — Approve to Next Stage
-          </button>
-          <button class="btn btn-ghost" onclick="generateReport('${app.reference}')">
-            <i class="fas fa-file-chart-line"></i> Generate Risk Report
           </button>
           <button class="btn btn-danger btn-sm" onclick="rejectApplication('${app.id}')">
             <i class="fas fa-times"></i> Decline — Credit Risk Unacceptable
@@ -3300,14 +3454,32 @@ async function generateReport(appRef) {
   const prompt = document.getElementById('reportPromptPanel')?.value
     || document.getElementById('reportPrompt')?.value
     || `Generate compliance report for ${appRef||'Green Home Loan applications'}`;
-  // Output target: panel inline div (when called from compliance detail) or reports page div
+  // Output target: panel inline div (when called from compliance/risk detail) or reports page div
   const output = document.getElementById('reportOutput');
   if (!output) { toast('Report output area not found', 'error'); return; }
   output.innerHTML = '<div style="padding:.75rem;text-align:center;color:var(--grey-500)"><i class="fas fa-spinner fa-spin"></i> Generating report…</div>';
+
+  // Build rich context from the cached /compliance/full/ payload
+  const fullCtx = window._lastComplianceData || null;
+  const contextPayload = fullCtx ? {
+    app_ref:      appRef,
+    product_name: fullCtx.product?.name,
+    product_id:   fullCtx.product?.id,
+    application:  { id: fullCtx.application?.id, reference: fullCtx.application?.reference,
+                    customer_name: fullCtx.application?.customer_name, loan_amount: fullCtx.application?.loan_amount,
+                    loan_term: fullCtx.application?.loan_term, applied_rate: fullCtx.application?.applied_rate,
+                    gsas_score: fullCtx.application?.gsas_score, epc_rating: fullCtx.application?.epc_rating,
+                    salary_omr: fullCtx.application?.salary_omr, status: fullCtx.application?.status },
+    product:      fullCtx.product,
+    credit_metrics: fullCtx.credit_metrics,
+    esg_status:   fullCtx.esg_status,
+    rules_summary: (fullCtx.rules?.all_evaluated||[]).map(r=>({ name:r.name, category:r.category, status:r.evaluation?.status, value:r.evaluation?.value }))
+  } : { app_ref: appRef };
+
   try {
     const r = await fetch('/api/v1/ai/reports/generate', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ prompt, app_ref: appRef })
+      body: JSON.stringify({ prompt, app_ref: appRef, context: contextPayload })
     });
     if (!r.ok) throw new Error('API error');
     const d = await r.json();
