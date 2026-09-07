@@ -885,7 +885,9 @@ var Ie = [
 	"./migrations/0006_align_existing_products.sql",
 	"./migrations/0007_demo_flags_contractors.sql",
 	"./migrations/0008_eco_product_seed.sql",
-	"./migrations/0009_eco_units_seed.sql"
+	"./migrations/0009_eco_units_seed.sql",
+	"./migrations/0010_gsas_discounts_and_rate_fix.sql",
+	"./migrations/0011_portal_auth.sql"
 ];
 function Le() {
 	let e = r.resolve("./migrations");
@@ -6481,7 +6483,7 @@ $.use("/api/*", Ne()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Be.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "7fe9dc5";
+var xt = "5ae3f4a";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
