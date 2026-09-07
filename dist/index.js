@@ -4087,7 +4087,7 @@ async function it(e) {
 	if (!t) return console.warn("[blob-storage] No connection string — file not stored in Azure"), null;
 	let n = e.filename.replace(/[^a-zA-Z0-9._\-]/g, "_"), r = `${e.entityType}s/${e.entityId}/${e.docType}/${Date.now()}-${n}`;
 	try {
-		await t.createIfNotExists({ access: "blob" });
+		await t.createIfNotExists();
 		let i = t.getBlockBlobClient(r);
 		return await i.uploadData(e.buffer, { blobHTTPHeaders: {
 			blobContentType: e.mimeType || "application/octet-stream",
@@ -6326,7 +6326,7 @@ $.use("/api/*", Pe()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await z.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var mt = "a6402d0";
+var mt = "cda5b35";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

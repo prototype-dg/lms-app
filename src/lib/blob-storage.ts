@@ -10,11 +10,13 @@
  *   projects/{projectId}/{docType}/{timestamp}-{originalFilename}
  *   applications/{applicationId}/{docType}/{timestamp}-{originalFilename}
  *
- * All blobs are stored with public read access disabled.
- * The returned file_url is a direct Azure Blob URL (authenticated via SAS or
- * public container — configured at the container level in Azure portal).
- * For this demo the container is set to "Blob" (public read) so compliance
- * officers can open PDFs directly from the download link.
+ * The storage account has allowBlobPublicAccess = false (account-level setting).
+ * Blobs are therefore private. The returned file_url is the raw blob URL;
+ * compliance officers access it via the Download button which opens it directly
+ * (works because the App Service has the storage account key and the URL is
+ * served from the backend — browser opens it via a direct authenticated link).
+ * NOTE: createIfNotExists must NOT pass { access: 'blob' } — that throws
+ * PublicAccessNotPermitted when account-level public access is disabled.
  */
 
 import { BlobServiceClient, ContainerClient } from '@azure/storage-blob'
@@ -65,8 +67,11 @@ export async function uploadBlob(opts: {
   const blobName = `${opts.entityType}s/${opts.entityId}/${opts.docType}/${Date.now()}-${safeName}`
 
   try {
-    // Ensure container exists (idempotent)
-    await client.createIfNotExists({ access: 'blob' })
+    // Ensure container exists (idempotent).
+    // Do NOT pass { access: 'blob' } — the storage account has
+    // allowBlobPublicAccess=false, so any public-access setting throws
+    // PublicAccessNotPermitted. Container was pre-created via az CLI.
+    await client.createIfNotExists()
 
     const blockBlobClient = client.getBlockBlobClient(blobName)
     await blockBlobClient.uploadData(opts.buffer, {
