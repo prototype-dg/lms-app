@@ -163,4 +163,72 @@ function getDemoAnalysis(docType: string, filename?: string) {
   return map[docType] || map.civil_id
 }
 
+// ── Blob download proxy — streams private Azure blobs through the server ───
+// Avoids PublicAccessNotPermitted by fetching the blob with the storage key
+// server-side and forwarding the bytes to the browser.
+// Usage: GET /api/v1/documents/serve?url=<encoded blob url>&filename=<name>
+app.get('/serve', async (c) => {
+  const blobUrl  = c.req.query('url')
+  const filename = c.req.query('filename') || 'document'
+
+  if (!blobUrl) return c.json({ error: 'url query param required' }, 400)
+
+  // Validate it looks like an Azure Blob URL (basic safety check)
+  if (!blobUrl.includes('.blob.core.windows.net')) {
+    return c.json({ error: 'Invalid blob URL' }, 400)
+  }
+
+  const connStr = process.env.AZURE_STORAGE_CONNECTION_STRING || ''
+  if (!connStr) {
+    // No storage configured — redirect directly (will fail with public-access error
+    // but is better than a 500; happens only in misconfigured envs)
+    return c.redirect(blobUrl)
+  }
+
+  try {
+    // Build a SAS token via the Azure Blob SDK so we can fetch it server-side
+    // We import dynamically to avoid the Vite bundle (externalized in vite.config)
+    const { BlobServiceClient, generateBlobSASQueryParameters, BlobSASPermissions, StorageSharedKeyCredential } = await import('@azure/storage-blob')
+
+    // Parse account name + key from connection string
+    const acctMatch = connStr.match(/AccountName=([^;]+)/)
+    const keyMatch  = connStr.match(/AccountKey=([^;]+)/)
+    if (!acctMatch || !keyMatch) return c.json({ error: 'Storage misconfigured' }, 500)
+
+    const accountName = acctMatch[1]
+    const accountKey  = keyMatch[1]
+    const container   = process.env.AZURE_STORAGE_CONTAINER || 'lms-documents'
+
+    // Extract blob name from URL
+    const urlObj   = new URL(blobUrl)
+    const blobName = urlObj.pathname.replace(`/${container}/`, '')
+
+    const cred = new StorageSharedKeyCredential(accountName, accountKey)
+    const sas  = generateBlobSASQueryParameters({
+      containerName: container,
+      blobName,
+      permissions: BlobSASPermissions.parse('r'),
+      expiresOn: new Date(Date.now() + 5 * 60 * 1000), // 5 min
+    }, cred).toString()
+
+    const sasUrl = `${blobUrl}?${sas}`
+    const resp   = await fetch(sasUrl)
+    if (!resp.ok) return c.json({ error: `Blob fetch failed: ${resp.status}` }, 502)
+
+    const contentType = resp.headers.get('Content-Type') || 'application/octet-stream'
+    const body        = await resp.arrayBuffer()
+
+    return new Response(body, {
+      headers: {
+        'Content-Type':        contentType,
+        'Content-Disposition': `inline; filename="${encodeURIComponent(filename)}"`,
+        'Cache-Control':       'private, max-age=300',
+      }
+    })
+  } catch (e: any) {
+    console.error('[documents/serve] Error:', e)
+    return c.json({ error: 'Failed to serve document' }, 500)
+  }
+})
+
 export { app as documentsApi }

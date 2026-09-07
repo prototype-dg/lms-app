@@ -3344,7 +3344,10 @@ async function selectProject(id) {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = await authGuard('developer');
+  if (!user) return;
+
   loadProjects();
   showPage('dashboard');
   // Close unit detail panel on Escape
@@ -3388,5 +3391,6 @@ document.addEventListener('DOMContentLoaded', () => {
 .ud-row span { color:var(--gray-500); }
 .inv-row:hover { background:rgba(0,127,134,.05); }
 </style>
+<script src="/portals/js/auth-guard.js"></script>
 </body>
 </html>

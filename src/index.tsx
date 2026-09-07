@@ -15,6 +15,7 @@ import { documentsApi } from './api/documents'
 import { escrowApi } from './api/escrow'
 import { auditApi } from './api/audit'
 import { usersApi } from './api/users'
+import { authApi } from './api/auth'
 import { seedApi } from './api/seed'
 import { portalApi } from './api/portal'
 import { marketsApi } from './api/markets'
@@ -55,6 +56,7 @@ app.route('/api/v1/documents', documentsApi)
 app.route('/api/v1/escrow', escrowApi)
 app.route('/api/v1/audit', auditApi)
 app.route('/api/v1/users', usersApi)
+app.route('/api/v1/auth', authApi)
 app.route('/api/v1/seed', seedApi)
 app.route('/api/v1/portal', portalApi)
 app.route('/api/v1/markets', marketsApi)

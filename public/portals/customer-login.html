@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Customer Portal — Sohar International</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0a1628;color:#fff}
+.split{display:flex;width:100%;min-height:100vh}
+/* LEFT — brand panel */
+.brand{flex:1;background:linear-gradient(145deg,#0a1628 0%,#0f2240 50%,#0a3d47 100%);
+  display:flex;flex-direction:column;justify-content:center;padding:60px;position:relative;overflow:hidden}
+.brand::before{content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23007f86' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");}
+.brand-inner{position:relative;z-index:1}
+.bank-logo{display:flex;align-items:center;gap:14px;margin-bottom:60px}
+.bank-logo-mark{width:48px;height:48px;background:linear-gradient(135deg,#007f86,#00a8b0);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;letter-spacing:-1px}
+.bank-logo-name{font-size:18px;font-weight:700;letter-spacing:.5px;line-height:1.2}
+.bank-logo-name span{display:block;font-size:11px;font-weight:400;color:rgba(255,255,255,.5);letter-spacing:1.5px;text-transform:uppercase}
+.brand-headline{font-size:42px;font-weight:700;line-height:1.15;margin-bottom:20px}
+.brand-headline .accent{color:#c9a84c}
+.brand-sub{font-size:16px;color:rgba(255,255,255,.6);line-height:1.7;max-width:420px;margin-bottom:48px}
+.features{display:flex;flex-direction:column;gap:16px}
+.feature{display:flex;align-items:center;gap:14px;font-size:14px;color:rgba(255,255,255,.75)}
+.feature-icon{width:36px;height:36px;border-radius:10px;background:rgba(0,127,134,.2);
+  border:1px solid rgba(0,127,134,.3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.brand-footer{margin-top:auto;padding-top:48px;font-size:12px;color:rgba(255,255,255,.3)}
+/* RIGHT — form panel */
+.form-panel{width:480px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;
+  justify-content:center;padding:60px 52px;position:relative}
+.form-panel-header{margin-bottom:36px}
+.portal-badge{display:inline-flex;align-items:center;gap:6px;background:#e6f9fa;color:#007f86;
+  font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  padding:5px 12px;border-radius:20px;margin-bottom:20px}
+.portal-badge svg{width:12px;height:12px}
+.form-title{font-size:28px;font-weight:700;color:#0a1628;line-height:1.2;margin-bottom:8px}
+.form-subtitle{font-size:14px;color:#6b7280;line-height:1.6}
+.form-group{margin-bottom:20px}
+label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:7px}
+input{width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:13px 16px;
+  font-size:15px;font-family:'Inter',sans-serif;color:#111827;outline:none;transition:border-color .2s,box-shadow .2s}
+input:focus{border-color:#007f86;box-shadow:0 0 0 3px rgba(0,127,134,.1)}
+input::placeholder{color:#9ca3af}
+.btn-login{width:100%;background:linear-gradient(135deg,#007f86,#005f65);color:#fff;border:none;
+  border-radius:10px;padding:15px;font-size:15px;font-weight:600;cursor:pointer;
+  font-family:'Inter',sans-serif;transition:opacity .2s,transform .1s;position:relative}
+.btn-login:hover{opacity:.92}
+.btn-login:active{transform:scale(.99)}
+.btn-login:disabled{opacity:.6;cursor:not-allowed}
+.error-msg{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px;
+  font-size:13px;color:#dc2626;margin-bottom:20px;display:none;align-items:center;gap:8px}
+.divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:#d1d5db;font-size:12px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#e5e7eb}
+.demo-hint{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;font-size:12px;color:#166534}
+.demo-hint strong{display:block;margin-bottom:3px}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);
+  border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:900px){.brand{display:none}.form-panel{width:100%;padding:48px 32px}}
+</style>
+</head>
+<body>
+<div class="split">
+  <!-- Brand Panel -->
+  <div class="brand">
+    <div class="brand-inner">
+      <div class="bank-logo">
+        <div class="bank-logo-mark">SI</div>
+        <div class="bank-logo-name">Sohar International<span>Bank Sohar S.A.O.G</span></div>
+      </div>
+      <h1 class="brand-headline">Your home.<br>Your <span class="accent">green future.</span></h1>
+      <p class="brand-sub">Apply for Sohar International's Green Home Loan — sustainable financing built for Oman's next generation of homeowners.</p>
+      <div class="features">
+        <div class="feature"><div class="feature-icon">🏡</div>Up to OMR 500,000 home financing</div>
+        <div class="feature"><div class="feature-icon">🌿</div>Green discount up to 0.75% off your rate</div>
+        <div class="feature"><div class="feature-icon">⚡</div>AI-powered instant GSAS eligibility check</div>
+        <div class="feature"><div class="feature-icon">🛡️</div>CBO-compliant, transparent terms</div>
+      </div>
+    </div>
+    <div class="brand-footer">© 2025 Sohar International. Licensed by the Central Bank of Oman.</div>
+  </div>
+
+  <!-- Form Panel -->
+  <div class="form-panel">
+    <div class="form-panel-header">
+      <div class="portal-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Customer Portal
+      </div>
+      <div class="form-title">Sign in to your account</div>
+      <div class="form-subtitle">Access your applications, track status, and manage your home loan journey.</div>
+    </div>
+
+    <div class="error-msg" id="errMsg">⚠️ <span id="errText">Invalid credentials.</span></div>
+
+    <form id="loginForm" onsubmit="doLogin(event)">
+      <div class="form-group">
+        <label for="loginInput">Username</label>
+        <input type="text" id="loginInput" placeholder="Enter your username" autocomplete="username" required>
+      </div>
+      <div class="form-group">
+        <label for="passInput">Password</label>
+        <input type="password" id="passInput" placeholder="Enter your password" autocomplete="current-password" required>
+      </div>
+      <button class="btn-login" type="submit" id="loginBtn">Sign In</button>
+    </form>
+
+    <div class="divider">demo credentials</div>
+    <div class="demo-hint">
+      <strong>🔑 Demo Account</strong>
+      Username: <code>customer01</code> &nbsp;·&nbsp; Password: <code>password</code>
+    </div>
+  </div>
+</div>
+
+<script>
+async function doLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('errMsg');
+  err.style.display = 'none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Signing in…';
+
+  try {
+    const r = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        login:    document.getElementById('loginInput').value.trim(),
+        password: document.getElementById('passInput').value
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Login failed');
+
+    // Role check — only customer
+    if (d.user.portal_access !== 'customer' && d.user.portal_access !== 'all') {
+      throw new Error('This account does not have customer portal access.');
+    }
+    window.location.href = '/portals/customer.html';
+  } catch(e) {
+    document.getElementById('errText').textContent = e.message;
+    err.style.display = 'flex';
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+}
+</script>
+</body>
+</html>
