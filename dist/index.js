@@ -3405,7 +3405,11 @@ K.get("/full/:appId", async (e) => {
 			rule_ref: a.find((e) => e.metric === "gsas_score")?.regulatory_reference || "OS GSO 3000:2025",
 			passes_threshold: (r.gsas_score || 0) >= ie,
 			passes_premium: (r.gsas_score || 0) >= ae,
-			color: g?.validation_status === "auto_verified" ? "green" : g?.validation_status === "manual_review" ? "amber" : "red"
+			color: g?.validation_status === "auto_verified" ? "green" : g?.validation_status === "manual_review" ? "amber" : "red",
+			filename: g?.filename || null,
+			file_url: g?.file_url || null,
+			doc_id: g?.id || null,
+			doc_source: g ? f.find((e) => e.doc_type === "gsas_cert") ? "application" : p.find((e) => e.doc_type === "gsas_cert") ? "unit" : "project" : null
 		},
 		epc: {
 			status: _?.validation_status || "pending",
@@ -3433,7 +3437,11 @@ K.get("/full/:appId", async (e) => {
 			units: x.units || r.project_total_units || "N/A",
 			required: (r.project_total_units || 0) > 20,
 			rule_ref: a.find((e) => e.metric === "eia_approval" || e.metric === "eia_required")?.regulatory_reference || "Environment Authority Decision 107/2023",
-			color: v?.validation_status === "auto_verified" ? "green" : v?.validation_status === "manual_review" ? "amber" : "red"
+			color: v?.validation_status === "auto_verified" ? "green" : v?.validation_status === "manual_review" ? "amber" : "red",
+			filename: v?.filename || null,
+			file_url: v?.file_url || null,
+			doc_id: v?.id || null,
+			doc_source: v ? f.find((e) => e.doc_type === "eia_approval") ? "application" : p.find((e) => e.doc_type === "eia_approval") ? "unit" : "project" : null
 		},
 		ai_recommendation: We(g, _, v),
 		overall_esg_status: Ge(g, _, v)
@@ -5173,6 +5181,14 @@ J.get("/products", async (e) => {
 		let n = Math.round(a * t.pct / 100);
 		await e.env.DB.prepare("\n        INSERT INTO construction_stages (id,application_id,stage_number,stage_name,description,tranche_amount,tranche_percentage,required_material,status,created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?)\n      ").bind(B("st"), w, t.num, t.name, t.desc, n, t.pct, t.mat, t.status, T).run();
 	}
+	let O = [];
+	if (i) {
+		let { results: t } = await e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'project' AND entity_id = ?").bind(i).all();
+		for (let n of t || []) {
+			let t = B("doc");
+			await e.env.DB.prepare("\n        INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, file_url,\n          extracted_data, ai_confidence, validation_status, validation_notes, created_at)\n        VALUES (?, 'application', ?, ?, ?, ?, ?, ?, ?, ?, ?)\n      ").bind(t, w, n.doc_type, n.filename, n.file_url || null, n.extracted_data || "{}", n.ai_confidence, n.validation_status, n.validation_notes, T).run(), O.push(t);
+		}
+	}
 	return await H(e.env.DB, {
 		userId: D || "portal",
 		userName: n,
@@ -5184,7 +5200,8 @@ J.get("/products", async (e) => {
 			reference: E,
 			product_id: t,
 			loan_amount: a,
-			applied_rate: g
+			applied_rate: g,
+			docs_copied: O.length
 		}
 	}), e.json({
 		success: !0,
@@ -5193,7 +5210,8 @@ J.get("/products", async (e) => {
 		applied_rate: g,
 		monthly_payment: Math.round(y * 100) / 100,
 		lifetime_saving: S,
-		status: "submitted"
+		status: "submitted",
+		docs_transferred: O.length
 	});
 }), J.get("/applications/:ref/status", async (e) => {
 	let t = e.req.param("ref"), n = await e.env.DB.prepare("SELECT a.*, p.name as product_name, p.portal_hero_title\n     FROM applications a LEFT JOIN products p ON a.product_id = p.id\n     WHERE a.reference = ?").bind(t).first();
@@ -5458,7 +5476,7 @@ J.get("/products", async (e) => {
 	});
 }), J.post("/developer/projects", async (e) => {
 	let t = await e.req.json(), n = B("proj"), r = t.code || `PROJ-${Date.now().toString(36).toUpperCase()}`, i = V();
-	return await e.env.DB.prepare("\n    INSERT INTO projects (id, developer_id, name, code, location, governorate, type,\n    total_units, available_units, geo_json, status, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.developer_id || "d001", t.name, r, t.location, t.governorate || "Muscat", t.type || "villa", t.total_units || 0, t.total_units || 0, JSON.stringify(t.geo_json || {}), "draft", i, i).run(), await H(e.env.DB, {
+	return await e.env.DB.prepare("\n    INSERT INTO projects (id, developer_id, name, code, location, governorate, type,\n    total_units, available_units, geo_json, gsas_score, gsas_rating, epc_rating,\n    eia_reference, green_eligible, premium_tier, status, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.developer_id || "d001", t.name, r, t.location, t.governorate || "Muscat", t.type || "villa", t.total_units || 0, t.total_units || 0, JSON.stringify(t.geo_json || {}), t.gsas_score || null, t.gsas_rating || null, t.epc_rating || null, t.eia_reference || null, +!!t.green_eligible, +!!t.premium_tier, "draft", i, i).run(), await H(e.env.DB, {
 		userId: t.user_id || "u010",
 		userName: "Ahmed Al-Hinai",
 		userRole: "developer",
@@ -5540,6 +5558,9 @@ J.get("/products", async (e) => {
 		success: !0,
 		...a
 	});
+}), J.get("/developer/projects/:id/documents", async (e) => {
+	let t = e.req.param("id"), { results: n } = await e.env.DB.prepare("SELECT id, doc_type, filename, file_url, ai_confidence, validation_status, validation_notes,\n            extracted_data, created_at\n     FROM documents WHERE entity_type = 'project' AND entity_id = ?\n     ORDER BY created_at ASC").bind(t).all();
+	return e.json({ documents: n || [] });
 }), J.get("/developer/projects/:id/units", async (e) => {
 	let t = e.req.param("id"), { results: n } = await e.env.DB.prepare("SELECT * FROM units WHERE project_id = ? ORDER BY unit_number").bind(t).all();
 	return e.json({ units: n });
@@ -6232,7 +6253,7 @@ $.use("/api/*", Ne()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await z.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var ot = "2cbe9cf";
+var ot = "2f4c516";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

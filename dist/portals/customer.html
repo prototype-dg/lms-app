@@ -2032,6 +2032,7 @@ function renderWiz(){
   // Post-render hooks
   if(wizStep===2 && wizProjectId) setTimeout(()=>loadUnitPicker(wizProjectId), 80);
   if(wizStep===2) setTimeout(updateGsasCheck, 0);   // restore live status after re-render
+  if(wizStep===6 && wizSource==='partner' && wizProjectId) setTimeout(()=>loadStep6Docs(wizProjectId), 80);
   if(wizStep===3){
     // If products haven't loaded yet (async fetch still in flight), wait for them then re-render
     if(!allProducts.length){
@@ -3603,25 +3604,144 @@ function applyOCRResults(data){
 /* ══════════════════════════════════════════════════════
    STEP 6: DOCUMENTS
 ══════════════════════════════════════════════════════ */
+// Cache for project documents fetched in step 6; keyed by projectId
+let _projDocsCache = {};
+
+/* Synchronous skeleton for step 6 — returns immediately; loadStep6Docs() fills in project docs async */
 function stepDocuments(){
   const isPartner = wizSource==='partner';
-  const docs=[
-    {id:'dc-civil',  ic:'🪪', name:'Civil ID (Both Sides)',      st: wizState.idVerified?'ok':'pending'},
-    {id:'dc-salary', ic:'💼', name:'Salary Certificate',         st: isPartner?'ok':'pending'},
-    {id:'dc-bank',   ic:'🏦', name:'Bank Statements (6 months)', st:'pending'},
-    {id:'dc-val',    ic:'🏠', name:'Property Valuation Report',  st: isPartner?'ok':'pending'},
-    {id:'dc-gsas',   ic:'🏆', name:'GSAS Certificate',           st: isPartner?'ok':'pending'},
-    {id:'dc-epc',    ic:'⚡', name:'EPC Report',                  st: isPartner?'flagged':'pending'},
-    {id:'dc-noc',    ic:'📋', name:'No-Objection Certificate',   st:'pending'},
+
+  // Personal docs — always required regardless of source
+  const personalDocs=[
+    {id:'dc-civil',  ic:'🪪', name:'Civil ID (Both Sides)',      st: wizState.idVerified?'ok':'pending', conf:wizState.idVerified?98:null, required:true},
+    {id:'dc-salary', ic:'💼', name:'Salary Certificate',         st:'pending', conf:null, required:true},
+    {id:'dc-bank',   ic:'🏦', name:'Bank Statements (6 months)', st:'pending', conf:null, required:true},
+    {id:'dc-noc',    ic:'📋', name:'No-Objection Certificate',   st:'pending', conf:null, required:false},
   ];
+  const personalCardsHtml = personalDocs.map(d=>docCard(d)).join('');
+
+  // Property doc section — for partner projects show a loading skeleton initially;
+  // loadStep6Docs() will replace #doc-grid-prop content once fetch resolves
+  let propertySection = '';
+  if(isPartner){
+    propertySection = `
+    <div class="info-strip" style="background:rgba(0,127,134,.06);border:1px solid rgba(0,127,134,.2);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px">
+      🤝 <strong>Partner project ESG documents below are fetched directly from the developer's submission</strong> — no re-upload needed.
+      They have already been AI-validated and will be automatically associated with your application.
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Property ESG Documents (from project)</div>
+    <div class="doc-grid" id="doc-grid-prop" style="margin-bottom:14px">
+      <div style="grid-column:1/-1;padding:18px;text-align:center;color:var(--g400);font-size:13px">⏳ Loading project documents…</div>
+    </div>`;
+  } else {
+    // BYO property — show upload cards
+    const byoCards = [
+      {id:'dc-val',  ic:'🏠', name:'Property Valuation Report', required:true},
+      {id:'dc-gsas', ic:'🏆', name:'GSAS Certificate',          required:false},
+      {id:'dc-epc',  ic:'⚡', name:'EPC Report',                 required:false},
+    ].map(d=>docCard({...d, st:'pending', conf:null})).join('');
+    propertySection = `
+    <div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Property Documents</div>
+    <div class="doc-grid" id="doc-grid-prop" style="margin-bottom:14px">${byoCards}</div>`;
+  }
+
   return `
     <div class="step-title">Document Upload</div>
-    <div class="step-sub">Upload remaining documents. ${isPartner?'Partner project documents are pre-populated.':'Upload all required documents below.'}</div>
-    ${isPartner?`<div class="info-strip" style="background:rgba(0,127,134,.06);border-color:rgba(0,127,134,.2)">🤝 <strong>Partner project</strong> — GSAS, EPC &amp; valuation pre-fetched. Upload remaining docs.</div>`:''}
-    <div class="doc-grid" id="doc-grid">
-      ${docs.map(d=>docCard(d)).join('')}
-    </div>
-    ${isPartner?`<div class="warn-strip" style="margin-top:12px">⚠️ <strong>EPC Report</strong> flagged — minor thermal bridging note. Compliance officer will review. Does not block application.</div>`:''}`;
+    <div class="step-sub">Upload personal documents. ${isPartner?'Property ESG documents are pre-loaded from the partner project.':'Upload all required documents below.'}</div>
+    ${propertySection}
+    <div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Personal Documents</div>
+    <div class="doc-grid" id="doc-grid">${personalCardsHtml}</div>`;
+}
+
+/* Async fill — called via setTimeout after step 6 renders; fetches real project docs and replaces skeleton */
+async function loadStep6Docs(projId){
+  const grid = document.getElementById('doc-grid-prop');
+  if(!grid) return; // user navigated away
+
+  // Use cache if already fetched
+  if(!_projDocsCache[projId]){
+    try{
+      const r = await fetch(`/api/v1/portal/developer/projects/${projId}/documents`);
+      const d = r.ok ? await r.json() : {};
+      _projDocsCache[projId] = d.documents || [];
+    }catch(e){ _projDocsCache[projId] = []; }
+  }
+  // Guard: user may have moved to a different step while fetch was in flight
+  const gridNow = document.getElementById('doc-grid-prop');
+  if(!gridNow) return;
+
+  const projDocs = _projDocsCache[projId];
+
+  // Map doc_type → display config
+  const docMeta = {
+    gsas_cert:    {ic:'🏆', name:'GSAS Certificate'},
+    epc_report:   {ic:'⚡', name:'EPC Report'},
+    eia_approval: {ic:'🌿', name:'EIA Environmental Approval'},
+  };
+
+  let hasEpcFlag = false;
+  let cardsHtml = '';
+
+  if(projDocs.length > 0){
+    cardsHtml = projDocs.map(pd=>{
+      const m = docMeta[pd.doc_type] || {ic:'📄', name:pd.doc_type};
+      const isFlag = pd.validation_status === 'manual_review' || pd.validation_status === 'flagged';
+      if(isFlag && pd.doc_type==='epc_report') hasEpcFlag = true;
+      const st    = pd.validation_status === 'auto_verified' || pd.validation_status === 'approved' ? 'ok'
+                  : isFlag ? 'flagged' : 'pending';
+      const conf  = pd.ai_confidence;
+      const notes = pd.validation_notes || '';
+      let detail = '';
+      try{
+        const ex = JSON.parse(pd.extracted_data||'{}');
+        if(pd.doc_type==='gsas_cert')    detail = ex.rating ? `Rating: ${ex.rating} · Score: ${ex.overall_score||'—'}` : '';
+        if(pd.doc_type==='epc_report')   detail = ex.rating ? `Rating: ${ex.rating} · ${ex.energy_consumption||''}` : '';
+        if(pd.doc_type==='eia_approval') detail = ex.reference ? `Ref: ${ex.reference}` : '';
+      }catch(_){}
+      return realDocCard({ic:m.ic, name:m.name, st, conf, detail, notes, filename:pd.filename, docId:pd.id, fromProject:true});
+    }).join('');
+  } else {
+    // Project exists but developer hasn't uploaded docs yet
+    cardsHtml = ['GSAS Certificate','EPC Report','EIA Environmental Approval'].map(name=>
+      `<div class="doc-card" style="opacity:.6">
+        <div class="doc-ic">📄</div>
+        <div class="doc-name">${name}</div>
+        <div class="doc-st" style="color:var(--g400)">⏳ Not yet uploaded by developer</div>
+      </div>`
+    ).join('');
+  }
+
+  gridNow.innerHTML = cardsHtml;
+
+  // Append EPC flag warning if needed
+  if(hasEpcFlag){
+    const wiz = document.getElementById('wiz-body');
+    if(wiz && !wiz.querySelector('.epc-flag-warn')){
+      const warn = document.createElement('div');
+      warn.className = 'warn-strip epc-flag-warn';
+      warn.style.cssText = 'margin-top:12px;font-size:12px';
+      warn.innerHTML = '⚠️ <strong>EPC Report</strong> flagged for manual review — compliance officer will verify. Does not block application.';
+      wiz.appendChild(warn);
+    }
+  }
+}
+
+function realDocCard({ic, name, st, conf, detail, notes, filename, docId, fromProject}){
+  const stMap={
+    ok:      {cls:'ok',  lbl:'✅ AI Verified',        bg:'rgba(39,174,96,.08)',  border:'rgba(39,174,96,.25)'},
+    flagged: {cls:'ai',  lbl:'⚠️ Needs Manual Review', bg:'rgba(243,156,18,.08)', border:'rgba(243,156,18,.3)'},
+    pending: {cls:'',    lbl:'📎 Click to Upload',     bg:'',                     border:''},
+  };
+  const s=stMap[st]||stMap.pending;
+  return `<div class="doc-card ${s.cls}" style="${s.bg?`background:${s.bg};border:1px solid ${s.border};`:''}cursor:default" title="${filename||name}">
+    <div class="doc-ic">${ic}</div>
+    <div class="doc-name">${name}</div>
+    <div class="doc-st ${s.cls}">${s.lbl}</div>
+    ${conf!=null?`<div class="doc-conf">${conf}% confidence</div>`:''}
+    ${detail?`<div style="font-size:10px;color:var(--g400);margin-top:2px">${detail}</div>`:''}
+    ${fromProject?`<div style="font-size:10px;color:var(--teal);margin-top:3px">📁 ${filename||'Project document'}</div>`:''}
+    ${notes&&st==='flagged'?`<div style="font-size:10px;color:#c0782a;margin-top:3px;line-height:1.3">${notes.substring(0,80)}…</div>`:''}
+  </div>`;
 }
 
 function docCard(d){

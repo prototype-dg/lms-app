@@ -2745,12 +2745,57 @@ function renderCompliancePanel(fullD) {
   const stdRate = 5.5;
   const discount = app.applied_rate ? (stdRate - app.applied_rate).toFixed(2) : '0.75';
 
-  // EPC document — traversed chain: application → unit → project
-  const epcDoc      = fullD.documents?.epc || null;
+  // ESG documents — traversed chain: application → unit → project
+  const epcDoc      = fullD.documents?.epc  || null;
+  const gsasDoc2    = fullD.documents?.gsas || null;
+  const eiaDoc2     = fullD.documents?.eia  || null;
   const epcFileUrl  = esg.epc?.file_url  || null;
   const epcFilename = esg.epc?.filename  || (epcDoc?.filename) || 'EPC_Report.pdf';
   const epcSource   = esg.epc?.doc_source; // 'application' | 'unit' | 'project' | null
   const epcSourceLabel = { application:'Uploaded by applicant', unit:'Uploaded at unit level', project:'Uploaded at project level' };
+
+  // Helper: build a compact document card for compliance review
+  function buildDocReviewCard(opts) {
+    const { icon, label, docRow, esgObj, color, sourceLabel } = opts;
+    const filename   = docRow?.filename  || `${label.replace(/\s/g,'_')}.pdf`;
+    const fileUrl    = docRow?.file_url  || null;
+    const confidence = esgObj?.confidence || docRow?.ai_confidence || 0;
+    const status     = esgObj?.status || docRow?.validation_status || 'pending';
+    const statusMap  = { auto_verified:'Auto-Verified ✅', manual_review:'Manual Review ⚠️', approved:'Approved ✅', rejected:'Rejected ❌', pending:'Pending ⏳', flagged:'Flagged ⚠️' };
+    const statusStr  = statusMap[status] || status;
+    const confColor  = confidence >= 90 ? 'var(--success)' : confidence >= 70 ? 'var(--amber)' : 'var(--danger)';
+    const srcBadge   = sourceLabel
+      ? `<span style="font-size:.65rem;background:rgba(0,127,134,.1);color:var(--teal);padding:.1rem .4rem;border-radius:10px;white-space:nowrap">📁 ${sourceLabel}</span>`
+      : `<span style="font-size:.65rem;background:rgba(239,68,68,.08);color:var(--danger);padding:.1rem .4rem;border-radius:10px">Not found</span>`;
+
+    return `<div style="border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:.75rem;background:${docRow?'white':'var(--grey-50)'}">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+        <span style="font-size:1.3rem">${icon}</span>
+        <div style="flex:1">
+          <div style="font-size:.8rem;font-weight:700;color:var(--navy)">${label}</div>
+          <div style="display:flex;align-items:center;gap:.4rem;margin-top:.15rem;flex-wrap:wrap">
+            ${srcBadge}
+            <span style="font-size:.65rem;color:${confColor};font-weight:600">${confidence}% confidence</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
+        <i class="fas fa-file-pdf" style="color:var(--danger);font-size:.85rem"></i>
+        <span style="font-size:.72rem;color:var(--grey-600);word-break:break-all;flex:1">${filename}</span>
+      </div>
+      <div style="font-size:.72rem;color:var(--grey-500);margin-bottom:.5rem">${statusStr}</div>
+      <div class="confidence-bar" style="margin-bottom:.5rem"><div class="confidence-bar-fill ${confidence>=80?'confidence-high':'confidence-med'}" style="width:${confidence}%"></div></div>
+      ${fileUrl
+        ? `<a href="${fileUrl}" target="_blank" download="${filename}"
+             style="display:inline-flex;align-items:center;gap:.3rem;font-size:.72rem;background:var(--danger);color:white;padding:.3rem .65rem;border-radius:var(--radius-sm);text-decoration:none;font-weight:600">
+             <i class="fas fa-download"></i> Download
+           </a>`
+        : docRow
+          ? `<span style="font-size:.68rem;color:var(--grey-400)"><i class="fas fa-database"></i> Demo record — no file attached</span>`
+          : `<span style="font-size:.68rem;color:var(--danger)"><i class="fas fa-times-circle"></i> Document not uploaded</span>`
+      }
+    </div>`;
+  }
 
   // Product threshold thresholds for display
   const maxDbr = prod.green_dbr || prod.max_dbr || 55;
@@ -2911,53 +2956,66 @@ Include: ESG rule checklist, document status, credit metrics, AI recommendation.
           <div style="font-size:.8rem;color:rgba(255,255,255,.7)">${rec.detail||'Review documents manually to complete ESG assessment.'}</div>
         </div>
 
-        <!-- EPC Document — traversed chain: application → unit → project -->
+        <!-- ESG Documents for Manual Review — full chain: application → unit → project -->
         <div class="card" style="margin-bottom:1rem">
-          <div class="card-header" style="background:${esg.epc?.color==='green'?'var(--success-light)':'var(--warning-light)'}">
-            <h4 style="color:${esg.epc?.color==='green'?'var(--success)':'var(--warning)'}">
-              <i class="fas fa-${esg.epc?.color==='green'?'check-circle':'exclamation-triangle'}"></i>
-              EPC Report – ${statusLabel[esg.epc?.status]||'Manual Review Required'}
+          <div class="card-header" style="background:linear-gradient(135deg,rgba(0,127,134,.06),rgba(0,127,134,.02));border-bottom:1px solid rgba(0,127,134,.15)">
+            <h4 style="color:var(--teal);display:flex;align-items:center;gap:.5rem">
+              <i class="fas fa-file-shield"></i>
+              ESG Documents — Manual Review
+              <span style="font-size:.65rem;font-weight:400;color:var(--grey-500);margin-left:auto">Chain: application → unit → project</span>
             </h4>
           </div>
           <div class="card-body">
             ${epcSource ? `
-            <div style="font-size:.72rem;margin-bottom:.75rem;padding:.4rem .6rem;background:var(--grey-50);border-radius:var(--radius-sm);border-left:3px solid var(--teal)">
+            <div style="font-size:.72rem;margin-bottom:.75rem;padding:.4rem .6rem;background:rgba(0,127,134,.05);border-radius:var(--radius-sm);border-left:3px solid var(--teal)">
               <i class="fas fa-sitemap" style="color:var(--teal)"></i>
-              <strong>Document chain resolved:</strong> ${epcSourceLabel[epcSource]||epcSource}
-              <span style="color:var(--grey-400);margin-left:.5rem">(application → unit → project)</span>
+              <strong>Documents resolved from:</strong> ${epcSourceLabel[epcSource]||epcSource}
             </div>` : `
             <div style="font-size:.72rem;margin-bottom:.75rem;padding:.4rem .6rem;background:var(--warning-light);border-radius:var(--radius-sm);border-left:3px solid var(--amber)">
               <i class="fas fa-search" style="color:var(--amber)"></i>
-              <strong>Document not found</strong> — searched application, unit, and project levels
+              <strong>No ESG documents found</strong> — searched application, unit, and project levels
             </div>`}
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-size:.8rem">
-              <div style="background:var(--grey-100);border-radius:var(--radius-md);padding:.75rem;text-align:center">
-                <i class="fas fa-file-pdf" style="font-size:2rem;color:var(--danger);margin-bottom:.5rem;display:block"></i>
-                <div style="font-size:.75rem;color:var(--grey-700);margin-bottom:.5rem;word-break:break-all">${epcFilename}</div>
-                ${epcFileUrl
-                  ? `<a href="${epcFileUrl}" target="_blank" download="${epcFilename}" class="btn btn-sm" style="background:var(--danger);color:white;text-decoration:none;font-size:.72rem;padding:.3rem .7rem">
-                       <i class="fas fa-download"></i> Download EPC
-                     </a>`
-                  : epcDoc
-                    ? `<div style="font-size:.7rem;color:var(--grey-500);margin-top:.25rem"><i class="fas fa-database"></i> Demo record — no physical file<br><span style="font-size:.65rem;color:var(--grey-400)">File stored as analysed metadata only</span></div>`
-                    : `<div style="font-size:.7rem;color:var(--danger)"><i class="fas fa-times-circle"></i> Document not found</div>`
-                }
-              </div>
-              <div>
-                <div style="font-size:.72rem;color:var(--grey-500);margin-bottom:.5rem">Extracted Data</div>
-                ${[
-                  ['Rating',     esg.epc?.rating   || '—'],
-                  ['Min Required', esg.epc?.min_rating || 'C'],
-                  ['Expiry',     esg.epc?.expiry   || '—'],
-                  ['Assessor',   esg.epc?.assessor || '—'],
-                  ['Energy kWh', esg.epc?.energy_kwh !== 'N/A' ? esg.epc?.energy_kwh || '—' : '—'],
-                  ['Confidence', `${esg.epc?.confidence||0}%`]
-                ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.2rem 0;border-bottom:1px solid var(--grey-100);font-size:.75rem"><span style="color:var(--grey-500)">${k}</span><strong>${v}</strong></div>`).join('')}
-              </div>
+
+            <div style="display:grid;grid-template-columns:1fr;gap:.65rem">
+              ${buildDocReviewCard({
+                icon: '🏆', label: 'GSAS Certificate',
+                docRow: gsasDoc2, esgObj: esg.gsas,
+                color: esg.gsas?.color,
+                sourceLabel: gsasDoc2 ? (epcSource ? epcSourceLabel[epcSource] : 'Project level') : null
+              })}
+              ${buildDocReviewCard({
+                icon: '⚡', label: 'EPC Report',
+                docRow: epcDoc, esgObj: esg.epc,
+                color: esg.epc?.color,
+                sourceLabel: epcDoc ? (epcSource ? epcSourceLabel[epcSource] : 'Project level') : null
+              })}
+              ${buildDocReviewCard({
+                icon: '🌿', label: 'EIA Environmental Approval',
+                docRow: eiaDoc2, esgObj: esg.eia,
+                color: esg.eia?.color,
+                sourceLabel: eiaDoc2 ? (epcSource ? epcSourceLabel[epcSource] : 'Project level') : null
+              })}
             </div>
+
+            <!-- Extracted EPC details (most important for manual review) -->
+            ${epcDoc ? `
+            <div style="margin-top:.75rem;padding-top:.65rem;border-top:1px solid var(--grey-100)">
+              <div style="font-size:.72rem;color:var(--grey-500);font-weight:600;margin-bottom:.4rem">EPC Extracted Data</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.15rem .75rem;font-size:.72rem">
+                ${[
+                  ['Rating',       esg.epc?.rating       || '—'],
+                  ['Min Required', esg.epc?.min_rating   || 'C'],
+                  ['Expiry',       esg.epc?.expiry       || '—'],
+                  ['Assessor',     esg.epc?.assessor     || '—'],
+                  ['Energy kWh',   esg.epc?.energy_kwh !== 'N/A' ? esg.epc?.energy_kwh || '—' : '—'],
+                  ['Passes Check', esg.epc?.passes ? '✅ Yes' : '❌ No']
+                ].map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:.15rem 0;border-bottom:1px solid var(--grey-100)"><span style="color:var(--grey-500)">${k}</span><strong>${v}</strong></div>`).join('')}
+              </div>
+            </div>` : ''}
+
             ${esg.epc?.doc_id ? `
             <button class="btn btn-ghost btn-sm" style="margin-top:.75rem" onclick="overrideDocConfidence('${esg.epc.doc_id}')">
-              <i class="fas fa-user-check"></i> Override AI Confidence – Accept & Trust
+              <i class="fas fa-user-check"></i> Override AI Confidence – Accept & Trust EPC
             </button>` : ''}
           </div>
         </div>

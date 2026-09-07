@@ -288,7 +288,11 @@ app.get('/full/:appId', async (c) => {
       rule_ref:           esgRules.find((r: any) => r.metric === 'gsas_score')?.regulatory_reference || 'OS GSO 3000:2025',
       passes_threshold:   (app_.gsas_score || 0) >= gsasMinScore,
       passes_premium:     (app_.gsas_score || 0) >= gsasPremiumScore,
-      color:              gsasDoc?.validation_status === 'auto_verified' ? 'green' : gsasDoc?.validation_status === 'manual_review' ? 'amber' : 'red'
+      color:              gsasDoc?.validation_status === 'auto_verified' ? 'green' : gsasDoc?.validation_status === 'manual_review' ? 'amber' : 'red',
+      filename:           gsasDoc?.filename || null,
+      file_url:           gsasDoc?.file_url || null,
+      doc_id:             gsasDoc?.id || null,
+      doc_source:         gsasDoc ? (appDocs.find((d: any) => d.doc_type === 'gsas_cert') ? 'application' : unitDocs.find((d: any) => d.doc_type === 'gsas_cert') ? 'unit' : 'project') : null
     },
     epc: {
       status:       epcDoc?.validation_status || 'pending',
@@ -316,7 +320,11 @@ app.get('/full/:appId', async (c) => {
       units:      eiaData.units || app_.project_total_units || 'N/A',
       required:   (app_.project_total_units || 0) > 20,
       rule_ref:   esgRules.find((r: any) => r.metric === 'eia_approval' || r.metric === 'eia_required')?.regulatory_reference || 'Environment Authority Decision 107/2023',
-      color:      eiaDoc?.validation_status === 'auto_verified' ? 'green' : eiaDoc?.validation_status === 'manual_review' ? 'amber' : 'red'
+      color:      eiaDoc?.validation_status === 'auto_verified' ? 'green' : eiaDoc?.validation_status === 'manual_review' ? 'amber' : 'red',
+      filename:   eiaDoc?.filename || null,
+      file_url:   eiaDoc?.file_url || null,
+      doc_id:     eiaDoc?.id || null,
+      doc_source: eiaDoc ? (appDocs.find((d: any) => d.doc_type === 'eia_approval') ? 'application' : unitDocs.find((d: any) => d.doc_type === 'eia_approval') ? 'unit' : 'project') : null
     },
     ai_recommendation: generateEsgRecommendation(gsasDoc, epcDoc, eiaDoc),
     overall_esg_status: getOverallEsgStatus(gsasDoc, epcDoc, eiaDoc)

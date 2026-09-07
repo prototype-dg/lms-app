@@ -248,6 +248,31 @@ app.post('/applications', async (c) => {
     }
   }
 
+  // ── Copy project-level ESG documents to this application ────────────────
+  // If the application references a partner project, copy each ESG document
+  // (epc_report, gsas_cert, eia_approval) from the project to the application
+  // so compliance officers can retrieve originals without traversing the chain.
+  const copiedDocIds: string[] = []
+  if (project_id) {
+    const { results: projDocs } = await c.env.DB.prepare(
+      `SELECT * FROM documents WHERE entity_type = 'project' AND entity_id = ?`
+    ).bind(project_id).all() as any
+    for (const pd of (projDocs || [])) {
+      const newDocId = generateId('doc')
+      await c.env.DB.prepare(`
+        INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, file_url,
+          extracted_data, ai_confidence, validation_status, validation_notes, created_at)
+        VALUES (?, 'application', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        newDocId, id,
+        pd.doc_type, pd.filename, pd.file_url || null,
+        pd.extracted_data || '{}',
+        pd.ai_confidence, pd.validation_status, pd.validation_notes, ts
+      ).run()
+      copiedDocIds.push(newDocId)
+    }
+  }
+
   await logAudit(c.env.DB, {
     userId: customerId || 'portal',
     userName: customer_name,
@@ -255,7 +280,7 @@ app.post('/applications', async (c) => {
     action: 'APPLICATION_SUBMITTED',
     entityType: 'application',
     entityId: id,
-    details: { reference: refNum, product_id, loan_amount, applied_rate: appliedRate },
+    details: { reference: refNum, product_id, loan_amount, applied_rate: appliedRate, docs_copied: copiedDocIds.length },
   })
 
   return c.json({
@@ -266,6 +291,7 @@ app.post('/applications', async (c) => {
     monthly_payment: Math.round(monthlyPayment * 100) / 100,
     lifetime_saving: lifetimeSaving,
     status: 'submitted',
+    docs_transferred: copiedDocIds.length,
   })
 })
 
@@ -614,12 +640,18 @@ app.post('/developer/projects', async (c) => {
 
   await c.env.DB.prepare(`
     INSERT INTO projects (id, developer_id, name, code, location, governorate, type,
-    total_units, available_units, geo_json, status, created_at, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-  `).bind(id, body.developer_id || 'd001', body.name, code,
+    total_units, available_units, geo_json, gsas_score, gsas_rating, epc_rating,
+    eia_reference, green_eligible, premium_tier, status, created_at, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `).bind(
+    id, body.developer_id || 'd001', body.name, code,
     body.location, body.governorate || 'Muscat', body.type || 'villa',
     body.total_units || 0, body.total_units || 0,
-    JSON.stringify(body.geo_json || {}), 'draft', ts, ts
+    JSON.stringify(body.geo_json || {}),
+    body.gsas_score || null, body.gsas_rating || null,
+    body.epc_rating || null, body.eia_reference || null,
+    body.green_eligible ? 1 : 0, body.premium_tier ? 1 : 0,
+    'draft', ts, ts
   ).run()
 
   await logAudit(c.env.DB, {
@@ -696,6 +728,19 @@ app.post('/developer/projects/:id/documents', async (c) => {
   })
 
   return c.json({ doc_id: docId, success: true, ...result })
+})
+
+// ── Developer Portal: GET project documents ───────────────────────────────
+// Used by customer wizard step 6 to display pre-validated docs for partner projects
+app.get('/developer/projects/:id/documents', async (c) => {
+  const projectId = c.req.param('id')
+  const { results: docs } = await c.env.DB.prepare(
+    `SELECT id, doc_type, filename, file_url, ai_confidence, validation_status, validation_notes,
+            extracted_data, created_at
+     FROM documents WHERE entity_type = 'project' AND entity_id = ?
+     ORDER BY created_at ASC`
+  ).bind(projectId).all() as any
+  return c.json({ documents: docs || [] })
 })
 
 // ── Developer Portal: Upload unit inventory ───────────────────────────────

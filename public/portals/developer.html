@@ -2260,17 +2260,19 @@ function handleDocFile(docType, input) {
   statusEl.className = 'cert-status analyzing';
   statusEl.textContent = '⏳ Reading file…';
 
-  // Use FileReader to confirm the file is accessible (no server upload needed for demo)
   const reader = new FileReader();
   reader.onload = () => {
     const sizeKB = (file.size / 1024).toFixed(0);
-    wizDocsUploaded[docType] = { filename: file.name, size: sizeKB + ' KB', file };
+    // Map short docType key → API doc_type value
+    const docTypeMap = { gsas:'gsas_cert', epc:'epc_report', eia:'eia_approval', brochure:'brochure', specs:'specs' };
+    const apiDocType = docTypeMap[docType] || docType;
+    // Queue: store filename + api key so doRegisterProject can flush after pid is known
+    wizDocsUploaded[docType] = { filename: file.name, size: sizeKB + ' KB', file, apiDocType };
     card.className    = 'cert-card verified';
     statusEl.className = 'cert-status verified';
     statusEl.textContent = '✅ ' + file.name + ' (' + sizeKB + ' KB)';
     const count = Object.keys(wizDocsUploaded).length;
-    toast(`${file.name} ready (${count}/5)`, 'success');
-    // Reset input so the same file can be re-selected if needed
+    toast(`${file.name} ready — will be submitted with project (${count}/5)`, 'success');
     input.value = '';
   };
   reader.onerror = () => {
@@ -2279,7 +2281,7 @@ function handleDocFile(docType, input) {
     statusEl.textContent = '❌ Could not read file — try again';
     input.value = '';
   };
-  // Read first 4 KB just to verify readability; we don't need the full content
+  // Read first 4 KB to verify readability; content sent to API is filename-based (demo)
   reader.readAsArrayBuffer(file.slice(0, 4096));
 }
 
@@ -2455,9 +2457,10 @@ async function doRegisterProject(publish) {
         name, location:loc, governorate:gov, type, total_units:18,
         available_units:18, price_from:parseFloat(pf), price_to:parseFloat(pt),
         marketing_tagline:tag, hero_image_url:imgUrl,
-        gsas_score: wizParsedData?.gsas_score||91,
-        gsas_rating:'Gold', epc_rating: wizParsedData?.epc_rating||'A+',
-        eia_reference: wizParsedData?.eia_ref||'EA/EIA/2026/MSC/0887',
+        gsas_score:    wizParsedData?.gsas_score    || 91,
+        gsas_rating:   wizParsedData?.gsas_rating   || 'Gold',
+        epc_rating:    wizParsedData?.epc_rating     || 'A+',
+        eia_reference: wizParsedData?.eia_ref        || 'EA/EIA/2026/MSC/0887',
         green_eligible:1, premium_tier:1,
         amenities: JSON.stringify(amenities),
         completion_date:'Q4 2027'
@@ -2468,6 +2471,28 @@ async function doRegisterProject(publish) {
     const pid = d.id;
     wizProjectId = pid;
     window._activeProjectId = pid;
+
+    // ── Flush queued documents to the API now that we have a project ID ──
+    // Each entry in wizDocsUploaded: { filename, apiDocType, file }
+    const docEntries = Object.entries(wizDocsUploaded);
+    if(docEntries.length > 0) {
+      toast(`Registering ${docEntries.length} document(s) with project…`, 'info');
+    }
+    for(const [, doc] of docEntries) {
+      try {
+        const docResp = await fetch(`/api/v1/portal/developer/projects/${pid}/documents`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ doc_type: doc.apiDocType, filename: doc.filename, user_id:'u010' })
+        });
+        const docData = await docResp.json();
+        if(docData.success) {
+          toast(`✅ ${doc.filename} — AI validated (${docData.ai_confidence||'—'}% confidence)`, 'success');
+        }
+      } catch(e) {
+        console.warn('[wizard] document upload failed for', doc.apiDocType, e);
+      }
+    }
+
     // Create units (with per-type image_url)
     for(const u of UNITS_P2) {
       await fetch('/api/v1/portal/developer/projects/'+pid+'/units', {
@@ -2476,7 +2501,6 @@ async function doRegisterProject(publish) {
       });
     }
     // ALWAYS PATCH hero image after project creation — guarantees image is saved
-    // even if POST body was too large or the FileReader finished after the POST fired
     const finalImgUrl = imgUrl || EV2_IMAGES.hero;
     await fetch('/api/v1/portal/developer/projects/'+pid, {
       method:'PATCH', headers:{'Content-Type':'application/json'},
