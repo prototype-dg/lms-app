@@ -6547,7 +6547,7 @@ $.use("/api/*", Ne()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Be.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var bt = "960d3f0";
+var bt = "1159ec0";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
@@ -6563,7 +6563,7 @@ $.use("*", async (e, t) => {
 		let t = e.req.url.startsWith("http") ? e.req.url : `http://localhost${e.req.url}`, n = new URL(t);
 		return n.searchParams.set("v", bt), e.newResponse(null, 302, {
 			Location: n.pathname + n.search,
-			"Clear-Site-Data": "\"cache\", \"cookies\", \"storage\"",
+			"Clear-Site-Data": "\"cache\"",
 			"Cache-Control": "no-store"
 		});
 	}

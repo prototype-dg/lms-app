@@ -158,7 +158,7 @@ app.use('*', async (c, next) => {
     // redirect response itself — covers Chrome, Safari, Edge, Firefox.
     return c.newResponse(null, 302, {
       'Location': url.pathname + url.search,
-      'Clear-Site-Data': '"cache", "cookies", "storage"',
+      'Clear-Site-Data': '"cache"',
       'Cache-Control': 'no-store',
     })
   }
