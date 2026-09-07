@@ -2,10 +2,11 @@ import { serveStatic as e } from "@hono/node-server/serve-static";
 import t from "better-sqlite3";
 import n from "fs";
 import r from "path";
-import i from "node:fs";
-import a from "node:path";
+import { BlobServiceClient as i } from "@azure/storage-blob";
+import a from "node:fs";
+import o from "node:path";
 //#region node_modules/hono/dist/compose.js
-var o = (e, t, n) => (r, i) => {
+var s = (e, t, n) => (r, i) => {
 	let a = -1;
 	return o(0);
 	async function o(s) {
@@ -21,45 +22,45 @@ var o = (e, t, n) => (r, i) => {
 		else r.finalized === !1 && n && (c = await n(r));
 		return c && (r.finalized === !1 || l) && (r.res = c), r;
 	}
-}, s = /* @__PURE__ */ Symbol(), c = (e, t) => new Response(e, { headers: { "Content-Type": t.replace(/^[^;]+/, (e) => e.toLowerCase()) } }).formData(), l = 32, u = 1e4, d = (e) => "headers" in e, f = async (e, t = /* @__PURE__ */ Object.create(null)) => {
-	let { all: n = !1, dot: r = !1 } = t, i = (d(e) ? e.headers : e.raw.headers).get("Content-Type")?.split(";")[0].trim().toLowerCase();
-	return i === "multipart/form-data" || i === "application/x-www-form-urlencoded" ? p(e, {
+}, c = /* @__PURE__ */ Symbol(), l = (e, t) => new Response(e, { headers: { "Content-Type": t.replace(/^[^;]+/, (e) => e.toLowerCase()) } }).formData(), u = 32, d = 1e4, f = (e) => "headers" in e, p = async (e, t = /* @__PURE__ */ Object.create(null)) => {
+	let { all: n = !1, dot: r = !1 } = t, i = (f(e) ? e.headers : e.raw.headers).get("Content-Type")?.split(";")[0].trim().toLowerCase();
+	return i === "multipart/form-data" || i === "application/x-www-form-urlencoded" ? m(e, {
 		all: n,
 		dot: r
 	}) : {};
 };
-async function p(e, t) {
-	if (!d(e) && e.bodyCache.formData) return m(await e.bodyCache.formData, t);
-	let n = d(e) ? e.headers : e.raw.headers, r = c(await e.arrayBuffer(), n.get("Content-Type") || "");
-	d(e) || (e.bodyCache.formData = r);
+async function m(e, t) {
+	if (!f(e) && e.bodyCache.formData) return h(await e.bodyCache.formData, t);
+	let n = f(e) ? e.headers : e.raw.headers, r = l(await e.arrayBuffer(), n.get("Content-Type") || "");
+	f(e) || (e.bodyCache.formData = r);
 	let i = await r;
-	return i ? m(i, t) : {};
+	return i ? h(i, t) : {};
 }
-function m(e, t) {
+function h(e, t) {
 	let n = /* @__PURE__ */ Object.create(null), r = { count: 0 };
 	return e.forEach((e, r) => {
-		t.all || r.endsWith("[]") ? h(n, r, e) : n[r] = e;
+		t.all || r.endsWith("[]") ? g(n, r, e) : n[r] = e;
 	}), t.dot && Object.entries(n).forEach(([e, t]) => {
-		e.includes(".") && (g(n, e, t, r), delete n[e]);
+		e.includes(".") && (_(n, e, t, r), delete n[e]);
 	}), n;
 }
-var h = (e, t, n) => {
+var g = (e, t, n) => {
 	e[t] === void 0 ? e[t] = t.endsWith("[]") ? [n] : n : Array.isArray(e[t]) ? e[t].push(n) : e[t] = [e[t], n];
-}, g = (e, t, n, r) => {
+}, _ = (e, t, n, r) => {
 	if (/(?:^|\.)__proto__\./.test(t)) return;
-	let i = e, a = t.split(".", l + 2);
-	a.length > l + 1 && _(), a.forEach((e, t) => {
-		t === a.length - 1 ? i[e] = n : ((!i[e] || typeof i[e] != "object" || Array.isArray(i[e]) || i[e] instanceof File) && (r.count++ >= u && _(), i[e] = /* @__PURE__ */ Object.create(null)), i = i[e]);
+	let i = e, a = t.split(".", u + 2);
+	a.length > u + 1 && v(), a.forEach((e, t) => {
+		t === a.length - 1 ? i[e] = n : ((!i[e] || typeof i[e] != "object" || Array.isArray(i[e]) || i[e] instanceof File) && (r.count++ >= d && v(), i[e] = /* @__PURE__ */ Object.create(null)), i = i[e]);
 	});
-}, _ = () => {
+}, v = () => {
 	throw Error("Nesting limit exceeded");
-}, v = (e) => {
+}, y = (e) => {
 	let t = e.split("/");
 	return t[0] === "" && t.shift(), t;
-}, y = (e) => {
-	let { groups: t, path: n } = b(e);
-	return x(v(n), t);
 }, b = (e) => {
+	let { groups: t, path: n } = x(e);
+	return S(y(n), t);
+}, x = (e) => {
 	let t = [];
 	return e = e.replace(/\{[^}]+\}/g, (e, n) => {
 		let r = `@${n}`;
@@ -68,7 +69,7 @@ var h = (e, t, n) => {
 		groups: t,
 		path: e
 	};
-}, x = (e, t) => {
+}, S = (e, t) => {
 	for (let n = t.length - 1; n >= 0; n--) {
 		let [r] = t[n];
 		for (let i = e.length - 1; i >= 0; i--) if (e[i].includes(r)) {
@@ -77,12 +78,12 @@ var h = (e, t, n) => {
 		}
 	}
 	return e;
-}, S = {}, C = (e, t) => {
+}, C = {}, w = (e, t) => {
 	if (e === "*") return "*";
 	let n = e.match(/^\:([^\{\}]+)(?:\{(.+)\})?$/);
 	if (n) {
 		let r = `${e}#${t}`;
-		return S[r] || (S[r] = n[2] ? t && t[0] !== ":" && t[0] !== "*" ? [
+		return C[r] || (C[r] = n[2] ? t && t[0] !== ":" && t[0] !== "*" ? [
 			r,
 			n[1],
 			RegExp(`^${n[2]}(?=/${t})`)
@@ -94,10 +95,10 @@ var h = (e, t, n) => {
 			e,
 			n[1],
 			!0
-		]), S[r];
+		]), C[r];
 	}
 	return null;
-}, w = (e, t) => {
+}, T = (e, t) => {
 	try {
 		return t(e);
 	} catch {
@@ -109,21 +110,21 @@ var h = (e, t, n) => {
 			}
 		});
 	}
-}, T = (e) => w(e, decodeURI), E = (e) => {
+}, E = (e) => T(e, decodeURI), D = (e) => {
 	let t = e.url, n = t.indexOf("/", t.indexOf(":") + 4), r = n;
 	for (; r < t.length; r++) {
 		let e = t.charCodeAt(r);
 		if (e === 37) {
 			let e = t.indexOf("?", r), i = t.indexOf("#", r), a = e === -1 ? i === -1 ? void 0 : i : i === -1 ? e : Math.min(e, i), o = t.slice(n, a);
-			return T(o.includes("%25") ? o.replace(/%25/g, "%2525") : o);
+			return E(o.includes("%25") ? o.replace(/%25/g, "%2525") : o);
 		}
 		if (e === 63 || e === 35) break;
 	}
 	return t.slice(n, r);
-}, D = (e) => {
-	let t = E(e);
+}, O = (e) => {
+	let t = D(e);
 	return t.length > 1 && t.at(-1) === "/" ? t.slice(0, -1) : t;
-}, O = (e, t, ...n) => (n.length && (t = O(t, ...n)), `${e?.[0] === "/" ? "" : "/"}${e}${t === "/" ? "" : `${e?.at(-1) === "/" ? "" : "/"}${t?.[0] === "/" ? t.slice(1) : t}`}`), ee = (e) => {
+}, k = (e, t, ...n) => (n.length && (t = k(t, ...n)), `${e?.[0] === "/" ? "" : "/"}${e}${t === "/" ? "" : `${e?.at(-1) === "/" ? "" : "/"}${t?.[0] === "/" ? t.slice(1) : t}`}`), A = (e) => {
 	if (e.charCodeAt(e.length - 1) !== 63 || !e.includes(":")) return null;
 	let t = e.split("/"), n = [], r = "";
 	return t.forEach((e) => {
@@ -136,7 +137,7 @@ var h = (e, t, n) => {
 			} else r += "/" + e;
 		}
 	}), n.filter((e, t, n) => n.indexOf(e) === t);
-}, k = (e) => e.indexOf("%") === -1 ? e : w(e, ne), A = (e) => (e.indexOf("+") !== -1 && (e = e.replace(/\+/g, " ")), k(e)), j = (e, t, n) => {
+}, j = (e) => e.indexOf("%") === -1 ? e : T(e, ne), M = (e) => (e.indexOf("+") !== -1 && (e = e.replace(/\+/g, " ")), j(e)), N = (e, t, n) => {
 	let r = e.indexOf("#", 8);
 	r !== -1 && (e = e.slice(0, r));
 	let i;
@@ -147,7 +148,7 @@ var h = (e, t, n) => {
 			let r = e.charCodeAt(n + t.length + 1);
 			if (r === 61) {
 				let r = n + t.length + 2, i = e.indexOf("&", r);
-				return A(e.slice(r, i === -1 ? void 0 : i));
+				return M(e.slice(r, i === -1 ? void 0 : i));
 			}
 			if (r == 38 || isNaN(r)) return "";
 			n = e.indexOf(`&${t}`, n + 1);
@@ -161,12 +162,12 @@ var h = (e, t, n) => {
 		let t = e.indexOf("&", o + 1), r = e.indexOf("=", o);
 		r > t && t !== -1 && (r = -1);
 		let s = e.slice(o + 1, r === -1 ? t === -1 ? void 0 : t : r);
-		if (i && (s = A(s)), o = t, s === "") continue;
+		if (i && (s = M(s)), o = t, s === "") continue;
 		let c;
-		r === -1 ? c = "" : (c = e.slice(r + 1, t === -1 ? void 0 : t), i && (c = A(c))), n ? (a[s] && Array.isArray(a[s]) || (a[s] = []), a[s].push(c)) : a[s] ??= c;
+		r === -1 ? c = "" : (c = e.slice(r + 1, t === -1 ? void 0 : t), i && (c = M(c))), n ? (a[s] && Array.isArray(a[s]) || (a[s] = []), a[s].push(c)) : a[s] ??= c;
 	}
 	return t ? a[t] : a;
-}, M = j, te = (e, t) => j(e, t, !0), ne = decodeURIComponent, re = class {
+}, ee = N, te = (e, t) => N(e, t, !0), ne = decodeURIComponent, re = class {
 	raw;
 	#e;
 	#t;
@@ -181,13 +182,13 @@ var h = (e, t, n) => {
 	}
 	#n(e) {
 		let t = this.#t[0][this.routeIndex]?.[1][e], n = this.#i(t);
-		return n && k(n);
+		return n && j(n);
 	}
 	#r() {
 		let e = {}, t = Object.keys(this.#t[0][this.routeIndex]?.[1] ?? {});
 		for (let n of t) {
 			let t = this.#i(this.#t[0][this.routeIndex][1][n]);
-			t !== void 0 && (e[n] = k(t));
+			t !== void 0 && (e[n] = j(t));
 		}
 		return e;
 	}
@@ -195,7 +196,7 @@ var h = (e, t, n) => {
 		return this.#t[1] ? this.#t[1][e] : e;
 	}
 	query(e) {
-		return M(this.url, e);
+		return ee(this.url, e);
 	}
 	queries(e) {
 		return te(this.url, e);
@@ -208,7 +209,7 @@ var h = (e, t, n) => {
 		}), t;
 	}
 	async parseBody(e) {
-		return f(this, e);
+		return p(this, e);
 	}
 	#a = (e) => {
 		let { bodyCache: t, raw: n } = this, r = t[e];
@@ -246,7 +247,7 @@ var h = (e, t, n) => {
 	get method() {
 		return this.raw.method;
 	}
-	get [s]() {
+	get [c]() {
 		return this.#t;
 	}
 	get matchedRoutes() {
@@ -262,7 +263,7 @@ var h = (e, t, n) => {
 }, ae = (e, t) => {
 	let n = new String(e);
 	return n.isEscaped = !0, n.callbacks = t, n;
-}, N = async (e, t, n, r, i) => {
+}, P = async (e, t, n, r, i) => {
 	typeof e == "object" && !(e instanceof String) && (e instanceof Promise || (e = e.toString()), e instanceof Promise && (e = await e));
 	let a = e.callbacks;
 	if (!a?.length) return Promise.resolve(e);
@@ -271,12 +272,12 @@ var h = (e, t, n) => {
 		phase: t,
 		buffer: i,
 		context: r
-	}))).then((e) => Promise.all(e.filter(Boolean).map((e) => N(e, t, !1, r, i))).then(() => i[0]));
+	}))).then((e) => Promise.all(e.filter(Boolean).map((e) => P(e, t, !1, r, i))).then(() => i[0]));
 	return n ? ae(await o, a) : o;
-}, oe = "text/plain; charset=UTF-8", P = (e, t) => ({
+}, oe = "text/plain; charset=UTF-8", se = (e, t) => ({
 	"Content-Type": e,
 	...t
-}), F = (e, t) => new Response(e, t), se = class {
+}), F = (e, t) => new Response(e, t), ce = class {
 	#e;
 	#t;
 	env = {};
@@ -373,18 +374,18 @@ var h = (e, t, n) => {
 	}
 	newResponse = (...e) => this.#f(...e);
 	body = (e, t, n) => this.#f(e, t, n);
-	text = (e, t, n) => !this.#l && !this.#r && !t && !n && !this.finalized ? new Response(e) : this.#f(e, t, P(oe, n));
-	json = (e, t, n) => this.#f(JSON.stringify(e), t, P("application/json", n));
+	text = (e, t, n) => !this.#l && !this.#r && !t && !n && !this.finalized ? new Response(e) : this.#f(e, t, se(oe, n));
+	json = (e, t, n) => this.#f(JSON.stringify(e), t, se("application/json", n));
 	html = (e, t, n) => {
-		let r = (e) => this.#f(e, t, P("text/html; charset=UTF-8", n));
-		return typeof e == "object" ? N(e, ie.Stringify, !1, {}).then(r) : r(e);
+		let r = (e) => this.#f(e, t, se("text/html; charset=UTF-8", n));
+		return typeof e == "object" ? P(e, ie.Stringify, !1, {}).then(r) : r(e);
 	};
 	redirect = (e, t) => {
 		let n = String(e);
 		return this.header("Location", /[^\x00-\xFF]/.test(n) ? encodeURI(n) : n), this.newResponse(null, t ?? 302);
 	};
 	notFound = () => (this.#c ??= () => F(), this.#c(this));
-}, ce = [
+}, le = [
 	"get",
 	"post",
 	"put",
@@ -392,13 +393,13 @@ var h = (e, t, n) => {
 	"options",
 	"patch",
 	"query"
-], le = "Can not add a route since the matcher is already built.", ue = class extends Error {}, de = "__COMPOSED_HANDLER", fe = (e) => e.text("404 Not Found", 404), pe = (e, t) => {
+], ue = "Can not add a route since the matcher is already built.", de = class extends Error {}, fe = "__COMPOSED_HANDLER", pe = (e) => e.text("404 Not Found", 404), me = (e, t) => {
 	if ("getResponse" in e) {
 		let n = e.getResponse();
 		return t.newResponse(n.body, n);
 	}
 	return console.error(e), t.text("Internal Server Error", 500);
-}, me = class e {
+}, he = class e {
 	get;
 	post;
 	put;
@@ -415,7 +416,7 @@ var h = (e, t, n) => {
 	#e = "/";
 	routes = [];
 	constructor(e = {}) {
-		[...ce, "all"].forEach((e) => {
+		[...le, "all"].forEach((e) => {
 			this[e] = (t, ...n) => (typeof t == "string" ? this.#e = t : this.#r(e, this.#e, t), n.forEach((t) => {
 				this.#r(e, this.#e, t);
 			}), this);
@@ -431,7 +432,7 @@ var h = (e, t, n) => {
 			this.#r("ALL", this.#e, e);
 		}), this);
 		let { strict: t, ...n } = e;
-		Object.assign(this, n), this.getPath = t ?? !0 ? e.getPath ?? E : D;
+		Object.assign(this, n), this.getPath = t ?? !0 ? e.getPath ?? D : O;
 	}
 	#t() {
 		let t = new e({
@@ -440,18 +441,18 @@ var h = (e, t, n) => {
 		});
 		return t.errorHandler = this.errorHandler, t.#n = this.#n, t.routes = this.routes, t;
 	}
-	#n = fe;
-	errorHandler = pe;
+	#n = pe;
+	errorHandler = me;
 	route(e, t) {
 		let n = this.basePath(e);
 		return t.routes.map((e) => {
 			let r;
-			t.errorHandler === pe ? r = e.handler : (r = async (n, r) => (await o([], t.errorHandler)(n, () => e.handler(n, r))).res, r[de] = e.handler), n.#r(e.method, e.path, r, e.basePath);
+			t.errorHandler === me ? r = e.handler : (r = async (n, r) => (await s([], t.errorHandler)(n, () => e.handler(n, r))).res, r[fe] = e.handler), n.#r(e.method, e.path, r, e.basePath);
 		}), this;
 	}
 	basePath(e) {
 		let t = this.#t();
-		return t._basePath = O(this._basePath, e), t;
+		return t._basePath = k(this._basePath, e), t;
 	}
 	onError = (e) => (this.errorHandler = e, this);
 	notFound = (e) => (this.#n = e, this);
@@ -469,21 +470,21 @@ var h = (e, t, n) => {
 			return [e.env, t];
 		};
 		return r ||= (() => {
-			let t = O(this._basePath, e), n = t === "/" ? 0 : t.length;
+			let t = k(this._basePath, e), n = t === "/" ? 0 : t.length;
 			return (e) => {
 				let t = new URL(e.url);
 				return t.pathname = this.getPath(e).slice(n) || "/", new Request(t, e);
 			};
-		})(), this.#r("ALL", O(e, "*"), async (e, n) => {
+		})(), this.#r("ALL", k(e, "*"), async (e, n) => {
 			let i = await t(r(e.req.raw), ...a(e));
 			if (i) return i;
 			await n();
 		}), this;
 	}
 	#r(e, t, n, r) {
-		e = e.toUpperCase(), t = O(this._basePath, t);
+		e = e.toUpperCase(), t = k(this._basePath, t);
 		let i = {
-			basePath: r === void 0 ? this._basePath : O(this._basePath, r),
+			basePath: r === void 0 ? this._basePath : k(this._basePath, r),
 			path: t,
 			method: e,
 			handler: n
@@ -496,7 +497,7 @@ var h = (e, t, n) => {
 	}
 	#a(e, t, n, r) {
 		if (r === "HEAD") return (async () => new Response(null, await this.#a(e, t, n, "GET")))();
-		let i = this.getPath(e, { env: n }), a = this.router.match(r, i), s = new se(e, {
+		let i = this.getPath(e, { env: n }), a = this.router.match(r, i), o = new ce(e, {
 			path: i,
 			matchResult: a,
 			env: n,
@@ -506,39 +507,39 @@ var h = (e, t, n) => {
 		if (a[0].length === 1) {
 			let e;
 			try {
-				e = a[0][0][0][0](s, async () => {
-					s.res = await this.#n(s);
+				e = a[0][0][0][0](o, async () => {
+					o.res = await this.#n(o);
 				});
 			} catch (e) {
-				return this.#i(e, s);
+				return this.#i(e, o);
 			}
-			return e instanceof Promise ? e.then((e) => e || (s.finalized ? s.res : this.#n(s))).catch((e) => this.#i(e, s)) : e ?? this.#n(s);
+			return e instanceof Promise ? e.then((e) => e || (o.finalized ? o.res : this.#n(o))).catch((e) => this.#i(e, o)) : e ?? this.#n(o);
 		}
-		let c = o(a[0], this.errorHandler, this.#n);
+		let c = s(a[0], this.errorHandler, this.#n);
 		return (async () => {
 			try {
-				let e = await c(s);
+				let e = await c(o);
 				if (!e.finalized) throw Error("Context is not finalized. Did you forget to return a Response object or `await next()`?");
 				return e.res;
 			} catch (e) {
-				return this.#i(e, s);
+				return this.#i(e, o);
 			}
 		})();
 	}
 	fetch = (e, ...t) => this.#a(e, t[1], t[0], e.method);
-	request = (e, t, n, r) => e instanceof Request ? this.fetch(t ? new Request(e, t) : e, n, r) : (e = e.toString(), this.fetch(new Request(/^https?:\/\//.test(e) ? e : `http://localhost${O("/", e)}`, t), n, r));
+	request = (e, t, n, r) => e instanceof Request ? this.fetch(t ? new Request(e, t) : e, n, r) : (e = e.toString(), this.fetch(new Request(/^https?:\/\//.test(e) ? e : `http://localhost${k("/", e)}`, t), n, r));
 	fire = () => {
 		addEventListener("fetch", (e) => {
 			e.respondWith(this.#a(e.request, e, void 0, e.request.method));
 		});
 	};
-}, I = () => /* @__PURE__ */ Object.create(null), he = [];
-function ge(e, t) {
+}, I = () => /* @__PURE__ */ Object.create(null), ge = [];
+function _e(e, t) {
 	let n = this.buildAllMatchers(), r = ((e, t) => {
 		let r = n[e] || n.ALL, i = r[2][t];
 		if (i) return i;
 		let a = t.match(r[0]);
-		if (!a) return [[], he];
+		if (!a) return [[], ge];
 		let o = a.indexOf("", 1);
 		return [r[1][o], a];
 	});
@@ -546,11 +547,11 @@ function ge(e, t) {
 }
 //#endregion
 //#region node_modules/hono/dist/router/reg-exp-router/node.js
-var _e = "[^/]+", ve = "(?:|/.*)", ye = /* @__PURE__ */ Symbol(), be = /* @__PURE__ */ new Set(".\\+*[^]$()");
-function xe(e, t) {
+var ve = "[^/]+", ye = "(?:|/.*)", be = /* @__PURE__ */ Symbol(), xe = /* @__PURE__ */ new Set(".\\+*[^]$()");
+function Se(e, t) {
 	return e.length === 1 ? t.length === 1 ? e < t ? -1 : 1 : -1 : t.length === 1 ? 1 : e === ".*" || e === "(?:|/.*)" ? t === "(?:|/.*)" ? -1 : 1 : t === ".*" || t === "(?:|/.*)" ? -1 : e === "[^/]+" ? 1 : t === "[^/]+" ? -1 : e.length === t.length ? e < t ? -1 : 1 : t.length - e.length;
 }
-var Se = class e {
+var Ce = class e {
 	#e;
 	#t;
 	#n = I();
@@ -564,41 +565,41 @@ var Se = class e {
 			] : [
 				"",
 				"",
-				_e
+				ve
 			] : null : s === "/*" ? [
 				"",
 				"",
-				ve
+				ye
 			] : s.match(/^\:([^\{\}]+)(?:\{(.+)\})?$/), l;
 			if (c) {
 				let t = c[1], n = c[2] || "[^/]+";
-				if (t && c[2] && (n === ".*" || (n = n.replace(/^\((?!\?:)(?=[^)]+\)$)/, "(?:"), /\((?!\?:)/.test(n)) || n.length === 1 && be.has(n))) throw ye;
+				if (t && c[2] && (n === ".*" || (n = n.replace(/^\((?!\?:)(?=[^)]+\)$)/, "(?:"), /\((?!\?:)/.test(n)) || n.length === 1 && xe.has(n))) throw be;
 				if (l = o.#n[n], !l) {
 					if (n !== ".*" && n !== "(?:|/.*)") {
-						for (let e in o.#n) if ((n.length > 1 || e.length > 1) && e !== ".*" && e !== "(?:|/.*)") throw ye;
+						for (let e in o.#n) if ((n.length > 1 || e.length > 1) && e !== ".*" && e !== "(?:|/.*)") throw be;
 					}
 					l = o.#n[n] = new e();
 				}
 				t !== "" && (l.#t ??= i.varIndex++, r.push([t, l.#t]));
 			} else if (l = o.#n[s], !l) {
-				for (let e in o.#n) if (e.length > 1 && e !== ".*" && e !== "(?:|/.*)") throw ye;
+				for (let e in o.#n) if (e.length > 1 && e !== ".*" && e !== "(?:|/.*)") throw be;
 				l = o.#n[s] = new e();
 			}
 			o = l;
 		}
-		if (o.#e !== void 0) throw ye;
+		if (o.#e !== void 0) throw be;
 		o.#e = a ? -1 : n;
 	}
 	buildRegExpStr() {
-		let e = Object.keys(this.#n).sort(xe).map((e) => {
+		let e = Object.keys(this.#n).sort(Se).map((e) => {
 			let t = this.#n[e], n = t.buildRegExpStr();
-			return n === "" ? "" : (typeof t.#t == "number" ? `(${e})@${t.#t}` : be.has(e) ? `\\${e}` : e) + n;
+			return n === "" ? "" : (typeof t.#t == "number" ? `(${e})@${t.#t}` : xe.has(e) ? `\\${e}` : e) + n;
 		}).filter(Boolean);
 		return typeof this.#e == "number" && this.#e !== -1 && e.unshift(`#${this.#e}`), e.length === 0 ? "" : e.length === 1 ? e[0] : "(?:" + e.join("|") + ")";
 	}
-}, Ce = class {
+}, we = class {
 	#e = { varIndex: 0 };
-	#t = new Se();
+	#t = new Ce();
 	#n = 0;
 	paths = I();
 	insert(e, t) {
@@ -638,33 +639,33 @@ var Se = class e {
 			r
 		];
 	}
-}, we = I();
-function Te(e) {
-	return we[e] ??= RegExp(`^${e.replace(/\/:[^/{}]+(?:\{\[\^\/]\+})?(?=[/{]|$)|\/?\*$|([.\\+*[^\]$()?{}|])/g, (e, t) => t ? `\\${t}` : e === "/*" ? ve : e === "*" ? ".*" : `/:${_e}`)}$`);
+}, Te = I();
+function Ee(e) {
+	return Te[e] ??= RegExp(`^${e.replace(/\/:[^/{}]+(?:\{\[\^\/]\+})?(?=[/{]|$)|\/?\*$|([.\\+*[^\]$()?{}|])/g, (e, t) => t ? `\\${t}` : e === "/*" ? ye : e === "*" ? ".*" : `/:${ve}`)}$`);
 }
-function Ee(e, t) {
-	for (let n of Object.keys(e).sort((e, t) => t.length - e.length)) if (Te(n).test(t)) return [...e[n]];
+function De(e, t) {
+	for (let n of Object.keys(e).sort((e, t) => t.length - e.length)) if (Ee(n).test(t)) return [...e[n]];
 }
-var De = class {
+var Oe = class {
 	name = "RegExpRouter";
 	#e;
 	#t;
 	#n;
 	constructor() {
-		this.#e = { ALL: I() }, this.#t = { ALL: I() }, this.#n = { ALL: new Ce() };
+		this.#e = { ALL: I() }, this.#t = { ALL: I() }, this.#n = { ALL: new we() };
 	}
 	#r(e, t) {
 		try {
 			this.#n[e].insert(t, !/\*|\/:/.test(t));
 		} catch (e) {
-			throw e === ye ? new ue(t) : e;
+			throw e === be ? new de(t) : e;
 		}
 	}
 	add(e, t, n) {
 		let r = this.#e, i = this.#t;
-		if (!r) throw Error(le);
+		if (!r) throw Error(ue);
 		if (!r[e]) {
-			this.#n[e] = new Ce();
+			this.#n[e] = new we();
 			for (let t of [r, i]) {
 				t[e] = I();
 				for (let n in t.ALL) t[e][n] = [...t.ALL[n]], this.#r(e, n);
@@ -673,26 +674,26 @@ var De = class {
 		t === "/*" && (t = "*");
 		let a = e === "ALL" ? Object.keys(r) : [e];
 		if (/\*$/.test(t)) {
-			let e = Te(t);
-			for (let e of a) r[e][t] || (this.#r(e, t), r[e][t] = Ee(r[e], t) || Ee(r.ALL, t) || []);
+			let e = Ee(t);
+			for (let e of a) r[e][t] || (this.#r(e, t), r[e][t] = De(r[e], t) || De(r.ALL, t) || []);
 			for (let o of [r, i]) for (let r of a) for (let i in o[r]) e.test(i) && o[r][i].push([n, t]);
 			return;
 		}
-		let o = ee(t) || [t];
-		for (let e of o) for (let t of a) i[t][e] || (this.#r(t, e), i[t][e] = Ee(r[t], e) || Ee(r.ALL, e) || []), i[t][e].push([n, e]);
+		let o = A(t) || [t];
+		for (let e of o) for (let t of a) i[t][e] || (this.#r(t, e), i[t][e] = De(r[t], e) || De(r.ALL, e) || []), i[t][e].push([n, e]);
 	}
-	match = ge;
+	match = _e;
 	buildAllMatchers() {
 		let e = I();
 		for (let t of Object.keys(this.#t)) e[t] = this.#i(t);
-		return this.#e = this.#t = this.#n = void 0, we = I(), e;
+		return this.#e = this.#t = this.#n = void 0, Te = I(), e;
 	}
 	#i(e) {
 		let t = this.#e[e], n = this.#t[e], r = this.#n[e], i = I(), a = [], [o, s, c] = r.buildRegExp();
 		for (let e of [t, n]) for (let t in e) {
 			let n = e[t], o = r.paths[t];
 			if (!o) {
-				i[t] = [n.map(([e]) => [e, I()]), he];
+				i[t] = [n.map(([e]) => [e, I()]), ge];
 				continue;
 			}
 			a[o[0]] = n.map(([e, t]) => [e, r.paths[t][1].reduceRight((e, [t], n) => (e[t] = c[o[1][n][1]], e), I())]);
@@ -703,7 +704,7 @@ var De = class {
 			i
 		];
 	}
-}, Oe = class {
+}, ke = class {
 	name = "SmartRouter";
 	#e = [];
 	#t = [];
@@ -711,7 +712,7 @@ var De = class {
 		this.#e = e.routers;
 	}
 	add(e, t, n) {
-		if (!this.#t) throw Error(le);
+		if (!this.#t) throw Error(ue);
 		this.#t.push([
 			e,
 			t,
@@ -727,7 +728,7 @@ var De = class {
 				for (let e = 0, t = r.length; e < t; e++) i.add(...r[e]);
 				o = i.match(e, t);
 			} catch (e) {
-				if (e instanceof ue) continue;
+				if (e instanceof de) continue;
 				throw e;
 			}
 			this.match = i.match.bind(i), this.#e = [i], this.#t = void 0;
@@ -740,22 +741,22 @@ var De = class {
 		if (this.#t || this.#e.length !== 1) throw Error("No active router has been determined yet.");
 		return this.#e[0];
 	}
-}, ke = I(), Ae = 0, je = class e {
+}, Ae = I(), je = 0, Me = class e {
 	#e = [];
 	#t = I();
 	#n = [];
 	#r;
-	#i = ke;
+	#i = Ae;
 	insert(t, n, r) {
-		let i = this, a = y(n), o = /* @__PURE__ */ new Set(), s = 0;
+		let i = this, a = b(n), o = /* @__PURE__ */ new Set(), s = 0;
 		for (let t of a) {
-			let n = a[++s], r = C(t, n) || (n === void 0 && t && t.indexOf("*") === t.length - 1 ? t : null), c = Array.isArray(r), l = c ? r[0] : r || t, u = i.#t[l] ||= new e();
+			let n = a[++s], r = w(t, n) || (n === void 0 && t && t.indexOf("*") === t.length - 1 ? t : null), c = Array.isArray(r), l = c ? r[0] : r || t, u = i.#t[l] ||= new e();
 			r && !u.#r && (u.#r = r, i.#n.push(u)), i = u, c && o.add(r[1]);
 		}
 		i.#e.push({ [t]: {
 			handler: r,
 			possibleKeys: [...o],
-			score: ++Ae
+			score: ++je
 		} });
 	}
 	#a(e, t, n, r, i) {
@@ -772,15 +773,15 @@ var De = class {
 	}
 	search(e, t) {
 		let n = [];
-		this.#i = ke;
-		let r = [this], i = v(t), a = [], o = i.length, s = null;
+		this.#i = Ae;
+		let r = [this], i = y(t), a = [], o = i.length, s = null;
 		for (let c = 0; c < o; c++) {
 			let l = i[c], u = c === o - 1, d = [];
 			for (let f = 0, p = r.length; f < p; f++) {
 				let p = r[f], m = p.#t[l];
 				m && (m.#i = p.#i, u ? (m.#t["*"] && this.#a(n, m.#t["*"], e, p.#i), this.#a(n, m, e, p.#i)) : d.push(m));
 				for (let r of p.#n) {
-					let f = r.#r, m = p.#i === ke ? {} : { ...p.#i };
+					let f = r.#r, m = p.#i === Ae ? {} : { ...p.#i };
 					if (typeof f == "string") {
 						(f === "*" || l.startsWith(f.slice(0, -1))) && (this.#a(n, r, e, p.#i), f === "*" && (r.#i = m, d.push(r)));
 						continue;
@@ -814,20 +815,20 @@ var De = class {
 		}
 		return n[1] && n.sort((e, t) => e.score - t.score), [n.map(({ handler: e, params: t }) => [e, t])];
 	}
-}, Me = class {
+}, Ne = class {
 	name = "TrieRouter";
-	#e = new je();
+	#e = new Me();
 	add(e, t, n) {
-		for (let r of ee(t) || [t]) this.#e.insert(e, r, n);
+		for (let r of A(t) || [t]) this.#e.insert(e, r, n);
 	}
 	match(e, t) {
 		return this.#e.search(e, t);
 	}
-}, L = class extends me {
+}, L = class extends he {
 	constructor(e = {}) {
-		super(e), this.router = e.router ?? new Oe({ routers: [new De(), new Me()] });
+		super(e), this.router = e.router ?? new ke({ routers: [new Oe(), new Ne()] });
 	}
-}, Ne = (e) => {
+}, Pe = (e) => {
 	let t = {
 		origin: "*",
 		allowMethods: [
@@ -872,11 +873,11 @@ var De = class {
 		}
 		await o(), t.origin !== "*" && e.header("Vary", "Origin", { append: !0 });
 	};
-}, Pe = process.env.DB_PATH || "./data/app.db", Fe = r.dirname(Pe);
-n.existsSync(Fe) || n.mkdirSync(Fe, { recursive: !0 });
-var R = new t(Pe);
+}, Fe = process.env.DB_PATH || "./data/app.db", Ie = r.dirname(Fe);
+n.existsSync(Ie) || n.mkdirSync(Ie, { recursive: !0 });
+var R = new t(Fe);
 R.pragma("journal_mode = WAL"), R.pragma("foreign_keys = ON");
-var Ie = [
+var Le = [
 	"./migrations/0001_initial.sql",
 	"./migrations/0002_seed.sql",
 	"./migrations/0003_portal_columns.sql",
@@ -887,7 +888,7 @@ var Ie = [
 	"./migrations/0008_eco_product_seed.sql",
 	"./migrations/0009_eco_units_seed.sql"
 ];
-function Le() {
+function Re() {
 	let e = r.resolve("./migrations");
 	if (!n.existsSync(e)) {
 		console.log("[db-adapter] migrations/ directory not found — skipping auto-migration");
@@ -900,7 +901,7 @@ function Le() {
 		(n || r) && R.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0004_project_images.sql");
 	}
 	console.log("[db-adapter] Running auto-migrations...");
-	for (let e of Ie) {
+	for (let e of Le) {
 		let t = r.resolve(e);
 		if (!n.existsSync(t)) {
 			console.log(`[db-adapter] Migration not found, skipping: ${e}`);
@@ -931,8 +932,8 @@ function Le() {
 	let t = R.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
 	console.log("[db-adapter] Tables:", t.map((e) => e.name).join(", "));
 }
-Le();
-function Re(e, t) {
+Re();
+function ze(e, t) {
 	try {
 		let n = e.run(...t);
 		return {
@@ -947,7 +948,7 @@ function Re(e, t) {
 		throw e;
 	}
 }
-function ze(e, t = []) {
+function Be(e, t = []) {
 	return {
 		all: async () => ({
 			results: R.prepare(e).all(...t),
@@ -958,14 +959,14 @@ function ze(e, t = []) {
 			}
 		}),
 		first: async () => R.prepare(e).get(...t) ?? null,
-		run: async () => Re(R.prepare(e), t)
+		run: async () => ze(R.prepare(e), t)
 	};
 }
 var z = { prepare: (e) => ({
-	bind: (...t) => ze(e, t),
-	all: () => ze(e, []).all(),
-	first: () => ze(e, []).first(),
-	run: () => ze(e, []).run()
+	bind: (...t) => Be(e, t),
+	all: () => Be(e, []).all(),
+	first: () => Be(e, []).first(),
+	run: () => Be(e, []).run()
 }) };
 //#endregion
 //#region src/lib/db.ts
@@ -1444,7 +1445,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 				let e = r.choices[0].message.content, t = e.match(/\{[\s\S]*\}/);
 				if (t) {
 					if (h = JSON.parse(t[0]), h.current_stage < 6 && (h.product_draft = null), h.current_stage >= 6 && !h.product_draft) {
-						let e = Ue(n, c.length, c);
+						let e = We(n, c.length, c);
 						e.product_draft && (h.product_draft = e.product_draft), e.schema_draft && !h.schema_draft && (h.schema_draft = e.schema_draft);
 					}
 					h.current_stage < 3 && (h.rules_draft = null), h.current_stage >= 6 && (h.rules_draft = null), h.current_stage > 1 && (h.show_roadmap = !1);
@@ -1462,9 +1463,9 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 				} else h.message = e;
 			}
 		} catch {
-			h = Ue(n, c.length, c);
+			h = We(n, c.length, c);
 		}
-		else h = Ue(n, c.length, c);
+		else h = We(n, c.length, c);
 		let g = {
 			role: "assistant",
 			content: h.message,
@@ -1536,7 +1537,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 		if (!r && n) {
 			let t = await e.env.DB.prepare("SELECT messages FROM ai_threads WHERE id = ?").bind(n).first();
 			if (t?.messages) try {
-				let e = JSON.parse(t.messages), n = Ue("confirm", e.length, e);
+				let e = JSON.parse(t.messages), n = We("confirm", e.length, e);
 				n.product_draft && (r = n.product_draft, !i && n.rules_draft && (i = n.rules_draft), !a && n.schema_draft && (a = n.schema_draft));
 			} catch {}
 		}
@@ -1934,10 +1935,10 @@ Product: ${p}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 			aiConfidence: s.rules?.[0]?.ai_confidence
 		}), e.json(s);
 	} catch {
-		return e.json(Be(t));
+		return e.json(Ve(t));
 	}
 }), G.post("/documents/validate", async (e) => {
-	let { doc_type: t, extracted_text: n, entity_id: r, entity_type: i = "project", user_id: a = "system" } = await e.req.json(), o = e.env.OPENAI_API_KEY, s = Ve(t);
+	let { doc_type: t, extracted_text: n, entity_id: r, entity_type: i = "project", user_id: a = "system" } = await e.req.json(), o = e.env.OPENAI_API_KEY, s = He(t);
 	try {
 		let r = `Document type: ${t}\nExtracted text: ${n || "N/A (using demo mode)"}`, i = await callOpenAI(r, "You are an AI document validation system for Sohar International Bank's Green Home Loan program.\nValidate the provided document against Oman banking and ESG regulatory standards.\nReturn ONLY valid JSON:\n{\n  \"doc_type\": \"gsas_cert|epc_report|eia_approval|civil_id|salary_cert|invoice\",\n  \"extracted_fields\": {},\n  \"validation_results\": [{\"field\": \"string\", \"value\": \"string\", \"status\": \"pass|fail|warning\", \"message\": \"string\"}],\n  \"overall_status\": \"auto_verified|manual_review|rejected\",\n  \"ai_confidence\": number (0-100),\n  \"confidence_reason\": \"string\",\n  \"recommendation\": \"string\"\n}", o, "gpt-4o"), a;
 		try {
@@ -1983,11 +1984,11 @@ Product: ${p}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 			let e = t.match(/\{[\s\S]*\}/);
 			n = JSON.parse(e ? e[0] : t);
 		} catch {
-			n = He(l || [], s, a);
+			n = Ue(l || [], s, a);
 		}
 		return e.json(n);
 	} catch {
-		return e.json(He(l || [], s, a));
+		return e.json(Ue(l || [], s, a));
 	}
 }), G.post("/invoice/validate", async (e) => {
 	let { filename: t, application_id: n } = await e.req.json(), r = await e.env.DB.prepare("SELECT p.approved_materials, p.approved_vendors FROM applications a JOIN products p ON a.product_id = p.id WHERE a.id = ?").bind(n).first();
@@ -2076,7 +2077,7 @@ Product: ${p}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 	ai_confidence: 96,
 	regulatory_reference: "OS GSO 3000:2025, Section 4.2"
 })));
-function Be(e) {
+function Ve(e) {
 	let t = e.toLowerCase().includes("dbr") || e.toLowerCase().includes("debt burden");
 	return e.toLowerCase().includes("gsas") || e.toLowerCase().includes("green"), t ? {
 		rules: [{
@@ -2127,7 +2128,7 @@ function Be(e) {
 		analysis_summary: "Extracted GSAS score threshold and certification requirements."
 	};
 }
-function Ve(e) {
+function He(e) {
 	let t = {
 		gsas_cert: {
 			doc_type: "gsas_cert",
@@ -2263,7 +2264,7 @@ function Ve(e) {
 	};
 	return t[e] || t.gsas_cert;
 }
-function He(e, t, n) {
+function Ue(e, t, n) {
 	let r = t || n?.application || null, i = n?.product || null, a = n?.credit_metrics || null, o = n?.esg_status || null, s = i?.name || r?.product_name || "Green Home Loan", c = r?.reference || "N/A", l = r?.customer_name || "Applicant", u = a?.dbr?.value, d = a?.ltv?.value, f = r?.gsas_score, p = o?.epc?.rating || r?.epc_rating || "—", m = i?.green_dbr || i?.max_dbr || 55, h = i?.max_ltv || 90, g = i?.gsas_min_score || 70, _ = a?.stress_test?.passed !== !1, v = (n?.rules_summary || []).filter((e) => e.status !== "unknown").map((e) => `${e.name}: ${e.status?.toUpperCase() || "N/A"}${e.value == null ? "" : " (" + e.value + ")"}`).join("; ") || "Rule evaluation data not available", y = e.filter((e) => e.status === "approved").length, b = e.filter((e) => e.status === "rejected").length, x = e.length - y - b, S = e.length ? Math.round(e.reduce((e, t) => e + (t.gsas_score || 0), 0) / e.length) : f || 89;
 	return {
 		title: r ? `${s} — Compliance Report: ${c}` : `${s} – ESG Compliance Report`,
@@ -2339,7 +2340,7 @@ function He(e, t, n) {
 		]
 	};
 }
-function Ue(e, t, n) {
+function We(e, t, n) {
 	let r = e.toLowerCase(), i = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great") || r.includes("continue") || r.includes("use") || r.includes("keep") || r.includes("proceed"), a = n || [], o = a.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), s = o.some((e) => e.includes("clone") || e.includes("from scratch") || e.includes("product model") || e.includes("stage 1")), c = o.some((e) => e.includes("islamic") || e.includes("murabaha") || e.includes("conventional") || e.includes("structure")), l = o.some((e) => e.includes("target segment") || e.includes("omani nationals") || e.includes("expat") || e.includes("income band")), u = o.some((e) => e.includes("product name") || e.includes("sohar green") || e.includes("sohar eco") || e.includes("ecohome") || e.includes("confirm the name") || e.includes("shall i use") || e.includes("for the product name") || e.includes("i suggest") && e.includes("name")), d = o.some((e) => e.includes("base rate") || e.includes("pricing structure") || e.includes("stage 2") || e.includes("5.25%")), f = o.some((e) => e.includes("discount tier") || e.includes("green discount") || e.includes("gsas score band")), p = o.some((e) => e.includes("ltv band") || e.includes("loan-to-value") || e.includes("ltv") && e.includes("first home") && e.includes("subsequent") || e.includes("90% ltv") || e.includes("ltv settings")), m = o.some((e) => e.includes("dbr") && (e.includes("55%") || e.includes("stage 2") || e.includes("debt burden"))), h = o.some((e) => e.includes("term range") || e.includes("amount range") || e.includes("omr 10,000") || e.includes("min/max")), g = o.some((e) => e.includes("arrangement fee") || e.includes("early settlement") || e.includes("fee")), _ = o.some((e) => e.includes("17 eligibility rules") || e.includes("gsas minimum") || e.includes("stage 3") && e.includes("credit risk")), v = o.some((e) => e.includes("10-step workflow") || e.includes("10-step approval workflow") || e.includes("more human touchpoints in the automated phase") || e.includes("should i configure automated processing")), y = o.some((e) => e.includes("stage 4 complete") || e.includes("10-step approval workflow configured") || e.includes("approval workflow set") || e.includes("approval workflow configured") || e.includes("workflow is now configured") || e.includes("workflow has been configured") || e.includes("nci ekyc") && e.includes("muscat municipality") || e.includes("workflow") && e.includes("10 steps") || e.includes("workflow") && e.includes("10-step") && e.includes("stage 5")), b = o.some((e) => e.includes("shall i apply these compliance parameters") || e.includes("compliance parameters, or do you want to adjust") || e.includes("stage 5 complete") || e.includes("compliance parameters applied") || e.includes("basel iii") && e.includes("ifrs9") && e.includes("aml risk score")), x = o.some((e) => e.includes("ready to publish") || e.includes("confirm &amp; publish") || e.includes("confirm & publish") || e.includes("click confirm") || e.includes("stage 6") && (e.includes("portfolio target") || e.includes("break-even") || e.includes("nim ~")) || e.includes("stage 6") && e.includes("everything is configured")), S = [...a.map((e) => e.content || ""), e].join(" ").toLowerCase(), C = S.includes("green") || S.includes("gsas") || S.includes("esg") || S.includes("sustainable"), w = !C && (S.includes("auto") || S.includes("car") || S.includes("vehicle")), T = !C && !w && (S.includes("personal") || S.includes("unsecured") || S.includes("consumer")), E = !C && !w && !T && (S.includes("sme") || S.includes("business") || S.includes("working capital")), D = (() => {
 		let e = r.match(/\b(7[0-9]|80|85|90)\b/);
 		return e ? parseInt(e[1]) : 70;
@@ -3269,9 +3270,9 @@ K.get("/esg/:appId", async (e) => {
 			issuer: f.issuer || "N/A",
 			color: l?.validation_status === "auto_verified" ? "green" : l?.validation_status === "manual_review" ? "amber" : "red"
 		},
-		ai_recommendation: We(s, c, l),
-		overall_esg_status: Ge(s, c, l)
-	}, ee = {
+		ai_recommendation: Ge(s, c, l),
+		overall_esg_status: Ke(s, c, l)
+	}, k = {
 		dbr: {
 			value: x,
 			max: 55,
@@ -3301,7 +3302,7 @@ K.get("/esg/:appId", async (e) => {
 	};
 	return e.json({
 		esg_status: O,
-		credit_metrics: ee,
+		credit_metrics: k,
 		application: r
 	});
 }), K.post("/:appId/approve-esg", async (e) => {
@@ -3345,7 +3346,7 @@ K.get("/esg/:appId", async (e) => {
 		details: { reason: n.reason }
 	}), e.json({ success: !0 });
 });
-function We(e, t, n) {
+function Ge(e, t, n) {
 	let r = [];
 	return (!e || e.validation_status === "pending") && r.push("GSAS certificate pending validation"), t?.validation_status === "manual_review" && r.push("EPC requires manual visual check (88% confidence – image quality)"), (!n || n.validation_status === "pending") && r.push("EIA clearance pending"), r.length === 0 ? {
 		action: "Approve",
@@ -3361,7 +3362,7 @@ function We(e, t, n) {
 		confidence: 70
 	};
 }
-function Ge(e, t, n) {
+function Ke(e, t, n) {
 	let r = [
 		e?.validation_status,
 		t?.validation_status,
@@ -3381,30 +3382,30 @@ K.get("/full/:appId", async (e) => {
 		e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'application' AND entity_id = ?").bind(r.id).all(),
 		r.unit_id ? e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'unit' AND entity_id = ?").bind(r.unit_id).all() : Promise.resolve({ results: [] }),
 		r.project_id ? e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'project' AND entity_id = ?").bind(r.project_id).all() : Promise.resolve({ results: [] })
-	]), f = l.results || [], p = u.results || [], m = d.results || [], h = (e) => f.find((t) => t.doc_type === e) || p.find((t) => t.doc_type === e) || m.find((t) => t.doc_type === e), g = h("gsas_cert"), _ = h("epc_report"), v = h("eia_approval"), y = g ? JSON.parse(g.extracted_data || "{}") : {}, b = _ ? JSON.parse(_.extracted_data || "{}") : {}, x = v ? JSON.parse(v.extracted_data || "{}") : {}, S = r.salary_omr || r.salary || 0, C = r.loan_amount || 0, w = r.loan_term || 25, T = r.applied_rate || 5.5, E = r.property_value || C / .8, D = T / 100 / 12, O = w * 12, ee = D > 0 ? C * D * (1 + D) ** +O / ((1 + D) ** +O - 1) : C / O, k = r.dbr || (S > 0 ? Math.round(ee / S * 100 * 10) / 10 : null), A = r.ltv || (E > 0 ? Math.round(C / E * 100 * 10) / 10 : null), j = r.malaa_score || r.credit_score || null, M = T + 3.5, te = (() => {
-		let e = M / 100 / 12;
+	]), f = l.results || [], p = u.results || [], m = d.results || [], h = (e) => f.find((t) => t.doc_type === e) || p.find((t) => t.doc_type === e) || m.find((t) => t.doc_type === e), g = h("gsas_cert"), _ = h("epc_report"), v = h("eia_approval"), y = g ? JSON.parse(g.extracted_data || "{}") : {}, b = _ ? JSON.parse(_.extracted_data || "{}") : {}, x = v ? JSON.parse(v.extracted_data || "{}") : {}, S = r.salary_omr || r.salary || 0, C = r.loan_amount || 0, w = r.loan_term || 25, T = r.applied_rate || 5.5, E = r.property_value || C / .8, D = T / 100 / 12, O = w * 12, k = D > 0 ? C * D * (1 + D) ** +O / ((1 + D) ** +O - 1) : C / O, A = r.dbr || (S > 0 ? Math.round(k / S * 100 * 10) / 10 : null), j = r.ltv || (E > 0 ? Math.round(C / E * 100 * 10) / 10 : null), M = r.malaa_score || r.credit_score || null, N = T + 3.5, ee = (() => {
+		let e = N / 100 / 12;
 		return C * e * (1 + e) ** +O / ((1 + e) ** +O - 1);
-	})(), ne = S > 0 ? Math.round(te / S * 100 * 10) / 10 : null, re = ne === null ? (r.stress_test_passed, !0) : ne <= 60, ie = r.gsas_min_score || 70, ae = r.gsas_premium_score || 85, N = r.green_dbr || r.max_dbr || 55, oe = r.max_ltv || 90, P = {
+	})(), te = S > 0 ? Math.round(ee / S * 100 * 10) / 10 : null, ne = te === null ? (r.stress_test_passed, !0) : te <= 60, re = r.gsas_min_score || 70, ie = r.gsas_premium_score || 85, ae = r.green_dbr || r.max_dbr || 55, P = r.max_ltv || 90, oe = {
 		A: 5,
 		B: 4,
 		C: 3,
 		D: 2,
 		E: 1,
 		F: 0
-	}[b.rating || r.epc_rating || "A"] ?? 5, F = a.find((e) => e.metric === "epc_rating")?.threshold_value || 3, se = {
+	}[b.rating || r.epc_rating || "A"] ?? 5, se = a.find((e) => e.metric === "epc_rating")?.threshold_value || 3, F = {
 		gsas: {
 			status: g?.validation_status || "pending",
 			confidence: g?.ai_confidence || 0,
 			score: y.overall_score || r.gsas_score,
-			min_score: ie,
-			premium_score: ae,
+			min_score: re,
+			premium_score: ie,
 			rating: y.rating || (r.gsas_score >= 90 ? "Platinum" : r.gsas_score >= 75 ? "Gold" : r.gsas_score >= 60 ? "Silver" : "Unknown"),
 			certificate_number: y.certificate_number || "N/A",
 			expiry: y.expiry_date || "N/A",
 			issuer: y.issuer || "N/A",
 			rule_ref: a.find((e) => e.metric === "gsas_score")?.regulatory_reference || "OS GSO 3000:2025",
-			passes_threshold: (r.gsas_score || 0) >= ie,
-			passes_premium: (r.gsas_score || 0) >= ae,
+			passes_threshold: (r.gsas_score || 0) >= re,
+			passes_premium: (r.gsas_score || 0) >= ie,
 			color: g?.validation_status === "auto_verified" ? "green" : g?.validation_status === "manual_review" ? "amber" : "red",
 			filename: g?.filename || null,
 			file_url: g?.file_url || null,
@@ -3416,7 +3417,7 @@ K.get("/full/:appId", async (e) => {
 			confidence: _?.ai_confidence || 0,
 			rating: b.rating || r.epc_rating || "A",
 			min_rating: "C",
-			passes: P >= F,
+			passes: oe >= se,
 			expiry: b.expiry_date || "N/A",
 			assessor: b.assessor || "N/A",
 			energy_kwh: b.energy_consumption || "N/A",
@@ -3443,47 +3444,47 @@ K.get("/full/:appId", async (e) => {
 			doc_id: v?.id || null,
 			doc_source: v ? f.find((e) => e.doc_type === "eia_approval") ? "application" : p.find((e) => e.doc_type === "eia_approval") ? "unit" : "project" : null
 		},
-		ai_recommendation: We(g, _, v),
-		overall_esg_status: Ge(g, _, v)
+		ai_recommendation: Ge(g, _, v),
+		overall_esg_status: Ke(g, _, v)
 	}, ce = {
 		dbr: {
-			value: k,
-			max: N,
-			status: k === null || k <= N ? "pass" : "fail",
-			label: `Max ${N}% — ${r.product_name || "product"} green DBR limit`
+			value: A,
+			max: ae,
+			status: A === null || A <= ae ? "pass" : "fail",
+			label: `Max ${ae}% — ${r.product_name || "product"} green DBR limit`
 		},
 		ltv: {
-			value: A,
-			max: oe,
-			status: A === null || A <= oe ? "pass" : "fail",
-			label: `Max ${oe}% — ${r.product_name || "product"} LTV ceiling`
+			value: j,
+			max: P,
+			status: j === null || j <= P ? "pass" : "fail",
+			label: `Max ${P}% — ${r.product_name || "product"} LTV ceiling`
 		},
 		malaa_score: {
-			value: j,
+			value: M,
 			min: 650,
-			status: j ? j >= 650 ? "pass" : "fail" : "pass",
+			status: M ? M >= 650 ? "pass" : "fail" : "pass",
 			label: "Min 650 — CBO Credit Bureau minimum"
 		},
 		stress_test: {
-			passed: re,
-			rate: parseFloat(M.toFixed(2)),
-			stress_dbr: ne,
-			label: `CBO +350bps shock: ${M.toFixed(2)}% — threshold 60%`
+			passed: ne,
+			rate: parseFloat(N.toFixed(2)),
+			stress_dbr: te,
+			label: `CBO +350bps shock: ${N.toFixed(2)}% — threshold 60%`
 		},
-		monthly_payment: Math.round(ee),
+		monthly_payment: Math.round(k),
 		property_value: Math.round(E)
 	}, le = (e) => {
 		let t = (() => {
 			switch (e.metric) {
 				case "DBR":
-				case "dbr": return k;
+				case "dbr": return A;
 				case "LTV":
-				case "ltv": return A;
+				case "ltv": return j;
 				case "gsas_score": return r.gsas_score;
-				case "credit_score": return j;
+				case "credit_score": return M;
 				case "loan_term": return w;
-				case "stress_rate": return M;
-				case "epc_rating": return P;
+				case "stress_rate": return N;
+				case "epc_rating": return oe;
 				case "esg_docs_complete": return g && _ ? 1 : 0;
 				case "eia_approval":
 				case "eia_required": return +!!v;
@@ -3546,7 +3547,7 @@ K.get("/full/:appId", async (e) => {
 			collateral: s,
 			all_evaluated: ue
 		},
-		esg_status: se,
+		esg_status: F,
 		credit_metrics: ce,
 		documents: {
 			gsas: g || null,
@@ -3563,7 +3564,7 @@ K.get("/full/:appId", async (e) => {
 			...e,
 			priority: t ? "high" : "normal",
 			customer_display_name: e.customer_name,
-			manual_checks: Ke(e)
+			manual_checks: qe(e)
 		};
 	});
 	return e.json({
@@ -3571,7 +3572,7 @@ K.get("/full/:appId", async (e) => {
 		total: n.length
 	});
 });
-function Ke(e) {
+function qe(e) {
 	let t = [];
 	return e.gsas_score || t.push("GSAS score not provided — manual verification required"), e.esg_verification_status === "pending" && t.push("ESG documents pending review"), e.dbr && parseFloat(e.dbr) > 40 && t.push(`DBR ${e.dbr}% exceeds 40% threshold — credit officer sign-off needed`), e.loan_amount >= 2e5 && t.push("High-value loan (≥OMR 200k) — senior credit approval required"), e.gsas_score && e.gsas_score >= (e.gsas_premium_score || 85) && e.green_discount_premium > 0 && t.push(`GSAS ${e.gsas_score} qualifies for ${e.green_discount_premium}% green premium discount — verify certificate`), t;
 }
@@ -3690,9 +3691,9 @@ q.get("/:id", async (e) => {
 });
 //#endregion
 //#region src/api/documents.ts
-var qe = new L();
-qe.post("/analyze", async (e) => {
-	let { doc_type: t, filename: n, entity_id: r, entity_type: i = "project", user_id: a = "system" } = await e.req.json(), o = Je(t, n), s = B("doc"), c = V();
+var Je = new L();
+Je.post("/analyze", async (e) => {
+	let { doc_type: t, filename: n, entity_id: r, entity_type: i = "project", user_id: a = "system" } = await e.req.json(), o = Ye(t, n), s = B("doc"), c = V();
 	return await e.env.DB.prepare("\n    INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, extracted_data, ai_confidence, validation_status, validation_notes, created_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?)\n  ").bind(s, i, r, t, n, JSON.stringify(o.extracted_fields), o.ai_confidence, o.overall_status, o.recommendation, c).run(), await H(e.env.DB, {
 		userId: "system",
 		userName: "System AI",
@@ -3711,7 +3712,7 @@ qe.post("/analyze", async (e) => {
 		...o,
 		document_id: s
 	});
-}), qe.patch("/:id/override", async (e) => {
+}), Je.patch("/:id/override", async (e) => {
 	let t = e.req.param("id"), n = await e.req.json(), r = V();
 	return await e.env.DB.prepare("\n    UPDATE documents SET validation_status = 'approved', validation_notes = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ?\n  ").bind(`Manual override: ${n.reason}`, n.user_id, r, t).run(), await H(e.env.DB, {
 		userId: n.user_id || "u002",
@@ -3727,7 +3728,7 @@ qe.post("/analyze", async (e) => {
 		regulatoryReference: n.regulatory_reference
 	}), e.json({ success: !0 });
 });
-function Je(e, t) {
+function Ye(e, t) {
 	let n = {
 		gsas_cert: {
 			doc_type: "gsas_cert",
@@ -3945,8 +3946,8 @@ function Je(e, t) {
 }
 //#endregion
 //#region src/api/escrow.ts
-var Ye = new L();
-Ye.post("/:appId/complete-stage", async (e) => {
+var Xe = new L();
+Xe.post("/:appId/complete-stage", async (e) => {
 	e.req.param("appId");
 	let { stage_id: t, invoice_filename: n, user_id: r = "u011", user_name: i = "Rashid Al-Hassani" } = await e.req.json(), a = V();
 	return await e.env.DB.prepare("\n    UPDATE construction_stages SET status = 'completed', ai_validated = 1, ai_confidence = 94, completed_at = ? WHERE id = ?\n  ").bind(a, t).run(), await H(e.env.DB, {
@@ -4008,7 +4009,7 @@ Ye.post("/:appId/complete-stage", async (e) => {
 			recommendation: "Stage 1 completion verified. Green material confirmed. Payment initiation in progress."
 		}
 	});
-}), Ye.post("/:appId/release-tranche", async (e) => {
+}), Xe.post("/:appId/release-tranche", async (e) => {
 	let t = e.req.param("appId"), { stage_id: n, amount: r, user_id: i = "u004", user_name: a = "Khalid Al-Rawahi" } = await e.req.json(), o = V(), s = `TRX-${(/* @__PURE__ */ new Date()).getFullYear()}-${String((/* @__PURE__ */ new Date()).getMonth() + 1).padStart(2, "0")}-${String((/* @__PURE__ */ new Date()).getDate()).padStart(2, "0")}-${Math.floor(Math.random() * 9e3 + 1e3)}`;
 	await e.env.DB.prepare("\n    UPDATE construction_stages SET status = 'paid', payment_reference = ?, paid_at = ? WHERE id = ?\n  ").bind(s, o, n).run();
 	let c = await e.env.DB.prepare("SELECT * FROM construction_stages WHERE id = ?").bind(n).first();
@@ -4032,8 +4033,8 @@ Ye.post("/:appId/complete-stage", async (e) => {
 });
 //#endregion
 //#region src/api/audit.ts
-var Xe = new L();
-Xe.get("/", async (e) => {
+var Ze = new L();
+Ze.get("/", async (e) => {
 	let t = parseInt(e.req.query("limit") || "50"), n = parseInt(e.req.query("offset") || "0"), r = e.req.query("action") || "", i = e.req.query("entity_type") || "", a = e.req.query("user_id") || "", o = "SELECT al.*,\n    CASE\n      WHEN al.entity_type = 'application' THEN (SELECT reference FROM applications WHERE id = al.entity_id)\n      WHEN al.entity_type = 'product'     THEN (SELECT name     FROM products     WHERE id = al.entity_id)\n      WHEN al.entity_type = 'rule'        THEN (SELECT name     FROM rules        WHERE id = al.entity_id)\n      ELSE NULL\n    END as entity_label\n  FROM audit_logs al WHERE 1=1", s = [];
 	r && (o += " AND al.action LIKE ?", s.push(`%${r}%`)), i && (o += " AND al.entity_type = ?", s.push(i)), a && (o += " AND al.user_id = ?", s.push(a)), o += " ORDER BY al.created_at DESC LIMIT ? OFFSET ?", s.push(Math.min(t, 200), n);
 	let { results: c } = await e.env.DB.prepare(o).bind(...s).all(), l = await e.env.DB.prepare("SELECT COUNT(*) as total FROM audit_logs WHERE 1=1").first();
@@ -4041,7 +4042,7 @@ Xe.get("/", async (e) => {
 		audit_logs: c || [],
 		total: l?.total || 0
 	});
-}), Xe.post("/", async (e) => {
+}), Ze.post("/", async (e) => {
 	let t = await e.req.json(), n = B("al"), r = V();
 	return await e.env.DB.prepare("\n    INSERT INTO audit_logs (id, user_id, user_name, user_role, action, entity_type, entity_id, details, source, ai_confidence, regulatory_reference, created_at)\n    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n  ").bind(n, t.user_id || "system", t.user_name || "System", t.user_role || "system", t.action || "MANUAL_ENTRY", t.entity_type || null, t.entity_id || null, JSON.stringify(t.details || {}), t.source || "manual", t.ai_confidence || null, t.regulatory_reference || null, r).run(), e.json({
 		success: !0,
@@ -4050,14 +4051,14 @@ Xe.get("/", async (e) => {
 });
 //#endregion
 //#region src/api/users.ts
-var Ze = new L();
-Ze.get("/", async (e) => {
+var Qe = new L();
+Qe.get("/", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT id, name, name_ar, email, role, department, avatar_initials, status\n     FROM users WHERE status != 'inactive' ORDER BY id").all();
 	return e.json({ users: t });
-}), Ze.get("/:id", async (e) => {
+}), Qe.get("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(t).first();
 	return n ? e.json({ user: n }) : e.json({ error: "Not found" }, 404);
-}), Ze.get("/customer/:customerId", async (e) => {
+}), Qe.get("/customer/:customerId", async (e) => {
 	let t = e.req.param("customerId"), n = await e.env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	if (!n) return e.json({ error: "Not found" }, 404);
 	let { results: r } = await e.env.DB.prepare("SELECT a.*, p.name as product_name FROM applications a LEFT JOIN products p ON a.product_id = p.id WHERE a.customer_id = ? ORDER BY a.created_at DESC").bind(t).all();
@@ -4067,20 +4068,60 @@ Ze.get("/", async (e) => {
 	});
 });
 //#endregion
+//#region src/lib/blob-storage.ts
+var $e = process.env.AZURE_STORAGE_CONNECTION_STRING || "", et = process.env.AZURE_STORAGE_CONTAINER || "lms-documents", tt = null;
+function nt() {
+	if (!$e) return null;
+	if (tt) return tt;
+	try {
+		return tt = i.fromConnectionString($e).getContainerClient(et), tt;
+	} catch (e) {
+		return console.error("[blob-storage] Failed to create BlobServiceClient:", e), null;
+	}
+}
+function rt() {
+	return !!$e;
+}
+async function it(e) {
+	let t = nt();
+	if (!t) return console.warn("[blob-storage] No connection string — file not stored in Azure"), null;
+	let n = e.filename.replace(/[^a-zA-Z0-9._\-]/g, "_"), r = `${e.entityType}s/${e.entityId}/${e.docType}/${Date.now()}-${n}`;
+	try {
+		await t.createIfNotExists({ access: "blob" });
+		let i = t.getBlockBlobClient(r);
+		return await i.uploadData(e.buffer, { blobHTTPHeaders: {
+			blobContentType: e.mimeType || "application/octet-stream",
+			blobContentDisposition: `inline; filename="${n}"`
+		} }), console.log(`[blob-storage] Uploaded: ${r} (${e.buffer.length} bytes)`), i.url;
+	} catch (e) {
+		return console.error("[blob-storage] Upload failed:", e), null;
+	}
+}
+async function at(e) {
+	let t = nt();
+	if (!t) return !1;
+	try {
+		let n = new URL(e).pathname.replace(`/${et}/`, "");
+		return await t.getBlockBlobClient(n).deleteIfExists(), console.log(`[blob-storage] Deleted: ${n}`), !0;
+	} catch (t) {
+		return console.error("[blob-storage] Delete failed for", e, t), !1;
+	}
+}
+//#endregion
 //#region src/api/seed.ts
-var Qe = new L(), $e = "\nCREATE TABLE IF NOT EXISTS products (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, code TEXT UNIQUE, description TEXT,\n  category TEXT DEFAULT 'home_loan', status TEXT DEFAULT 'draft',\n  base_rate REAL DEFAULT 5.5, max_ltv INTEGER DEFAULT 90, max_dbr INTEGER DEFAULT 60,\n  green_dbr INTEGER DEFAULT 55, min_term INTEGER DEFAULT 5, max_term INTEGER DEFAULT 25,\n  min_amount REAL DEFAULT 10000, max_amount REAL DEFAULT 500000,\n  gsas_min_score INTEGER DEFAULT 0, gsas_premium_score INTEGER DEFAULT 0,\n  green_discount_premium REAL DEFAULT 0.0, green_discount_standard REAL DEFAULT 0.0,\n  ai_confidence_threshold INTEGER DEFAULT 90, allow_byop INTEGER DEFAULT 1,\n  allow_partner_inventory INTEGER DEFAULT 1,\n  required_docs TEXT DEFAULT '[]', esg_required_docs TEXT DEFAULT '[]',\n  approved_materials TEXT DEFAULT '[]', approved_vendors TEXT DEFAULT '[]',\n  configuration TEXT DEFAULT '{}', applications_ytd INTEGER DEFAULT 0,\n  created_by TEXT DEFAULT 'system', created_at TEXT DEFAULT (datetime('now')),\n  updated_at TEXT DEFAULT (datetime('now')),\n  portal_visible INTEGER DEFAULT 0,\n  portal_hero_title TEXT, portal_hero_subtitle TEXT, portal_card_badge TEXT,\n  portal_highlights TEXT DEFAULT '[]',\n  portal_calculator_enabled INTEGER DEFAULT 1,\n  developer_portal_visible INTEGER DEFAULT 0,\n  developer_requirements TEXT DEFAULT '{}',\n  published_at TEXT\n);\n\nCREATE TABLE IF NOT EXISTS rules (\n  id TEXT PRIMARY KEY, product_id TEXT, name TEXT NOT NULL, category TEXT NOT NULL,\n  metric TEXT NOT NULL, operator TEXT NOT NULL, threshold_value REAL,\n  threshold_condition TEXT, action_on_breach TEXT DEFAULT 'reject',\n  severity TEXT DEFAULT 'hard', regulatory_reference TEXT,\n  source TEXT DEFAULT 'manual', ai_confidence REAL, description TEXT,\n  is_active INTEGER DEFAULT 1, created_by TEXT DEFAULT 'system',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS developers (\n  id TEXT PRIMARY KEY, company_name TEXT NOT NULL, cr_number TEXT UNIQUE,\n  contact_name TEXT, email TEXT, phone TEXT, po_box TEXT,\n  status TEXT DEFAULT 'active', verified_at TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS projects (\n  id TEXT PRIMARY KEY, developer_id TEXT, name TEXT NOT NULL, code TEXT UNIQUE,\n  location TEXT, governorate TEXT, type TEXT DEFAULT 'residential',\n  total_units INTEGER DEFAULT 0, available_units INTEGER DEFAULT 0,\n  reserved_units INTEGER DEFAULT 0, sold_units INTEGER DEFAULT 0,\n  gsas_score INTEGER, gsas_rating TEXT, epc_rating TEXT, eia_reference TEXT,\n  geo_json TEXT, status TEXT DEFAULT 'draft',\n  green_eligible INTEGER DEFAULT 0, premium_tier INTEGER DEFAULT 0,\n  created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS units (\n  id TEXT PRIMARY KEY, project_id TEXT, unit_number TEXT NOT NULL,\n  floor_number INTEGER, type TEXT DEFAULT 'villa', area_sqm REAL,\n  bedrooms INTEGER, bathrooms INTEGER, price REAL, lat REAL, lng REAL,\n  status TEXT DEFAULT 'available', features TEXT DEFAULT '[]',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS documents (\n  id TEXT PRIMARY KEY, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL,\n  doc_type TEXT NOT NULL, filename TEXT, file_url TEXT,\n  extracted_data TEXT DEFAULT '{}', ai_confidence REAL,\n  validation_status TEXT DEFAULT 'pending', validation_notes TEXT,\n  reviewed_by TEXT, reviewed_at TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS customers (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, name_ar TEXT, civil_id TEXT UNIQUE,\n  email TEXT, phone TEXT, nationality TEXT DEFAULT 'Omani', employer TEXT,\n  salary_omr REAL, employment_type TEXT DEFAULT 'salaried',\n  credit_score INTEGER DEFAULT 700, existing_dbr REAL DEFAULT 0,\n  sohar_customer_since TEXT, status TEXT DEFAULT 'active',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS applications (\n  id TEXT PRIMARY KEY, reference TEXT UNIQUE NOT NULL, product_id TEXT,\n  customer_id TEXT, customer_name TEXT, unit_id TEXT, project_id TEXT,\n  loan_amount REAL, loan_term INTEGER, property_address TEXT,\n  property_source TEXT DEFAULT 'partner', property_area_sqm REAL,\n  gsas_score INTEGER, epc_rating TEXT, applied_rate REAL, standard_rate REAL DEFAULT 5.5,\n  monthly_payment REAL, standard_monthly_payment REAL, lifetime_saving REAL,\n  dbr REAL, ltv REAL, stress_test_rate REAL DEFAULT 9.0, stress_test_passed INTEGER DEFAULT 0,\n  malaa_score INTEGER, status TEXT DEFAULT 'draft', esg_verification_status TEXT DEFAULT 'pending',\n  compliance_approved_by TEXT, compliance_approved_at TEXT,\n  risk_approved_by TEXT, risk_approved_at TEXT,\n  escrow_amount REAL, escrow_released REAL DEFAULT 0,\n  rejection_reason TEXT, tracking_url TEXT,\n  created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS construction_stages (\n  id TEXT PRIMARY KEY, application_id TEXT, stage_number INTEGER NOT NULL,\n  stage_name TEXT NOT NULL, description TEXT, tranche_amount REAL,\n  tranche_percentage REAL, required_material TEXT, status TEXT DEFAULT 'locked',\n  invoice_doc_id TEXT, ai_validated INTEGER DEFAULT 0, ai_confidence REAL,\n  payment_reference TEXT, completed_at TEXT, paid_at TEXT,\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS users (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, name_ar TEXT, email TEXT UNIQUE NOT NULL,\n  role TEXT NOT NULL, department TEXT, avatar_initials TEXT,\n  status TEXT DEFAULT 'active', created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS audit_logs (\n  id TEXT PRIMARY KEY, user_id TEXT, user_name TEXT, user_role TEXT,\n  action TEXT NOT NULL, entity_type TEXT, entity_id TEXT, details TEXT DEFAULT '{}',\n  source TEXT DEFAULT 'manual', ai_confidence REAL, regulatory_reference TEXT,\n  ip_address TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS knowledge_base (\n  id TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT NOT NULL,\n  content TEXT NOT NULL, source TEXT, effective_date TEXT,\n  tags TEXT DEFAULT '[]', created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS rule_templates (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL,\n  regulatory_source TEXT, template_json TEXT NOT NULL,\n  is_cbo_required INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);\nCREATE INDEX IF NOT EXISTS idx_applications_reference ON applications(reference);\nCREATE INDEX IF NOT EXISTS idx_units_project ON units(project_id);\nCREATE INDEX IF NOT EXISTS idx_documents_entity ON documents(entity_type, entity_id);\nCREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);\nCREATE INDEX IF NOT EXISTS idx_construction_stages_app ON construction_stages(application_id);\n", et = "\nALTER TABLE products ADD COLUMN portal_visible INTEGER DEFAULT 0;\nALTER TABLE products ADD COLUMN portal_hero_title TEXT;\nALTER TABLE products ADD COLUMN portal_hero_subtitle TEXT;\nALTER TABLE products ADD COLUMN portal_card_badge TEXT;\nALTER TABLE products ADD COLUMN portal_highlights TEXT DEFAULT '[]';\nALTER TABLE products ADD COLUMN portal_calculator_enabled INTEGER DEFAULT 1;\nALTER TABLE products ADD COLUMN developer_portal_visible INTEGER DEFAULT 0;\nALTER TABLE products ADD COLUMN developer_requirements TEXT DEFAULT '{}';\nALTER TABLE products ADD COLUMN published_at TEXT;\nALTER TABLE projects ADD COLUMN listing_visible INTEGER DEFAULT 0;\nALTER TABLE projects ADD COLUMN hero_image_url TEXT;\nALTER TABLE projects ADD COLUMN marketing_tagline TEXT;\nALTER TABLE projects ADD COLUMN price_from REAL;\nALTER TABLE projects ADD COLUMN price_to REAL;\nALTER TABLE projects ADD COLUMN completion_date TEXT;\nALTER TABLE projects ADD COLUMN amenities TEXT DEFAULT '[]';\nCREATE TABLE IF NOT EXISTS ai_threads (\n  id TEXT PRIMARY KEY, user_id TEXT, product_id TEXT, purpose TEXT NOT NULL,\n  messages TEXT DEFAULT '[]', context TEXT DEFAULT '{}', status TEXT DEFAULT 'active',\n  result TEXT DEFAULT '{}', created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\n", tt = "\nINSERT OR IGNORE INTO users VALUES ('u001','Fatima Al-Rashdi','فاطمة الراشدي','fatima@sib.om','product_manager','Product Management','FA','active','2024-01-15');\nINSERT OR IGNORE INTO users VALUES ('u002','Aisha Al-Balushi','عائشة البلوشي','aisha@sib.om','compliance_officer','Compliance & ESG','AB','active','2023-06-01');\nINSERT OR IGNORE INTO users VALUES ('u003','Omar Al-Mantheri','عمر المنذري','omar@sib.om','risk_officer','Credit Risk','OM','active','2023-03-15');\nINSERT OR IGNORE INTO users VALUES ('u004','Khalid Al-Rawahi','خالد الرواحي','khalid@sib.om','operations','Operations','KR','active','2022-09-01');\nINSERT OR IGNORE INTO users VALUES ('u010','Ahmed Al-Hinai','أحمد الهنائي','ahmed@almadaen.om','developer','Al Madaen Real Estate','AH','active','2023-11-01');\nINSERT OR IGNORE INTO users VALUES ('u011','Rashid Al-Hassani','راشد الحساني','rashid@aljazeera-const.om','contractor','Al Jazeera Constructions','RH','active','2024-02-01');\nINSERT OR IGNORE INTO users VALUES ('u020','Salim Al-Harthy','سالم الحارثي','salim@gmail.com','customer',null,'SH','active','2019-05-10');\n\nINSERT OR IGNORE INTO customers VALUES ('c001','Salim Al-Harthy','سالم الحارثي','84521789','salim@gmail.com','+968 9921 3344','Omani','Ministry of Heritage & Tourism',3200,'salaried',750,0,'2019-05-10','active','2019-05-10');\nINSERT OR IGNORE INTO customers VALUES ('c002','Mariam Al-Siyabi','مريم السيابي','91234567','mariam@hotmail.com','+968 9955 1122','Omani','Oman Oil Company',4500,'salaried',780,12,'2020-03-22','active','2020-03-22');\nINSERT OR IGNORE INTO customers VALUES ('c003','Hassan Al-Amri','حسن العامري','78654321','hassan@gmail.com','+968 9977 8899','Omani','Bank Muscat',2800,'salaried',710,18,'2021-07-15','active','2021-07-15');\n\nINSERT OR IGNORE INTO products VALUES ('p001','Standard Home Loan','SHL-STANDARD','Flagship home financing for Omani nationals and residents. Fixed and variable rate options, top-up facility, and bundled insurance. CBO-compliant with full credit assessment.','home_loan','active',5.5,90,60,60,5,25,10000,500000,0,0,0.0,0.0,90,1,1,'[\"civil_id\",\"salary_certificate\",\"utility_bill\",\"property_deed\",\"independent_valuation_report\",\"bank_statements_3m\",\"employer_letter\"]','[]','[]','[]','{\"features\":[\"Fixed and variable rate options\",\"Top-up facility available\",\"Insurance bundled\",\"Salary transfer preferred\"]}',4847,'u001','2024-01-10','2025-12-15');\nINSERT OR IGNORE INTO products VALUES ('p002','Auto Finance – Personal','AFL-PERSONAL','Financing for personal vehicles including sedans, SUVs, and electric vehicles. Competitive flat rate, quick 48-hour approval, covers new and used vehicles up to 5 years old.','auto_loan','active',4.9,85,55,55,1,7,3000,80000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"salary_certificate\",\"vehicle_proforma_invoice\",\"driving_license\",\"insurance_quotation\",\"bank_statements_3m\"]','[]','[]','[]','{\"features\":[\"Covers new & used vehicles\",\"48-hour credit decision\",\"EV purchase supported\",\"Comprehensive insurance required\"]}',1923,'u001','2023-06-01','2025-11-20');\nINSERT OR IGNORE INTO products VALUES ('p003','Personal Loan','PL-UNSECURED','Unsecured personal financing for salaried employees of approved employers. No collateral required. Flat competitive rate for medical, travel, home renovation and other personal needs.','personal_loan','active',7.5,0,45,45,1,5,1000,30000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"salary_certificate\",\"employer_letter\",\"bank_statements_3m\",\"approved_employer_confirmation\"]','[]','[]','[]','{\"features\":[\"No collateral required\",\"Approved employer list\",\"Competitive fixed rate\",\"Loan protector insurance available\"]}',3241,'u001','2023-01-15','2025-10-01');\nINSERT OR IGNORE INTO products VALUES ('p004','SME Working Capital','SME-WORKCAP','Short-term working capital facility for small and medium enterprises registered in Oman. Revolving or term structure. Supports payroll, inventory procurement, and operational growth.','sme','active',6.5,70,65,65,1,3,5000,200000,0,0,0.0,0.0,85,0,0,'[\"commercial_registration_certificate\",\"memorandum_of_association\",\"audited_financials_2yr\",\"bank_statements_6m\",\"cr_extract\",\"tax_clearance_certificate\",\"business_profile\"]','[]','[]','[]','{\"features\":[\"For Oman-registered SMEs\",\"Revolving or term facility\",\"Supports payroll & growth\",\"MOCI-verified CR required\"]}',892,'u001','2023-08-10','2025-09-15');\nINSERT OR IGNORE INTO products VALUES ('p005','Home Equity Line','HELOC-STANDARD','Revolving credit facility secured against existing owned property. Access equity without selling. Ideal for large purchases, education, or business funding. Second charge behind primary mortgage.','home_loan','active',6.0,75,55,55,5,15,20000,300000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"property_title_deed\",\"independent_valuation_report\",\"salary_certificate\",\"bank_statements_3m\",\"existing_mortgage_statement\",\"noc_from_primary_lender\"]','[]','[]','[]','{\"features\":[\"Use your property equity\",\"Revolving credit line\",\"Up to OMR 300,000\",\"No early settlement penalty\"]}',567,'u001','2024-03-01','2025-08-20');\nINSERT OR IGNORE INTO products VALUES ('p006','Commercial Property Finance','CPF-COMMERCIAL','Financing for commercial properties including offices, retail units, and warehouses. Available to Omani-registered companies and sole proprietors. Full corporate credit assessment applies.','commercial','active',6.8,70,65,65,5,20,50000,2000000,0,0,0.0,0.0,85,0,0,'[\"commercial_registration_certificate\",\"memorandum_of_association\",\"audited_financials_3yr\",\"bank_statements_12m\",\"property_title_deed\",\"independent_valuation_report\",\"lease_agreements\",\"board_resolution\"]','[]','[]','[]','{\"features\":[\"For offices, retail & warehouses\",\"Up to OMR 2,000,000\",\"Flexible repayment structures\",\"Lease income considered\"]}',234,'u001','2023-09-01','2025-07-10');\nINSERT OR IGNORE INTO products VALUES ('p007','Expat Home Finance','EHL-EXPAT','Home financing for expatriate professionals working in Oman. Stricter LTV (max 75%) per CBO regulations. Employer NOC required. Available for IZ-approved freehold zones.','home_loan','active',6.0,75,55,55,5,20,15000,400000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"passport_copy\",\"valid_work_permit_residence_card\",\"salary_certificate\",\"noc_from_employer\",\"property_deed_freehold_zone\",\"independent_valuation_report\",\"bank_statements_6m\"]','[]','[]','[]','{\"features\":[\"Expatriate professionals\",\"LTV up to 75%\",\"Freehold zone properties\",\"Employer NOC required\"]}',1102,'u001','2024-01-20','2025-12-01');\nINSERT OR IGNORE INTO products VALUES ('p008','Education Finance','EDU-FINANCE','Financing for higher education expenses including tuition, accommodation, and study materials at approved universities in Oman and abroad. Deferred repayment option available.','education','archived',8.0,0,45,45,1,8,500,20000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"university_offer_letter_or_enrollment\",\"salary_certificate\",\"fee_schedule_from_institution\",\"bank_statements_3m\"]','[]','[]','[]','{\"features\":[\"Approved universities list\",\"Deferred repayment option\",\"Covers tuition & accommodation\",\"Loan protector insurance\"]}',445,'u001','2022-01-01','2024-06-01');\n-- Green Home Loan is created LIVE during the presentation (Act 1).\n\nINSERT OR IGNORE INTO rules VALUES ('r001',null,'DBR Maximum Limit','creditworthiness','DBR','<=',60,null,'reject','hard','CBO Circular 2024-01, Section 3.1','manual',null,'Debt Burden Ratio must not exceed 60% of gross monthly income',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r002',null,'LTV Maximum – Salaried Omani','collateral','LTV','<=',90,'nationality=Omani AND employment=salaried','reject','hard','CBO Circular 2024-01, Section 4.2','manual',null,'LTV max 90% for salaried Omani nationals',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r003',null,'LTV Maximum – Expat','collateral','LTV','<=',75,'nationality!=Omani','reject','hard','CBO Circular 2024-01, Section 4.3','manual',null,'LTV max 75% for expatriates',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r004',null,'Minimum Loan Term','product','loan_term','>=',5,null,'reject','hard','Bank Policy BP-2024-HL-001','manual',null,'Minimum loan term 5 years',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r005',null,'Maximum Loan Term','product','loan_term','<=',25,null,'reject','hard','CBO Circular 2024-01, Section 5.1','manual',null,'Maximum loan term 25 years',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r006',null,'Minimum Credit Score','creditworthiness','credit_score','>=',650,null,'reject','hard','Bank Policy BP-2024-CR-002','manual',null,'Minimum MALAA credit score 650',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r007',null,'CBO Stress Test – Rate Hike','stress_test','stress_rate','<=',9,null,'reject','hard','CBO Circular 2025-07, Section 2.3','manual',null,'Simulate +350bps rate hike; DBR must not exceed 70%',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r008',null,'Minimum Salary – Home Loan','eligibility','salary_omr','>=',400,null,'reject','soft','Bank Policy BP-2024-HL-003','manual',null,'Minimum monthly salary OMR 400',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r009',null,'Property Valuation Required','collateral','valuation_required','=',1,null,'reject','hard','CBO Circular 2024-01, Section 6.1','manual',null,'Independent valuation mandatory',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r010',null,'AML Sanctions Screening','compliance','sanctions_clear','=',1,null,'reject','hard','CBO AML/CFT Rules 2022, Section 8','manual',null,'Customer must pass sanctions screening',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r011',null,'KYC Completeness Check','compliance','kyc_complete','=',1,null,'reject','hard','CBO AML/CFT Rules 2022, Section 5.2','manual',null,'All KYC documents must be verified',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r012',null,'GSAS Score – Green Entry','esg','gsas_score','>=',70,null,'reject','hard','OS GSO 3000:2025, Section 4.2','manual',null,'Minimum GSAS score 70 for Green Home Loan',1,'system','2026-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r013',null,'EPC Rating Minimum','esg','epc_rating','in',null,'A,B,C','reject','hard','OEESC Section 5.1','manual',null,'EPC minimum rating C required',1,'system','2026-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r014',null,'EIA Clearance – Large Projects','esg','eia_required','=',1,'units>20','reject','hard','Environment Authority Decision 107/2023','manual',null,'EIA clearance mandatory for >20 units',1,'system','2026-01-01');\n-- r015 (Green DBR Buffer) is generated LIVE by AI during Act 1.\n\nINSERT OR IGNORE INTO developers VALUES ('d001','Al Madaen Real Estate','CR-2019-45821','Ahmed Al-Hinai','ahmed@almadaen.om','+968 2434 5566','PO Box 1234, Muscat','active','2023-11-15','2019-03-01');\nINSERT OR IGNORE INTO developers VALUES ('d002','Muscat Hills Development','CR-2018-33201','Sara Al-Lawati','sara@muscathills.om','+968 2488 9900','PO Box 567, Muscat','active','2022-09-20','2018-07-10');\nINSERT OR IGNORE INTO developers VALUES ('d003','Gulf Horizon Properties','CR-2021-78543','Khalid Al-Farsi','khalid@gulfhorizon.om','+968 2456 7788','PO Box 890, Sohar','active','2024-01-05','2021-02-15');\n\nINSERT OR IGNORE INTO projects VALUES ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',36,12,8,16,78,'Gold','B','EIA/2024/201','{\"type\":\"FeatureCollection\",\"features\":[]}','active',1,0,'2024-06-15','2025-11-30',1,'/static/img/proj001_hero.jpg','Waterfront living with premium amenities in the heart of Muscat',95000,185000,NULL,'[\"Swimming Pool\",\"Gym\",\"24/7 Security\",\"Covered Parking\",\"Children''s Play Area\"]');\nINSERT OR IGNORE INTO projects VALUES ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',18,18,0,0,82,'Gold','A',null,'{\"type\":\"FeatureCollection\",\"features\":[]}','active',1,0,'2025-01-10','2025-12-01',1,'/static/img/proj002_hero.jpg','Spacious villas with panoramic views near Muscat International Airport',145000,220000,NULL,'[\"Private Garden\",\"Rooftop Terrace\",\"Central A/C\",\"Smart Home\",\"Visitor Parking\"]');\nINSERT OR IGNORE INTO projects VALUES ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',60,0,0,60,null,null,null,null,'{\"type\":\"FeatureCollection\",\"features\":[]}','archived',0,0,'2023-05-01','2025-06-30',0,'/static/img/proj003_hero.jpg',null,null,null,null,'[]');\nINSERT OR IGNORE INTO projects VALUES ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',24,0,0,0,null,null,null,null,'{\"type\":\"FeatureCollection\",\"features\":[]}','draft',0,0,'2026-08-31','2026-08-31',0,'/static/img/proj004_hero.jpg',null,null,null,null,'[]');\n\n-- EcoVillage units and documents are uploaded LIVE during Act 2.\n\nINSERT OR IGNORE INTO applications VALUES ('app001','HL-240892','p001','c002','Mariam Al-Siyabi',null,'proj001',250000,20,'Al Mouj Residences, Unit A12, Muscat','partner',142,null,null,5.5,5.5,1608.82,1608.82,0,46,78,9.0,1,780,'approved','verified','u002','2024-09-15','u003','2024-09-16',250000,0,null,null,'2024-09-14','2024-09-16');\nINSERT OR IGNORE INTO applications VALUES ('app002','HL-241156','p001','c003','Hassan Al-Amri',null,null,120000,15,'Plot 45, Al Ghubra North, Muscat','byop',200,null,null,5.5,5.5,980.12,980.12,0,36,72,9.0,1,710,'credit_review','pending',null,null,null,null,120000,0,null,null,'2024-12-01','2024-12-03');\n-- GHL-250001 (app003) and construction stages are created LIVE during Acts 3-5.\n\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb001','CBO Circular 2026-12 – DBR Rules','regulatory','The Central Bank of Oman requires DBR shall not exceed 60% of gross monthly income. For green financing, banks apply a 5% buffer, limiting DBR to 55%.','CBO Circular 2026-12','2026-01-01','[\"DBR\",\"housing\",\"green\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb002','OS GSO 3000:2025 – GSAS Standards','esg','GSAS certificates must contain: Certificate Number (GSAS-YYYY-NNN), Issuer (GORD), Issue Date, Expiry Date, Overall Score (0-100), Rating. Minimum score 70 for green financing.','OS GSO 3000:2025','2025-01-01','[\"GSAS\",\"ESG\",\"certification\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb003','Oman PDPL – Royal Decree 6/2022','compliance','PDPL requires explicit consent, secure storage, right to erasure, mandatory breach notification within 72 hours.','Royal Decree 6/2022','2022-02-01','[\"PDPL\",\"data\",\"privacy\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb004','OEESC – EPC Requirements','esg','Energy Performance Certificates required for all new residential developments. Minimum rating C for green financing. Scale A+ to G.','OEESC Section 5.1','2024-01-01','[\"EPC\",\"energy\",\"efficiency\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb005','Environment Authority Decision 107/2023','esg','EIA clearance mandatory for residential developments exceeding 20 units. Reference format: EIA/YYYY/NNN. Valid 3 years.','Environment Authority Decision 107/2023','2023-07-15','[\"EIA\",\"environment\",\"assessment\"]','2026-08-31');\n\nINSERT OR IGNORE INTO audit_logs VALUES ('al001','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p001','{\"status\":\"active\",\"product_name\":\"Standard Home Loan\"}','manual',null,null,'10.10.50.15','2024-01-10 09:00:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al002','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p002','{\"status\":\"active\",\"product_name\":\"Auto Finance - Personal\"}','manual',null,null,'10.10.50.15','2023-06-01 10:00:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al003','u002','Aisha Al-Balushi','compliance_officer','APPLICATION_APPROVED','application','app001','{\"reference\":\"HL-240892\",\"customer\":\"Mariam Al-Siyabi\",\"amount\":250000}','manual',null,'CBO Circular 2024-01','10.10.50.22','2024-09-15 14:30:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al004','u003','Omar Al-Mantheri','risk_officer','CREDIT_REVIEW_APPROVED','application','app001','{\"reference\":\"HL-240892\",\"dbr\":46,\"ltv\":78,\"stress_test\":\"passed\"}','manual',null,'CBO Circular 2024-01','10.10.50.33','2024-09-16 11:00:00');\n";
-Qe.post("/run", async (e) => {
+var ot = new L(), st = "\nCREATE TABLE IF NOT EXISTS products (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, code TEXT UNIQUE, description TEXT,\n  category TEXT DEFAULT 'home_loan', status TEXT DEFAULT 'draft',\n  base_rate REAL DEFAULT 5.5, max_ltv INTEGER DEFAULT 90, max_dbr INTEGER DEFAULT 60,\n  green_dbr INTEGER DEFAULT 55, min_term INTEGER DEFAULT 5, max_term INTEGER DEFAULT 25,\n  min_amount REAL DEFAULT 10000, max_amount REAL DEFAULT 500000,\n  gsas_min_score INTEGER DEFAULT 0, gsas_premium_score INTEGER DEFAULT 0,\n  green_discount_premium REAL DEFAULT 0.0, green_discount_standard REAL DEFAULT 0.0,\n  ai_confidence_threshold INTEGER DEFAULT 90, allow_byop INTEGER DEFAULT 1,\n  allow_partner_inventory INTEGER DEFAULT 1,\n  required_docs TEXT DEFAULT '[]', esg_required_docs TEXT DEFAULT '[]',\n  approved_materials TEXT DEFAULT '[]', approved_vendors TEXT DEFAULT '[]',\n  configuration TEXT DEFAULT '{}', applications_ytd INTEGER DEFAULT 0,\n  created_by TEXT DEFAULT 'system', created_at TEXT DEFAULT (datetime('now')),\n  updated_at TEXT DEFAULT (datetime('now')),\n  portal_visible INTEGER DEFAULT 0,\n  portal_hero_title TEXT, portal_hero_subtitle TEXT, portal_card_badge TEXT,\n  portal_highlights TEXT DEFAULT '[]',\n  portal_calculator_enabled INTEGER DEFAULT 1,\n  developer_portal_visible INTEGER DEFAULT 0,\n  developer_requirements TEXT DEFAULT '{}',\n  published_at TEXT\n);\n\nCREATE TABLE IF NOT EXISTS rules (\n  id TEXT PRIMARY KEY, product_id TEXT, name TEXT NOT NULL, category TEXT NOT NULL,\n  metric TEXT NOT NULL, operator TEXT NOT NULL, threshold_value REAL,\n  threshold_condition TEXT, action_on_breach TEXT DEFAULT 'reject',\n  severity TEXT DEFAULT 'hard', regulatory_reference TEXT,\n  source TEXT DEFAULT 'manual', ai_confidence REAL, description TEXT,\n  is_active INTEGER DEFAULT 1, created_by TEXT DEFAULT 'system',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS developers (\n  id TEXT PRIMARY KEY, company_name TEXT NOT NULL, cr_number TEXT UNIQUE,\n  contact_name TEXT, email TEXT, phone TEXT, po_box TEXT,\n  status TEXT DEFAULT 'active', verified_at TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS projects (\n  id TEXT PRIMARY KEY, developer_id TEXT, name TEXT NOT NULL, code TEXT UNIQUE,\n  location TEXT, governorate TEXT, type TEXT DEFAULT 'residential',\n  total_units INTEGER DEFAULT 0, available_units INTEGER DEFAULT 0,\n  reserved_units INTEGER DEFAULT 0, sold_units INTEGER DEFAULT 0,\n  gsas_score INTEGER, gsas_rating TEXT, epc_rating TEXT, eia_reference TEXT,\n  geo_json TEXT, status TEXT DEFAULT 'draft',\n  green_eligible INTEGER DEFAULT 0, premium_tier INTEGER DEFAULT 0,\n  created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS units (\n  id TEXT PRIMARY KEY, project_id TEXT, unit_number TEXT NOT NULL,\n  floor_number INTEGER, type TEXT DEFAULT 'villa', area_sqm REAL,\n  bedrooms INTEGER, bathrooms INTEGER, price REAL, lat REAL, lng REAL,\n  status TEXT DEFAULT 'available', features TEXT DEFAULT '[]',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS documents (\n  id TEXT PRIMARY KEY, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL,\n  doc_type TEXT NOT NULL, filename TEXT, file_url TEXT,\n  extracted_data TEXT DEFAULT '{}', ai_confidence REAL,\n  validation_status TEXT DEFAULT 'pending', validation_notes TEXT,\n  reviewed_by TEXT, reviewed_at TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS customers (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, name_ar TEXT, civil_id TEXT UNIQUE,\n  email TEXT, phone TEXT, nationality TEXT DEFAULT 'Omani', employer TEXT,\n  salary_omr REAL, employment_type TEXT DEFAULT 'salaried',\n  credit_score INTEGER DEFAULT 700, existing_dbr REAL DEFAULT 0,\n  sohar_customer_since TEXT, status TEXT DEFAULT 'active',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS applications (\n  id TEXT PRIMARY KEY, reference TEXT UNIQUE NOT NULL, product_id TEXT,\n  customer_id TEXT, customer_name TEXT, unit_id TEXT, project_id TEXT,\n  loan_amount REAL, loan_term INTEGER, property_address TEXT,\n  property_source TEXT DEFAULT 'partner', property_area_sqm REAL,\n  gsas_score INTEGER, epc_rating TEXT, applied_rate REAL, standard_rate REAL DEFAULT 5.5,\n  monthly_payment REAL, standard_monthly_payment REAL, lifetime_saving REAL,\n  dbr REAL, ltv REAL, stress_test_rate REAL DEFAULT 9.0, stress_test_passed INTEGER DEFAULT 0,\n  malaa_score INTEGER, status TEXT DEFAULT 'draft', esg_verification_status TEXT DEFAULT 'pending',\n  compliance_approved_by TEXT, compliance_approved_at TEXT,\n  risk_approved_by TEXT, risk_approved_at TEXT,\n  escrow_amount REAL, escrow_released REAL DEFAULT 0,\n  rejection_reason TEXT, tracking_url TEXT,\n  created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS construction_stages (\n  id TEXT PRIMARY KEY, application_id TEXT, stage_number INTEGER NOT NULL,\n  stage_name TEXT NOT NULL, description TEXT, tranche_amount REAL,\n  tranche_percentage REAL, required_material TEXT, status TEXT DEFAULT 'locked',\n  invoice_doc_id TEXT, ai_validated INTEGER DEFAULT 0, ai_confidence REAL,\n  payment_reference TEXT, completed_at TEXT, paid_at TEXT,\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS users (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, name_ar TEXT, email TEXT UNIQUE NOT NULL,\n  role TEXT NOT NULL, department TEXT, avatar_initials TEXT,\n  status TEXT DEFAULT 'active', created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS audit_logs (\n  id TEXT PRIMARY KEY, user_id TEXT, user_name TEXT, user_role TEXT,\n  action TEXT NOT NULL, entity_type TEXT, entity_id TEXT, details TEXT DEFAULT '{}',\n  source TEXT DEFAULT 'manual', ai_confidence REAL, regulatory_reference TEXT,\n  ip_address TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS knowledge_base (\n  id TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT NOT NULL,\n  content TEXT NOT NULL, source TEXT, effective_date TEXT,\n  tags TEXT DEFAULT '[]', created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS rule_templates (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL,\n  regulatory_source TEXT, template_json TEXT NOT NULL,\n  is_cbo_required INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);\nCREATE INDEX IF NOT EXISTS idx_applications_reference ON applications(reference);\nCREATE INDEX IF NOT EXISTS idx_units_project ON units(project_id);\nCREATE INDEX IF NOT EXISTS idx_documents_entity ON documents(entity_type, entity_id);\nCREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);\nCREATE INDEX IF NOT EXISTS idx_construction_stages_app ON construction_stages(application_id);\n", ct = "\nALTER TABLE products ADD COLUMN portal_visible INTEGER DEFAULT 0;\nALTER TABLE products ADD COLUMN portal_hero_title TEXT;\nALTER TABLE products ADD COLUMN portal_hero_subtitle TEXT;\nALTER TABLE products ADD COLUMN portal_card_badge TEXT;\nALTER TABLE products ADD COLUMN portal_highlights TEXT DEFAULT '[]';\nALTER TABLE products ADD COLUMN portal_calculator_enabled INTEGER DEFAULT 1;\nALTER TABLE products ADD COLUMN developer_portal_visible INTEGER DEFAULT 0;\nALTER TABLE products ADD COLUMN developer_requirements TEXT DEFAULT '{}';\nALTER TABLE products ADD COLUMN published_at TEXT;\nALTER TABLE projects ADD COLUMN listing_visible INTEGER DEFAULT 0;\nALTER TABLE projects ADD COLUMN hero_image_url TEXT;\nALTER TABLE projects ADD COLUMN marketing_tagline TEXT;\nALTER TABLE projects ADD COLUMN price_from REAL;\nALTER TABLE projects ADD COLUMN price_to REAL;\nALTER TABLE projects ADD COLUMN completion_date TEXT;\nALTER TABLE projects ADD COLUMN amenities TEXT DEFAULT '[]';\nCREATE TABLE IF NOT EXISTS ai_threads (\n  id TEXT PRIMARY KEY, user_id TEXT, product_id TEXT, purpose TEXT NOT NULL,\n  messages TEXT DEFAULT '[]', context TEXT DEFAULT '{}', status TEXT DEFAULT 'active',\n  result TEXT DEFAULT '{}', created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\n", lt = "\nINSERT OR IGNORE INTO users VALUES ('u001','Fatima Al-Rashdi','فاطمة الراشدي','fatima@sib.om','product_manager','Product Management','FA','active','2024-01-15');\nINSERT OR IGNORE INTO users VALUES ('u002','Aisha Al-Balushi','عائشة البلوشي','aisha@sib.om','compliance_officer','Compliance & ESG','AB','active','2023-06-01');\nINSERT OR IGNORE INTO users VALUES ('u003','Omar Al-Mantheri','عمر المنذري','omar@sib.om','risk_officer','Credit Risk','OM','active','2023-03-15');\nINSERT OR IGNORE INTO users VALUES ('u004','Khalid Al-Rawahi','خالد الرواحي','khalid@sib.om','operations','Operations','KR','active','2022-09-01');\nINSERT OR IGNORE INTO users VALUES ('u010','Ahmed Al-Hinai','أحمد الهنائي','ahmed@almadaen.om','developer','Al Madaen Real Estate','AH','active','2023-11-01');\nINSERT OR IGNORE INTO users VALUES ('u011','Rashid Al-Hassani','راشد الحساني','rashid@aljazeera-const.om','contractor','Al Jazeera Constructions','RH','active','2024-02-01');\nINSERT OR IGNORE INTO users VALUES ('u020','Salim Al-Harthy','سالم الحارثي','salim@gmail.com','customer',null,'SH','active','2019-05-10');\n\nINSERT OR IGNORE INTO customers VALUES ('c001','Salim Al-Harthy','سالم الحارثي','84521789','salim@gmail.com','+968 9921 3344','Omani','Ministry of Heritage & Tourism',3200,'salaried',750,0,'2019-05-10','active','2019-05-10');\nINSERT OR IGNORE INTO customers VALUES ('c002','Mariam Al-Siyabi','مريم السيابي','91234567','mariam@hotmail.com','+968 9955 1122','Omani','Oman Oil Company',4500,'salaried',780,12,'2020-03-22','active','2020-03-22');\nINSERT OR IGNORE INTO customers VALUES ('c003','Hassan Al-Amri','حسن العامري','78654321','hassan@gmail.com','+968 9977 8899','Omani','Bank Muscat',2800,'salaried',710,18,'2021-07-15','active','2021-07-15');\n\nINSERT OR IGNORE INTO products VALUES ('p001','Standard Home Loan','SHL-STANDARD','Flagship home financing for Omani nationals and residents. Fixed and variable rate options, top-up facility, and bundled insurance. CBO-compliant with full credit assessment.','home_loan','active',5.5,90,60,60,5,25,10000,500000,0,0,0.0,0.0,90,1,1,'[\"civil_id\",\"salary_certificate\",\"utility_bill\",\"property_deed\",\"independent_valuation_report\",\"bank_statements_3m\",\"employer_letter\"]','[]','[]','[]','{\"features\":[\"Fixed and variable rate options\",\"Top-up facility available\",\"Insurance bundled\",\"Salary transfer preferred\"]}',4847,'u001','2024-01-10','2025-12-15');\nINSERT OR IGNORE INTO products VALUES ('p002','Auto Finance – Personal','AFL-PERSONAL','Financing for personal vehicles including sedans, SUVs, and electric vehicles. Competitive flat rate, quick 48-hour approval, covers new and used vehicles up to 5 years old.','auto_loan','active',4.9,85,55,55,1,7,3000,80000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"salary_certificate\",\"vehicle_proforma_invoice\",\"driving_license\",\"insurance_quotation\",\"bank_statements_3m\"]','[]','[]','[]','{\"features\":[\"Covers new & used vehicles\",\"48-hour credit decision\",\"EV purchase supported\",\"Comprehensive insurance required\"]}',1923,'u001','2023-06-01','2025-11-20');\nINSERT OR IGNORE INTO products VALUES ('p003','Personal Loan','PL-UNSECURED','Unsecured personal financing for salaried employees of approved employers. No collateral required. Flat competitive rate for medical, travel, home renovation and other personal needs.','personal_loan','active',7.5,0,45,45,1,5,1000,30000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"salary_certificate\",\"employer_letter\",\"bank_statements_3m\",\"approved_employer_confirmation\"]','[]','[]','[]','{\"features\":[\"No collateral required\",\"Approved employer list\",\"Competitive fixed rate\",\"Loan protector insurance available\"]}',3241,'u001','2023-01-15','2025-10-01');\nINSERT OR IGNORE INTO products VALUES ('p004','SME Working Capital','SME-WORKCAP','Short-term working capital facility for small and medium enterprises registered in Oman. Revolving or term structure. Supports payroll, inventory procurement, and operational growth.','sme','active',6.5,70,65,65,1,3,5000,200000,0,0,0.0,0.0,85,0,0,'[\"commercial_registration_certificate\",\"memorandum_of_association\",\"audited_financials_2yr\",\"bank_statements_6m\",\"cr_extract\",\"tax_clearance_certificate\",\"business_profile\"]','[]','[]','[]','{\"features\":[\"For Oman-registered SMEs\",\"Revolving or term facility\",\"Supports payroll & growth\",\"MOCI-verified CR required\"]}',892,'u001','2023-08-10','2025-09-15');\nINSERT OR IGNORE INTO products VALUES ('p005','Home Equity Line','HELOC-STANDARD','Revolving credit facility secured against existing owned property. Access equity without selling. Ideal for large purchases, education, or business funding. Second charge behind primary mortgage.','home_loan','active',6.0,75,55,55,5,15,20000,300000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"property_title_deed\",\"independent_valuation_report\",\"salary_certificate\",\"bank_statements_3m\",\"existing_mortgage_statement\",\"noc_from_primary_lender\"]','[]','[]','[]','{\"features\":[\"Use your property equity\",\"Revolving credit line\",\"Up to OMR 300,000\",\"No early settlement penalty\"]}',567,'u001','2024-03-01','2025-08-20');\nINSERT OR IGNORE INTO products VALUES ('p006','Commercial Property Finance','CPF-COMMERCIAL','Financing for commercial properties including offices, retail units, and warehouses. Available to Omani-registered companies and sole proprietors. Full corporate credit assessment applies.','commercial','active',6.8,70,65,65,5,20,50000,2000000,0,0,0.0,0.0,85,0,0,'[\"commercial_registration_certificate\",\"memorandum_of_association\",\"audited_financials_3yr\",\"bank_statements_12m\",\"property_title_deed\",\"independent_valuation_report\",\"lease_agreements\",\"board_resolution\"]','[]','[]','[]','{\"features\":[\"For offices, retail & warehouses\",\"Up to OMR 2,000,000\",\"Flexible repayment structures\",\"Lease income considered\"]}',234,'u001','2023-09-01','2025-07-10');\nINSERT OR IGNORE INTO products VALUES ('p007','Expat Home Finance','EHL-EXPAT','Home financing for expatriate professionals working in Oman. Stricter LTV (max 75%) per CBO regulations. Employer NOC required. Available for IZ-approved freehold zones.','home_loan','active',6.0,75,55,55,5,20,15000,400000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"passport_copy\",\"valid_work_permit_residence_card\",\"salary_certificate\",\"noc_from_employer\",\"property_deed_freehold_zone\",\"independent_valuation_report\",\"bank_statements_6m\"]','[]','[]','[]','{\"features\":[\"Expatriate professionals\",\"LTV up to 75%\",\"Freehold zone properties\",\"Employer NOC required\"]}',1102,'u001','2024-01-20','2025-12-01');\nINSERT OR IGNORE INTO products VALUES ('p008','Education Finance','EDU-FINANCE','Financing for higher education expenses including tuition, accommodation, and study materials at approved universities in Oman and abroad. Deferred repayment option available.','education','archived',8.0,0,45,45,1,8,500,20000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"university_offer_letter_or_enrollment\",\"salary_certificate\",\"fee_schedule_from_institution\",\"bank_statements_3m\"]','[]','[]','[]','{\"features\":[\"Approved universities list\",\"Deferred repayment option\",\"Covers tuition & accommodation\",\"Loan protector insurance\"]}',445,'u001','2022-01-01','2024-06-01');\n-- Green Home Loan is created LIVE during the presentation (Act 1).\n\nINSERT OR IGNORE INTO rules VALUES ('r001',null,'DBR Maximum Limit','creditworthiness','DBR','<=',60,null,'reject','hard','CBO Circular 2024-01, Section 3.1','manual',null,'Debt Burden Ratio must not exceed 60% of gross monthly income',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r002',null,'LTV Maximum – Salaried Omani','collateral','LTV','<=',90,'nationality=Omani AND employment=salaried','reject','hard','CBO Circular 2024-01, Section 4.2','manual',null,'LTV max 90% for salaried Omani nationals',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r003',null,'LTV Maximum – Expat','collateral','LTV','<=',75,'nationality!=Omani','reject','hard','CBO Circular 2024-01, Section 4.3','manual',null,'LTV max 75% for expatriates',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r004',null,'Minimum Loan Term','product','loan_term','>=',5,null,'reject','hard','Bank Policy BP-2024-HL-001','manual',null,'Minimum loan term 5 years',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r005',null,'Maximum Loan Term','product','loan_term','<=',25,null,'reject','hard','CBO Circular 2024-01, Section 5.1','manual',null,'Maximum loan term 25 years',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r006',null,'Minimum Credit Score','creditworthiness','credit_score','>=',650,null,'reject','hard','Bank Policy BP-2024-CR-002','manual',null,'Minimum MALAA credit score 650',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r007',null,'CBO Stress Test – Rate Hike','stress_test','stress_rate','<=',9,null,'reject','hard','CBO Circular 2025-07, Section 2.3','manual',null,'Simulate +350bps rate hike; DBR must not exceed 70%',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r008',null,'Minimum Salary – Home Loan','eligibility','salary_omr','>=',400,null,'reject','soft','Bank Policy BP-2024-HL-003','manual',null,'Minimum monthly salary OMR 400',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r009',null,'Property Valuation Required','collateral','valuation_required','=',1,null,'reject','hard','CBO Circular 2024-01, Section 6.1','manual',null,'Independent valuation mandatory',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r010',null,'AML Sanctions Screening','compliance','sanctions_clear','=',1,null,'reject','hard','CBO AML/CFT Rules 2022, Section 8','manual',null,'Customer must pass sanctions screening',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r011',null,'KYC Completeness Check','compliance','kyc_complete','=',1,null,'reject','hard','CBO AML/CFT Rules 2022, Section 5.2','manual',null,'All KYC documents must be verified',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r012',null,'GSAS Score – Green Entry','esg','gsas_score','>=',70,null,'reject','hard','OS GSO 3000:2025, Section 4.2','manual',null,'Minimum GSAS score 70 for Green Home Loan',1,'system','2026-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r013',null,'EPC Rating Minimum','esg','epc_rating','in',null,'A,B,C','reject','hard','OEESC Section 5.1','manual',null,'EPC minimum rating C required',1,'system','2026-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r014',null,'EIA Clearance – Large Projects','esg','eia_required','=',1,'units>20','reject','hard','Environment Authority Decision 107/2023','manual',null,'EIA clearance mandatory for >20 units',1,'system','2026-01-01');\n-- r015 (Green DBR Buffer) is generated LIVE by AI during Act 1.\n\nINSERT OR IGNORE INTO developers VALUES ('d001','Al Madaen Real Estate','CR-2019-45821','Ahmed Al-Hinai','ahmed@almadaen.om','+968 2434 5566','PO Box 1234, Muscat','active','2023-11-15','2019-03-01');\nINSERT OR IGNORE INTO developers VALUES ('d002','Muscat Hills Development','CR-2018-33201','Sara Al-Lawati','sara@muscathills.om','+968 2488 9900','PO Box 567, Muscat','active','2022-09-20','2018-07-10');\nINSERT OR IGNORE INTO developers VALUES ('d003','Gulf Horizon Properties','CR-2021-78543','Khalid Al-Farsi','khalid@gulfhorizon.om','+968 2456 7788','PO Box 890, Sohar','active','2024-01-05','2021-02-15');\n\nINSERT OR IGNORE INTO projects VALUES ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',36,12,8,16,78,'Gold','B','EIA/2024/201','{\"type\":\"FeatureCollection\",\"features\":[]}','active',1,0,'2024-06-15','2025-11-30',1,'/static/img/proj001_hero.jpg','Waterfront living with premium amenities in the heart of Muscat',95000,185000,NULL,'[\"Swimming Pool\",\"Gym\",\"24/7 Security\",\"Covered Parking\",\"Children''s Play Area\"]');\nINSERT OR IGNORE INTO projects VALUES ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',18,18,0,0,82,'Gold','A',null,'{\"type\":\"FeatureCollection\",\"features\":[]}','active',1,0,'2025-01-10','2025-12-01',1,'/static/img/proj002_hero.jpg','Spacious villas with panoramic views near Muscat International Airport',145000,220000,NULL,'[\"Private Garden\",\"Rooftop Terrace\",\"Central A/C\",\"Smart Home\",\"Visitor Parking\"]');\nINSERT OR IGNORE INTO projects VALUES ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',60,0,0,60,null,null,null,null,'{\"type\":\"FeatureCollection\",\"features\":[]}','archived',0,0,'2023-05-01','2025-06-30',0,'/static/img/proj003_hero.jpg',null,null,null,null,'[]');\nINSERT OR IGNORE INTO projects VALUES ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',24,0,0,0,null,null,null,null,'{\"type\":\"FeatureCollection\",\"features\":[]}','draft',0,0,'2026-08-31','2026-08-31',0,'/static/img/proj004_hero.jpg',null,null,null,null,'[]');\n\n-- EcoVillage units and documents are uploaded LIVE during Act 2.\n\nINSERT OR IGNORE INTO applications VALUES ('app001','HL-240892','p001','c002','Mariam Al-Siyabi',null,'proj001',250000,20,'Al Mouj Residences, Unit A12, Muscat','partner',142,null,null,5.5,5.5,1608.82,1608.82,0,46,78,9.0,1,780,'approved','verified','u002','2024-09-15','u003','2024-09-16',250000,0,null,null,'2024-09-14','2024-09-16');\nINSERT OR IGNORE INTO applications VALUES ('app002','HL-241156','p001','c003','Hassan Al-Amri',null,null,120000,15,'Plot 45, Al Ghubra North, Muscat','byop',200,null,null,5.5,5.5,980.12,980.12,0,36,72,9.0,1,710,'credit_review','pending',null,null,null,null,120000,0,null,null,'2024-12-01','2024-12-03');\n-- GHL-250001 (app003) and construction stages are created LIVE during Acts 3-5.\n\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb001','CBO Circular 2026-12 – DBR Rules','regulatory','The Central Bank of Oman requires DBR shall not exceed 60% of gross monthly income. For green financing, banks apply a 5% buffer, limiting DBR to 55%.','CBO Circular 2026-12','2026-01-01','[\"DBR\",\"housing\",\"green\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb002','OS GSO 3000:2025 – GSAS Standards','esg','GSAS certificates must contain: Certificate Number (GSAS-YYYY-NNN), Issuer (GORD), Issue Date, Expiry Date, Overall Score (0-100), Rating. Minimum score 70 for green financing.','OS GSO 3000:2025','2025-01-01','[\"GSAS\",\"ESG\",\"certification\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb003','Oman PDPL – Royal Decree 6/2022','compliance','PDPL requires explicit consent, secure storage, right to erasure, mandatory breach notification within 72 hours.','Royal Decree 6/2022','2022-02-01','[\"PDPL\",\"data\",\"privacy\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb004','OEESC – EPC Requirements','esg','Energy Performance Certificates required for all new residential developments. Minimum rating C for green financing. Scale A+ to G.','OEESC Section 5.1','2024-01-01','[\"EPC\",\"energy\",\"efficiency\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb005','Environment Authority Decision 107/2023','esg','EIA clearance mandatory for residential developments exceeding 20 units. Reference format: EIA/YYYY/NNN. Valid 3 years.','Environment Authority Decision 107/2023','2023-07-15','[\"EIA\",\"environment\",\"assessment\"]','2026-08-31');\n\nINSERT OR IGNORE INTO audit_logs VALUES ('al001','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p001','{\"status\":\"active\",\"product_name\":\"Standard Home Loan\"}','manual',null,null,'10.10.50.15','2024-01-10 09:00:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al002','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p002','{\"status\":\"active\",\"product_name\":\"Auto Finance - Personal\"}','manual',null,null,'10.10.50.15','2023-06-01 10:00:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al003','u002','Aisha Al-Balushi','compliance_officer','APPLICATION_APPROVED','application','app001','{\"reference\":\"HL-240892\",\"customer\":\"Mariam Al-Siyabi\",\"amount\":250000}','manual',null,'CBO Circular 2024-01','10.10.50.22','2024-09-15 14:30:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al004','u003','Omar Al-Mantheri','risk_officer','CREDIT_REVIEW_APPROVED','application','app001','{\"reference\":\"HL-240892\",\"dbr\":46,\"ltv\":78,\"stress_test\":\"passed\"}','manual',null,'CBO Circular 2024-01','10.10.50.33','2024-09-16 11:00:00');\n";
+ot.post("/run", async (e) => {
 	let t = e.env.DB;
 	try {
-		let n = $e.split(";").map((e) => e.trim()).filter((e) => e.length > 0);
+		let n = st.split(";").map((e) => e.trim()).filter((e) => e.length > 0);
 		for (let e of n) try {
 			await t.prepare(e).run();
 		} catch {}
-		let r = et.split(";").map((e) => e.trim()).filter((e) => e.length > 0);
+		let r = ct.split(";").map((e) => e.trim()).filter((e) => e.length > 0);
 		for (let e of r) try {
 			await t.prepare(e).run();
 		} catch {}
-		let i = tt.split(";").map((e) => e.trim()).filter((e) => e.length > 0 && !e.startsWith("--"));
+		let i = lt.split(";").map((e) => e.trim()).filter((e) => e.length > 0 && !e.startsWith("--"));
 		for (let e of i) try {
 			await t.prepare(e).run();
 		} catch {}
@@ -4094,14 +4135,16 @@ Qe.post("/run", async (e) => {
 			error: t.message
 		}, 500);
 	}
-}), Qe.post("/purge-applications", async (e) => {
+}), ot.post("/purge-applications", async (e) => {
 	let t = e.env.DB;
 	try {
-		await t.prepare("PRAGMA foreign_keys = OFF").run(), await t.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run(), await t.prepare("DELETE FROM documents WHERE entity_type='application' AND entity_id NOT IN ('app001','app002')").run(), await t.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run(), await t.prepare("PRAGMA foreign_keys = ON").run();
-		let { results: n } = await t.prepare("SELECT id, reference, customer_name FROM applications ORDER BY created_at").all();
+		await t.prepare("PRAGMA foreign_keys = OFF").run(), await t.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run();
+		let { results: n } = await t.prepare("SELECT file_url FROM documents WHERE entity_type='application' AND entity_id NOT IN ('app001','app002') AND file_url IS NOT NULL").all();
+		n?.length && await Promise.allSettled(n.map((e) => at(e.file_url))), await t.prepare("DELETE FROM documents WHERE entity_type='application' AND entity_id NOT IN ('app001','app002')").run(), await t.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run(), await t.prepare("PRAGMA foreign_keys = ON").run();
+		let { results: r } = await t.prepare("SELECT id, reference, customer_name FROM applications ORDER BY created_at").all();
 		return e.json({
 			success: !0,
-			remaining_applications: n
+			remaining_applications: r
 		});
 	} catch (n) {
 		return await t.prepare("PRAGMA foreign_keys = ON").run(), e.json({
@@ -4109,7 +4152,7 @@ Qe.post("/run", async (e) => {
 			error: n.message
 		}, 500);
 	}
-}), Qe.post("/reset-demo", async (e) => {
+}), ot.post("/reset-demo", async (e) => {
 	let t = e.env.DB, n = [
 		"p001",
 		"p002",
@@ -4123,7 +4166,9 @@ Qe.post("/run", async (e) => {
 	try {
 		await t.prepare("PRAGMA foreign_keys = OFF").run();
 		let r = n.map(() => "?").join(",");
-		await t.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run(), await t.prepare("UPDATE construction_stages SET invoice_doc_id=NULL WHERE invoice_doc_id IS NOT NULL").run(), await t.prepare("DELETE FROM documents WHERE entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')").run(), await t.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run(), await t.prepare(`DELETE FROM rules WHERE product_id IS NOT NULL AND product_id NOT IN (${r})`).bind(...n).run(), await t.prepare(`DELETE FROM audit_logs WHERE entity_type='product' AND entity_id NOT IN (${r})`).bind(...n).run();
+		await t.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run(), await t.prepare("UPDATE construction_stages SET invoice_doc_id=NULL WHERE invoice_doc_id IS NOT NULL").run();
+		let { results: i } = await t.prepare("SELECT file_url FROM documents\n       WHERE file_url IS NOT NULL\n         AND entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')").all(), { results: a } = await t.prepare("SELECT file_url FROM documents\n       WHERE file_url IS NOT NULL\n         AND entity_type = 'application'\n         AND entity_id NOT IN ('app001','app002')").all(), o = [...(i || []).map((e) => e.file_url).filter(Boolean), ...(a || []).map((e) => e.file_url).filter(Boolean)];
+		o.length > 0 && (console.log(`[reset] Purging ${o.length} blob(s) from Azure storage…`), await Promise.allSettled(o.map((e) => at(e))), console.log("[reset] Blob purge complete")), await t.prepare("DELETE FROM documents WHERE entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')").run(), await t.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run(), await t.prepare(`DELETE FROM rules WHERE product_id IS NOT NULL AND product_id NOT IN (${r})`).bind(...n).run(), await t.prepare(`DELETE FROM audit_logs WHERE entity_type='product' AND entity_id NOT IN (${r})`).bind(...n).run();
 		try {
 			await t.prepare(`DELETE FROM ai_threads WHERE product_id IS NOT NULL AND product_id NOT IN (${r})`).bind(...n).run();
 		} catch {}
@@ -4152,8 +4197,8 @@ Qe.post("/run", async (e) => {
 			await t.prepare("DELETE FROM ai_threads").run();
 		} catch {}
 		await t.prepare("UPDATE applications SET unit_id=NULL, project_id=NULL WHERE id IN ('app001','app002')").run(), await t.prepare("DELETE FROM units").run(), await t.prepare("DELETE FROM projects WHERE id NOT IN ('proj001','proj002','proj003','proj004')").run(), await t.prepare("DELETE FROM documents WHERE entity_type='project' AND entity_id NOT IN ('proj001','proj002','proj003','proj004')").run();
-		let i = "(id,developer_id,name,code,location,governorate,type,\n      total_units,available_units,reserved_units,sold_units,\n      gsas_score,gsas_rating,epc_rating,eia_reference,geo_json,\n      status,green_eligible,premium_tier,created_at,updated_at,\n      listing_visible,hero_image_url,marketing_tagline,\n      price_from,price_to,completion_date,amenities,\n      is_demo_project,gsas_overall_score,green_features)";
-		await t.prepare(`INSERT OR REPLACE INTO projects ${i} VALUES
+		let s = "(id,developer_id,name,code,location,governorate,type,\n      total_units,available_units,reserved_units,sold_units,\n      gsas_score,gsas_rating,epc_rating,eia_reference,geo_json,\n      status,green_eligible,premium_tier,created_at,updated_at,\n      listing_visible,hero_image_url,marketing_tagline,\n      price_from,price_to,completion_date,amenities,\n      is_demo_project,gsas_overall_score,green_features)";
+		await t.prepare(`INSERT OR REPLACE INTO projects ${s} VALUES
       ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',
        36,12,8,16,78,'Gold','B','EIA/2024/201',
        '{"type":"FeatureCollection","features":[]}',
@@ -4162,7 +4207,7 @@ Qe.post("/run", async (e) => {
        'Waterfront living with premium amenities in the heart of Muscat',
        95000,185000,NULL,
        '["Swimming Pool","Gym","24/7 Security","Covered Parking","Children''s Play Area"]',
-       0,NULL,NULL)`).run(), await t.prepare(`INSERT OR REPLACE INTO projects ${i} VALUES
+       0,NULL,NULL)`).run(), await t.prepare(`INSERT OR REPLACE INTO projects ${s} VALUES
       ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',
        18,18,0,0,82,'Gold','A',NULL,
        '{"type":"FeatureCollection","features":[]}',
@@ -4171,14 +4216,14 @@ Qe.post("/run", async (e) => {
        'Spacious villas with panoramic views near Muscat International Airport',
        145000,220000,NULL,
        '["Private Garden","Rooftop Terrace","Central A/C","Smart Home","Visitor Parking"]',
-       0,NULL,NULL)`).run(), await t.prepare(`INSERT OR REPLACE INTO projects ${i} VALUES
+       0,NULL,NULL)`).run(), await t.prepare(`INSERT OR REPLACE INTO projects ${s} VALUES
       ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',
        60,0,0,60,NULL,NULL,NULL,NULL,
        '{"type":"FeatureCollection","features":[]}',
        'archived',0,0,'2023-05-01','2025-06-30',
        0,'/static/img/proj003_hero.jpg',
        NULL,NULL,NULL,NULL,'[]',
-       0,NULL,NULL)`).run(), await t.prepare(`INSERT OR REPLACE INTO projects ${i} VALUES
+       0,NULL,NULL)`).run(), await t.prepare(`INSERT OR REPLACE INTO projects ${s} VALUES
       ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',
        6,4,1,1,89,'Gold','A',NULL,
        '{"type":"FeatureCollection","features":[]}',
@@ -5494,7 +5539,21 @@ J.get("/products", async (e) => {
 		success: !0
 	});
 }), J.post("/developer/projects/:id/documents", async (e) => {
-	let t = e.req.param("id"), { doc_type: n, filename: r, user_id: i = "u010" } = await e.req.json(), a = {
+	let t = e.req.param("id"), n = e.req.header("content-type") || "", r, i, a = "u010", o = null, s = "application/octet-stream";
+	if (n.includes("multipart/form-data")) {
+		let t = await e.req.formData();
+		r = t.get("doc_type") || "other", a = t.get("user_id") || "u010";
+		let n = t.get("file");
+		if (!n) return e.json({
+			success: !1,
+			error: "No file in request"
+		}, 400);
+		i = n.name, s = n.type || "application/octet-stream", o = Buffer.from(await n.arrayBuffer());
+	} else {
+		let t = await e.req.json();
+		r = t.doc_type, i = t.filename || `${r}.pdf`, a = t.user_id || "u010";
+	}
+	let c = {
 		gsas_cert: {
 			extracted_data: {
 				certificate_number: "GSAS-2026-078",
@@ -5533,30 +5592,42 @@ J.get("/products", async (e) => {
 			validation_status: "auto_verified",
 			validation_notes: "Auto-verified: EIA clearance confirmed for 24 units. Issuer accredited."
 		}
-	}[n] || {
+	}[r] || {
 		extracted_data: {},
 		ai_confidence: 80,
 		validation_status: "pending",
 		validation_notes: "Awaiting manual review."
-	}, o = B("doc"), s = V();
-	return await e.env.DB.prepare("\n    INSERT INTO documents (id, entity_type, entity_id, doc_type, filename,\n    extracted_data, ai_confidence, validation_status, validation_notes, created_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?)\n  ").bind(o, "project", t, n, r || `${n}.pdf`, JSON.stringify(a.extracted_data), a.ai_confidence, a.validation_status, a.validation_notes, s).run(), n === "gsas_cert" && a.extracted_data.overall_score && await e.env.DB.prepare("UPDATE projects SET gsas_score = ?, gsas_rating = ?, updated_at = ? WHERE id = ?").bind(a.extracted_data.overall_score, a.extracted_data.rating, s, t).run(), n === "epc_report" && a.extracted_data.rating && await e.env.DB.prepare("UPDATE projects SET epc_rating = ?, updated_at = ? WHERE id = ?").bind(a.extracted_data.rating, s, t).run(), n === "eia_approval" && a.extracted_data.reference && await e.env.DB.prepare("UPDATE projects SET eia_reference = ?, updated_at = ? WHERE id = ?").bind(a.extracted_data.reference, s, t).run(), await H(e.env.DB, {
-		userId: i,
+	}, l = null;
+	o && o.length > 0 && (l = await it({
+		entityType: "project",
+		entityId: t,
+		docType: r,
+		filename: i,
+		buffer: o,
+		mimeType: s
+	}));
+	let u = B("doc"), d = V();
+	return await e.env.DB.prepare("\n    INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, file_url,\n    extracted_data, ai_confidence, validation_status, validation_notes, created_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(u, "project", t, r, i, l, JSON.stringify(c.extracted_data), c.ai_confidence, c.validation_status, c.validation_notes, d).run(), r === "gsas_cert" && c.extracted_data.overall_score && await e.env.DB.prepare("UPDATE projects SET gsas_score = ?, gsas_rating = ?, updated_at = ? WHERE id = ?").bind(c.extracted_data.overall_score, c.extracted_data.rating, d, t).run(), r === "epc_report" && c.extracted_data.rating && await e.env.DB.prepare("UPDATE projects SET epc_rating = ?, updated_at = ? WHERE id = ?").bind(c.extracted_data.rating, d, t).run(), r === "eia_approval" && c.extracted_data.reference && await e.env.DB.prepare("UPDATE projects SET eia_reference = ?, updated_at = ? WHERE id = ?").bind(c.extracted_data.reference, d, t).run(), await H(e.env.DB, {
+		userId: a,
 		userName: "Ahmed Al-Hinai",
 		userRole: "developer",
-		action: a.validation_status === "auto_verified" ? "DOCUMENT_AUTO_VERIFIED" : "DOCUMENT_FLAGGED_REVIEW",
+		action: c.validation_status === "auto_verified" ? "DOCUMENT_AUTO_VERIFIED" : "DOCUMENT_FLAGGED_REVIEW",
 		entityType: "document",
-		entityId: o,
+		entityId: u,
 		details: {
-			doc_type: n,
-			confidence: a.ai_confidence,
-			project_id: t
+			doc_type: r,
+			confidence: c.ai_confidence,
+			project_id: t,
+			file_stored: !!l
 		},
 		source: "ai_generated",
-		aiConfidence: a.ai_confidence
+		aiConfidence: c.ai_confidence
 	}), e.json({
-		doc_id: o,
+		doc_id: u,
 		success: !0,
-		...a
+		file_url: l,
+		storage_configured: rt(),
+		...c
 	});
 }), J.get("/developer/projects/:id/documents", async (e) => {
 	let t = e.req.param("id"), { results: n } = await e.env.DB.prepare("SELECT id, doc_type, filename, file_url, ai_confidence, validation_status, validation_notes,\n            extracted_data, created_at\n     FROM documents WHERE entity_type = 'project' AND entity_id = ?\n     ORDER BY created_at ASC").bind(t).all();
@@ -5855,7 +5926,7 @@ X.get("/", async (e) => {
 });
 //#endregion
 //#region src/api/product-versions.ts
-var nt = new L(), rt = {
+var ut = new L(), dt = {
 	1: {
 		en: "Product Model",
 		ar: "نموذج المنتج"
@@ -5881,21 +5952,21 @@ var nt = new L(), rt = {
 		ar: "المحاكاة"
 	}
 };
-nt.get("/products/:productId/versions", async (e) => {
+ut.get("/products/:productId/versions", async (e) => {
 	let t = e.req.param("productId"), { results: n } = await e.env.DB.prepare("\n    SELECT id, product_id, version_number, stage, stage_name,\n           commit_message, created_by, created_by_name, created_by_role, created_at\n    FROM product_versions\n    WHERE product_id = ?\n    ORDER BY version_number DESC\n  ").bind(t).all();
 	return e.json({
 		versions: n,
 		total: n.length
 	});
-}), nt.get("/products/:productId/versions/:versionId", async (e) => {
+}), ut.get("/products/:productId/versions/:versionId", async (e) => {
 	let { productId: t, versionId: n } = e.req.param(), r = await e.env.DB.prepare("\n    SELECT * FROM product_versions WHERE id = ? AND product_id = ?\n  ").bind(n, t).first();
 	return r ? e.json({ version: r }) : e.json({ error: "Version not found" }, 404);
-}), nt.post("/products/:productId/versions/snapshot", async (e) => {
+}), ut.post("/products/:productId/versions/snapshot", async (e) => {
 	let t = e.req.param("productId"), { stage: n, user_id: r, user_name: i, user_role: a } = await e.req.json();
 	if (!n || !r) return e.json({ error: "stage and user_id are required" }, 400);
 	let o = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(t).first();
 	if (!o) return e.json({ error: "Product not found" }, 404);
-	let { results: s } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id = ?").bind(t).all(), { results: c } = await e.env.DB.prepare("SELECT * FROM rule_matrices WHERE product_id = ?").bind(t).all(), l = ((await e.env.DB.prepare("SELECT MAX(version_number) as max_v FROM product_versions WHERE product_id = ?").bind(t).first())?.max_v || 0) + 1, u = rt[n] || {
+	let { results: s } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id = ?").bind(t).all(), { results: c } = await e.env.DB.prepare("SELECT * FROM rule_matrices WHERE product_id = ?").bind(t).all(), l = ((await e.env.DB.prepare("SELECT MAX(version_number) as max_v FROM product_versions WHERE product_id = ?").bind(t).first())?.max_v || 0) + 1, u = dt[n] || {
 		en: `Stage ${n}`,
 		ar: `المرحلة ${n}`
 	}, d = {
@@ -5977,7 +6048,7 @@ Output ONLY the commit message text, no quotes, no markdown.`, l = (await (await
 		commit_message: f,
 		success: !0
 	});
-}), nt.post("/products/:productId/versions/:versionId/revert", async (e) => {
+}), ut.post("/products/:productId/versions/:versionId/revert", async (e) => {
 	let { productId: t, versionId: n } = e.req.param(), r = await e.req.json(), i = await e.env.DB.prepare("SELECT * FROM product_versions WHERE id = ? AND product_id = ?").bind(n, t).first();
 	if (!i) return e.json({ error: "Version not found" }, 404);
 	let a = {};
@@ -6143,12 +6214,12 @@ Q.get("/", async (e) => {
 	try {
 		i = JSON.parse(n.edges || "[]");
 	} catch {}
-	return e.json(it(r, i));
+	return e.json(ft(r, i));
 }), Q.post("/validate/inline", async (e) => {
 	let { nodes: t, edges: n } = await e.req.json();
-	return e.json(it(t || [], n || []));
+	return e.json(ft(t || [], n || []));
 });
-function it(e, t) {
+function ft(e, t) {
 	let n = [], r = [], i = new Set(e.map((e) => e.id)), a = new Set(t.map((e) => e.from)), o = new Set(t.map((e) => e.to)), s = e.filter((e) => e.type === "start"), c = e.filter((e) => e.type === "end");
 	s.length === 0 && n.push({
 		type: "missing_start",
@@ -6212,15 +6283,17 @@ function it(e, t) {
 }
 //#endregion
 //#region src/index.tsx
-var at = {
+var pt = {
 	DB: z,
 	OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
 	GOOGLE_VISION_API_KEY: process.env.GOOGLE_VISION_API_KEY || "",
-	DEMO_MODE: process.env.DEMO_MODE || "true"
+	DEMO_MODE: process.env.DEMO_MODE || "true",
+	AZURE_STORAGE_CONNECTION_STRING: process.env.AZURE_STORAGE_CONNECTION_STRING || "",
+	AZURE_STORAGE_CONTAINER: process.env.AZURE_STORAGE_CONTAINER || "lms-documents"
 }, $ = new L();
-$.use("/api/*", Ne()), $.use("*", async (e, t) => {
-	e.set("env", at), Object.assign(e, { env: at }), await t();
-}), $.route("/api/v1/products", U), $.route("/api/v1/applications", W), $.route("/api/v1/ai", G), $.route("/api/v1/compliance", K), $.route("/api/v1/projects", q), $.route("/api/v1/documents", qe), $.route("/api/v1/escrow", Ye), $.route("/api/v1/audit", Xe), $.route("/api/v1/users", Ze), $.route("/api/v1/seed", Qe), $.route("/api/v1/portal", J), $.route("/api/v1/markets", Y), $.route("/api/v1/rule-matrices", X), $.route("/api/v1/compliance-tags", Z), $.route("/api/v1/workflow-templates", Q), $.route("/api/v1", nt), $.get("/api/v1/img-proxy", async (e) => {
+$.use("/api/*", Pe()), $.use("*", async (e, t) => {
+	e.set("env", pt), Object.assign(e, { env: pt }), await t();
+}), $.route("/api/v1/products", U), $.route("/api/v1/applications", W), $.route("/api/v1/ai", G), $.route("/api/v1/compliance", K), $.route("/api/v1/projects", q), $.route("/api/v1/documents", Je), $.route("/api/v1/escrow", Xe), $.route("/api/v1/audit", Ze), $.route("/api/v1/users", Qe), $.route("/api/v1/seed", ot), $.route("/api/v1/portal", J), $.route("/api/v1/markets", Y), $.route("/api/v1/rule-matrices", X), $.route("/api/v1/compliance-tags", Z), $.route("/api/v1/workflow-templates", Q), $.route("/api/v1", ut), $.get("/api/v1/img-proxy", async (e) => {
 	let t = e.req.query("url");
 	if (!t || !t.startsWith("https://www.genspark.ai/")) return e.text("Invalid URL", 400);
 	try {
@@ -6253,28 +6326,28 @@ $.use("/api/*", Ne()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await z.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var ot = "b2a7b62";
+var mt = "a6402d0";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
 		await t();
 		return;
 	}
-	let r = a.join(process.cwd(), "dist", n);
-	if (!i.existsSync(r)) {
+	let r = o.join(process.cwd(), "dist", n);
+	if (!a.existsSync(r)) {
 		await t();
 		return;
 	}
-	if (e.req.query("v") !== ot) {
+	if (e.req.query("v") !== mt) {
 		let t = e.req.url.startsWith("http") ? e.req.url : `http://localhost${e.req.url}`, n = new URL(t);
-		return n.searchParams.set("v", ot), e.newResponse(null, 302, {
+		return n.searchParams.set("v", mt), e.newResponse(null, 302, {
 			Location: n.pathname + n.search,
 			"Clear-Site-Data": "\"cache\", \"cookies\", \"storage\"",
 			"Cache-Control": "no-store"
 		});
 	}
-	let o = i.readFileSync(r, "utf-8");
-	return e.html(o, 200, {
+	let i = a.readFileSync(r, "utf-8");
+	return e.html(i, 200, {
 		"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
 		Pragma: "no-cache",
 		Expires: "0",
@@ -6282,4 +6355,4 @@ $.use("*", async (e, t) => {
 	});
 }), $.use("/*", e({ root: "./dist" }));
 //#endregion
-export { $ as default, at as env };
+export { $ as default, pt as env };

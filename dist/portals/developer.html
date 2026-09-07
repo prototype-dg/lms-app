@@ -2261,29 +2261,27 @@ function handleDocFile(docType, input) {
   statusEl.className = 'cert-status analyzing';
   statusEl.textContent = '⏳ Reading file…';
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    const sizeKB = (file.size / 1024).toFixed(0);
-    // Map short docType key → API doc_type value
-    const docTypeMap = { gsas:'gsas_cert', epc:'epc_report', eia:'eia_approval', brochure:'brochure', specs:'specs' };
-    const apiDocType = docTypeMap[docType] || docType;
-    // Queue: store filename + api key so doRegisterProject can flush after pid is known
-    wizDocsUploaded[docType] = { filename: file.name, size: sizeKB + ' KB', file, apiDocType };
-    card.className    = 'cert-card verified';
-    statusEl.className = 'cert-status verified';
-    statusEl.textContent = '✅ ' + file.name + ' (' + sizeKB + ' KB)';
-    const count = Object.keys(wizDocsUploaded).length;
-    toast(`${file.name} ready — will be submitted with project (${count}/5)`, 'success');
-    input.value = '';
-  };
-  reader.onerror = () => {
+  // Validate file is readable by checking it's a File object with size > 0
+  if (file.size === 0) {
     card.className    = 'cert-card flagged';
     statusEl.className = 'cert-status pending';
-    statusEl.textContent = '❌ Could not read file — try again';
+    statusEl.textContent = '❌ File is empty — try again';
     input.value = '';
-  };
-  // Read first 4 KB to verify readability; content sent to API is filename-based (demo)
-  reader.readAsArrayBuffer(file.slice(0, 4096));
+    return;
+  }
+
+  const sizeKB = (file.size / 1024).toFixed(0);
+  const docTypeMap = { gsas:'gsas_cert', epc:'epc_report', eia:'eia_approval', brochure:'brochure', specs:'specs' };
+  const apiDocType = docTypeMap[docType] || docType;
+
+  // Queue the real File object — doRegisterProject will POST it as multipart
+  wizDocsUploaded[docType] = { filename: file.name, size: sizeKB + ' KB', file, apiDocType };
+  card.className    = 'cert-card verified';
+  statusEl.className = 'cert-status verified';
+  statusEl.textContent = '✅ ' + file.name + ' (' + sizeKB + ' KB)';
+  const count = Object.keys(wizDocsUploaded).length;
+  toast(`${file.name} ready — will be submitted with project (${count}/5)`, 'success');
+  input.value = '';
 }
 
 function runAiParse() {
@@ -2481,13 +2479,28 @@ async function doRegisterProject(publish) {
     }
     for(const [, doc] of docEntries) {
       try {
-        const docResp = await fetch(`/api/v1/portal/developer/projects/${pid}/documents`, {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ doc_type: doc.apiDocType, filename: doc.filename, user_id:'u010' })
-        });
+        let docResp;
+        if (doc.file && doc.file instanceof File) {
+          // Real file — send as multipart/form-data so the server stores bytes in Azure Blob
+          const fd = new FormData();
+          fd.append('file', doc.file, doc.filename);
+          fd.append('doc_type', doc.apiDocType);
+          fd.append('user_id', 'u010');
+          docResp = await fetch(`/api/v1/portal/developer/projects/${pid}/documents`, {
+            method: 'POST',
+            body: fd   // browser sets Content-Type: multipart/form-data automatically
+          });
+        } else {
+          // Fallback: filename-only (no file object available)
+          docResp = await fetch(`/api/v1/portal/developer/projects/${pid}/documents`, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ doc_type: doc.apiDocType, filename: doc.filename, user_id: 'u010' })
+          });
+        }
         const docData = await docResp.json();
         if(docData.success) {
-          toast(`✅ ${doc.filename} — AI validated (${docData.ai_confidence||'—'}% confidence)`, 'success');
+          const stored = docData.file_url ? ' · stored in Azure' : (docData.storage_configured ? '' : ' · metadata only');
+          toast(`✅ ${doc.filename} — AI validated (${docData.ai_confidence||'—'}% confidence)${stored}`, 'success');
         }
       } catch(e) {
         console.warn('[wizard] document upload failed for', doc.apiDocType, e);
