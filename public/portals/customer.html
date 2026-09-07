@@ -23,7 +23,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'Inter',system-ui,sans-serif;background:var(--g100);color:var(--g900);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+/* Hide body until auth guard confirms session — prevents content flash before redirect */
+body{font-family:'Inter',system-ui,sans-serif;background:var(--g100);color:var(--g900);-webkit-font-smoothing:antialiased;overflow-x:hidden;visibility:hidden}
 body.rtl{font-family:'Noto Sans Arabic',system-ui,sans-serif;direction:rtl}
 
 /* NAV */
@@ -666,9 +667,17 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
   <div class="nav-end">
     <button class="lang-pill" onclick="toggleLang()" id="lang-btn">عربي</button>
     <div class="user-chip">
-      <div class="user-av">SA</div>
-      <span id="user-name" data-en="Salim Al-Harthy" data-ar="سالم الحارثي">Salim Al-Harthy</span>
+      <div class="user-av" id="cust-avatar">SA</div>
+      <span id="user-name">Salim Al-Harthy</span>
     </div>
+    <button onclick="authLogout('customer')"
+      style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.35);color:#fca5a5;
+             border-radius:var(--rfull);padding:5px 14px;font-size:12px;font-weight:600;
+             cursor:pointer;font-family:inherit;transition:var(--transition);white-space:nowrap"
+      onmouseover="this.style.background='rgba(248,113,113,.28)'"
+      onmouseout="this.style.background='rgba(248,113,113,.15)'">
+      <span data-en="Sign Out" data-ar="تسجيل خروج">Sign Out</span>
+    </button>
   </div>
 </nav>
 
@@ -4168,6 +4177,15 @@ function renderTrackingHTML(data, ref){
 document.addEventListener('DOMContentLoaded', async ()=>{
   const user = await authGuard('customer');
   if (!user) return; // redirected
+
+  // Populate user identity from session
+  const avEl   = document.getElementById('cust-avatar');
+  const nameEl = document.getElementById('user-name');
+  if (avEl)   avEl.textContent   = (user.display_name || user.login || 'CU').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  if (nameEl) nameEl.textContent = user.display_name || user.login;
+
+  // Reveal page now that auth is confirmed (was hidden to prevent flash)
+  document.body.style.visibility = 'visible';
 
   loadProducts();
   loadProjects();

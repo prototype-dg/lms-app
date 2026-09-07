@@ -8,6 +8,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
+/* Hide body until auth guard confirms session — prevents content flash before redirect */
+body{visibility:hidden}
 :root{
   --navy:#003B5C;--teal:#007F86;--seaglass:#35C6C4;--sand:#F4F0E7;--amber:#F4B35B;
   --success:#2ECC71;--warning:#F39C12;--danger:#E74C3C;--white:#fff;--gray-50:#F8F9FA;
@@ -417,12 +419,17 @@ body.ar .toast-container{right:auto;left:24px}
     </a>
   </div>
   <div class="sidebar-user">
-    <div class="sidebar-avatar">AH</div>
+    <div class="sidebar-avatar" id="dev-avatar">AH</div>
     <div class="sidebar-user-info">
-      <div class="sidebar-user-name">Ahmed Al-Hinai</div>
-      <div class="sidebar-user-role">Developer Partner</div>
+      <div class="sidebar-user-name" id="dev-user-name">Ahmed Al-Hinai</div>
+      <div class="sidebar-user-role" id="dev-user-role">Developer Partner</div>
     </div>
   </div>
+  <a class="nav-item" onclick="authLogout('developer')" href="#"
+     style="color:rgba(248,113,113,.9);border-top:1px solid rgba(255,255,255,.08);margin-top:0;flex-shrink:0">
+    <span class="nav-icon">🚪</span>
+    <span data-en="Sign Out" data-ar="تسجيل خروج">Sign Out</span>
+  </a>
 </nav>
 
 <!-- MAIN -->
@@ -3349,6 +3356,17 @@ async function selectProject(id) {
 document.addEventListener('DOMContentLoaded', async () => {
   const user = await authGuard('developer');
   if (!user) return;
+
+  // Populate user identity from session
+  const avEl   = document.getElementById('dev-avatar');
+  const nameEl = document.getElementById('dev-user-name');
+  const roleEl = document.getElementById('dev-user-role');
+  if (avEl)   avEl.textContent   = (user.display_name || user.login || 'DV').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  if (nameEl) nameEl.textContent = user.display_name || user.login;
+  if (roleEl) roleEl.textContent = 'Developer Partner';
+
+  // Reveal page now that auth is confirmed (was hidden to prevent flash)
+  document.body.style.visibility = 'visible';
 
   loadProjects();
   showPage('dashboard');
