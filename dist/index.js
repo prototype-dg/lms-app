@@ -6253,7 +6253,7 @@ $.use("/api/*", Ne()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await z.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var ot = "2f4c516";
+var ot = "9d7ffe9";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

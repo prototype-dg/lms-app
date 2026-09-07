@@ -3473,8 +3473,8 @@ async function renderAuditLogs(filterAction='', filterEntity='') {
   const entityColors = { application:'var(--teal)', product:'var(--amber)', rule:'var(--blue)', project:'var(--green)' };
 
   // Unique action/entity values for filter dropdowns
-  const allActions  = [...new Set(auditLogs.map((l:any) => l.action))].sort();
-  const allEntities = [...new Set(auditLogs.map((l:any) => l.entity_type).filter(Boolean))].sort();
+  const allActions  = [...new Set(auditLogs.map((l) => l.action))].sort();
+  const allEntities = [...new Set(auditLogs.map((l) => l.entity_type).filter(Boolean))].sort();
 
   const buildTimeline = () => {
     if (!auditLogs.length) return `
@@ -3484,7 +3484,7 @@ async function renderAuditLogs(filterAction='', filterEntity='') {
         <p style="font-size:.82rem;margin-top:.3rem">${filterAction||filterEntity ? 'Try clearing the filters above.' : 'Actions will appear here as users work with applications, products and rules.'}</p>
       </div>`;
 
-    return auditLogs.map((log:any) => {
+    return auditLogs.map((log) => {
       const icon    = actionIcon[log.action] || 'fa-circle';
       const cls     = sourceColor[log.source] || 'manual';
       const details = (() => { try { return JSON.parse(log.details||'{}'); } catch{ return {}; } })();
@@ -3493,7 +3493,7 @@ async function renderAuditLogs(filterAction='', filterEntity='') {
       const entityLabel = log.entity_label
         ? `<a href="#" onclick="event.preventDefault();if(log.entity_type==='application')openApplicationDetail('${log.entity_id}')" style="color:${entityCol};font-weight:500">${log.entity_label}</a>`
         : '';
-      const actionLabel = log.action.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,(c:string)=>c.toUpperCase());
+      const actionLabel = log.action.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,(c)=>c.toUpperCase());
 
       return `
       <div class="audit-item">
@@ -3537,12 +3537,12 @@ async function renderAuditLogs(filterAction='', filterEntity='') {
           <select id="auditFilterAction" onchange="renderAuditLogs(this.value, document.getElementById('auditFilterEntity').value)"
             style="font-size:.82rem;padding:.3rem .6rem;border:1px solid var(--grey-200);border-radius:var(--radius-sm);background:white;color:var(--grey-700);cursor:pointer">
             <option value="">All actions</option>
-            ${allActions.map((a:any)=>`<option value="${a}" ${a===filterAction?'selected':''}>${a.replace(/_/g,' ')}</option>`).join('')}
+            ${allActions.map((a)=>`<option value="${a}" ${a===filterAction?'selected':''}>${a.replace(/_/g,' ')}</option>`).join('')}
           </select>
           <select id="auditFilterEntity" onchange="renderAuditLogs(document.getElementById('auditFilterAction').value, this.value)"
             style="font-size:.82rem;padding:.3rem .6rem;border:1px solid var(--grey-200);border-radius:var(--radius-sm);background:white;color:var(--grey-700);cursor:pointer">
             <option value="">All entity types</option>
-            ${allEntities.map((e:any)=>`<option value="${e}" ${e===filterEntity?'selected':''}>${e}</option>`).join('')}
+            ${allEntities.map((e)=>`<option value="${e}" ${e===filterEntity?'selected':''}>${e}</option>`).join('')}
           </select>
           ${filterAction||filterEntity ? `<button class="btn btn-ghost btn-sm" onclick="renderAuditLogs()" style="font-size:.78rem"><i class="fas fa-times"></i> Clear</button>` : ''}
           <span style="margin-left:auto;font-size:.8rem;color:var(--grey-400)">Showing ${auditLogs.length} of ${totalCount}</span>
@@ -3565,13 +3565,7 @@ async function renderReports() {
   document.getElementById('pageTitle').textContent = 'Regulatory Reports';
   document.getElementById('pageSubtitle').textContent = 'Portfolio overview & CBO compliance reports';
 
-  // Skeleton while loading
-  document.getElementById('mainContent').innerHTML = `<div class="page">
-    <div style="display:flex;align-items:center;gap:1rem;padding:3rem;color:var(--grey-400)">
-      <i class="fas fa-spinner fa-spin"></i> Loading portfolio data…
-    </div>
-  </div>`;
-
+  // Fetch all data upfront — renderPage already shows a spinner while we await
   let summary = null;
   try {
     const r = await fetch('/api/v1/compliance/summary');
@@ -3590,14 +3584,14 @@ async function renderReports() {
   const volume     = s.total_loan_volume  || 0;
 
   // ── helpers ────────────────────────────────────────────────────────────────
-  const fmtOMR  = (v:number) => v >= 1000000 ? `OMR ${(v/1000000).toFixed(2)}M` : v >= 1000 ? `OMR ${(v/1000).toFixed(0)}K` : `OMR ${v}`;
-  const fmtPct  = (v:any)   => v != null ? `${v}%` : '—';
-  const statusBadge = (st:string) => {
-    const map:any = { approved:'green', submitted:'amber', credit_review:'amber', risk_review:'amber', rejected:'red', pending:'grey' };
+  const fmtOMR  = (v) => v >= 1000000 ? `OMR ${(v/1000000).toFixed(2)}M` : v >= 1000 ? `OMR ${(v/1000).toFixed(0)}K` : `OMR ${v}`;
+  const fmtPct  = (v)   => v != null ? `${v}%` : '—';
+  const statusBadge = (st) => {
+    const map = { approved:'green', submitted:'amber', credit_review:'amber', risk_review:'amber', rejected:'red', pending:'grey' };
     const col = map[st] || 'grey';
     return `<span class="badge badge-${col}">${st.replace(/_/g,' ')}</span>`;
   };
-  const epcBadge = (r:string) => {
+  const epcBadge = (r) => {
     if (!r) return '<span style="color:var(--grey-300)">—</span>';
     const col = r<='B' ? 'green' : r<='D' ? 'amber' : 'red';
     return `<span class="badge badge-${col}">${r}</span>`;
@@ -3607,13 +3601,13 @@ async function renderReports() {
   const approvedCount  = statusCts['approved']      || 0;
   const pendingCount   = (statusCts['submitted']    || 0) + (statusCts['credit_review'] || 0) + (statusCts['risk_review'] || 0);
   const rejectedCount  = statusCts['rejected']      || 0;
-  const topProduct     = prodCts.sort((a:any,b:any)=>b.count-a.count)[0];
+  const topProduct     = prodCts.sort((a,b)=>b.count-a.count)[0];
   const smartPrompt    = total
     ? `Generate a quarterly regulatory compliance summary for the CBO green finance portfolio. Portfolio: ${total} applications (approved: ${approvedCount}, pending: ${pendingCount}, rejected: ${rejectedCount}). Total volume: ${fmtOMR(volume)}. ESG verification rate: ${esg.pass_rate||0}%. DBR compliance: ${dbrSt.pass_rate!=null?dbrSt.pass_rate+'%':'N/A'}. Average GSAS score: ${avgs.gsas_score||'N/A'}. Most active product: ${topProduct?.name||'N/A'} (${topProduct?.count||0} applications). Include: summary of compliance performance, flagged concerns, product-level breakdown, and recommendations for the next review period.`
     : 'Generate a compliance summary report for the green home finance portfolio, including ESG verification status, credit metrics, and regulatory adherence.';
 
   // ── per-app table rows ─────────────────────────────────────────────────────
-  const appRows = apps.map((a:any) => `
+  const appRows = apps.map((a) => `
     <tr style="cursor:pointer" onclick="navigateTo('applications');setTimeout(()=>openApplicationDetail('${a.id}'),400)">
       <td><span style="font-family:monospace;font-size:.8rem;color:var(--teal)">${a.reference||a.id}</span></td>
       <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.customer_display||'—'}</td>
@@ -3627,9 +3621,9 @@ async function renderReports() {
     </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--grey-400)">No applications on record</td></tr>`;
 
   // ── recent audit mini-feed ─────────────────────────────────────────────────
-  const auditFeed = recentAud.slice(0,8).map((log:any) => {
-    const actionLabel = log.action.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,(c:string)=>c.toUpperCase());
-    const entityCol:any = {application:'var(--teal)',product:'var(--amber)',rule:'var(--blue)',project:'var(--green)'};
+  const auditFeed = recentAud.slice(0,8).map((log) => {
+    const actionLabel = log.action.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,(c)=>c.toUpperCase());
+    const entityCol = {application:'var(--teal)',product:'var(--amber)',rule:'var(--blue)',project:'var(--green)'};
     return `<div style="display:flex;align-items:baseline;gap:.6rem;padding:.45rem 0;border-bottom:1px solid var(--grey-100);font-size:.8rem">
       <span style="color:var(--grey-300);min-width:80px;font-size:.72rem">${new Date(log.created_at).toLocaleDateString()}</span>
       <span style="font-weight:500;color:var(--grey-700)">${actionLabel}</span>
@@ -3639,7 +3633,7 @@ async function renderReports() {
   }).join('') || `<p style="color:var(--grey-400);font-size:.82rem;padding:.75rem 0">No recent activity</p>`;
 
   // ── product breakdown pills ────────────────────────────────────────────────
-  const productPills = prodCts.map((p:any) => `
+  const productPills = prodCts.map((p) => `
     <div style="background:var(--grey-50);border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:.6rem .9rem;min-width:140px">
       <div style="font-size:.78rem;color:var(--grey-500);margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
       <div style="font-size:1.4rem;font-weight:700;color:var(--navy)">${p.count}</div>
@@ -3782,8 +3776,8 @@ async function renderReports() {
       <div class="card">
         <div class="card-header"><h4><i class="fas fa-chart-pie" style="color:var(--amber);margin-right:.5rem"></i>Portfolio Status</h4></div>
         <div class="card-body">
-          ${Object.entries(statusCts).length ? Object.entries(statusCts).map(([st,cnt]:any)=>{
-            const map:any={approved:'var(--green)',submitted:'var(--amber)',credit_review:'var(--amber)',risk_review:'var(--amber)',rejected:'var(--red)'};
+          ${Object.entries(statusCts).length ? Object.entries(statusCts).map(([st,cnt])=>{
+            const map={approved:'var(--green)',submitted:'var(--amber)',credit_review:'var(--amber)',risk_review:'var(--amber)',rejected:'var(--red)'};
             const col=map[st]||'var(--grey-400)';
             const pct=total?Math.round((cnt/total)*100):0;
             return `<div style="margin-bottom:.6rem">
