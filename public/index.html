@@ -60,7 +60,6 @@
     .chip-customer { background:rgba(53,198,196,.15); color:#35C6C4; }
     .chip-developer { background:rgba(244,179,91,.15); color:#F4B35B; }
     .chip-backoffice { background:rgba(255,255,255,.08); color:rgba(255,255,255,.7); }
-    .chip-contractor { background:rgba(22,132,91,.2); color:#4eda9e; }
     .init-status { text-align:center; padding:1rem; }
     .init-status p { color:rgba(255,255,255,.5); font-size:.8rem; }
     .init-status .spinner { display:inline-block; width:20px; height:20px; border:2px solid rgba(255,255,255,.2); border-top-color:#35C6C4; border-radius:50%; animation:spin 1s linear infinite; margin-right:.5rem; vertical-align:middle; }
@@ -101,7 +100,7 @@
   </nav>
 
   <div class="hero">
-    <div class="hero-eyebrow">Andersen FZCO &amp; KUDO LABS FZCO · 31 August 2026</div>
+    <div class="hero-eyebrow">Andersen FZCO &amp; KUDO LABS FZCO</div>
     <h2>Banking made clear.<br>Progress made possible.</h2>
     <p>AI-powered digital lending — from product configuration to first construction tranche. Select a portal to begin.</p>
     <div class="acts-row">
@@ -109,7 +108,7 @@
       <div class="act-pill"><strong>Act 2</strong> Developer: Project Registration</div>
       <div class="act-pill"><strong>Act 3</strong> Customer: Loan Application</div>
       <div class="act-pill"><strong>Act 4</strong> Compliance &amp; Risk Review</div>
-      <div class="act-pill"><strong>Act 5</strong> Contractor: Tranche Release</div>
+
     </div>
   </div>
 
@@ -132,12 +131,7 @@
       <p>Product Manager creates and publishes products. Compliance &amp; Risk review</p>
       <span class="chip chip-backoffice">Fatima · Aisha · Omar</span>
     </div>
-    <div class="portal-tile" onclick="openPortal('contractor')">
-      <div class="icon">🔨</div>
-      <h3>Contractor Portal</h3>
-      <p>Track construction stages, submit invoices, and receive tranche payments</p>
-      <span class="chip chip-contractor">Contractor</span>
-    </div>
+
   </div>
 
   <div class="init-status" id="initStatus"></div>
@@ -153,7 +147,6 @@ function openPortal(p) {
     customer: '/portals/customer.html',
     developer: '/portals/developer.html',
     backoffice: '/portals/backoffice.html',
-    contractor: '/portals/contractor.html'
   };
   window.open(urls[p], '_blank');
 }
