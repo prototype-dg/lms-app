@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Azure Deployment Guide — Hono + Node.js + SQLite + Blob Storage</title>
+<style>
+  :root {
+    --navy: #0f2b46;
+    --teal: #0e7490;
+    --teal-light: #cffafe;
+    --green: #166534;
+    --green-bg: #f0fdf4;
+    --amber: #92400e;
+    --amber-bg: #fffbeb;
+    --red: #991b1b;
+    --red-bg: #fef2f2;
+    --grey-50: #f8fafc;
+    --grey-100: #f1f5f9;
+    --grey-200: #e2e8f0;
+    --grey-300: #cbd5e1;
+    --grey-500: #64748b;
+    --grey-700: #334155;
+    --grey-900: #0f172a;
+    --code-bg: #1e293b;
+    --code-text: #e2e8f0;
+    --radius: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--grey-50);
+    color: var(--grey-900);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ── PRINT button bar ── */
+  .action-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--navy);
+    padding: 10px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.25);
+  }
+  .action-bar-title {
+    color: rgba(255,255,255,.85);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: .3px;
+  }
+  .action-bar-title strong { color: #fff; }
+  .btn-dl {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #0e7490;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s;
+    text-decoration: none;
+  }
+  .btn-dl:hover { background: #0891b2; }
+  .btn-dl svg { flex-shrink: 0; }
+
+  @media print {
+    .action-bar { display: none; }
+    body { background: #fff; font-size: 13px; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+    h2 { page-break-before: always; }
+    h2:first-of-type { page-break-before: avoid; }
+  }
+
+  /* ── LAYOUT ── */
+  .page-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 40px 80px;
+  }
+
+  /* ── HERO ── */
+  .doc-hero {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e4976 100%);
+    border-radius: 12px;
+    padding: 40px 44px;
+    margin-bottom: 40px;
+    color: #fff;
+  }
+  .doc-hero h1 {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 10px;
+  }
+  .doc-hero p {
+    color: rgba(255,255,255,.7);
+    font-size: 14px;
+    max-width: 600px;
+  }
+  .doc-hero .stack-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .stack-pill {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,.9);
+  }
+
+  /* ── PLACEHOLDER BOX ── */
+  .placeholder-box {
+    background: var(--amber-bg);
+    border: 1px solid #fcd34d;
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    margin-bottom: 36px;
+  }
+  .placeholder-box h3 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--amber);
+    margin-bottom: 12px;
+  }
+  .placeholder-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .placeholder-table th {
+    text-align: left;
+    padding: 6px 12px;
+    background: #fef3c7;
+    color: var(--amber);
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .placeholder-table td {
+    padding: 7px 12px;
+    border-top: 1px solid #fde68a;
+    vertical-align: top;
+  }
+  .placeholder-table tr:first-child td { border-top: none; }
+  .ph { font-family: 'Courier New', monospace; font-weight: 700; color: #b45309; background: #fef9c3; border-radius: 3px; padding: 1px 5px; font-size: 12px; }
+
+  /* ── ARCH DIAGRAM ── */
+  .arch-box {
+    background: var(--code-bg);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 36px;
+    overflow-x: auto;
+  }
+  .arch-box pre {
+    color: #94a3b8;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    white-space: pre;
+  }
+  .arch-box pre .hl { color: #67e8f9; }
+  .arch-box pre .hl2 { color: #a3e635; }
+  .arch-box pre .hl3 { color: #fbbf24; }
+
+  /* ── SECTIONS ── */
+  h2 {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 44px 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--grey-200);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .part-badge {
+    background: var(--teal);
+    color: #fff;
+    border-radius: 5px;
+    padding: 2px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--grey-700);
+    margin: 28px 0 10px;
+  }
+
+  p { margin-bottom: 12px; }
+
+  /* ── CALLOUTS ── */
+  .callout {
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 14px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+  .callout.info { background: #e0f2fe; border-left: 4px solid #0284c7; }
+  .callout.warn { background: var(--amber-bg); border-left: 4px solid #f59e0b; }
+  .callout.danger { background: var(--red-bg); border-left: 4px solid #dc2626; }
+  .callout.success { background: var(--green-bg); border-left: 4px solid #16a34a; }
+
+  /* ── CODE BLOCKS ── */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.75;
+    margin: 12px 0 20px;
+    position: relative;
+  }
+  pre .comment { color: #64748b; }
+  pre .kw { color: #67e8f9; }
+  pre .str { color: #a3e635; }
+  pre .ph-inline { color: #fbbf24; font-style: italic; }
+  code {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    background: var(--grey-100);
+    border: 1px solid var(--grey-200);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: #0e7490;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+
+  /* ── TABLES ── */
+  .doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 16px 0 24px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  }
+  .doc-table th {
+    background: var(--navy);
+    color: #fff;
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .doc-table td {
+    padding: 10px 16px;
+    border-top: 1px solid var(--grey-200);
+    vertical-align: top;
+    background: #fff;
+  }
+  .doc-table tr:nth-child(even) td { background: var(--grey-50); }
+  .doc-table code { font-size: 12px; }
+  .yes { color: #16a34a; font-weight: 700; }
+  .no  { color: #dc2626; font-weight: 700; }
+
+  /* ── CHECKLIST ── */
+  .checklist {
+    list-style: none;
+    background: #fff;
+    border: 1px solid var(--grey-200);
+    border-radius: var(--radius);
+    padding: 6px 0;
+    margin: 16px 0;
+  }
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 20px;
+    border-top: 1px solid var(--grey-100);
+    font-size: 14px;
+  }
+  .checklist li:first-child { border-top: none; }
+  .chk {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--grey-300);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* ── SAS FIELDS TABLE ── */
+  .sas-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 12px 0 20px;
+  }
+  .sas-table th { background: #1e293b; color: #94a3b8; padding: 8px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+  .sas-table td { padding: 8px 14px; border-top: 1px solid #334155; background: #0f172a; color: #cbd5e1; font-family: 'Courier New', monospace; font-size: 12px; }
+  .sas-table .field-name { color: #67e8f9; }
+  .sas-table .field-val { color: #a3e635; }
+  .sas-table .field-note { color: #64748b; font-family: inherit; font-style: italic; }
+  .sas-table .last-row td { color: #f87171; }
+
+  /* ── FOOTER ── */
+  .doc-footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--grey-200);
+    font-size: 12px;
+    color: var(--grey-500);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── ACTION BAR ── -->
+<div class="action-bar">
+  <span class="action-bar-title"><strong>Azure Deployment Guide</strong> — Hono + Node.js + SQLite + Blob Storage</span>
+  <button class="btn-dl" onclick="window.print()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    Save / Print PDF
+  </button>
+</div>
+
+<div class="page-wrap">
+
+  <!-- ── HERO ── -->
+  <div class="doc-hero">
+    <h1>Azure Deployment Guide<br>Hono · Node.js · SQLite · Azure Blob Storage</h1>
+    <p>Step-by-step guide for deploying a Hono/Node.js web application to Azure App Service
+       with automatic CI/CD via GitHub Actions, a SQLite database on persistent storage,
+       and private Azure Blob Storage with server-side SAS proxying.</p>
+    <div class="stack-pills">
+      <span class="stack-pill">Hono Framework</span>
+      <span class="stack-pill">Node.js 22 LTS</span>
+      <span class="stack-pill">Vite Build</span>
+      <span class="stack-pill">better-sqlite3</span>
+      <span class="stack-pill">Azure App Service (Linux)</span>
+      <span class="stack-pill">Azure Blob Storage</span>
+      <span class="stack-pill">GitHub Actions</span>
+    </div>
+  </div>
+
+  <!-- ── PLACEHOLDER REFERENCE ── -->
+  <div class="placeholder-box">
+    <h3>📋 Placeholder Reference — Replace These Before Running Any Command</h3>
+    <table class="placeholder-table">
+      <thead><tr><th>Placeholder</th><th>What to substitute</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ph">&lt;APP_NAME&gt;</span></td><td>Azure Web App name (globally unique)</td><td><code>app-my-project</code></td></tr>
+        <tr><td><span class="ph">&lt;RESOURCE_GROUP&gt;</span></td><td>Azure Resource Group name</td><td><code>MyProject-RG</code></td></tr>
+        <tr><td><span class="ph">&lt;PLAN_NAME&gt;</span></td><td>App Service Plan name</td><td><code>MyProject-Plan</code></td></tr>
+        <tr><td><span class="ph">&lt;STORAGE_ACCOUNT&gt;</span></td><td>Storage account name (3–24 chars, lowercase, no dashes)</td><td><code>myprojectstorage</code></td></tr>
+        <tr><td><span class="ph">&lt;CONTAINER_NAME&gt;</span></td><td>Blob container name (lowercase, dashes ok)</td><td><code>app-documents</code></td></tr>
+        <tr><td><span class="ph">&lt;LOCATION&gt;</span></td><td>Azure region</td><td><code>eastus</code> / <code>westeurope</code></td></tr>
+        <tr><td><span class="ph">&lt;SUBSCRIPTION_ID&gt;</span></td><td>Azure subscription UUID</td><td><code>xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code></td></tr>
+        <tr><td><span class="ph">&lt;SP_NAME&gt;</span></td><td>Service principal display name</td><td><code>github-actions-myproject</code></td></tr>
+        <tr><td><span class="ph">&lt;CUSTOM_DOMAIN&gt;</span></td><td>Your custom domain (optional)</td><td><code>app.yourdomain.com</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── ARCHITECTURE ── -->
+  <h2><span class="part-badge">Overview</span> Architecture</h2>
+
+  <div class="arch-box"><pre>
+<span class="hl">GitHub</span> (main branch)
+        │
+        ▼  git push triggers
+<span class="hl">GitHub Actions</span> CI/CD  (ubuntu-latest runner)
+        │
+        ├─ npm ci                    <span class="comment"># install all deps (incl. devDeps for build)</span>
+        ├─ npm run build             <span class="comment"># Vite → dist/index.js</span>
+        ├─ npm ci --omit=dev         <span class="comment"># strip devDeps before zipping</span>
+        ├─ zip -r deploy.zip .       <span class="comment"># ~50–80 MB including node_modules</span>
+        │
+        ▼  az webapp deploy
+<span class="hl2">Azure App Service</span>  (Linux, Node 22 LTS)
+        │
+        ├─ server.js                 <span class="comment"># entry: reads PORT from process.env at runtime</span>
+        ├─ dist/index.js             <span class="comment"># Vite-bundled Hono app</span>
+        ├─ migrations/*.sql          <span class="comment"># auto-applied on startup via db-adapter.ts</span>
+        └─ /home/data/app.db         <span class="comment"># SQLite — persists across restarts in /home/</span>
+
+<span class="hl3">Azure Blob Storage</span>  (allowBlobPublicAccess = false)
+        └─ container: &lt;CONTAINER_NAME&gt;
+               └─ blobs are private — served via backend SAS proxy only
+  </pre></div>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ️</span>
+    <div><strong>Key design decisions:</strong><br>
+    • <strong>SQLite</strong> via <code>better-sqlite3</code> — no external DB server; file lives on Azure's persistent <code>/home/</code> volume.<br>
+    • <strong>Blob Storage</strong> is private — browsers never receive storage keys; downloads go through a server-side SAS token proxy.<br>
+    • <strong>No Cloudflare Workers at runtime</strong> — the production stack is pure Node.js on App Service.</div>
+  </div>
+
+  <!-- ── PART 1 ── -->
+  <h2><span class="part-badge">Part 1</span> Azure Resource Setup <small style="font-size:13px;font-weight:400;color:var(--grey-500)">(one-time)</small></h2>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div>Run these commands once per project. They create the Azure resources that GitHub Actions will deploy into. Requires <strong>Azure CLI</strong> installed and <code>az login</code> completed.</div>
+  </div>
+
+  <h3>1.1 — Resource Group</h3>
+<pre>az group create \
+  --name <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span> \
+  --location <span class="ph-inline">&lt;LOCATION&gt;</span></pre>
+
+  <h3>1.2 — App Service Plan (Linux)</h3>
+<pre>az appservice plan create \
+  --name <span class="ph-inline">&lt;PLAN_NAME&gt;</span> \
+  --resource-group <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span> \
+  --is-linux \
+  --sku B1      <span class="comment"># B1 = sufficient for a demo; upgrade to P1v3 for production</span></pre>
+
+  <h3>1.3 — Web App (Node 22 LTS)</h3>
+<pre>az webapp create \
+  --name <span class="ph-inline">&lt;APP_NAME&gt;</span> \
+  --resource-group <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span> \
+  --plan <span class="ph-inline">&lt;PLAN_NAME&gt;</span> \
+  --runtime "NODE:22-lts"</pre>
+
+  <h3>1.4 — Application Settings (environment variables)</h3>
+  <p>These become <code>process.env.*</code> inside Node.js at runtime:</p>
+<pre>az webapp config appsettings set \
+  --name <span class="ph-inline">&lt;APP_NAME&gt;</span> \
+  --resource-group <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span> \
+  --settings \
+    NODE_ENV="production" \
+    DB_PATH="/home/data/app.db" \
+    PORT="8080" \
+    AZURE_STORAGE_CONNECTION_STRING="<span class="ph-inline">&lt;paste-connection-string-from-Part-2&gt;</span>" \
+    AZURE_STORAGE_CONTAINER="<span class="ph-inline">&lt;CONTAINER_NAME&gt;</span>"</pre>
+
+  <div class="callout info">
+    <span class="callout-icon">💡</span>
+    <div><strong>Why <code>/home/data/app.db</code>?</strong><br>
+    Azure App Service's <code>/home/</code> directory is backed by Azure Files and persists across instance restarts and redeployments. Everything outside <code>/home/</code> is ephemeral — wiped on restart. Always store SQLite here.</div>
+  </div>
+
+  <h3>1.5 — Startup Command</h3>
+<pre>az webapp config set \
+  --name <span class="ph-inline">&lt;APP_NAME&gt;</span> \
+  --resource-group <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span> \
+  --startup-file "node server.js"</pre>
+
+  <h3>1.6 — Custom Domain (optional)</h3>
+<pre>az webapp config hostname add \
+  --webapp-name <span class="ph-inline">&lt;APP_NAME&gt;</span> \
+  --resource-group <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span> \
+  --hostname <span class="ph-inline">&lt;CUSTOM_DOMAIN&gt;</span></pre>
+  <p>Then add a CNAME record at your DNS provider: <code><span style="color:#b45309">&lt;subdomain&gt;</span> → <span style="color:#b45309">&lt;APP_NAME&gt;</span>.azurewebsites.net</code></p>
+
+  <!-- ── PART 2 ── -->
+  <h2><span class="part-badge">Part 2</span> Azure Blob Storage Setup <small style="font-size:13px;font-weight:400;color:var(--grey-500)">(one-time)</small></h2>
+
+  <h3>2.1 — Create Storage Account</h3>
+<pre>az storage account create \
+  --name <span class="ph-inline">&lt;STORAGE_ACCOUNT&gt;</span> \
+  --resource-group <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span> \
+  --location <span class="ph-inline">&lt;LOCATION&gt;</span> \
+  --sku Standard_LRS \
+  --allow-blob-public-access false   <span class="comment"># CRITICAL — enforces private blobs account-wide</span></pre>
+
+  <div class="callout danger">
+    <span class="callout-icon">🔒</span>
+    <div><strong><code>--allow-blob-public-access false</code> is mandatory.</strong> This disables public URLs for every blob in the account. Documents are private and served only via the backend SAS proxy. Without this flag blobs are publicly readable by anyone with the URL.</div>
+  </div>
+
+  <h3>2.2 — Create the Blob Container</h3>
+<pre>az storage container create \
+  --name <span class="ph-inline">&lt;CONTAINER_NAME&gt;</span> \
+  --account-name <span class="ph-inline">&lt;STORAGE_ACCOUNT&gt;</span></pre>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div>Do <strong>not</strong> pass <code>--public-access blob</code>. The account-level flag blocks it and throws <code>PublicAccessNotPermitted</code>.</div>
+  </div>
+
+  <h3>2.3 — Get the Connection String</h3>
+<pre>az storage account show-connection-string \
+  --name <span class="ph-inline">&lt;STORAGE_ACCOUNT&gt;</span> \
+  --resource-group <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span> \
+  --query connectionString \
+  --output tsv</pre>
+
+  <p>The output looks like this — copy the entire string:</p>
+<pre style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0">DefaultEndpointsProtocol=https;AccountName=<span class="ph-inline">&lt;STORAGE_ACCOUNT&gt;</span>;AccountKey=XXXX==;EndpointSuffix=core.windows.net</pre>
+  <p>This value goes into both the <strong>Azure App Settings</strong> (step 1.4) and the <strong>GitHub Secret</strong> (step 3).</p>
+
+  <!-- ── PART 3 ── -->
+  <h2><span class="part-badge">Part 3</span> GitHub Repository Secrets</h2>
+
+  <p>Navigate to <strong>GitHub → your repo → Settings → Secrets and variables → Actions → New repository secret</strong> and add these three secrets:</p>
+
+  <table class="doc-table">
+    <thead><tr><th>Secret name</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td><code>AZURE_CREDENTIALS</code></td><td>Full JSON block from the service principal command below</td></tr>
+      <tr><td><code>AZURE_STORAGE_CONNECTION_STRING</code></td><td>Full connection string from step 2.3</td></tr>
+      <tr><td><code>AZURE_STORAGE_CONTAINER</code></td><td>Your container name, e.g. <code>&lt;CONTAINER_NAME&gt;</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.1 — Create the Service Principal for GitHub Actions</h3>
+<pre>az ad sp create-for-rbac \
+  --name "<span class="ph-inline">&lt;SP_NAME&gt;</span>" \
+  --role contributor \
+  --scopes /subscriptions/<span class="ph-inline">&lt;SUBSCRIPTION_ID&gt;</span>/resourceGroups/<span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span> \
+  --sdk-auth</pre>
+
+  <p>The output is a JSON block — paste the <strong>entire output</strong> as the value of <code>AZURE_CREDENTIALS</code>:</p>
+<pre>{
+  "clientId": "...",
+  "clientSecret": "...",
+  "subscriptionId": "...",
+  "tenantId": "...",
+  "activeDirectoryEndpointUrl": "...",
+  ...
+}</pre>
+
+  <!-- ── PART 4 ── -->
+  <h2><span class="part-badge">Part 4</span> GitHub Actions Workflow</h2>
+
+  <p>Create this file in your repository: <code>.github/workflows/azure-deploy.yml</code></p>
+
+<pre><span class="comment"># .github/workflows/azure-deploy.yml</span>
+<span class="kw">name:</span> Deploy to Azure App Service
+
+<span class="kw">on:</span>
+  <span class="kw">push:</span>
+    <span class="kw">branches:</span>
+      - main
+
+<span class="kw">jobs:</span>
+  <span class="kw">deploy:</span>
+    <span class="kw">runs-on:</span> ubuntu-latest   <span class="comment"># MUST be Linux — better-sqlite3 native module is Linux-only</span>
+
+    <span class="kw">steps:</span>
+      - <span class="kw">name:</span> Checkout code
+        <span class="kw">uses:</span> actions/checkout@v4
+
+      - <span class="kw">name:</span> Set up Node.js
+        <span class="kw">uses:</span> actions/setup-node@v4
+        <span class="kw">with:</span>
+          <span class="kw">node-version:</span> <span class="str">'22'</span>
+          <span class="kw">cache:</span> <span class="str">'npm'</span>
+
+      <span class="comment"># Install ALL deps — devDeps (vite, typescript) needed for the build step</span>
+      - <span class="kw">name:</span> Install all dependencies
+        <span class="kw">run:</span> npm ci
+
+      <span class="comment"># Vite compiles src/ → dist/index.js</span>
+      - <span class="kw">name:</span> Build frontend
+        <span class="kw">run:</span> npm run build
+
+      <span class="comment"># Strip devDeps before zipping — reduces zip size by ~60%</span>
+      - <span class="kw">name:</span> Install production dependencies only
+        <span class="kw">run:</span> npm ci --omit=dev
+
+      <span class="comment"># Fail fast if anything critical is missing</span>
+      - <span class="kw">name:</span> Verify key files exist
+        <span class="kw">run:</span> |
+          ls -lh server.js dist/index.js
+          ls -lh node_modules/@hono/node-server/dist/index.mjs
+          ls -lh node_modules/better-sqlite3/prebuilds/linux-x64.node
+          echo "node_modules size: $(du -sh node_modules/)"
+
+      - <span class="kw">name:</span> Azure Login
+        <span class="kw">uses:</span> azure/login@v2
+        <span class="kw">with:</span>
+          <span class="kw">creds:</span> ${{ secrets.AZURE_CREDENTIALS }}
+
+      <span class="comment"># Sync secrets → Azure App Settings so process.env picks them up</span>
+      - <span class="kw">name:</span> Configure App Service settings
+        <span class="kw">run:</span> |
+          az webapp config appsettings set \
+            --name <span class="ph-inline">&lt;APP_NAME&gt;</span> \
+            --resource-group <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span> \
+            --settings \
+              AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+              AZURE_STORAGE_CONTAINER="${{ secrets.AZURE_STORAGE_CONTAINER }}"
+          echo "✅ App settings synced"
+
+      <span class="comment"># Zip the deployment package — exclude source, secrets, and local dev artifacts</span>
+      - <span class="kw">name:</span> Create deployment zip
+        <span class="kw">run:</span> |
+          zip -r deploy.zip . \
+            --exclude "*.git*" \
+            --exclude "*.zip" \
+            --exclude ".env*" \
+            --exclude "data/*" \
+            --exclude ".wrangler/*" \
+            --exclude "src/*" \
+            --exclude "vite.config*" \
+            --exclude "tsconfig*" \
+            --exclude "wrangler*" \
+            --exclude "ecosystem*" \
+            --exclude "*.md"
+          echo "Zip size: $(du -sh deploy.zip)"
+          echo "Spot-check zip contents:"
+          unzip -l deploy.zip | grep -E "(server\.js|dist/index\.js|node_modules/@hono|better-sqlite)" | head -6
+
+      <span class="comment"># Upload zip — App Service extracts and runs startup-file</span>
+      - <span class="kw">name:</span> Deploy zip to Azure
+        <span class="kw">run:</span> |
+          az webapp deploy \
+            --name <span class="ph-inline">&lt;APP_NAME&gt;</span> \
+            --resource-group <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span> \
+            --src-path deploy.zip \
+            --type zip
+          echo "✅ Deployment completed"
+
+      - <span class="kw">name:</span> Restart app
+        <span class="kw">run:</span> |
+          az webapp restart \
+            --name <span class="ph-inline">&lt;APP_NAME&gt;</span> \
+            --resource-group <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span>
+          echo "✅ App restarted"
+
+      <span class="comment"># Poll every 15 s for up to 10 minutes — fail the job if app doesn't come up</span>
+      - <span class="kw">name:</span> Wait for app to come online
+        <span class="kw">run:</span> |
+          echo "Polling https://<span class="ph-inline">&lt;APP_NAME&gt;</span>.azurewebsites.net ..."
+          for i in $(seq 1 40); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 15 \
+              https://<span class="ph-inline">&lt;APP_NAME&gt;</span>.azurewebsites.net/ 2>/dev/null || echo "000")
+            echo "$(date -u '+%H:%M:%S') Attempt $i/40: HTTP $CODE"
+            if [ "$CODE" = "200" ]; then
+              echo "✅ App is live!"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "⚠️ App did not return 200 within 10 minutes — check Kudu logs"
+          exit 1</pre>
+
+  <!-- ── PART 5 ── -->
+  <h2><span class="part-badge">Part 5</span> Application Code Requirements</h2>
+
+  <h3>5.1 — server.js (entry point — NOT bundled by Vite)</h3>
+<pre><span class="comment">// server.js — plain Node.js, deployed alongside dist/index.js</span>
+<span class="kw">import</span> { serve } from <span class="str">'@hono/node-server'</span>
+<span class="kw">import</span> app from <span class="str">'./dist/index.js'</span>
+
+<span class="comment">// Read PORT at true runtime — Azure injects it; never bake it into the Vite bundle</span>
+const port = Number(process.env.PORT) || 8080
+console.log(`🚀 Starting on port ${port}`)
+
+serve({ fetch: app.fetch, port })</pre>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div><strong>Critical:</strong> <code>process.env.PORT</code> must be read inside <code>server.js</code> at runtime, not inside <code>src/</code>. If it gets baked into <code>dist/index.js</code> by Vite, it will be <code>undefined</code> at build time and the app will bind to the wrong port.</div>
+  </div>
+
+  <h3>5.2 — package.json scripts</h3>
+<pre>{
+  <span class="str">"scripts"</span>: {
+    <span class="str">"start"</span>: <span class="str">"node server.js"</span>,           <span class="comment">// Azure startup command</span>
+    <span class="str">"build"</span>: <span class="str">"vite build"</span>,               <span class="comment">// GitHub Actions build step</span>
+    <span class="str">"dev"</span>:   <span class="str">"NODE_ENV=development DB_PATH=./data/app.db node server.js"</span>
+  },
+  <span class="str">"engines"</span>: { <span class="str">"node"</span>: <span class="str">">=22.0.0"</span> }
+}</pre>
+
+  <h3>5.3 — Database path pattern</h3>
+<pre><span class="comment">// src/lib/db-adapter.ts</span>
+const dbPath = process.env.DB_PATH || <span class="str">'./data/app.db'</span>
+<span class="comment">// Production: DB_PATH=/home/data/app.db  (set in App Settings)</span>
+<span class="comment">// Local dev:  falls back to ./data/app.db</span></pre>
+
+  <h3>5.4 — Auto-migrations on startup</h3>
+  <p>The db-adapter runs all migrations automatically when the Node process starts, tracked via a <code>schema_migrations</code> table so each file runs exactly once:</p>
+<pre><span class="comment">// src/lib/db-adapter.ts</span>
+const MIGRATION_FILES = [
+  <span class="str">'./migrations/0001_initial.sql'</span>,
+  <span class="str">'./migrations/0002_seed.sql'</span>,
+  <span class="comment">// ... add new files here in order ...</span>
+  <span class="str">'./migrations/00NN_latest_change.sql'</span>,
+]
+runMigrations() <span class="comment">// called at module load — before any request is handled</span></pre>
+
+  <div class="callout success">
+    <span class="callout-icon">✅</span>
+    <div><strong>Adding a migration:</strong> create <code>migrations/00NN_description.sql</code>, append its path to <code>MIGRATION_FILES</code>, commit and push. The next deploy auto-applies it on startup.</div>
+  </div>
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div><strong>Write safe SQL:</strong> use <code>CREATE TABLE IF NOT EXISTS</code> and <code>ALTER TABLE ADD COLUMN</code> (not <code>DROP TABLE</code>) so existing data survives redeploys.</div>
+  </div>
+
+  <h3>5.5 — Blob Storage — private with server-side SAS proxy</h3>
+  <p>Because <code>allowBlobPublicAccess=false</code>, the browser can never access a blob URL directly. The flow is:</p>
+  <ol style="margin:12px 0 16px 24px;line-height:2">
+    <li>Frontend calls <code>GET /api/documents/serve?url=&lt;blobUrl&gt;&amp;filename=&lt;name&gt;</code></li>
+    <li>Backend generates a short-lived (15 min) SAS token using <strong>HMAC-SHA256</strong> over the account key — pure Node <code>crypto</code>, no Azure SDK needed at request time</li>
+    <li>Backend fetches the blob server-side using the SAS URL and streams the response to the browser</li>
+  </ol>
+
+  <p>The SAS <strong>string-to-sign</strong> for Azure Blob service SAS version <code>2020-08-04</code> — the field order is strict and must match exactly:</p>
+
+  <table class="sas-table">
+    <thead><tr><th>#</th><th>Field name</th><th>Value used</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td class="field-name">signedPermissions</td><td class="field-val">"r"</td></tr>
+      <tr><td>2</td><td class="field-name">signedStart</td><td class="field-note">ISO 8601 UTC, ~1 min in the past</td></tr>
+      <tr><td>3</td><td class="field-name">signedExpiry</td><td class="field-note">ISO 8601 UTC, 15 min in the future</td></tr>
+      <tr><td>4</td><td class="field-name">canonicalizedResource</td><td class="field-val">"/blob/{accountName}/{container}/{blobName}"</td></tr>
+      <tr><td>5</td><td class="field-name">signedIdentifier</td><td class="field-note">empty string</td></tr>
+      <tr><td>6</td><td class="field-name">signedIP</td><td class="field-note">empty string</td></tr>
+      <tr><td>7</td><td class="field-name">signedProtocol</td><td class="field-note">empty string</td></tr>
+      <tr><td>8</td><td class="field-name">signedVersion</td><td class="field-val">"2020-08-04"</td></tr>
+      <tr><td>9</td><td class="field-name">signedResource (sr)</td><td class="field-val">"b"  (blob)</td></tr>
+      <tr><td>10</td><td class="field-name">signedSnapshotTime</td><td class="field-note">empty string</td></tr>
+      <tr><td>11</td><td class="field-name">rscc</td><td class="field-note">empty string (Cache-Control override)</td></tr>
+      <tr><td>12</td><td class="field-name">rscd</td><td class="field-note">empty string (Content-Disposition override)</td></tr>
+      <tr><td>13</td><td class="field-name">rsce</td><td class="field-note">empty string (Content-Encoding override)</td></tr>
+      <tr><td>14</td><td class="field-name">rscl</td><td class="field-note">empty string (Content-Language override)</td></tr>
+      <tr class="last-row"><td>15</td><td class="field-name">rsct</td><td class="field-note">empty string — NO trailing \n on this last field</td></tr>
+    </tbody>
+  </table>
+
+<pre><span class="comment">// Node.js implementation — pure crypto, no Azure SDK at request time</span>
+<span class="kw">const</span> { createHmac } = <span class="kw">await import</span>(<span class="str">'node:crypto'</span>)  <span class="comment">// dynamic import avoids DOM check</span>
+
+<span class="kw">const</span> strToSign = [
+  perms, start, expiry, canonicalizedResource,
+  <span class="str">''</span>, <span class="str">''</span>, <span class="str">''</span>,          <span class="comment">// signedIdentifier, signedIP, signedProtocol</span>
+  version,               <span class="comment">// "2020-08-04"</span>
+  signedResource,        <span class="comment">// "b"</span>
+  <span class="str">''</span>,                    <span class="comment">// signedSnapshotTime</span>
+  <span class="str">''</span>, <span class="str">''</span>, <span class="str">''</span>, <span class="str">''</span>, <span class="str">''</span>    <span class="comment">// rscc, rscd, rsce, rscl, rsct</span>
+].join(<span class="str">'\n'</span>)
+
+<span class="kw">const</span> sig = createHmac(<span class="str">'sha256'</span>, Buffer.from(accountKey, <span class="str">'base64'</span>))
+  .update(strToSign, <span class="str">'utf8'</span>)
+  .digest(<span class="str">'base64'</span>)</pre>
+
+  <!-- ── PART 6 ── -->
+  <h2><span class="part-badge">Part 6</span> Environment Variables Reference</h2>
+
+  <table class="doc-table">
+    <thead><tr><th>Variable</th><th>Where set</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>PORT</code></td><td>Azure (auto-injected)</td><td>HTTP port App Service binds to — read only in <code>server.js</code></td></tr>
+      <tr><td><code>NODE_ENV</code></td><td>App Settings</td><td>Set to <code>production</code> — disables demo helpers, enables optimisations</td></tr>
+      <tr><td><code>DB_PATH</code></td><td>App Settings</td><td><code>/home/data/app.db</code> — persists across restarts (see Part 7)</td></tr>
+      <tr><td><code>AZURE_STORAGE_CONNECTION_STRING</code></td><td>GitHub Secret → App Settings</td><td>Blob upload, delete, and SAS token generation</td></tr>
+      <tr><td><code>AZURE_STORAGE_CONTAINER</code></td><td>GitHub Secret → App Settings</td><td>Blob container name (e.g. <code>&lt;CONTAINER_NAME&gt;</code>)</td></tr>
+      <tr><td><code>OPENAI_API_KEY</code></td><td>App Settings (if used)</td><td>AI text generation features</td></tr>
+      <tr><td><code>GOOGLE_VISION_API_KEY</code></td><td>App Settings (if used)</td><td>Document OCR via Google Vision</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── PART 7 ── -->
+  <h2><span class="part-badge">Part 7</span> SQLite Persistence on Azure App Service</h2>
+
+  <table class="doc-table">
+    <thead><tr><th>Path</th><th>Persists?</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>/home/data/app.db</code></td><td class="yes">✅ Yes</td><td>Backed by Azure Files; survives restarts and <em>most</em> redeployments</td></tr>
+      <tr><td><code>./data/app.db</code> (relative)</td><td class="no">❌ No</td><td>In the app package directory — wiped on every deployment</td></tr>
+      <tr><td><code>/tmp/app.db</code></td><td class="no">❌ No</td><td>Ephemeral instance storage — wiped on restart</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout danger">
+    <span class="callout-icon">🔴</span>
+    <div><strong>Always use an absolute path under <code>/home/</code> for SQLite in production.</strong> Set <code>DB_PATH=/home/data/app.db</code> in App Settings. The <code>db-adapter.ts</code> must <code>mkdir -p</code> the directory before opening the database.</div>
+  </div>
+
+  <!-- ── PART 8 ── -->
+  <h2><span class="part-badge">Part 8</span> Viewing Logs</h2>
+
+  <h3>Via Azure CLI (live tail)</h3>
+<pre>az webapp log tail \
+  --name <span class="ph-inline">&lt;APP_NAME&gt;</span> \
+  --resource-group <span class="ph-inline">&lt;RESOURCE_GROUP&gt;</span></pre>
+
+  <h3>Via Kudu Console (browser)</h3>
+<pre>https://<span class="ph-inline">&lt;APP_NAME&gt;</span>.scm.azurewebsites.net/DebugConsole</pre>
+  <p>Navigate to <code>/home/LogFiles/</code> for application logs, or run commands directly in the Kudu shell (e.g. <code>sqlite3 /home/data/app.db ".tables"</code> to inspect the database).</p>
+
+  <!-- ── PART 9 ── -->
+  <h2><span class="part-badge">Part 9</span> First Deploy Checklist</h2>
+
+  <ul class="checklist">
+    <li><div class="chk"></div>Resource group created (<code>&lt;RESOURCE_GROUP&gt;</code>)</li>
+    <li><div class="chk"></div>App Service Plan created — Linux, B1 or higher</li>
+    <li><div class="chk"></div>Web App created — Node 22 LTS runtime</li>
+    <li><div class="chk"></div>Startup command set: <code>node server.js</code></li>
+    <li><div class="chk"></div><code>DB_PATH</code> set to <code>/home/data/app.db</code> in App Settings</li>
+    <li><div class="chk"></div>Storage account created with <code>--allow-blob-public-access false</code></li>
+    <li><div class="chk"></div>Blob container created — no public-access flag</li>
+    <li><div class="chk"></div>Connection string copied from Step 2.3</li>
+    <li><div class="chk"></div><code>AZURE_CREDENTIALS</code> secret added to GitHub (full service principal JSON)</li>
+    <li><div class="chk"></div><code>AZURE_STORAGE_CONNECTION_STRING</code> secret added to GitHub</li>
+    <li><div class="chk"></div><code>AZURE_STORAGE_CONTAINER</code> secret added to GitHub</li>
+    <li><div class="chk"></div><code>server.js</code> reads <code>PORT</code> from <code>process.env</code> at runtime (not baked into bundle)</li>
+    <li><div class="chk"></div>All migration files listed in <code>MIGRATION_FILES</code> array in <code>db-adapter.ts</code></li>
+    <li><div class="chk"></div><code>APP_NAME</code> and <code>RESOURCE_GROUP</code> placeholders replaced in <code>azure-deploy.yml</code></li>
+    <li><div class="chk"></div><code>.github/workflows/azure-deploy.yml</code> committed to <code>main</code> branch</li>
+    <li><div class="chk"></div>Push to <code>main</code> → Actions tab shows green → app returns HTTP 200</li>
+  </ul>
+
+  <!-- ── PART 10 ── -->
+  <h2><span class="part-badge">Part 10</span> Common Errors &amp; Fixes</h2>
+
+  <table class="doc-table">
+    <thead><tr><th>Error message</th><th>Root cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>ENOENT: no such file, open './migrations/...'</code></td>
+        <td>CWD is not the project root at startup</td>
+        <td>Ensure startup command is <code>node server.js</code> (not <code>cd src &amp;&amp; node ...</code>) and <code>migrations/</code> is included in the zip</td>
+      </tr>
+      <tr>
+        <td><code>PublicAccessNotPermitted</code> on blob upload</td>
+        <td>Passing <code>{ access: 'blob' }</code> to <code>createIfNotExists()</code></td>
+        <td>Remove the access parameter entirely — the container inherits the account-level private setting</td>
+      </tr>
+      <tr>
+        <td><code>AuthenticationFailed</code> / 403 on blob download</td>
+        <td>Wrong SAS string-to-sign field order or trailing <code>\n</code> after last field</td>
+        <td>See Part 5.5 — 15 fields in exact order, joined by <code>\n</code>, no trailing newline on field 15</td>
+      </tr>
+      <tr>
+        <td><code>Cannot find module './dist/index.js'</code></td>
+        <td>Build step didn't run, or <code>dist/</code> excluded from zip</td>
+        <td><code>npm run build</code> must run before <code>npm ci --omit=dev</code>; ensure <code>dist/</code> is not in <code>.gitignore</code></td>
+      </tr>
+      <tr>
+        <td><code>better-sqlite3</code> native module error</td>
+        <td>Built on macOS/Windows, deployed to Linux — native binary mismatch</td>
+        <td>Always build on <code>ubuntu-latest</code> in GitHub Actions — never zip from a Mac or Windows machine</td>
+      </tr>
+      <tr>
+        <td>App shows stale content after deploy</td>
+        <td>Browser or CDN cache serving old HTML</td>
+        <td>Add <code>Clear-Site-Data: "cache"</code> response header on HTML pages; or use cache-busting query strings on assets</td>
+      </tr>
+      <tr>
+        <td>SQLite DB is empty after redeploy</td>
+        <td><code>DB_PATH</code> points outside <code>/home/</code> — ephemeral path wiped on deploy</td>
+        <td>Set <code>DB_PATH=/home/data/app.db</code> in App Settings; ensure <code>db-adapter.ts</code> does <code>mkdir -p</code> on the directory</td>
+      </tr>
+      <tr>
+        <td><code>document is not defined</code> crash on startup</td>
+        <td>Azure SDK (<code>@azure/storage-blob</code>) has a top-level DOM check that fails in Node.js</td>
+        <td>Use dynamic <code>await import('@azure/storage-blob')</code> inside a function, never a top-level static import</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="doc-footer">
+    Azure Deployment Guide — Hono · Node.js · SQLite · Azure Blob Storage via GitHub Actions<br>
+    Generic template — replace all <code style="color:#b45309">&lt;PLACEHOLDER&gt;</code> values before use.
+  </div>
+
+</div><!-- /page-wrap -->
+</body>
+</html>
