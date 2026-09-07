@@ -177,7 +177,7 @@ app.post('/applications', async (c) => {
   const body = await c.req.json()
   const { product_id, customer_name, unit_id, project_id, loan_amount, loan_term,
     property_address, property_source, gsas_score, epc_rating, salary, civil_id,
-    applied_rate } = body
+    applied_rate, documents: customerDocs } = body
 
   // Allow product lookup by code as well as id (for backwards compat)
   let product = await c.env.DB.prepare('SELECT * FROM products WHERE id = ? AND status = ?')
@@ -274,6 +274,30 @@ app.post('/applications', async (c) => {
     }
   }
 
+  // ── Save customer-uploaded documents (civil ID, salary cert, etc.) ───────
+  const customerDocIds: string[] = []
+  if (Array.isArray(customerDocs) && customerDocs.length > 0) {
+    for (const doc of (customerDocs as any[])) {
+      if (!doc.doc_type) continue
+      const docId = generateId('doc')
+      await c.env.DB.prepare(`
+        INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, file_url,
+          extracted_data, ai_confidence, validation_status, validation_notes, created_at)
+        VALUES (?, 'application', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        docId, id,
+        doc.doc_type,
+        doc.filename || doc.doc_type,
+        doc.url || null,
+        doc.ocr_data ? JSON.stringify(doc.ocr_data) : '{}',
+        doc.ocr_data ? 85 : 0,
+        doc.url ? 'pending' : 'not_applicable',
+        null, ts
+      ).run()
+      customerDocIds.push(docId)
+    }
+  }
+
   await logAudit(c.env.DB, {
     userId: customerId || 'portal',
     userName: customer_name,
@@ -281,7 +305,7 @@ app.post('/applications', async (c) => {
     action: 'APPLICATION_SUBMITTED',
     entityType: 'application',
     entityId: id,
-    details: { reference: refNum, product_id, loan_amount, applied_rate: appliedRate, docs_copied: copiedDocIds.length },
+    details: { reference: refNum, product_id, loan_amount, applied_rate: appliedRate, docs_copied: copiedDocIds.length, customer_docs: customerDocIds.length },
   })
 
   return c.json({
@@ -293,6 +317,7 @@ app.post('/applications', async (c) => {
     lifetime_saving: lifetimeSaving,
     status: 'submitted',
     docs_transferred: copiedDocIds.length,
+    customer_docs_saved: customerDocIds.length,
   })
 })
 
@@ -351,6 +376,41 @@ app.get('/applications/:ref/status', async (c) => {
     documents: docs,
     created_at: app.created_at,
   })
+})
+
+// ── Consumer Portal: Document pre-upload (wizard steps 4–6) ─────────────
+// Accepts multipart/form-data { doc_type, file }
+// Uploads to Azure Blob, returns { url, filename, doc_type }
+app.post('/documents/upload', async (c) => {
+  const formData = await c.req.formData()
+  const docType  = (formData.get('doc_type') as string || '').trim()
+  const file     = formData.get('file') as File | null
+
+  if (!docType || !file) {
+    return c.json({ error: 'doc_type and file are required' }, 400)
+  }
+
+  // If storage not configured, return a placeholder so wizard flow continues
+  if (!isStorageConfigured()) {
+    console.warn('[portal/upload] Azure Storage not configured — returning placeholder')
+    return c.json({ url: null, filename: file.name, doc_type: docType, stored: false })
+  }
+
+  const buffer   = Buffer.from(await file.arrayBuffer())
+  const mimeType = file.type || 'application/octet-stream'
+
+  // Use a temporary entity ID (wizard session); will be linked to application on submit
+  const tempId = `wizard-${Date.now()}`
+  const url = await uploadBlob({
+    entityType: 'application',
+    entityId:   tempId,
+    docType,
+    filename:   file.name,
+    buffer,
+    mimeType
+  })
+
+  return c.json({ url, filename: file.name, doc_type: docType, stored: !!url })
 })
 
 // ── Consumer Portal: OCR proxy (Google Vision — keeps API key server-side) ──
