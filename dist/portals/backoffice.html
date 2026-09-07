@@ -1635,6 +1635,10 @@ async function dispatchUiEvents(events, productId) {
     /* add_rule */
     if (ev.type === 'add_rule' && ev.rule) {
       const rule = ev.rule;
+      /* Dedup guard: rules_draft merge (synchronous) fires before this
+         setTimeout block, so the same 17 rules may already be in
+         aiDraftRules. Skip push AND DOM row if name already present. */
+      if (aiDraftRules.some(r => r.name === rule.name)) { continue; }
       aiDraftRules.push(rule);
       updateAiDraftCard();
       const container = document.getElementById('rulesList');
