@@ -1078,8 +1078,15 @@ function renderProductPanel(p, productRules) {
       </div>`
   };
 
+  // Cache tab content so switchProductTab can swap tabs without re-fetching from DB.
+  // This is critical: during the AI Studio session, rules/workflow are injected into
+  // DOM elements (#rulesList, #workflowCanvas) that live inside tab content. A
+  // full re-fetch wipes those live elements. Caching lets us swap tab HTML in-place.
+  _currentPanelTabContent = tabContent;
+  _currentPanelProductId  = p.id;
+
   document.getElementById('panelBody').innerHTML = `
-    <div class="tabs">${tabs.map(t=>`<div class="tab ${t===selectedTab?'active':''}" onclick="switchProductTab('${t}','${p.id}')">${tabLabels[t]}</div>`).join('')}</div>
+    <div class="tabs" id="productTabBar">${tabs.map(t=>`<div class="tab ${t===selectedTab?'active':''}" onclick="switchProductTab('${t}','${p.id}')">${tabLabels[t]}</div>`).join('')}</div>
     <div class="tab-content" id="productTabContent">
       ${tabContent[selectedTab]||''}
     </div>
@@ -1193,8 +1200,66 @@ async function loadProductWorkflowTemplate(p) {
   }
 }
 
+// Module-level cache so switchProductTab can swap tabs without a DB re-fetch.
+// A re-fetch would wipe live AI-injected DOM elements (#rulesList, #workflowCanvas)
+// that are prepended/updated by add_rule / set_workflow events during the AI session.
+let _currentPanelTabContent = null;
+let _currentPanelProductId  = null;
+
 function switchProductTab(tab, productId) {
   selectedTab = tab;
+  // If we already have the tab content for this product cached, swap in-place.
+  // This preserves any live DOM elements injected by AI events (add_rule, set_workflow).
+  if (_currentPanelProductId === productId && _currentPanelTabContent && _currentPanelTabContent[tab]) {
+    // Update active tab button
+    const bar = document.getElementById('productTabBar');
+    if (bar) bar.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.textContent.trim() === ({general:'General',pricing:'Pricing',eligibility:'Eligibility',documents:'Documents',workflow:'Workflow',ai_config:'AI Config','ai_assistant':'🤖 AI Studio'}[tab]||tab)));
+    // Swap content
+    const content = document.getElementById('productTabContent');
+    if (content) {
+      content.innerHTML = _currentPanelTabContent[tab];
+      // Re-run post-render hooks that the full openProductDetail would normally trigger
+      if (tab === 'eligibility') {
+        // Re-inject any AI-generated rules that arrived via add_rule events this session.
+        // The cached HTML has an empty #rulesList; re-populate it from aiDraftRules.
+        if (aiDraftRules && aiDraftRules.length) {
+          const container = document.getElementById('rulesList');
+          if (container) {
+            container.innerHTML = '';
+            [...aiDraftRules].reverse().forEach(rule => {
+              const sc = rule.severity==='hard'?'#f87171':rule.severity==='soft'?'#fbbf24':'#60a5fa';
+              const cc = {creditworthiness:'#60a5fa',esg:'#4ade80',collateral:'#fbbf24',eligibility:'#c084fc'};
+              const row = document.createElement('div');
+              row.style.cssText = 'display:flex;align-items:flex-start;gap:.5rem;padding:.55rem .75rem;background:rgba(53,198,196,.07);border:1px solid rgba(53,198,196,.2);border-radius:6px;margin-bottom:.4rem';
+              row.innerHTML =
+                '<span style="width:7px;height:7px;border-radius:50%;background:'+sc+';flex-shrink:0;margin-top:4px"></span>'+
+                '<div style="flex:1;min-width:0">'+
+                  '<div style="font-size:.78rem;font-weight:600;color:var(--navy)">'+(rule.name||rule.metric||'Rule')+'</div>'+
+                  '<div style="font-size:.67rem;color:var(--grey-400);margin-top:.1rem">'+(rule.regulatory_reference||rule.category||'')+'</div>'+
+                '</div>'+
+                '<span style="font-size:.68rem;background:rgba(0,127,134,.1);color:var(--teal);padding:.12rem .4rem;border-radius:10px;white-space:nowrap;flex-shrink:0">'+(rule.metric||'')+' '+(rule.operator||'')+' '+(rule.threshold_value??'')+'</span>';
+              container.appendChild(row);
+            });
+          }
+        }
+      }
+      if (tab === 'workflow') {
+        const prod = products.find(p => p.id === productId);
+        if (prod) loadProductWorkflowTemplate(prod);
+      }
+      if (tab === 'ai_assistant') {
+        aiProductIdContext = productId;
+        const chatHistory = document.getElementById('aiChatHistory');
+        if (chatHistory && chatHistory.children.length === 0) {
+          setTimeout(() => {
+            if (typeof renderAiWelcome === 'function') renderAiWelcome(productId);
+          }, 50);
+        }
+      }
+      return;
+    }
+  }
+  // Fallback: full re-fetch (different product, or cache miss)
   openProductDetail(productId);
 }
 
@@ -1960,6 +2025,12 @@ async function sendAiChat(productId) {
         + '<strong><i class="fas fa-list-check" style="margin-right:5px"></i>Rules (' + d.rules_draft.length + ')</strong><br>'
         + d.rules_draft.map(x => '&bull; ' + (x.name || x.metric || 'rule')).join('<br>')
         + '</div>';
+      // Merge rules_draft into aiDraftRules so the draft card and confirm payload
+      // always reflect the full rule set — regardless of whether GPT also emitted
+      // add_rule ui_events (real GPT often returns rules_draft without ui_events).
+      const existingNames = new Set(aiDraftRules.map(r => r.name));
+      d.rules_draft.forEach(r => { if (!existingNames.has(r.name)) aiDraftRules.push(r); });
+      setTimeout(() => updateAiDraftCard(), 200);
     }
     if (d.schema_draft) {
       replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(244,179,91,.1);border:1px solid rgba(244,179,91,.3);border-radius:6px;font-size:.78rem">'
