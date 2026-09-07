@@ -1,8 +1,7 @@
 'use strict';
 
 /**
- * auth-guard.js — token stored in localStorage, sent as Authorization: Bearer
- * No cookies — avoids all SameSite/CORS/credentials issues.
+ * auth-guard.js — token in localStorage, sent as Authorization: Bearer
  */
 
 const TOKEN_KEY = 'ps_token';
@@ -15,38 +14,61 @@ const LOGIN_PAGES = {
 };
 
 function getToken() { return localStorage.getItem(TOKEN_KEY); }
-function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
 function clearToken() { localStorage.removeItem(TOKEN_KEY); }
 
-/** Attach Bearer token to any fetch options object */
 function authHeaders(extra) {
-  return { ...extra, headers: { ...(extra && extra.headers), 'Authorization': 'Bearer ' + (getToken() || '') } };
+  const token = getToken();
+  return { ...extra, headers: { ...(extra && extra.headers), 'Authorization': 'Bearer ' + (token || '') } };
 }
 
 async function authGuard(requiredPortal) {
   const token = getToken();
-  if (!token) { window.location.href = LOGIN_PAGES[requiredPortal]; return null; }
+  if (!token) {
+    window.location.href = LOGIN_PAGES[requiredPortal];
+    return null;
+  }
+
+  let resp, data;
   try {
-    const r = await fetch('/api/v1/auth/me', authHeaders());
-    if (!r.ok) throw new Error('not authenticated');
-    const d = await r.json();
-    const user = d.user;
+    resp = await fetch('/api/v1/auth/me', authHeaders());
+    const text = await resp.text();
+    try { data = JSON.parse(text); } catch(_) {
+      // Server returned non-JSON (crash/500) — show it in console and bail
+      console.error('[auth-guard] /me non-JSON response (' + resp.status + '):', text.slice(0, 300));
+      clearToken();
+      window.location.href = LOGIN_PAGES[requiredPortal];
+      return null;
+    }
+  } catch(netErr) {
+    console.error('[auth-guard] /me network error:', netErr);
+    window.location.href = LOGIN_PAGES[requiredPortal];
+    return null;
+  }
 
-    const access = user.portal_access;
-    const allowed = access === 'all' ||
-      (requiredPortal === 'customer'   && access === 'customer')   ||
-      (requiredPortal === 'developer'  && access === 'developer')  ||
-      (requiredPortal === 'backoffice' && access === 'backoffice');
-
-    if (!allowed) { window.location.href = LOGIN_PAGES[requiredPortal]; return null; }
-
-    _portalUser = { ...user, allowed_sections: user.allowed_sections || [] };
-    return _portalUser;
-  } catch (_) {
+  if (!resp.ok || data.error) {
+    console.warn('[auth-guard] /me rejected:', resp.status, data.error);
     clearToken();
     window.location.href = LOGIN_PAGES[requiredPortal];
     return null;
   }
+
+  const user = data.user;
+  const access = user.portal_access;
+  const allowed =
+    access === 'all' ||
+    (requiredPortal === 'customer'   && access === 'customer')   ||
+    (requiredPortal === 'developer'  && access === 'developer')  ||
+    (requiredPortal === 'backoffice' && access === 'backoffice');
+
+  if (!allowed) {
+    console.warn('[auth-guard] wrong portal — access:', access, 'required:', requiredPortal);
+    clearToken();
+    window.location.href = LOGIN_PAGES[requiredPortal];
+    return null;
+  }
+
+  _portalUser = { ...user, allowed_sections: user.allowed_sections || [] };
+  return _portalUser;
 }
 
 function getPortalUser() { return _portalUser; }
