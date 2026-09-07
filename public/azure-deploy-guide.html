@@ -57,6 +57,12 @@
     letter-spacing: .3px;
   }
   .action-bar-title strong { color: #fff; }
+  .action-bar-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
   .btn-dl {
     display: inline-flex;
     align-items: center;
@@ -72,8 +78,14 @@
     font-family: inherit;
     transition: background .15s;
     text-decoration: none;
+    white-space: nowrap;
   }
   .btn-dl:hover { background: #0891b2; }
+  .btn-dl.btn-secondary {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.25);
+  }
+  .btn-dl.btn-secondary:hover { background: rgba(255,255,255,.22); }
   .btn-dl svg { flex-shrink: 0; }
 
   @media print {
@@ -355,11 +367,34 @@
 <!-- ── ACTION BAR ── -->
 <div class="action-bar">
   <span class="action-bar-title"><strong>Azure Deployment Guide</strong> — Hono + Node.js + SQLite + Blob Storage</span>
-  <button class="btn-dl" onclick="window.print()">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-    Save / Print PDF
-  </button>
+  <div class="action-bar-btns">
+    <button class="btn-dl" onclick="downloadHTML()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Download HTML
+    </button>
+    <button class="btn-dl btn-secondary" onclick="window.print()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print / PDF
+    </button>
+  </div>
 </div>
+
+<script>
+function downloadHTML() {
+  // Grab the full page source and trigger a browser download
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {
+    href:     url,
+    download: 'azure-deployment-guide.html',
+  });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
 
 <div class="page-wrap">
 
