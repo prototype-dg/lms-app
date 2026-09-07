@@ -19,18 +19,20 @@
  * PublicAccessNotPermitted when account-level public access is disabled.
  */
 
-import { BlobServiceClient, ContainerClient } from '@azure/storage-blob'
+// No top-level Azure SDK import — dynamic import inside each function prevents
+// the SDK's DOM check (document is not defined) from crashing Node at startup.
 
 const CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING || ''
 const CONTAINER_NAME    = process.env.AZURE_STORAGE_CONTAINER || 'lms-documents'
 
-// Lazy singleton — only created when a real connection string is present
-let _containerClient: ContainerClient | null = null
+// Lazy singleton
+let _containerClient: any = null
 
-function getContainerClient(): ContainerClient | null {
+async function getContainerClient(): Promise<any | null> {
   if (!CONNECTION_STRING) return null
   if (_containerClient) return _containerClient
   try {
+    const { BlobServiceClient } = await import('@azure/storage-blob')
     const blobServiceClient = BlobServiceClient.fromConnectionString(CONNECTION_STRING)
     _containerClient = blobServiceClient.getContainerClient(CONTAINER_NAME)
     return _containerClient
@@ -56,7 +58,7 @@ export async function uploadBlob(opts: {
   buffer:     Buffer
   mimeType:   string
 }): Promise<string | null> {
-  const client = getContainerClient()
+  const client = await getContainerClient()
   if (!client) {
     console.warn('[blob-storage] No connection string — file not stored in Azure')
     return null
@@ -94,7 +96,7 @@ export async function uploadBlob(opts: {
  * Used during demo reset to purge user-uploaded files.
  */
 export async function deleteBlob(blobUrl: string): Promise<boolean> {
-  const client = getContainerClient()
+  const client = await getContainerClient()
   if (!client) return false
 
   try {
@@ -117,7 +119,7 @@ export async function deleteBlob(blobUrl: string): Promise<boolean> {
  * Used during demo reset.
  */
 export async function deleteBlobsByPrefix(prefix: string): Promise<number> {
-  const client = getContainerClient()
+  const client = await getContainerClient()
   if (!client) return 0
 
   let count = 0
