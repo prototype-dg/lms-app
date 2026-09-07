@@ -3384,44 +3384,118 @@ async function renderEsgReview() {
 }
 
 /* ======================== AUDIT LOGS ======================== */
-async function renderAuditLogs() {
+async function renderAuditLogs(filterAction='', filterEntity='') {
   document.getElementById('pageTitle').textContent = 'Audit Trail';
   document.getElementById('pageSubtitle').textContent = 'Immutable compliance log';
+
+  // Build query string with active filters
+  let qs = '/api/v1/audit?limit=100';
+  if (filterAction) qs += `&action=${encodeURIComponent(filterAction)}`;
+  if (filterEntity) qs += `&entity_type=${encodeURIComponent(filterEntity)}`;
+
+  let totalCount = 0;
   try {
-    const r = await fetch('/api/v1/audit?limit=30');
+    const r = await fetch(qs);
     const d = await r.json();
     auditLogs = d.audit_logs || [];
+    totalCount = d.total || auditLogs.length;
   } catch(e) { auditLogs = []; }
-  
-  const actionIcon = { PRODUCT_CLONED:'fa-copy', PRODUCT_CONFIG_UPDATED:'fa-pen', AI_RULE_GENERATED:'fa-robot', AI_RULE_CONFIRMED:'fa-check-double', AI_SCHEMA_GENERATED:'fa-code', PRODUCT_PUBLISHED:'fa-rocket', PROJECT_CREATED:'fa-plus', DOCUMENT_AUTO_VERIFIED:'fa-shield-check', DOCUMENT_FLAGGED_REVIEW:'fa-flag', DOCUMENT_OVERRIDE:'fa-user-check', APPLICATION_SUBMITTED:'fa-paper-plane', CREDIT_SCORING_COMPLETE:'fa-chart-bar', ESG_COMPLIANCE_APPROVED:'fa-leaf', ESCROW_TRANCHE_RELEASED:'fa-money-bill-transfer' };
-  const actionColor = { ai_generated:'ai', manual:'manual', system:'system' };
+
+  const actionIcon = {
+    PRODUCT_CLONED:'fa-copy', PRODUCT_CONFIG_UPDATED:'fa-pen', PRODUCT_VERSION_SNAPSHOT:'fa-camera',
+    AI_RULE_GENERATED:'fa-robot', AI_RULE_CONFIRMED:'fa-check-double', AI_SCHEMA_GENERATED:'fa-code',
+    PRODUCT_PUBLISHED:'fa-rocket', PROJECT_CREATED:'fa-plus',
+    DOCUMENT_AUTO_VERIFIED:'fa-shield-check', DOCUMENT_FLAGGED_REVIEW:'fa-flag', DOCUMENT_OVERRIDE:'fa-user-check',
+    APPLICATION_SUBMITTED:'fa-paper-plane', APPLICATION_APPROVED:'fa-check-circle',
+    CREDIT_SCORING_COMPLETE:'fa-chart-bar', CREDIT_REVIEW_APPROVED:'fa-thumbs-up',
+    ESG_COMPLIANCE_APPROVED:'fa-leaf', ESCROW_TRANCHE_RELEASED:'fa-money-bill-transfer',
+    RULE_UPDATED:'fa-sliders', MANUAL_ENTRY:'fa-pencil'
+  };
+  const sourceColor  = { ai_generated:'ai', ai:'ai', manual:'manual', system:'system' };
+  const entityColors = { application:'var(--teal)', product:'var(--amber)', rule:'var(--blue)', project:'var(--green)' };
+
+  // Unique action/entity values for filter dropdowns
+  const allActions  = [...new Set(auditLogs.map((l:any) => l.action))].sort();
+  const allEntities = [...new Set(auditLogs.map((l:any) => l.entity_type).filter(Boolean))].sort();
+
+  const buildTimeline = () => {
+    if (!auditLogs.length) return `
+      <div style="text-align:center;padding:3rem 1rem;color:var(--grey-400)">
+        <i class="fas fa-clipboard-list" style="font-size:2.5rem;margin-bottom:1rem;display:block;opacity:.4"></i>
+        <p style="font-size:.95rem;font-weight:500">No audit entries found</p>
+        <p style="font-size:.82rem;margin-top:.3rem">${filterAction||filterEntity ? 'Try clearing the filters above.' : 'Actions will appear here as users work with applications, products and rules.'}</p>
+      </div>`;
+
+    return auditLogs.map((log:any) => {
+      const icon    = actionIcon[log.action] || 'fa-circle';
+      const cls     = sourceColor[log.source] || 'manual';
+      const details = (() => { try { return JSON.parse(log.details||'{}'); } catch{ return {}; } })();
+      const detailKeys = Object.keys(details);
+      const entityCol = entityColors[log.entity_type] || 'var(--grey-500)';
+      const entityLabel = log.entity_label
+        ? `<a href="#" onclick="event.preventDefault();if(log.entity_type==='application')openApplicationDetail('${log.entity_id}')" style="color:${entityCol};font-weight:500">${log.entity_label}</a>`
+        : '';
+      const actionLabel = log.action.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,(c:string)=>c.toUpperCase());
+
+      return `
+      <div class="audit-item">
+        <div class="audit-dot ${cls}"><i class="fas ${icon}" style="font-size:.75rem"></i></div>
+        <div class="audit-content">
+          <div class="audit-action">
+            ${actionLabel}
+            ${log.ai_confidence ? `<span class="ai-confidence-tag"><i class="fas fa-robot"></i> ${log.ai_confidence}%</span>` : ''}
+            ${log.source==='ai'||log.source==='ai_generated' ? '<span style="background:rgba(100,180,220,.15);color:var(--teal);font-size:.7rem;padding:.1rem .45rem;border-radius:999px;margin-left:.35rem">AI</span>' : ''}
+          </div>
+          <div class="audit-meta">
+            <span style="font-weight:500">${log.user_name||'System'}</span>
+            ${log.user_role ? `· <span style="color:var(--grey-500)">${log.user_role.replace(/_/g,' ')}</span>` : ''}
+            ${log.entity_type ? `· <span style="color:${entityCol};font-size:.72rem;background:${entityCol}1a;padding:.05rem .4rem;border-radius:4px">${log.entity_type}</span>` : ''}
+            ${entityLabel}
+            · <span style="color:var(--grey-400)">${new Date(log.created_at).toLocaleString()}</span>
+          </div>
+          ${log.regulatory_reference ? `<div style="font-size:.72rem;color:var(--teal);margin-top:.25rem"><i class="fas fa-gavel"></i> ${log.regulatory_reference}</div>` : ''}
+          ${detailKeys.length ? `<div class="audit-detail" style="margin-top:.3rem;font-size:.74rem">${detailKeys.slice(0,4).map(k=>`<span style="margin-right:.75rem"><strong>${k}:</strong> ${JSON.stringify(details[k]).substring(0,60)}</span>`).join('')}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  };
 
   document.getElementById('mainContent').innerHTML = `<div class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <div><h2>Audit Trail</h2><p>Immutable log of all actions, AI recommendations, and manual overrides</p></div>
+      <div>
+        <h2>Audit Trail</h2>
+        <p>Immutable log of all actions, AI recommendations, and manual overrides · <strong>${totalCount}</strong> total entries</p>
+      </div>
       <button class="btn btn-ghost btn-sm" onclick="toast('Audit report exported','success')"><i class="fas fa-download"></i> Export</button>
     </div>
+
+    <!-- Filter bar -->
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-body" style="padding:.75rem 1rem">
+        <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--grey-500)">
+            <i class="fas fa-filter"></i> Filter:
+          </div>
+          <select id="auditFilterAction" onchange="renderAuditLogs(this.value, document.getElementById('auditFilterEntity').value)"
+            style="font-size:.82rem;padding:.3rem .6rem;border:1px solid var(--grey-200);border-radius:var(--radius-sm);background:white;color:var(--grey-700);cursor:pointer">
+            <option value="">All actions</option>
+            ${allActions.map((a:any)=>`<option value="${a}" ${a===filterAction?'selected':''}>${a.replace(/_/g,' ')}</option>`).join('')}
+          </select>
+          <select id="auditFilterEntity" onchange="renderAuditLogs(document.getElementById('auditFilterAction').value, this.value)"
+            style="font-size:.82rem;padding:.3rem .6rem;border:1px solid var(--grey-200);border-radius:var(--radius-sm);background:white;color:var(--grey-700);cursor:pointer">
+            <option value="">All entity types</option>
+            ${allEntities.map((e:any)=>`<option value="${e}" ${e===filterEntity?'selected':''}>${e}</option>`).join('')}
+          </select>
+          ${filterAction||filterEntity ? `<button class="btn btn-ghost btn-sm" onclick="renderAuditLogs()" style="font-size:.78rem"><i class="fas fa-times"></i> Clear</button>` : ''}
+          <span style="margin-left:auto;font-size:.8rem;color:var(--grey-400)">Showing ${auditLogs.length} of ${totalCount}</span>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-body">
         <div class="audit-timeline">
-          ${auditLogs.map(log => {
-            const icon = actionIcon[log.action] || 'fa-circle';
-            const cls = actionColor[log.source] || 'manual';
-            const details = (() => { try { return JSON.parse(log.details||'{}'); } catch{return {};} })();
-            return `
-            <div class="audit-item">
-              <div class="audit-dot ${cls}"><i class="fas ${icon}" style="font-size:.75rem"></i></div>
-              <div class="audit-content">
-                <div class="audit-action">
-                  ${log.action.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase())}
-                  ${log.ai_confidence ? `<span class="ai-confidence-tag"><i class="fas fa-robot"></i> ${log.ai_confidence}%</span>` : ''}
-                </div>
-                <div class="audit-meta">${log.user_name||'System'} · ${log.user_role||''} · ${log.entity_type||''} ${log.entity_id||''} · ${new Date(log.created_at).toLocaleString()}</div>
-                ${log.regulatory_reference ? `<div style="font-size:.72rem;color:var(--teal);margin-top:.2rem"><i class="fas fa-gavel"></i> ${log.regulatory_reference}</div>` : ''}
-                ${Object.keys(details).length ? `<div class="audit-detail">${JSON.stringify(details, null, 0).substring(0,200)}</div>` : ''}
-              </div>
-            </div>`;
-          }).join('')}
+          ${buildTimeline()}
         </div>
       </div>
     </div>
@@ -3431,17 +3505,259 @@ async function renderAuditLogs() {
 /* ======================== REPORTS ======================== */
 async function renderReports() {
   document.getElementById('pageTitle').textContent = 'Regulatory Reports';
+  document.getElementById('pageSubtitle').textContent = 'Portfolio overview & CBO compliance reports';
+
+  // Skeleton while loading
+  document.getElementById('mainContent').innerHTML = `<div class="page">
+    <div style="display:flex;align-items:center;gap:1rem;padding:3rem;color:var(--grey-400)">
+      <i class="fas fa-spinner fa-spin"></i> Loading portfolio data…
+    </div>
+  </div>`;
+
+  let summary = null;
+  try {
+    const r = await fetch('/api/v1/compliance/summary');
+    if (r.ok) summary = await r.json();
+  } catch(e) { summary = null; }
+
+  const s = summary || {};
+  const apps       = s.applications     || [];
+  const statusCts  = s.status_counts    || {};
+  const prodCts    = s.product_counts   || [];
+  const esg        = s.esg_stats        || {};
+  const dbrSt      = s.dbr_stats        || {};
+  const avgs       = s.averages         || {};
+  const recentAud  = s.recent_audit     || [];
+  const total      = s.total_applications || 0;
+  const volume     = s.total_loan_volume  || 0;
+
+  // ── helpers ────────────────────────────────────────────────────────────────
+  const fmtOMR  = (v:number) => v >= 1000000 ? `OMR ${(v/1000000).toFixed(2)}M` : v >= 1000 ? `OMR ${(v/1000).toFixed(0)}K` : `OMR ${v}`;
+  const fmtPct  = (v:any)   => v != null ? `${v}%` : '—';
+  const statusBadge = (st:string) => {
+    const map:any = { approved:'green', submitted:'amber', credit_review:'amber', risk_review:'amber', rejected:'red', pending:'grey' };
+    const col = map[st] || 'grey';
+    return `<span class="badge badge-${col}">${st.replace(/_/g,' ')}</span>`;
+  };
+  const epcBadge = (r:string) => {
+    if (!r) return '<span style="color:var(--grey-300)">—</span>';
+    const col = r<='B' ? 'green' : r<='D' ? 'amber' : 'red';
+    return `<span class="badge badge-${col}">${r}</span>`;
+  };
+
+  // ── build smart prompt from real stats ────────────────────────────────────
+  const approvedCount  = statusCts['approved']      || 0;
+  const pendingCount   = (statusCts['submitted']    || 0) + (statusCts['credit_review'] || 0) + (statusCts['risk_review'] || 0);
+  const rejectedCount  = statusCts['rejected']      || 0;
+  const topProduct     = prodCts.sort((a:any,b:any)=>b.count-a.count)[0];
+  const smartPrompt    = total
+    ? `Generate a quarterly regulatory compliance summary for the CBO green finance portfolio. Portfolio: ${total} applications (approved: ${approvedCount}, pending: ${pendingCount}, rejected: ${rejectedCount}). Total volume: ${fmtOMR(volume)}. ESG verification rate: ${esg.pass_rate||0}%. DBR compliance: ${dbrSt.pass_rate!=null?dbrSt.pass_rate+'%':'N/A'}. Average GSAS score: ${avgs.gsas_score||'N/A'}. Most active product: ${topProduct?.name||'N/A'} (${topProduct?.count||0} applications). Include: summary of compliance performance, flagged concerns, product-level breakdown, and recommendations for the next review period.`
+    : 'Generate a compliance summary report for the green home finance portfolio, including ESG verification status, credit metrics, and regulatory adherence.';
+
+  // ── per-app table rows ─────────────────────────────────────────────────────
+  const appRows = apps.map((a:any) => `
+    <tr style="cursor:pointer" onclick="navigateTo('applications');setTimeout(()=>openApplicationDetail('${a.id}'),400)">
+      <td><span style="font-family:monospace;font-size:.8rem;color:var(--teal)">${a.reference||a.id}</span></td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.customer_display||'—'}</td>
+      <td style="font-size:.8rem">${a.product_name||'—'}</td>
+      <td>${statusBadge(a.status||'')}</td>
+      <td style="text-align:right">${a.dbr!=null?`<span style="color:${parseFloat(a.dbr)>(a.max_dbr||60)?'var(--red)':'var(--green)'}">${a.dbr}%</span>`:'—'}</td>
+      <td style="text-align:right">${a.ltv!=null?`<span style="color:${parseFloat(a.ltv)>(a.max_ltv||90)?'var(--red)':'var(--green)'}">${a.ltv}%</span>`:'—'}</td>
+      <td style="text-align:right">${a.gsas_score!=null?`<span style="font-weight:600;color:${a.gsas_score>=75?'var(--green)':a.gsas_score>=50?'var(--amber)':'var(--red)'}">${a.gsas_score}</span>`:'—'}</td>
+      <td>${epcBadge(a.epc_rating)}</td>
+      <td style="font-size:.75rem;color:var(--grey-400)">${a.created_at?new Date(a.created_at).toLocaleDateString():'—'}</td>
+    </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--grey-400)">No applications on record</td></tr>`;
+
+  // ── recent audit mini-feed ─────────────────────────────────────────────────
+  const auditFeed = recentAud.slice(0,8).map((log:any) => {
+    const actionLabel = log.action.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,(c:string)=>c.toUpperCase());
+    const entityCol:any = {application:'var(--teal)',product:'var(--amber)',rule:'var(--blue)',project:'var(--green)'};
+    return `<div style="display:flex;align-items:baseline;gap:.6rem;padding:.45rem 0;border-bottom:1px solid var(--grey-100);font-size:.8rem">
+      <span style="color:var(--grey-300);min-width:80px;font-size:.72rem">${new Date(log.created_at).toLocaleDateString()}</span>
+      <span style="font-weight:500;color:var(--grey-700)">${actionLabel}</span>
+      ${log.entity_type?`<span style="font-size:.72rem;color:${entityCol[log.entity_type]||'var(--grey-500)'};background:${entityCol[log.entity_type]||'var(--grey-500)'}1a;padding:.05rem .4rem;border-radius:4px">${log.entity_label||log.entity_type}</span>`:''}
+      <span style="margin-left:auto;color:var(--grey-400);font-size:.72rem">${log.user_name||'System'}</span>
+    </div>`;
+  }).join('') || `<p style="color:var(--grey-400);font-size:.82rem;padding:.75rem 0">No recent activity</p>`;
+
+  // ── product breakdown pills ────────────────────────────────────────────────
+  const productPills = prodCts.map((p:any) => `
+    <div style="background:var(--grey-50);border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:.6rem .9rem;min-width:140px">
+      <div style="font-size:.78rem;color:var(--grey-500);margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+      <div style="font-size:1.4rem;font-weight:700;color:var(--navy)">${p.count}</div>
+      <div style="font-size:.72rem;color:${p.approved?'var(--green)':'var(--grey-400)'}">
+        ${p.approved ? `${p.approved} approved` : 'none approved'}
+      </div>
+    </div>`).join('');
+
   document.getElementById('mainContent').innerHTML = `<div class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-      <div><h2>Regulatory Reports</h2><p>AI-generated compliance reports for CBO and internal governance</p></div>
+      <div>
+        <h2>Regulatory Reports</h2>
+        <p>AI-generated compliance reports for CBO and internal governance · Portfolio as of ${new Date().toLocaleDateString()}</p>
+      </div>
     </div>
+
+    <!-- KPI row -->
+    <div class="metric-grid" style="grid-template-columns:repeat(6,1fr);margin-bottom:1.5rem">
+      <div class="metric-card">
+        <div class="metric-value">${total}</div>
+        <div class="metric-label">Total Applications</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="color:var(--green)">${statusCts['approved']||0}</div>
+        <div class="metric-label">Approved</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="color:var(--amber)">${(statusCts['submitted']||0)+(statusCts['credit_review']||0)+(statusCts['risk_review']||0)}</div>
+        <div class="metric-label">In Review</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="color:var(--red)">${statusCts['rejected']||0}</div>
+        <div class="metric-label">Rejected</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">${avgs.gsas_score!=null?avgs.gsas_score:'—'}</div>
+        <div class="metric-label">Avg GSAS Score</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="font-size:1.1rem">${fmtOMR(volume)}</div>
+        <div class="metric-label">Total Loan Volume</div>
+      </div>
+    </div>
+
+    <!-- ESG + DBR compliance row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.5rem">
+      <!-- ESG stats -->
+      <div class="card">
+        <div class="card-header" style="padding:.75rem 1rem"><h5 style="margin:0"><i class="fas fa-leaf" style="color:var(--green);margin-right:.4rem"></i>ESG Verification</h5></div>
+        <div class="card-body" style="padding:.75rem 1rem">
+          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem">
+            <div style="flex:1;height:8px;background:var(--grey-100);border-radius:999px;overflow:hidden">
+              <div style="height:100%;width:${esg.pass_rate||0}%;background:var(--green);border-radius:999px;transition:width .6s"></div>
+            </div>
+            <span style="font-size:1rem;font-weight:700;color:var(--green)">${esg.pass_rate||0}%</span>
+          </div>
+          <div style="font-size:.8rem;color:var(--grey-600)">
+            <span style="color:var(--green);font-weight:600">${esg.verified||0} verified</span> · 
+            <span style="color:var(--amber)">${esg.pending||0} pending</span>
+          </div>
+        </div>
+      </div>
+      <!-- DBR compliance -->
+      <div class="card">
+        <div class="card-header" style="padding:.75rem 1rem"><h5 style="margin:0"><i class="fas fa-percentage" style="color:var(--teal);margin-right:.4rem"></i>DBR Compliance</h5></div>
+        <div class="card-body" style="padding:.75rem 1rem">
+          ${dbrSt.pass_rate!=null ? `
+          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem">
+            <div style="flex:1;height:8px;background:var(--grey-100);border-radius:999px;overflow:hidden">
+              <div style="height:100%;width:${dbrSt.pass_rate}%;background:var(--teal);border-radius:999px"></div>
+            </div>
+            <span style="font-size:1rem;font-weight:700;color:var(--teal)">${dbrSt.pass_rate}%</span>
+          </div>
+          <div style="font-size:.8rem;color:var(--grey-600)">
+            <span style="font-weight:600">${dbrSt.passing}</span> / ${dbrSt.checked} within limit · Avg DBR <strong>${avgs.dbr!=null?avgs.dbr+'%':'—'}</strong>
+          </div>` : `<p style="color:var(--grey-400);font-size:.82rem">No DBR data available</p>`}
+        </div>
+      </div>
+      <!-- Avg metrics -->
+      <div class="card">
+        <div class="card-header" style="padding:.75rem 1rem"><h5 style="margin:0"><i class="fas fa-chart-line" style="color:var(--amber);margin-right:.4rem"></i>Portfolio Averages</h5></div>
+        <div class="card-body" style="padding:.75rem 1rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+            ${[['DBR',avgs.dbr,'%'],['LTV',avgs.ltv,'%'],['GSAS',avgs.gsas_score,''],['MALA\'A',avgs.malaa_score,'']].map(([l,v,u])=>`
+            <div style="background:var(--grey-50);border-radius:var(--radius-sm);padding:.4rem .6rem;text-align:center">
+              <div style="font-size:1rem;font-weight:700;color:var(--navy)">${v!=null?v+u:'—'}</div>
+              <div style="font-size:.7rem;color:var(--grey-500)">${l}</div>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product breakdown -->
+    ${prodCts.length ? `
     <div class="card" style="margin-bottom:1.5rem">
+      <div class="card-header"><h4><i class="fas fa-boxes" style="color:var(--amber);margin-right:.5rem"></i>Applications by Product</h4></div>
+      <div class="card-body" style="display:flex;flex-wrap:wrap;gap:.75rem">${productPills}</div>
+    </div>` : ''}
+
+    <!-- Per-application table -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <h4><i class="fas fa-table" style="margin-right:.5rem"></i>All Applications</h4>
+        <span style="font-size:.8rem;color:var(--grey-500)">${total} records · click row to open</span>
+      </div>
+      <div class="card-body" style="padding:0;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+          <thead>
+            <tr style="background:var(--grey-50);border-bottom:2px solid var(--grey-200)">
+              <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--grey-600)">Reference</th>
+              <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--grey-600)">Customer</th>
+              <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--grey-600)">Product</th>
+              <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--grey-600)">Status</th>
+              <th style="padding:.6rem 1rem;text-align:right;font-weight:600;color:var(--grey-600)">DBR</th>
+              <th style="padding:.6rem 1rem;text-align:right;font-weight:600;color:var(--grey-600)">LTV</th>
+              <th style="padding:.6rem 1rem;text-align:right;font-weight:600;color:var(--grey-600)">GSAS</th>
+              <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--grey-600)">EPC</th>
+              <th style="padding:.6rem 1rem;text-align:left;font-weight:600;color:var(--grey-600)">Applied</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${appRows}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent audit events -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
+      <div class="card">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+          <h4><i class="fas fa-history" style="color:var(--teal);margin-right:.5rem"></i>Recent Activity</h4>
+          <button class="btn btn-ghost btn-sm" onclick="navigateTo('audit_logs')" style="font-size:.75rem">View all <i class="fas fa-arrow-right"></i></button>
+        </div>
+        <div class="card-body" style="padding:.5rem 1rem">${auditFeed}</div>
+      </div>
+
+      <!-- Status distribution -->
+      <div class="card">
+        <div class="card-header"><h4><i class="fas fa-chart-pie" style="color:var(--amber);margin-right:.5rem"></i>Portfolio Status</h4></div>
+        <div class="card-body">
+          ${Object.entries(statusCts).length ? Object.entries(statusCts).map(([st,cnt]:any)=>{
+            const map:any={approved:'var(--green)',submitted:'var(--amber)',credit_review:'var(--amber)',risk_review:'var(--amber)',rejected:'var(--red)'};
+            const col=map[st]||'var(--grey-400)';
+            const pct=total?Math.round((cnt/total)*100):0;
+            return `<div style="margin-bottom:.6rem">
+              <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.2rem">
+                <span style="font-weight:500;text-transform:capitalize">${st.replace(/_/g,' ')}</span>
+                <span style="color:var(--grey-500)">${cnt} (${pct}%)</span>
+              </div>
+              <div style="height:6px;background:var(--grey-100);border-radius:999px;overflow:hidden">
+                <div style="height:100%;width:${pct}%;background:${col};border-radius:999px"></div>
+              </div>
+            </div>`;
+          }).join('') : '<p style="color:var(--grey-400);font-size:.82rem">No data</p>'}
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Report Generator -->
+    <div class="card">
       <div class="card-header"><h4>🤖 AI Report Generator</h4></div>
       <div class="card-body">
         <div class="ai-assistant" style="background:linear-gradient(135deg,var(--navy-dark),var(--navy))">
-          <div class="ai-header"><div class="ai-icon"><i class="fas fa-robot" style="color:var(--sea-glass)"></i></div><div><div style="font-weight:600;font-size:.9rem">Compliance Report Generator</div><div style="font-size:.75rem;color:rgba(255,255,255,.5)">Natural language → structured report</div></div></div>
-          <textarea class="ai-textarea" id="reportPrompt" rows="3" placeholder="Generate a compliance report for all Green Home Loan applications in the last 30 days. Include: application ID, customer name, GSAS score, DBR, LTV, ESG verification status, approval decision. Flag any applications where ESG verification was manually overridden."></textarea>
-          <button class="btn btn-amber btn-sm" style="margin-top:.75rem" onclick="generateReport()"><i class="fas fa-bolt"></i> Generate Report</button>
+          <div class="ai-header">
+            <div class="ai-icon"><i class="fas fa-robot" style="color:var(--sea-glass)"></i></div>
+            <div>
+              <div style="font-weight:600;font-size:.9rem">Compliance Report Generator</div>
+              <div style="font-size:.75rem;color:rgba(255,255,255,.5)">Pre-filled with live portfolio stats · edit as needed</div>
+            </div>
+          </div>
+          <textarea class="ai-textarea" id="reportPrompt" rows="5">${smartPrompt}</textarea>
+          <button class="btn btn-amber btn-sm" style="margin-top:.75rem" onclick="generateReport()">
+            <i class="fas fa-bolt"></i> Generate Report
+          </button>
         </div>
         <div id="reportOutput" style="margin-top:1rem"></div>
       </div>

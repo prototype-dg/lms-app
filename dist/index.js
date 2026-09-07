@@ -3567,6 +3567,44 @@ function Ke(e) {
 	let t = [];
 	return e.gsas_score || t.push("GSAS score not provided — manual verification required"), e.esg_verification_status === "pending" && t.push("ESG documents pending review"), e.dbr && parseFloat(e.dbr) > 40 && t.push(`DBR ${e.dbr}% exceeds 40% threshold — credit officer sign-off needed`), e.loan_amount >= 2e5 && t.push("High-value loan (≥OMR 200k) — senior credit approval required"), e.gsas_score && e.gsas_score >= (e.gsas_premium_score || 85) && e.green_discount_premium > 0 && t.push(`GSAS ${e.gsas_score} qualifies for ${e.green_discount_premium}% green premium discount — verify certificate`), t;
 }
+K.get("/summary", async (e) => {
+	let { results: t } = await e.env.DB.prepare("\n    SELECT a.id, a.reference, a.status, a.loan_amount, a.gsas_score, a.epc_rating,\n           a.dbr, a.ltv, a.esg_verification_status, a.malaa_score,\n           a.applied_rate, a.loan_term, a.created_at, a.updated_at,\n           COALESCE(a.customer_name, cust.name) AS customer_display,\n           p.name  AS product_name,\n           p.id    AS product_id,\n           p.max_dbr, p.max_ltv, p.gsas_min_score\n    FROM applications a\n    LEFT JOIN products  p    ON a.product_id  = p.id\n    LEFT JOIN customers cust ON a.customer_id = cust.id\n    ORDER BY a.created_at DESC\n  ").all(), n = t || [], r = n.length, i = {};
+	for (let e of n) i[e.status] = (i[e.status] || 0) + 1;
+	let a = {};
+	for (let e of n) {
+		let t = e.product_id || "unknown";
+		a[t] || (a[t] = {
+			name: e.product_name || t,
+			count: 0,
+			approved: 0
+		}), a[t].count++, e.status === "approved" && a[t].approved++;
+	}
+	let o = n.filter((e) => e.gsas_score != null), s = n.filter((e) => e.dbr != null), c = n.filter((e) => e.ltv != null), l = n.filter((e) => e.malaa_score != null), u = (e, t) => e.length ? Math.round(e.reduce((e, n) => e + parseFloat(n[t] || 0), 0) / e.length * 10) / 10 : null, d = n.filter((e) => e.esg_verification_status === "verified" || e.esg_verification_status === "approved").length, f = n.filter((e) => !e.esg_verification_status || e.esg_verification_status === "pending").length, p = s.filter((e) => e.max_dbr), m = p.filter((e) => parseFloat(e.dbr) <= parseFloat(e.max_dbr)).length, h = n.reduce((e, t) => e + (parseFloat(t.loan_amount) || 0), 0), { results: g } = await e.env.DB.prepare("\n    SELECT al.*,\n      CASE\n        WHEN al.entity_type = 'application' THEN (SELECT reference FROM applications WHERE id = al.entity_id)\n        WHEN al.entity_type = 'product'     THEN (SELECT name     FROM products     WHERE id = al.entity_id)\n        WHEN al.entity_type = 'rule'        THEN (SELECT name     FROM rules        WHERE id = al.entity_id)\n        ELSE NULL\n      END as entity_label\n    FROM audit_logs al\n    ORDER BY al.created_at DESC LIMIT 10\n  ").all();
+	return e.json({
+		total_applications: r,
+		total_loan_volume: Math.round(h),
+		status_counts: i,
+		product_counts: Object.values(a),
+		esg_stats: {
+			verified: d,
+			pending: f,
+			pass_rate: r ? Math.round(d / r * 100) : 0
+		},
+		dbr_stats: {
+			checked: p.length,
+			passing: m,
+			pass_rate: p.length ? Math.round(m / p.length * 100) : null
+		},
+		averages: {
+			gsas_score: u(o, "gsas_score"),
+			dbr: u(s, "dbr"),
+			ltv: u(c, "ltv"),
+			malaa_score: u(l, "malaa_score")
+		},
+		applications: n,
+		recent_audit: g || []
+	});
+});
 //#endregion
 //#region src/api/projects.ts
 var q = new L();
@@ -3986,7 +4024,25 @@ Ye.post("/:appId/complete-stage", async (e) => {
 });
 //#endregion
 //#region src/api/audit.ts
-var Xe = new L(), Ze = new L();
+var Xe = new L();
+Xe.get("/", async (e) => {
+	let t = parseInt(e.req.query("limit") || "50"), n = parseInt(e.req.query("offset") || "0"), r = e.req.query("action") || "", i = e.req.query("entity_type") || "", a = e.req.query("user_id") || "", o = "SELECT al.*,\n    CASE\n      WHEN al.entity_type = 'application' THEN (SELECT reference FROM applications WHERE id = al.entity_id)\n      WHEN al.entity_type = 'product'     THEN (SELECT name     FROM products     WHERE id = al.entity_id)\n      WHEN al.entity_type = 'rule'        THEN (SELECT name     FROM rules        WHERE id = al.entity_id)\n      ELSE NULL\n    END as entity_label\n  FROM audit_logs al WHERE 1=1", s = [];
+	r && (o += " AND al.action LIKE ?", s.push(`%${r}%`)), i && (o += " AND al.entity_type = ?", s.push(i)), a && (o += " AND al.user_id = ?", s.push(a)), o += " ORDER BY al.created_at DESC LIMIT ? OFFSET ?", s.push(Math.min(t, 200), n);
+	let { results: c } = await e.env.DB.prepare(o).bind(...s).all(), l = await e.env.DB.prepare("SELECT COUNT(*) as total FROM audit_logs WHERE 1=1").first();
+	return e.json({
+		audit_logs: c || [],
+		total: l?.total || 0
+	});
+}), Xe.post("/", async (e) => {
+	let t = await e.req.json(), n = B("al"), r = V();
+	return await e.env.DB.prepare("\n    INSERT INTO audit_logs (id, user_id, user_name, user_role, action, entity_type, entity_id, details, source, ai_confidence, regulatory_reference, created_at)\n    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n  ").bind(n, t.user_id || "system", t.user_name || "System", t.user_role || "system", t.action || "MANUAL_ENTRY", t.entity_type || null, t.entity_id || null, JSON.stringify(t.details || {}), t.source || "manual", t.ai_confidence || null, t.regulatory_reference || null, r).run(), e.json({
+		success: !0,
+		id: n
+	});
+});
+//#endregion
+//#region src/api/users.ts
+var Ze = new L();
 Ze.get("/", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT id, name, name_ar, email, role, department, avatar_initials, status\n     FROM users WHERE status != 'inactive' ORDER BY id").all();
 	return e.json({ users: t });
@@ -6176,7 +6232,7 @@ $.use("/api/*", Ne()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await z.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var ot = "92c168a";
+var ot = "2cbe9cf";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

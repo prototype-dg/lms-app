@@ -443,4 +443,100 @@ function buildManualChecks(app: any): string[] {
   return checks
 }
 
+// ── GET /compliance/summary ─────────────────────────────────────────────────
+// Portfolio-level summary for the Regulatory Reports page.
+// Returns: per-status counts, per-product counts, ESG/credit aggregate stats,
+// full application list for the per-app table, and recent audit events.
+app.get('/summary', async (c) => {
+  // 1. All applications with product + customer joins
+  const { results: apps } = await c.env.DB.prepare(`
+    SELECT a.id, a.reference, a.status, a.loan_amount, a.gsas_score, a.epc_rating,
+           a.dbr, a.ltv, a.esg_verification_status, a.malaa_score,
+           a.applied_rate, a.loan_term, a.created_at, a.updated_at,
+           COALESCE(a.customer_name, cust.name) AS customer_display,
+           p.name  AS product_name,
+           p.id    AS product_id,
+           p.max_dbr, p.max_ltv, p.gsas_min_score
+    FROM applications a
+    LEFT JOIN products  p    ON a.product_id  = p.id
+    LEFT JOIN customers cust ON a.customer_id = cust.id
+    ORDER BY a.created_at DESC
+  `).all() as any
+
+  const appList = apps || []
+  const total = appList.length
+
+  // 2. Status counts
+  const statusCounts: Record<string, number> = {}
+  for (const a of appList) {
+    statusCounts[a.status] = (statusCounts[a.status] || 0) + 1
+  }
+
+  // 3. Per-product counts
+  const productCounts: Record<string, { name: string; count: number; approved: number }> = {}
+  for (const a of appList) {
+    const pid = a.product_id || 'unknown'
+    if (!productCounts[pid]) productCounts[pid] = { name: a.product_name || pid, count: 0, approved: 0 }
+    productCounts[pid].count++
+    if (a.status === 'approved') productCounts[pid].approved++
+  }
+
+  // 4. Aggregate numeric stats (only rows where the metric exists)
+  const withGsas  = appList.filter((a: any) => a.gsas_score  != null)
+  const withDbr   = appList.filter((a: any) => a.dbr         != null)
+  const withLtv   = appList.filter((a: any) => a.ltv         != null)
+  const withMalaa = appList.filter((a: any) => a.malaa_score != null)
+  const avg = (arr: any[], key: string) =>
+    arr.length ? Math.round((arr.reduce((s: number, r: any) => s + parseFloat(r[key] || 0), 0) / arr.length) * 10) / 10 : null
+
+  // 5. ESG pass-rate: esg_verification_status = 'verified' or 'approved'
+  const esgVerified = appList.filter((a: any) => a.esg_verification_status === 'verified' || a.esg_verification_status === 'approved').length
+  const esgPending  = appList.filter((a: any) => !a.esg_verification_status || a.esg_verification_status === 'pending').length
+
+  // 6. DBR compliance: apps where dbr <= max_dbr
+  const dbrChecked = withDbr.filter((a: any) => a.max_dbr)
+  const dbrPassing = dbrChecked.filter((a: any) => parseFloat(a.dbr) <= parseFloat(a.max_dbr)).length
+
+  // 7. Loan volume
+  const totalVolume = appList.reduce((s: number, a: any) => s + (parseFloat(a.loan_amount) || 0), 0)
+
+  // 8. Recent audit events (last 10)
+  const { results: recentAudit } = await c.env.DB.prepare(`
+    SELECT al.*,
+      CASE
+        WHEN al.entity_type = 'application' THEN (SELECT reference FROM applications WHERE id = al.entity_id)
+        WHEN al.entity_type = 'product'     THEN (SELECT name     FROM products     WHERE id = al.entity_id)
+        WHEN al.entity_type = 'rule'        THEN (SELECT name     FROM rules        WHERE id = al.entity_id)
+        ELSE NULL
+      END as entity_label
+    FROM audit_logs al
+    ORDER BY al.created_at DESC LIMIT 10
+  `).all() as any
+
+  return c.json({
+    total_applications: total,
+    total_loan_volume:  Math.round(totalVolume),
+    status_counts:      statusCounts,
+    product_counts:     Object.values(productCounts),
+    esg_stats: {
+      verified: esgVerified,
+      pending:  esgPending,
+      pass_rate: total ? Math.round((esgVerified / total) * 100) : 0
+    },
+    dbr_stats: {
+      checked: dbrChecked.length,
+      passing: dbrPassing,
+      pass_rate: dbrChecked.length ? Math.round((dbrPassing / dbrChecked.length) * 100) : null
+    },
+    averages: {
+      gsas_score:  avg(withGsas,  'gsas_score'),
+      dbr:         avg(withDbr,   'dbr'),
+      ltv:         avg(withLtv,   'ltv'),
+      malaa_score: avg(withMalaa, 'malaa_score')
+    },
+    applications: appList,
+    recent_audit:  recentAudit || []
+  })
+})
+
 export { app as complianceApi }
