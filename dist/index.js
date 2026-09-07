@@ -4150,10 +4150,10 @@ async function nt(e) {
 }
 function rt(e, t, n) {
 	let r = new Date(n).toUTCString();
-	e.header("Set-Cookie", `${et}=${t}; Path=/; HttpOnly; SameSite=Strict; Expires=${r}`);
+	e.header("Set-Cookie", `${et}=${t}; Path=/; HttpOnly; SameSite=Lax; Expires=${r}`);
 }
 function it(e) {
-	e.header("Set-Cookie", `${et}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`);
+	e.header("Set-Cookie", `${et}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
 }
 function at(e) {
 	let t = (e.req.header("Cookie") || "").match(RegExp(`${et}=([^;]+)`));
@@ -6483,7 +6483,7 @@ $.use("/api/*", Ne()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Be.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "5ae3f4a";
+var xt = "024d816";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

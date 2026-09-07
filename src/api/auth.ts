@@ -28,12 +28,12 @@ async function sha256(text: string): Promise<string> {
 function setSessionCookie(c: any, token: string, expiresAt: string) {
   const expires = new Date(expiresAt).toUTCString()
   c.header('Set-Cookie',
-    `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict; Expires=${expires}`)
+    `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires}`)
 }
 
 function clearSessionCookie(c: any) {
   c.header('Set-Cookie',
-    `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`)
+    `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`)
 }
 
 function getTokenFromRequest(c: any): string | null {

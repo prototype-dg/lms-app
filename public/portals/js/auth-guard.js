@@ -29,7 +29,7 @@ const LOGIN_PAGES = {
  */
 async function authGuard(requiredPortal) {
   try {
-    const r = await fetch('/api/v1/auth/me');
+    const r = await fetch('/api/v1/auth/me', { credentials: 'include' });
     if (!r.ok) throw new Error('not authenticated');
     const d = await r.json();
     const user = d.user;
@@ -56,7 +56,7 @@ async function authGuard(requiredPortal) {
 function getPortalUser() { return _portalUser; }
 
 async function authLogout(portal) {
-  await fetch('/api/v1/auth/logout', { method: 'POST' }).catch(() => {});
+  await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
   window.location.href = LOGIN_PAGES[portal] || '/';
 }
 
