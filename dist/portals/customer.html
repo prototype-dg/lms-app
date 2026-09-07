@@ -4163,7 +4163,10 @@ function renderTrackingHTML(data, ref){
 }
 
 // ── DOMContentLoaded init ──────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
+  const user = await authGuard('customer');
+  if (!user) return; // redirected
+
   loadProducts();
   loadProjects();
   showPage('home');
@@ -4174,5 +4177,6 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 </script>
 <script src="/portals/js/wiz-docs.js"></script>
+<script src="/portals/js/auth-guard.js"></script>
 </body>
 </html>

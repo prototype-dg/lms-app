@@ -123,7 +123,7 @@ let activeMarket = null;
 
 // ROLES: static nav config only — user identity now loaded from DB
 const ROLES = {
-  product_manager:    { userId:'u001', nav:['products','applications','rules','workflows','compliance_config','audit_logs'] },
+  product_manager:    { userId:'u001', nav:['products','applications','rules','workflows','compliance_config','audit_logs','users'] },
   compliance_officer: { userId:'u002', nav:['applications','tasks','esg_review','regulatory_reports','audit_logs','aml_alerts'] },
   risk_officer:       { userId:'u003', nav:['applications','tasks','credit_review','stress_tests','regulatory_reports','audit_logs'] },
   operations:         { userId:'u004', nav:['escrow','disbursements','audit_logs'] }
@@ -152,7 +152,8 @@ const NAV_ITEMS = {
   credit_review:      { icon:'fa-chart-bar', label:'Credit Review', labelAr:'مراجعة الائتمان' },
   stress_tests:       { icon:'fa-vials', label:'Stress Tests', labelAr:'اختبارات الضغط' },
   escrow:             { icon:'fa-vault', label:'Escrow & Disbursement', labelAr:'الضمان والصرف' },
-  disbursements:      { icon:'fa-money-bill-transfer', label:'Disbursements', labelAr:'الصرفيات' }
+  disbursements:      { icon:'fa-money-bill-transfer', label:'Disbursements', labelAr:'الصرفيات' },
+  users:              { icon:'fa-users-cog', label:'Users', labelAr:'المستخدمون' }
 };
 
 /* ======================== INIT ======================== */
@@ -178,7 +179,8 @@ window.onload = async () => {
   renderMarketBadge();
   updateUserBadge();
   await loadProducts();
-  renderPage('products');
+  const defaultPage = ROLES[currentRole].nav.find(k => hasSection(k)) || 'products';
+  renderPage(defaultPage);
 };
 
 async function loadUsers() {
@@ -253,7 +255,7 @@ function switchRole(role) {
   if (btnId) document.getElementById(btnId)?.classList.add('active');
   updateUserBadge();
   renderSidebar();
-  const firstNav = ROLES[role].nav[0];
+  const firstNav = ROLES[role].nav.find(k => hasSection(k)) || ROLES[role].nav[0];
   renderPage(firstNav);
 }
 
@@ -275,14 +277,18 @@ function setLang(lang) {
 
 function renderSidebar() {
   const nav = document.getElementById('sidebarNav');
-  const items = ROLES[currentRole].nav;
+  const allItems = ROLES[currentRole].nav;
+  const items = allItems.filter(key => hasSection(key));
   nav.innerHTML = items.map(key => {
     const item = NAV_ITEMS[key];
     return `<div class="sidebar-item" onclick="renderPage('${key}')" id="nav-${key}">
       <i class="fas ${item.icon}"></i>
       <span>${currentLang==='ar' ? item.labelAr : item.label}</span>
     </div>`;
-  }).join('');
+  }).join('') +
+  `<div class="sidebar-item" onclick="authLogout('backoffice')" style="margin-top:auto;color:#f87171">
+    <i class="fas fa-sign-out-alt"></i><span>Sign Out</span>
+  </div>`;
 }
 
 function setActiveNav(key) {
@@ -308,6 +314,7 @@ async function renderPage(page) {
     case 'credit_review': await renderCreditReview(); break;
     case 'escrow': await renderEscrow(); break;
     case 'regulatory_reports': await renderReports(); break;
+    case 'users': await renderUsers(); break;
     default: {
       const pageLabel = NAV_ITEMS[page] ? (currentLang==='ar' ? NAV_ITEMS[page].labelAr : NAV_ITEMS[page].label) : page.replace(/_/g,' ');
       document.getElementById('pageTitle').textContent = pageLabel;
@@ -3889,6 +3896,171 @@ function toast(msg, type='info') {
 }
 function logAuditEntry(action, entityType, entityId, detail) {
   fetch('/api/v1/audit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action, entity_type: entityType, entity_id: entityId, details: { detail }, user_id:'u001', user_name:'Fatima Al-Rashdi', user_role:'product_manager', source:'manual' }) }).catch(()=>{});
+}
+
+/* ======================== USERS MANAGEMENT ======================== */
+async function renderUsers() {
+  document.getElementById('pageTitle').textContent = 'Portal Users';
+  document.getElementById('pageSubtitle').textContent = 'Manage login accounts and role-based access';
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '<div class="page"><div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--grey-300)"></i></div></div>';
+
+  const r = await fetch('/api/v1/users/portal');
+  const d = await r.json();
+  const users = d.users || [];
+
+  const ROLE_BADGE = {
+    customer:          { label:'Customer',         color:'#007f86' },
+    developer:         { label:'Developer',        color:'#c9a84c' },
+    product_manager:   { label:'Product Manager',  color:'#2563eb' },
+    compliance_officer:{ label:'Compliance',       color:'#7c3aed' },
+    risk_officer:      { label:'Risk',             color:'#dc2626' },
+    admin:             { label:'Admin',            color:'#059669' },
+  };
+
+  const rows = users.map(u => {
+    const rb = ROLE_BADGE[u.role] || { label: u.role, color:'#6b7280' };
+    const sections = (() => { try { return JSON.parse(u.allowed_sections||'[]'); } catch{ return []; } })();
+    return `<tr>
+      <td style="font-weight:600">${u.login}</td>
+      <td>${u.display_name}</td>
+      <td><span style="background:${rb.color}22;color:${rb.color};border:1px solid ${rb.color}44;
+          border-radius:12px;padding:2px 10px;font-size:.7rem;font-weight:600">${rb.label}</span></td>
+      <td style="font-size:.75rem;color:var(--grey-500)">${u.portal_access}</td>
+      <td style="font-size:.75rem;color:var(--grey-500)">${sections.length?sections.join(', '):'all'}</td>
+      <td><span style="font-size:.75rem;color:${u.status==='active'?'var(--green)':'var(--danger)'}">${u.status}</span></td>
+      <td style="font-size:.75rem;color:var(--grey-500)">${u.last_login?u.last_login.slice(0,10):'—'}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="openUserModal(${JSON.stringify(u).replace(/"/g,'&quot;')})">Edit</button>
+        ${u.status==='active'
+          ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="deactivateUser('${u.id}')">Deactivate</button>`
+          : `<button class="btn btn-ghost btn-sm" style="color:var(--green)" onclick="activateUser('${u.id}')">Activate</button>`}
+      </td>
+    </tr>`;
+  }).join('');
+
+  main.innerHTML = `<div class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div>
+        <h2 style="font-size:1.1rem;font-weight:700;color:var(--navy)">Portal Users</h2>
+        <p style="font-size:.8rem;color:var(--grey-500);margin-top:2px">${users.length} accounts</p>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openUserModal(null)"><i class="fas fa-plus"></i> New User</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+        <thead><tr style="background:var(--grey-50);border-bottom:1px solid var(--grey-200)">
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--grey-600)">Login</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--grey-600)">Name</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--grey-600)">Role</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--grey-600)">Portal</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--grey-600)">Sections</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--grey-600)">Status</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--grey-600)">Last Login</th>
+          <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--grey-600)">Actions</th>
+        </tr></thead>
+        <tbody id="usersTableBody">${rows}</tbody>
+      </table>
+    </div>
+  </div>
+  <!-- User modal -->
+  <div id="userModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center">
+    <div class="card" style="width:420px;max-height:90vh;overflow-y:auto">
+      <h3 id="userModalTitle" style="font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:20px">New User</h3>
+      <div class="form-group"><label>Login</label><input id="uLogin" placeholder="e.g. pm02"></div>
+      <div class="form-group"><label>Display Name</label><input id="uName" placeholder="Full name"></div>
+      <div class="form-group"><label>Password <span id="uPwdHint" style="font-weight:400;color:var(--grey-400)">(required for new)</span></label><input id="uPwd" type="password" placeholder="Leave blank to keep current"></div>
+      <div class="form-group"><label>Role</label>
+        <select id="uRole" onchange="syncPortalFromRole()" style="width:100%;padding:10px;border:1px solid var(--grey-200);border-radius:8px;font-size:.85rem">
+          <option value="customer">Customer</option>
+          <option value="developer">Developer</option>
+          <option value="product_manager">Product Manager</option>
+          <option value="compliance_officer">Compliance Officer</option>
+          <option value="risk_officer">Risk Officer</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Portal Access</label>
+        <select id="uPortal" style="width:100%;padding:10px;border:1px solid var(--grey-200);border-radius:8px;font-size:.85rem">
+          <option value="customer">customer</option>
+          <option value="developer">developer</option>
+          <option value="backoffice">backoffice</option>
+          <option value="all">all</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Allowed Sections <span style="font-weight:400;color:var(--grey-400)">(comma-separated, blank=all)</span></label>
+        <input id="uSections" placeholder="e.g. compliance,risk or leave blank"></div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button class="btn btn-primary" style="flex:1" onclick="saveUser()">Save</button>
+        <button class="btn btn-ghost" onclick="closeUserModal()">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+
+  // Hide modal properly (display flex set by HTML above)
+  document.getElementById('userModal').style.display = 'none';
+}
+
+const ROLE_PORTAL_DEFAULT = {
+  customer:'customer', developer:'developer',
+  product_manager:'backoffice', compliance_officer:'backoffice',
+  risk_officer:'backoffice', admin:'all'
+};
+function syncPortalFromRole() {
+  const role = document.getElementById('uRole').value;
+  document.getElementById('uPortal').value = ROLE_PORTAL_DEFAULT[role] || 'backoffice';
+}
+
+let _editingUserId = null;
+function openUserModal(u) {
+  _editingUserId = u ? u.id : null;
+  document.getElementById('userModalTitle').textContent = u ? 'Edit User' : 'New User';
+  document.getElementById('uLogin').value   = u ? u.login        : '';
+  document.getElementById('uName').value    = u ? u.display_name : '';
+  document.getElementById('uPwd').value     = '';
+  document.getElementById('uRole').value    = u ? u.role         : 'product_manager';
+  document.getElementById('uPortal').value  = u ? u.portal_access: 'backoffice';
+  const secs = u ? (() => { try{return JSON.parse(u.allowed_sections||'[]');}catch{return [];} })() : [];
+  document.getElementById('uSections').value = secs.join(', ');
+  document.getElementById('uLogin').disabled = !!u; // can't change login after creation
+  document.getElementById('userModal').style.display = 'flex';
+}
+function closeUserModal() { document.getElementById('userModal').style.display = 'none'; }
+
+async function saveUser() {
+  const login    = document.getElementById('uLogin').value.trim();
+  const name     = document.getElementById('uName').value.trim();
+  const pwd      = document.getElementById('uPwd').value;
+  const role     = document.getElementById('uRole').value;
+  const portal   = document.getElementById('uPortal').value;
+  const secStr   = document.getElementById('uSections').value.trim();
+  const sections = secStr ? secStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
+
+  if (!login || !name || !role) { toast('Login, name and role are required','error'); return; }
+  if (!_editingUserId && !pwd)  { toast('Password required for new user','error'); return; }
+
+  const body = { login, display_name:name, role, portal_access:portal, allowed_sections:sections };
+  if (pwd) body.password = pwd;
+
+  const url    = _editingUserId ? `/api/v1/users/portal/${_editingUserId}` : '/api/v1/users/portal';
+  const method = _editingUserId ? 'PATCH' : 'POST';
+  const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if (!r.ok) { const e = await r.json().catch(()=>({})); toast(e.error||'Save failed','error'); return; }
+  toast(_editingUserId ? 'User updated' : 'User created', 'success');
+  closeUserModal();
+  await renderUsers();
+}
+
+async function deactivateUser(id) {
+  if (!confirm('Deactivate this user?')) return;
+  await fetch(`/api/v1/users/portal/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:'inactive'}) });
+  toast('User deactivated','success');
+  await renderUsers();
+}
+async function activateUser(id) {
+  await fetch(`/api/v1/users/portal/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:'active'}) });
+  toast('User activated','success');
+  await renderUsers();
 }
 </script>
 
