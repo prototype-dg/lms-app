@@ -1280,6 +1280,8 @@ function resetAiChat(productId) {
   // Clear live draft state
   Object.keys(aiDraftConfig).forEach(k => delete aiDraftConfig[k]);
   aiDraftRules = []; aiDraftWorkflow = [];
+  Object.keys(_pendingConfig).forEach(k => delete _pendingConfig[k]);
+  _pendingRules = []; _pendingWorkflow = [];
   _lastDraftSnapshot = { _rCount: 0, _wCount: 0 };   // reset highlight tracker
   const log = document.getElementById('ai-chat-log');
   if (log) log.innerHTML = '';
@@ -1372,12 +1374,61 @@ function renderRoadmap(activeStage) {
   }).join('');
 }
 
-/* ── Live draft state — accumulates field values from set_field events ──────
- * Used in standalone AI Studio to show a live config card (no product panel).
+/* ── Live draft state ────────────────────────────────────────────────────────
+ * Two-phase: AI proposals go into _pending* buffers first.
+ * They are committed into the confirmed draft only after the user explicitly
+ * confirms (any affirmative reply detected in sendAiChat).
+ *
+ * Confirmed state (shown in draft card, submitted on Save):
+ *   aiDraftConfig   — field key/value pairs
+ *   aiDraftRules    — rule objects
+ *   aiDraftWorkflow — workflow node objects
+ *
+ * Pending state (held until user confirms):
+ *   _pendingConfig   — fields proposed by AI this turn
+ *   _pendingRules    — rules proposed by AI this turn
+ *   _pendingWorkflow — workflow proposed by AI this turn
  * ─────────────────────────────────────────────────────────────────────────*/
 const aiDraftConfig = {};
 let aiDraftRules = [];
 let aiDraftWorkflow = [];
+
+const _pendingConfig   = {};
+let   _pendingRules    = [];
+let   _pendingWorkflow = [];
+
+/* Flush all pending buffers into confirmed draft state and refresh card. */
+function _flushPending() {
+  let changed = false;
+  // Config fields
+  for (const [k, v] of Object.entries(_pendingConfig)) {
+    if (aiDraftConfig[k] == null) { aiDraftConfig[k] = v; changed = true; }
+    delete _pendingConfig[k];
+  }
+  // Rules — dedup by name
+  if (_pendingRules.length) {
+    const existing = new Set(aiDraftRules.map(r => r.name));
+    _pendingRules.forEach(r => { if (!existing.has(r.name)) { aiDraftRules.push(r); changed = true; } });
+    _pendingRules = [];
+  }
+  // Workflow
+  if (_pendingWorkflow.length) {
+    aiDraftWorkflow = _pendingWorkflow.slice();
+    _pendingWorkflow = [];
+    changed = true;
+  }
+  if (changed) {
+    setTimeout(() => updateAiDraftCard(), 120);
+    setTimeout(() => _pulseDraftBorder(), 300);
+  }
+}
+
+/* Detect whether a user message is an affirmative confirmation. */
+function _isUserConfirm(msg) {
+  const t = msg.toLowerCase().trim();
+  return /^(yes|ok|okay|sure|proceed|confirm|confirmed|agree|agreed|good|great|looks good|perfect|correct|approved|approve|go ahead|sounds good|that.s (right|correct|good|fine)|continue|next|let.?s go|do it|set it|set that|lock it|lock that|accepted|accept|ready|done|fine|yep|yup|👍)/.test(t)
+      || /\b(yes|ok|okay|confirm|proceed|approve|agreed|correct|go ahead|looks good|sounds good)\b/.test(t);
+}
 
 /* ── Draft card highlight tracking ──────────────────────────────────────── *
  * _lastDraftSnapshot: shallow copy of aiDraftConfig + rule/wf counts from  *
@@ -1602,28 +1653,15 @@ async function dispatchUiEvents(events, productId) {
       if (targetId) { switchProductTab(ev.tab, targetId); await new Promise(r => setTimeout(r, 220)); }
       continue;
     }
-    /* set_field — always update live draft card; also update product panel if open */
-    // GUARD: Stage 6 emits set_field for every field as a "snapshot", but the
-    // user may have already confirmed a custom value in earlier stages (e.g.
-    // name='EcoElite Home Finance', min_term=5, min_amount=50000, discounts=0.5/0.25).
-    // Only overwrite if the field isn't already set, EXCEPT for fields that
-    // genuinely belong to Stage 6 and couldn't have been set earlier.
+    /* set_field — buffer into _pendingConfig; committed on user confirmation */
     if (ev.type === 'set_field' && ev.field != null && ev.value != null) {
-      const alreadySet = aiDraftConfig[ev.field] != null;
-      // Fields that Stage 6 should never overwrite if already confirmed in Stage 1-5
-      const protectedFields = ['name','base_rate','max_ltv','max_dbr','min_term','max_term',
-        'min_amount','max_amount','green_discount_premium','green_discount_standard'];
-      if (alreadySet && protectedFields.includes(ev.field)) {
-        // Still flash the DOM field to show it's been reviewed, but keep the value
-        const domId = FIELD_MAP[ev.field];
-        if (domId) { const el = document.getElementById(domId); if (el) flashField(el); }
-        updateAiDraftCard();
-        continue;
+      // Only store in pending if not already confirmed in draft
+      if (aiDraftConfig[ev.field] == null) {
+        _pendingConfig[ev.field] = ev.value;
       }
-      aiDraftConfig[ev.field] = ev.value;
-      updateAiDraftCard();
+      // Flash the DOM field if product panel is open (visual feedback only, no commit)
       const domId = FIELD_MAP[ev.field];
-      if (domId) { const el = document.getElementById(domId); if (el) { el.value = ev.value; el.dispatchEvent(new Event('input',{bubbles:true})); flashField(el); } }
+      if (domId && targetId) { const el = document.getElementById(domId); if (el) flashField(el); }
       continue;
     }
     /* highlight_field */
@@ -1632,15 +1670,14 @@ async function dispatchUiEvents(events, productId) {
       if (domId) flashField(document.getElementById(domId));
       continue;
     }
-    /* add_rule */
+    /* add_rule — buffer into _pendingRules; committed on user confirmation */
     if (ev.type === 'add_rule' && ev.rule) {
       const rule = ev.rule;
-      /* Dedup guard: rules_draft merge (synchronous) fires before this
-         setTimeout block, so the same 17 rules may already be in
-         aiDraftRules. Skip push AND DOM row if name already present. */
+      // Dedup against already-confirmed rules AND already-pending rules
       if (aiDraftRules.some(r => r.name === rule.name)) { continue; }
-      aiDraftRules.push(rule);
-      updateAiDraftCard();
+      if (_pendingRules.some(r => r.name === rule.name)) { continue; }
+      _pendingRules.push(rule);
+      // No updateAiDraftCard here — card only shows confirmed rules;
       const container = document.getElementById('rulesList');
       if (container) {
         const row = document.createElement('div');
@@ -1665,10 +1702,10 @@ async function dispatchUiEvents(events, productId) {
       }
       continue;
     }
-    /* set_workflow */
+    /* set_workflow — buffer into _pendingWorkflow; committed on user confirmation */
     if (ev.type === 'set_workflow' && Array.isArray(ev.nodes)) {
-      aiDraftWorkflow = ev.nodes;
-      updateAiDraftCard();
+      _pendingWorkflow = ev.nodes;
+      // No updateAiDraftCard — card only shows confirmed workflow;
       const wfContainer = document.getElementById('workflowCanvas');
       if (wfContainer) {
         wfContainer.innerHTML = ev.nodes.map((n, idx) => {
@@ -1761,23 +1798,16 @@ async function sendAiChat(productId) {
       // Extract the confirmed name from the message text (original case) as a
       // fallback so the draft card appears immediately rather than waiting for
       // the first explicit set_field event.
-      if (completedN === 1 && !aiDraftConfig.name) {
+      if (completedN === 1 && !aiDraftConfig.name && !_pendingConfig.name) {
         const rawMsg = d.reply || d.message || '';
-        // Strip HTML tags so <strong>Stage 1 complete.</strong> becomes plain text
         const plainMsg = rawMsg.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-        // Pattern 1: "Stage 1 complete — ProductName, conventional..."
-        //   Use \u2014 (em-dash) \u2013 (en-dash) unicode escapes — literal dash chars
-        //   inside [] are corrupted by some editors/encodings and silently fail.
-        //   Also allow period or plain space as separator (GPT varies the punctuation).
         const nameMatch = plainMsg.match(/stage\s+1\s+complete[\u2014\u2013\-\.\s]+([A-Z][^,\n]{3,59}),/i)
-          // Pattern 2: quoted name anywhere in message  "ProductName"
           || plainMsg.match(/"([^"]{4,60})"/);
         if (nameMatch) {
           const extracted = nameMatch[1].trim().replace(/[.!]$/, '');
-          // Sanity check: has uppercase, ≤8 words (product name, not a sentence)
           if (/[A-Z]/.test(extracted) && extracted.split(' ').length <= 8) {
-            aiDraftConfig.name = extracted;
-            setTimeout(() => updateAiDraftCard(), 200);
+            // Buffer name into pending — it enters the draft when user confirms
+            _pendingConfig.name = extracted;
           }
         }
       }
@@ -2029,12 +2059,10 @@ async function sendAiChat(productId) {
         + '<strong><i class="fas fa-list-check" style="margin-right:5px"></i>Rules (' + d.rules_draft.length + ')</strong><br>'
         + d.rules_draft.map(x => '&bull; ' + (x.name || x.metric || 'rule')).join('<br>')
         + '</div>';
-      // Merge rules_draft into aiDraftRules so the draft card and confirm payload
-      // always reflect the full rule set — regardless of whether GPT also emitted
-      // add_rule ui_events (real GPT often returns rules_draft without ui_events).
-      const existingNames = new Set(aiDraftRules.map(r => r.name));
-      d.rules_draft.forEach(r => { if (!existingNames.has(r.name)) aiDraftRules.push(r); });
-      setTimeout(() => updateAiDraftCard(), 200);
+      // Buffer rules_draft into _pendingRules — committed only when user confirms.
+      const existingNames = new Set([...aiDraftRules.map(r => r.name), ..._pendingRules.map(r => r.name)]);
+      d.rules_draft.forEach(r => { if (!existingNames.has(r.name)) _pendingRules.push(r); });
+      // No updateAiDraftCard — confirmed rules only enter draft on user affirmation.
     }
     if (d.schema_draft) {
       replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(244,179,91,.1);border:1px solid rgba(244,179,91,.3);border-radius:6px;font-size:.78rem">'
