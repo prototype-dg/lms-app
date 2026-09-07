@@ -852,40 +852,100 @@ Return ONLY valid JSON:
 // AI report generation
 app.post('/reports/generate', async (c) => {
   const body = await c.req.json()
-  const { prompt, data, report_type = 'compliance', user_id = 'u002' } = body
+  const { prompt, report_type = 'compliance', user_id = 'u002', app_ref, context } = body
   const apiKey = c.env.OPENAI_API_KEY
 
-  // Get real data from DB for context
-  const { results: apps } = await c.env.DB.prepare(
-    `SELECT a.*, c.name as customer_name, c.credit_score FROM applications a
-     LEFT JOIN customers c ON a.customer_id = c.id
-     WHERE a.product_id = 'p009' ORDER BY a.created_at DESC LIMIT 20`
-  ).all()
+  // ── 1. Try to load the specific application (via app_ref or context.application.id) ──
+  let singleApp: any = null
+  let productRules: any[] = []
 
-  const systemPrompt = `You are a compliance reporting AI for Sohar International Bank.
-Generate a professional compliance report in JSON format:
+  if (app_ref || context?.application?.reference || context?.application?.id) {
+    const lookupKey = app_ref || context?.application?.reference || context?.application?.id
+    const isRef = lookupKey.startsWith('GHL') || lookupKey.startsWith('HL')
+    singleApp = await c.env.DB.prepare(
+      isRef
+        ? `SELECT a.*, p.name as product_name, p.base_rate, p.max_dbr, p.green_dbr, p.max_ltv,
+                  p.gsas_min_score, p.gsas_premium_score, c.name as customer_name
+           FROM applications a
+           LEFT JOIN products p  ON a.product_id = p.id
+           LEFT JOIN customers c ON a.customer_id = c.id
+           WHERE a.reference = ?`
+        : `SELECT a.*, p.name as product_name, p.base_rate, p.max_dbr, p.green_dbr, p.max_ltv,
+                  p.gsas_min_score, p.gsas_premium_score, c.name as customer_name
+           FROM applications a
+           LEFT JOIN products p  ON a.product_id = p.id
+           LEFT JOIN customers c ON a.customer_id = c.id
+           WHERE a.id = ?`
+    ).bind(lookupKey).first() as any
+
+    if (singleApp?.product_id) {
+      const { results: rules } = await c.env.DB.prepare(
+        `SELECT name, category, metric, operator, threshold_value, regulatory_reference, severity
+         FROM rules WHERE is_active = 1 AND (product_id = ? OR product_id IS NULL) ORDER BY severity DESC LIMIT 20`
+      ).bind(singleApp.product_id).all() as any
+      productRules = rules || []
+    }
+  }
+
+  // ── 2. Fallback: load recent applications for portfolio-level reports ──
+  const { results: apps } = await c.env.DB.prepare(
+    singleApp
+      ? `SELECT a.*, p.name as product_name, c.name as customer_name FROM applications a
+         LEFT JOIN products p ON a.product_id = p.id
+         LEFT JOIN customers c ON a.customer_id = c.id
+         WHERE a.product_id = ? ORDER BY a.created_at DESC LIMIT 10`
+      : `SELECT a.*, p.name as product_name, c.name as customer_name FROM applications a
+         LEFT JOIN products p ON a.product_id = p.id
+         LEFT JOIN customers c ON a.customer_id = c.id
+         ORDER BY a.created_at DESC LIMIT 10`
+  ).bind(...(singleApp ? [singleApp.product_id] : [])).all() as any
+
+  // ── 3. Build rich data context for AI ──
+  const dataContext = JSON.stringify({
+    report_type,
+    prompt,
+    // Single-application context (from /compliance/full/ frontend payload)
+    application: context?.application || singleApp || null,
+    product: context?.product || (singleApp ? {
+      name: singleApp.product_name, base_rate: singleApp.base_rate,
+      max_dbr: singleApp.max_dbr, green_dbr: singleApp.green_dbr,
+      max_ltv: singleApp.max_ltv, gsas_min_score: singleApp.gsas_min_score,
+      gsas_premium_score: singleApp.gsas_premium_score
+    } : null),
+    credit_metrics: context?.credit_metrics || null,
+    esg_status:     context?.esg_status     || null,
+    rules_evaluated: context?.rules_summary  || productRules,
+    // Portfolio context
+    related_applications: (apps || []).slice(0, 5)
+  })
+
+  const systemPrompt = `You are a compliance reporting AI for Sohar International Bank's Green Home Loan programme.
+You receive rich structured data about a specific loan application and its product's rules.
+Generate a professional, product-specific compliance or credit-risk report in JSON format:
 {
-  "title": "string",
+  "title": "string — include application ref and product name",
   "period": "string",
   "summary": {"total_applications": number, "approved": number, "rejected": number, "pending": number, "avg_gsas_score": number, "approval_rate": "string"},
   "sections": [{"heading": "string", "content": "string"}],
   "flagged_items": [{"application_ref": "string", "issue": "string", "recommendation": "string"}],
   "metrics": [{"label": "string", "value": "string", "status": "green|amber|red"}]
-}`
+}
+When application and product data is provided, use the actual values (DBR, LTV, GSAS score, EPC rating, rule evaluations).
+Reference the specific product name and its thresholds (not generic defaults).
+Make sections informative: Executive Summary, ESG/Credit Metrics Analysis, Rule Compliance Checklist, Recommendation.`
 
   try {
-    const dataContext = JSON.stringify({ applications: apps.slice(0, 5), prompt })
     const response = await callOpenAI(dataContext, systemPrompt, apiKey, 'gpt-4o')
     let parsed
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/)
       parsed = JSON.parse(jsonMatch ? jsonMatch[0] : response)
     } catch {
-      parsed = getDemoReport(apps)
+      parsed = getDemoReport(apps || [], singleApp, context)
     }
     return c.json(parsed)
   } catch {
-    return c.json(getDemoReport(apps))
+    return c.json(getDemoReport(apps || [], singleApp, context))
   }
 })
 
@@ -1059,32 +1119,70 @@ function getDemoDocumentValidation(docType: string) {
   return responses[docType] || responses.gsas_cert
 }
 
-function getDemoReport(apps: any[]) {
+function getDemoReport(apps: any[], singleApp?: any, context?: any) {
+  const app    = singleApp || context?.application || null
+  const prod   = context?.product || null
+  const credit = context?.credit_metrics || null
+  const esg    = context?.esg_status || null
+
+  const prodName  = prod?.name || app?.product_name || 'Green Home Loan'
+  const appRef    = app?.reference || 'N/A'
+  const custName  = app?.customer_name || 'Applicant'
+  const dbr       = credit?.dbr?.value
+  const ltv       = credit?.ltv?.value
+  const gsas      = app?.gsas_score
+  const epcRating = esg?.epc?.rating || app?.epc_rating || '—'
+  const maxDbr    = prod?.green_dbr || prod?.max_dbr || 55
+  const maxLtv    = prod?.max_ltv || 90
+  const gsasMin   = prod?.gsas_min_score || 70
+  const stressPast = credit?.stress_test?.passed !== false
+
+  const rulesSummary = (context?.rules_summary || [])
+    .filter((r: any) => r.status !== 'unknown')
+    .map((r: any) => `${r.name}: ${r.status?.toUpperCase()||'N/A'}${r.value!=null?' ('+r.value+')':''}`)
+    .join('; ') || 'Rule evaluation data not available'
+
+  const approved = apps.filter((a: any) => a.status === 'approved').length
+  const rejected = apps.filter((a: any) => a.status === 'rejected').length
+  const pending  = apps.length - approved - rejected
+  const avgGsas  = apps.length ? Math.round(apps.reduce((s: number, a: any) => s + (a.gsas_score || 0), 0) / apps.length) : (gsas || 89)
+
   return {
-    title: 'Green Home Loan – ESG Compliance Report',
-    period: 'August 2026',
+    title: app ? `${prodName} — Compliance Report: ${appRef}` : `${prodName} – ESG Compliance Report`,
+    period: new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
     summary: {
-      total_applications: apps.length || 3,
-      approved: 1,
-      rejected: 0,
-      pending: 2,
-      avg_gsas_score: 89,
-      approval_rate: '33%'
+      total_applications: app ? 1 : (apps.length || 1),
+      approved: app ? (context?.application?.status === 'approved' ? 1 : 0) : approved,
+      rejected: app ? (context?.application?.status === 'rejected' ? 1 : 0) : rejected,
+      pending:  app ? (context?.application?.status === 'approved' || context?.application?.status === 'rejected' ? 0 : 1) : pending,
+      avg_gsas_score: gsas || avgGsas,
+      approval_rate: app ? (context?.application?.status === 'approved' ? '100%' : '0%') : (apps.length ? `${Math.round(approved/apps.length*100)}%` : '—')
     },
     sections: [
-      { heading: 'Executive Summary', content: 'Green Home Loan program launched 31 August 2026. Current pipeline shows strong ESG compliance with average GSAS score of 89 across active applications.' },
-      { heading: 'ESG Verification Summary', content: 'All submitted applications include valid GSAS certificates. One EPC document required manual override due to image quality (88% AI confidence). All EIA clearances auto-verified.' },
-      { heading: 'Credit Risk Analysis', content: 'Average DBR across approved applications: 48% (CBO limit: 55% for green products). All applications passed CBO stress test at simulated 9% rate.' }
+      { heading: 'Executive Summary', content: app
+          ? `Application ${appRef} (${custName}) processed under ${prodName}. Loan amount: OMR ${(app.loan_amount||0).toLocaleString()} over ${app.loan_term||25} years at ${app.applied_rate||'—'}%.`
+          : `${prodName} pipeline reviewed. ${apps.length} applications assessed.`
+      },
+      { heading: 'ESG Verification', content: app
+          ? `GSAS score: ${gsas||'—'}/100 (product minimum: ${gsasMin}). EPC Rating: ${epcRating} (source: ${esg?.epc?.doc_source||'N/A'}). EIA: ${esg?.eia?.reference||'N/A'}.`
+          : 'ESG documents reviewed for all applications in pipeline.'
+      },
+      { heading: 'Credit Risk Metrics', content: app
+          ? `DBR: ${dbr!=null?dbr+'%':'—'} (max ${maxDbr}%). LTV: ${ltv!=null?ltv+'%':'—'} (max ${maxLtv}%). CBO stress test at +350bps: ${stressPast?'PASSED':'MARGINAL'}.`
+          : `Average DBR within product limits. Stress tests conducted per CBO guidelines.`
+      },
+      { heading: 'Rule Compliance Checklist', content: rulesSummary },
+      { heading: 'Recommendation', content: esg?.ai_recommendation?.detail || `Application reviewed under ${prodName} criteria. Pending officer sign-off.` }
     ],
-    flagged_items: [
-      { application_ref: 'GHL-250001', issue: 'EPC confidence below threshold (88%)', recommendation: 'Manual verification completed by Aisha Al-Balushi. Approved.' }
-    ],
+    flagged_items: esg?.epc?.status === 'manual_review'
+      ? [{ application_ref: appRef, issue: `EPC confidence ${esg.epc.confidence||0}% — below auto-verify threshold`, recommendation: 'Manual visual verification required. Check rating and expiry date.' }]
+      : [],
     metrics: [
-      { label: 'Average GSAS Score', value: '89', status: 'green' },
-      { label: 'Average DBR', value: '48%', status: 'green' },
-      { label: 'Average LTV', value: '80%', status: 'green' },
-      { label: 'ESG Auto-Verification Rate', value: '67%', status: 'amber' },
-      { label: 'CBO Stress Test Pass Rate', value: '100%', status: 'green' }
+      { label: 'GSAS Score',    value: gsas ? `${gsas}/100` : '—', status: gsas >= gsasMin ? 'green' : 'red' },
+      { label: 'DBR',           value: dbr   != null ? `${dbr}%`  : '—', status: dbr  != null && dbr  <= maxDbr ? 'green' : 'amber' },
+      { label: 'LTV',           value: ltv   != null ? `${ltv}%`  : '—', status: ltv  != null && ltv  <= maxLtv ? 'green' : 'amber' },
+      { label: 'EPC Rating',    value: epcRating,                        status: ['A','B','C'].includes(epcRating) ? 'green' : 'amber' },
+      { label: 'Stress Test',   value: stressPast ? 'Passed' : 'Marginal', status: stressPast ? 'green' : 'amber' }
     ]
   }
 }

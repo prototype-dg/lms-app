@@ -163,6 +163,246 @@ function getOverallEsgStatus(gsas: any, epc: any, eia: any) {
   return 'pending'
 }
 
+// ── Full compliance context for a single application ─────────────────────
+// Returns everything the compliance & risk panels need in one call:
+//   • application record (with product, unit, project names)
+//   • product record (rates, thresholds, green parameters)
+//   • product rules (all active rules, categorised as esg / credit / collateral)
+//   • ESG documents (searched: application → unit → project, in that priority order)
+//   • computed credit metrics (DBR, LTV, stress test)
+//   • EPC file URL chain: app-level first, then unit, then project
+app.get('/full/:appId', async (c) => {
+  const appId = c.req.param('appId')
+  const isRef = appId.startsWith('GHL') || appId.startsWith('HL')
+
+  // ── 1. Application + joined names ──────────────────────────────────────
+  const app_ = await c.env.DB.prepare(
+    isRef
+      ? `SELECT a.*, p.name as product_name, p.base_rate, p.max_ltv, p.max_dbr, p.green_dbr,
+                p.gsas_min_score, p.gsas_premium_score, p.green_discount_premium, p.green_discount_standard,
+                p.ai_confidence_threshold, p.esg_required_docs as prod_esg_required_docs,
+                p.approved_materials as prod_approved_materials, p.approved_vendors as prod_approved_vendors,
+                p.min_amount, p.max_amount, p.min_term, p.max_term,
+                u.unit_number, u.area_sqm, u.bedrooms, u.bathrooms, u.features as unit_features,
+                pr.name as project_name, pr.location as project_location, pr.gsas_score as project_gsas_score,
+                pr.epc_rating as project_epc_rating, pr.eia_reference as project_eia_reference,
+                pr.total_units as project_total_units, pr.developer_id
+         FROM applications a
+         LEFT JOIN products p  ON a.product_id  = p.id
+         LEFT JOIN units    u  ON a.unit_id      = u.id
+         LEFT JOIN projects pr ON a.project_id   = pr.id
+         WHERE a.reference = ?`
+      : `SELECT a.*, p.name as product_name, p.base_rate, p.max_ltv, p.max_dbr, p.green_dbr,
+                p.gsas_min_score, p.gsas_premium_score, p.green_discount_premium, p.green_discount_standard,
+                p.ai_confidence_threshold, p.esg_required_docs as prod_esg_required_docs,
+                p.approved_materials as prod_approved_materials, p.approved_vendors as prod_approved_vendors,
+                p.min_amount, p.max_amount, p.min_term, p.max_term,
+                u.unit_number, u.area_sqm, u.bedrooms, u.bathrooms, u.features as unit_features,
+                pr.name as project_name, pr.location as project_location, pr.gsas_score as project_gsas_score,
+                pr.epc_rating as project_epc_rating, pr.eia_reference as project_eia_reference,
+                pr.total_units as project_total_units, pr.developer_id
+         FROM applications a
+         LEFT JOIN products p  ON a.product_id  = p.id
+         LEFT JOIN units    u  ON a.unit_id      = u.id
+         LEFT JOIN projects pr ON a.project_id   = pr.id
+         WHERE a.id = ?`
+  ).bind(appId).first() as any
+  if (!app_) return c.json({ error: 'Not found' }, 404)
+
+  // ── 2. Product rules (all active, for this product + global rules) ──────
+  const { results: rules } = await c.env.DB.prepare(
+    `SELECT * FROM rules WHERE is_active = 1 AND (product_id = ? OR product_id IS NULL) ORDER BY severity DESC, category`
+  ).bind(app_.product_id || '').all() as any
+
+  // Categorise rules for the UI
+  const esgRules    = (rules || []).filter((r: any) => r.category === 'esg')
+  const creditRules = (rules || []).filter((r: any) => ['credit','income','dbr','ltv'].includes(r.category))
+  const collRules   = (rules || []).filter((r: any) => r.category === 'collateral')
+  const allRules    = rules || []
+
+  // ── 3. ESG Documents — priority chain: application > unit > project ─────
+  const [appDocsRes, unitDocsRes, projDocsRes] = await Promise.all([
+    c.env.DB.prepare(`SELECT * FROM documents WHERE entity_type = 'application' AND entity_id = ?`).bind(app_.id).all(),
+    app_.unit_id
+      ? c.env.DB.prepare(`SELECT * FROM documents WHERE entity_type = 'unit' AND entity_id = ?`).bind(app_.unit_id).all()
+      : Promise.resolve({ results: [] }),
+    app_.project_id
+      ? c.env.DB.prepare(`SELECT * FROM documents WHERE entity_type = 'project' AND entity_id = ?`).bind(app_.project_id).all()
+      : Promise.resolve({ results: [] })
+  ]) as any[]
+  const appDocs  = (appDocsRes  as any).results || []
+  const unitDocs = (unitDocsRes as any).results || []
+  const projDocs = (projDocsRes as any).results || []
+
+  // Best doc = application-level first, then unit, then project
+  const findDoc = (type: string) =>
+    appDocs.find((d: any) => d.doc_type === type) ||
+    unitDocs.find((d: any) => d.doc_type === type) ||
+    projDocs.find((d: any) => d.doc_type === type)
+
+  const gsasDoc = findDoc('gsas_cert')
+  const epcDoc  = findDoc('epc_report')
+  const eiaDoc  = findDoc('eia_approval')
+
+  const gsasData = gsasDoc ? JSON.parse(gsasDoc.extracted_data || '{}') : {}
+  const epcData  = epcDoc  ? JSON.parse(epcDoc.extracted_data  || '{}') : {}
+  const eiaData  = eiaDoc  ? JSON.parse(eiaDoc.extracted_data  || '{}') : {}
+
+  // ── 4. Computed credit metrics ──────────────────────────────────────────
+  const salary      = (app_ as any).salary_omr || (app_ as any).salary || 0
+  const loanAmt     = (app_ as any).loan_amount || 0
+  const loanTerm    = (app_ as any).loan_term || 25
+  const appliedRate = (app_ as any).applied_rate || 5.5
+  const propVal     = (app_ as any).property_value || (loanAmt / 0.8)
+  const r           = (appliedRate / 100) / 12
+  const n           = loanTerm * 12
+  const monthlyPmt  = r > 0 ? loanAmt * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : loanAmt / n
+  const dbr         = (app_ as any).dbr || (salary > 0 ? Math.round((monthlyPmt / salary) * 100 * 10) / 10 : null)
+  const ltv         = (app_ as any).ltv || (propVal > 0 ? Math.round((loanAmt / propVal) * 100 * 10) / 10 : null)
+  const malaaScore  = (app_ as any).malaa_score || (app_ as any).credit_score || null
+  const stressRate  = appliedRate + 3.5
+  const stressPmt   = (() => { const sr=(stressRate/100)/12; return loanAmt*sr*Math.pow(1+sr,n)/(Math.pow(1+sr,n)-1); })()
+  const stressDbr   = salary > 0 ? Math.round((stressPmt / salary) * 100 * 10) / 10 : null
+  const stressPassed = stressDbr !== null ? stressDbr <= 60 : (app_ as any).stress_test_passed ? true : true
+
+  // ── 5. ESG status with product thresholds ──────────────────────────────
+  const gsasMinScore     = app_.gsas_min_score     || 70
+  const gsasPremiumScore = app_.gsas_premium_score || 85
+  const prodMaxDbr       = app_.green_dbr          || app_.max_dbr || 55
+  const prodMaxLtv       = app_.max_ltv            || 90
+  const epcRatingMap: Record<string,number> = { 'A':5, 'B':4, 'C':3, 'D':2, 'E':1, 'F':0 }
+  const epcRatingNum     = epcRatingMap[(epcData.rating || app_.epc_rating || 'A')] ?? 5
+  const epcMinRating     = esgRules.find((r: any) => r.metric === 'epc_rating')?.threshold_value || 3
+
+  const esgStatus = {
+    gsas: {
+      status:             gsasDoc?.validation_status || 'pending',
+      confidence:         gsasDoc?.ai_confidence || 0,
+      score:              gsasData.overall_score || app_.gsas_score,
+      min_score:          gsasMinScore,
+      premium_score:      gsasPremiumScore,
+      rating:             gsasData.rating || (app_.gsas_score >= 90 ? 'Platinum' : app_.gsas_score >= 75 ? 'Gold' : app_.gsas_score >= 60 ? 'Silver' : 'Unknown'),
+      certificate_number: gsasData.certificate_number || 'N/A',
+      expiry:             gsasData.expiry_date || 'N/A',
+      issuer:             gsasData.issuer || 'N/A',
+      rule_ref:           esgRules.find((r: any) => r.metric === 'gsas_score')?.regulatory_reference || 'OS GSO 3000:2025',
+      passes_threshold:   (app_.gsas_score || 0) >= gsasMinScore,
+      passes_premium:     (app_.gsas_score || 0) >= gsasPremiumScore,
+      color:              gsasDoc?.validation_status === 'auto_verified' ? 'green' : gsasDoc?.validation_status === 'manual_review' ? 'amber' : 'red'
+    },
+    epc: {
+      status:       epcDoc?.validation_status || 'pending',
+      confidence:   epcDoc?.ai_confidence || 0,
+      rating:       epcData.rating || app_.epc_rating || 'A',
+      min_rating:   'C',
+      passes:       epcRatingNum >= epcMinRating,
+      expiry:       epcData.expiry_date || 'N/A',
+      assessor:     epcData.assessor || 'N/A',
+      energy_kwh:   epcData.energy_consumption || 'N/A',
+      notes:        epcDoc?.validation_notes || '',
+      filename:     epcDoc?.filename || null,
+      file_url:     epcDoc?.file_url || null,
+      doc_id:       epcDoc?.id || null,
+      doc_source:   epcDoc ? (appDocs.find((d: any) => d.doc_type === 'epc_report') ? 'application' : unitDocs.find((d: any) => d.doc_type === 'epc_report') ? 'unit' : 'project') : null,
+      rule_ref:     esgRules.find((r: any) => r.metric === 'epc_rating')?.regulatory_reference || 'OEESC §5.1',
+      color:        epcDoc?.validation_status === 'auto_verified' || epcDoc?.validation_status === 'approved' ? 'green' : epcDoc?.validation_status === 'manual_review' ? 'amber' : 'red'
+    },
+    eia: {
+      status:     eiaDoc?.validation_status || 'pending',
+      confidence: eiaDoc?.ai_confidence || 0,
+      reference:  eiaData.reference || app_.project_eia_reference || 'N/A',
+      issuer:     eiaData.issuer || 'Environment Authority – Oman',
+      valid_until:eiaData.valid_until || 'N/A',
+      units:      eiaData.units || app_.project_total_units || 'N/A',
+      required:   (app_.project_total_units || 0) > 20,
+      rule_ref:   esgRules.find((r: any) => r.metric === 'eia_approval' || r.metric === 'eia_required')?.regulatory_reference || 'Environment Authority Decision 107/2023',
+      color:      eiaDoc?.validation_status === 'auto_verified' ? 'green' : eiaDoc?.validation_status === 'manual_review' ? 'amber' : 'red'
+    },
+    ai_recommendation: generateEsgRecommendation(gsasDoc, epcDoc, eiaDoc),
+    overall_esg_status: getOverallEsgStatus(gsasDoc, epcDoc, eiaDoc)
+  }
+
+  const creditMetrics = {
+    dbr:          { value: dbr,        max: prodMaxDbr, status: dbr  !== null ? (dbr  <= prodMaxDbr ? 'pass' : 'fail') : 'pass', label: `Max ${prodMaxDbr}% — ${app_.product_name||'product'} green DBR limit` },
+    ltv:          { value: ltv,        max: prodMaxLtv, status: ltv  !== null ? (ltv  <= prodMaxLtv ? 'pass' : 'fail') : 'pass', label: `Max ${prodMaxLtv}% — ${app_.product_name||'product'} LTV ceiling` },
+    malaa_score:  { value: malaaScore, min: 650, status: malaaScore ? (malaaScore >= 650 ? 'pass' : 'fail') : 'pass', label: `Min 650 — CBO Credit Bureau minimum` },
+    stress_test:  { passed: stressPassed, rate: parseFloat(stressRate.toFixed(2)), stress_dbr: stressDbr, label: `CBO +350bps shock: ${stressRate.toFixed(2)}% — threshold 60%` },
+    monthly_payment: Math.round(monthlyPmt),
+    property_value:  Math.round(propVal)
+  }
+
+  // ── 6. Rule evaluation against application data ─────────────────────────
+  const evaluateRule = (rule: any) => {
+    const val = (() => {
+      switch (rule.metric) {
+        case 'DBR': case 'dbr': return dbr
+        case 'LTV': case 'ltv': return ltv
+        case 'gsas_score': return app_.gsas_score
+        case 'credit_score': return malaaScore
+        case 'loan_term': return loanTerm
+        case 'stress_rate': return stressRate
+        case 'epc_rating': return epcRatingNum
+        case 'esg_docs_complete': return (gsasDoc && epcDoc) ? 1 : 0
+        case 'eia_approval': case 'eia_required': return eiaDoc ? 1 : 0
+        case 'gsas_cert_days_remaining': return gsasData.expiry_date ? Math.floor((new Date(gsasData.expiry_date).getTime() - Date.now()) / 86400000) : null
+        case 'net_monthly_income': return salary
+        case 'salary_omr': return salary
+        default: return null
+      }
+    })()
+    if (val === null) return { status: 'unknown', value: null }
+    const t = parseFloat(rule.threshold_value)
+    let passes = false
+    switch (rule.operator) {
+      case '<=': passes = val <= t; break
+      case '>=': passes = val >= t; break
+      case '<':  passes = val <  t; break
+      case '>':  passes = val >  t; break
+      case '=':  passes = val === t; break
+      default:   passes = true
+    }
+    return { status: passes ? 'pass' : 'fail', value: val }
+  }
+
+  const rulesWithStatus = allRules.map((rule: any) => ({
+    ...rule,
+    evaluation: evaluateRule(rule)
+  }))
+
+  return c.json({
+    application: app_,
+    product: {
+      id:                   app_.product_id,
+      name:                 app_.product_name,
+      base_rate:            app_.base_rate,
+      max_ltv:              app_.max_ltv,
+      max_dbr:              app_.max_dbr,
+      green_dbr:            app_.green_dbr,
+      gsas_min_score:       app_.gsas_min_score,
+      gsas_premium_score:   app_.gsas_premium_score,
+      green_discount_premium: app_.green_discount_premium,
+      esg_required_docs:    app_.prod_esg_required_docs,
+      approved_materials:   app_.prod_approved_materials,
+      approved_vendors:     app_.prod_approved_vendors
+    },
+    rules: {
+      esg:       esgRules,
+      credit:    creditRules,
+      collateral: collRules,
+      all_evaluated: rulesWithStatus
+    },
+    esg_status:     esgStatus,
+    credit_metrics: creditMetrics,
+    documents: {
+      gsas:    gsasDoc || null,
+      epc:     epcDoc  || null,
+      eia:     eiaDoc  || null,
+      all_app: appDocs,
+      all_proj: projDocs
+    }
+  })
+})
+
 // ── Compliance & Risk Task Queue ──────────────────────────────────────────
 // Returns all applications in states that require human review, enriched with
 // product name, GSAS info, and a derived priority flag.
