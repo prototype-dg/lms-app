@@ -129,7 +129,6 @@ async function doLogin(e) {
   try {
     const r = await fetch('/api/v1/auth/login', {
       method: 'POST',
-      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         login:    document.getElementById('loginInput').value.trim(),
@@ -143,6 +142,7 @@ async function doLogin(e) {
     if (d.user.portal_access !== 'customer' && d.user.portal_access !== 'all') {
       throw new Error('This account does not have customer portal access.');
     }
+    localStorage.setItem('ps_token', d.token);
     window.location.href = '/portals/customer.html';
   } catch(e) {
     document.getElementById('errText').textContent = e.message;

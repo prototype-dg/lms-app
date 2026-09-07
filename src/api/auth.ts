@@ -2,13 +2,11 @@
  * auth.ts — Portal authentication API
  *
  * Routes (all under /api/v1/auth):
- *   POST /login          { login, password } → { token, user }
- *   POST /logout         Cookie-clear
- *   GET  /me             Returns session user from cookie token
+ *   POST /login   { login, password } → { token, user }
+ *   POST /logout  (clears server session)
+ *   GET  /me      token from Authorization: Bearer header → { user }
  *
- * Storage: portal_users + portal_sessions tables (SQLite via D1)
- * Password hashing: SHA-256 (Web Crypto API — works in both Node & CF Workers)
- * Session: HttpOnly cookie "ps_token", 8h expiry
+ * Token stored in localStorage on the client — no cookies, no CORS issues.
  */
 
 import type { NodeBindings } from '../lib/types'
@@ -17,7 +15,6 @@ import { generateId, now } from '../lib/db'
 
 const app = new Hono<{ Bindings: NodeBindings }>()
 
-const COOKIE_NAME = 'ps_token'
 const SESSION_HOURS = 8
 
 async function sha256(text: string): Promise<string> {
@@ -25,21 +22,11 @@ async function sha256(text: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-function setSessionCookie(c: any, token: string, expiresAt: string) {
-  const expires = new Date(expiresAt).toUTCString()
-  c.header('Set-Cookie',
-    `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires}`)
-}
-
-function clearSessionCookie(c: any) {
-  c.header('Set-Cookie',
-    `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`)
-}
-
 function getTokenFromRequest(c: any): string | null {
-  const cookieHeader = c.req.header('Cookie') || ''
-  const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]+)`))
-  return match ? match[1] : null
+  // Authorization: Bearer <token>
+  const auth = c.req.header('Authorization') || ''
+  if (auth.startsWith('Bearer ')) return auth.slice(7).trim()
+  return null
 }
 
 // POST /login
@@ -65,8 +52,6 @@ app.post('/login', async (c) => {
 
   await c.env.DB.prepare(`UPDATE portal_users SET last_login = ? WHERE id = ?`).bind(ts, user.id).run()
 
-  setSessionCookie(c, token, expiresAt)
-
   return c.json({
     success:  true,
     token,
@@ -87,11 +72,10 @@ app.post('/logout', async (c) => {
   if (token) {
     await c.env.DB.prepare(`DELETE FROM portal_sessions WHERE token = ?`).bind(token).run().catch(() => {})
   }
-  clearSessionCookie(c)
   return c.json({ success: true })
 })
 
-// GET /me — returns current user from session token
+// GET /me
 app.get('/me', async (c) => {
   const token = getTokenFromRequest(c)
   if (!token) return c.json({ error: 'Not authenticated' }, 401)
@@ -100,10 +84,7 @@ app.get('/me', async (c) => {
     `SELECT * FROM portal_sessions WHERE token = ? AND expires_at > datetime('now')`
   ).bind(token).first() as any
 
-  if (!session) {
-    clearSessionCookie(c)
-    return c.json({ error: 'Session expired' }, 401)
-  }
+  if (!session) return c.json({ error: 'Session expired' }, 401)
 
   return c.json({
     user: {
