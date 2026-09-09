@@ -34,6 +34,7 @@ const MIGRATION_FILES = [
   './migrations/0009_eco_units_seed.sql',
   './migrations/0010_gsas_discounts_and_rate_fix.sql',
   './migrations/0011_portal_auth.sql',
+  './migrations/0012_sales_campaigns.sql',
 ]
 
 function runMigrations() {

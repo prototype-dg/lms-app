@@ -2547,7 +2547,34 @@ async function doRegisterProject(publish) {
 let salesUnits = [];
 let salesProjects = [];
 let salesScenario = 'base'; // 'base' | 'optimistic' | 'conservative'
-let campaigns = [];          // live campaign objects — drive forecast adjustments
+let campaigns = [];          // live campaign objects — synced with /api/v1/campaigns
+
+// ── Load campaigns from DB ──────────────────────────────────────────────────
+async function loadCampaigns() {
+  try {
+    const r = await fetch('/api/v1/campaigns', authHeaders());
+    if (!r.ok) return;
+    const d = await r.json();
+    // Normalize DB fields to match the shape the rest of the code expects
+    campaigns = (d.campaigns || []).map(c => ({
+      id:            c.id,
+      name:          c.name,
+      projectId:     c.project_id,
+      unitType:      c.unit_type,
+      discount:      c.discount,
+      velocityBoost: c.velocity_boost,
+      commission:    c.commission,
+      budget:        c.budget,
+      targetUnits:   c.target_units,
+      notes:         c.notes,
+      start:         c.start_date,
+      end:           c.end_date,
+      status:        c.status,
+    }));
+  } catch(e) {
+    console.warn('loadCampaigns failed:', e);
+  }
+}
 let _unitsDonutChart = null; // Chart.js instance — destroy+recreate on each render
 
 // ── Scenario multipliers ──────────────────────────
@@ -3157,7 +3184,7 @@ function updateCampaignPreview() {
   if(netEl) netEl.className = 'cimpact-val ' + (netRev>=0?'green':'red');
 }
 
-function saveCampaign() {
+async function saveCampaign() {
   const name = document.getElementById('cm-name')?.value.trim();
   if(!name) { toast('Campaign name is required','warning'); return; }
   const start = document.getElementById('cm-start')?.value;
@@ -3165,35 +3192,62 @@ function saveCampaign() {
   if(!start || !end) { toast('Start and end dates are required','warning'); return; }
   if(new Date(end) <= new Date(start)) { toast('End date must be after start date','warning'); return; }
 
-  const campaign = {
-    id:           Date.now(),
+  const payload = {
     name,
-    projectId:    document.getElementById('cm-project')?.value || 'all',
-    unitType:     document.getElementById('cm-unit-type')?.value || 'all',
-    discount:     parseFloat(document.getElementById('cm-discount')?.value) || 0,
-    velocityBoost:parseFloat(document.getElementById('cm-velocity-boost')?.value) || 0,
-    commission:   parseFloat(document.getElementById('cm-commission')?.value) || 0,
-    budget:       parseFloat(document.getElementById('cm-budget')?.value) || 0,
-    targetUnits:  parseInt(document.getElementById('cm-target-units')?.value) || 0,
-    notes:        document.getElementById('cm-notes')?.value.trim() || '',
-    start, end,
-    status:       document.getElementById('cm-status')?.value || 'scheduled',
+    project_id:     document.getElementById('cm-project')?.value || 'all',
+    unit_type:      document.getElementById('cm-unit-type')?.value || 'all',
+    discount:       parseFloat(document.getElementById('cm-discount')?.value) || 0,
+    velocity_boost: parseFloat(document.getElementById('cm-velocity-boost')?.value) || 0,
+    commission:     parseFloat(document.getElementById('cm-commission')?.value) || 0,
+    budget:         parseFloat(document.getElementById('cm-budget')?.value) || 0,
+    target_units:   parseInt(document.getElementById('cm-target-units')?.value) || 0,
+    notes:          document.getElementById('cm-notes')?.value.trim() || '',
+    start_date: start,
+    end_date:   end,
+    status:     document.getElementById('cm-status')?.value || 'scheduled',
   };
 
-  campaigns.push(campaign);
-  closeCampaignModal();
-
-  // Clear form for next time
-  ['cm-name','cm-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-
-  // Rebuild the full sales strategy so all panels reflect the new campaign
-  renderSalesStrategy();
-  toast(`Campaign "${name}" created — forecast updated`, 'success');
+  try {
+    const r = await fetch('/api/v1/campaigns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders().headers },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    // Add to local array immediately (no full reload needed)
+    campaigns.push({
+      id:            d.id,
+      name:          payload.name,
+      projectId:     payload.project_id,
+      unitType:      payload.unit_type,
+      discount:      payload.discount,
+      velocityBoost: payload.velocity_boost,
+      commission:    payload.commission,
+      budget:        payload.budget,
+      targetUnits:   payload.target_units,
+      notes:         payload.notes,
+      start:         payload.start_date,
+      end:           payload.end_date,
+      status:        payload.status,
+    });
+    closeCampaignModal();
+    ['cm-name','cm-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    renderSalesStrategy();
+    toast(`Campaign "${name}" saved — forecast updated`, 'success');
+  } catch(e) {
+    toast('Failed to save campaign: ' + e.message, 'error');
+  }
 }
 
-function deleteCampaign(id) {
+async function deleteCampaign(id) {
+  try {
+    await fetch(`/api/v1/campaigns/${id}`, { method: 'DELETE', ...authHeaders() });
+  } catch(e) {
+    console.warn('deleteCampaign API error:', e);
+  }
   campaigns = campaigns.filter(c=>c.id!==id);
-  renderSalesStrategy(); // full re-render so forecast updates
+  renderSalesStrategy();
   toast('Campaign removed — forecast updated','info');
 }
 
@@ -3369,6 +3423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.style.visibility = 'visible';
 
   loadProjects();
+  loadCampaigns();
   showPage('dashboard');
   // Close unit detail panel on Escape
   document.addEventListener('keydown', e => { if(e.key==='Escape') closeUnitDetail(); });

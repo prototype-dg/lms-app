@@ -1243,10 +1243,55 @@ let wizUnitId    = null;
 let wizSource    = 'byo';   // 'partner' | 'byo'
 let wizState     = {};      // accumulates field values across steps
 
-let allProducts  = [];
-let allProjects  = [];
+let allProducts    = [];
+let allProjects    = [];
+let activeCampaigns = [];   // live campaigns fetched from DB on load
 let hasDemoProduct = false;
 let hasDemoProject = false;
+
+// ── Campaign helpers ──────────────────────────────────────────────────────
+async function loadActiveCampaigns() {
+  try {
+    const r = await fetch('/api/v1/campaigns?status=active');
+    if (!r.ok) return;
+    const d = await r.json();
+    activeCampaigns = d.campaigns || [];
+  } catch(e) {
+    console.warn('loadActiveCampaigns failed:', e);
+  }
+}
+
+// Returns the best (highest discount) active campaign that applies to this unit.
+// A campaign applies when: project_id=='all' OR project_id===unitProjectId
+//                     AND: unit_type=='all'  OR unit_type===unit.type
+function getBestCampaignForUnit(unit, projectId) {
+  const today = new Date().toISOString().slice(0,10);
+  const matching = activeCampaigns.filter(c => {
+    const projOk = c.project_id === 'all' || c.project_id === projectId;
+    const typeOk = c.unit_type  === 'all' || c.unit_type  === (unit.type || '');
+    const dateOk = c.start_date <= today && c.end_date >= today;
+    return projOk && typeOk && dateOk;
+  });
+  if (!matching.length) return null;
+  // Pick highest discount
+  return matching.reduce((best, c) => c.discount > best.discount ? c : best, matching[0]);
+}
+
+// Given a base price and a campaign, returns { original, discountPct, discountAmt, final, campaignName, expiresOn }
+function calcCampaignPrice(basePrice, campaign) {
+  if (!campaign || !basePrice) return null;
+  const discountPct = parseFloat(campaign.discount) || 0;
+  if (!discountPct) return null;
+  const discountAmt = Math.round(basePrice * discountPct / 100);
+  return {
+    original:     basePrice,
+    discountPct,
+    discountAmt,
+    final:        basePrice - discountAmt,
+    campaignName: campaign.name,
+    expiresOn:    campaign.end_date,
+  };
+}
 
 // Map
 let propMap = null;
@@ -1859,12 +1904,18 @@ async function openProjectPanel(projectId){
               const stCol = colMap[u.status]||'var(--g500)';
               const stBg  = u.status==='available'?'var(--ok-bg)':u.status==='reserved'?'var(--warn-bg)':'var(--err-bg)';
               const gradBg = isDemo?'linear-gradient(135deg,#0d4a26,#0a5c3a)':'linear-gradient(135deg,#003B5C,#007F86)';
+              // ── Campaign discount for this unit ──
+              const camp    = getBestCampaignForUnit(u, projectId);
+              const cPrice  = u.price ? calcCampaignPrice(u.price, camp) : null;
+              const dispPrice = cPrice ? cPrice.final : (u.price||0);
+              const expFmt  = cPrice ? new Date(cPrice.expiresOn).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '';
               return `<div class="unit-card${u.status==='sold'?' sold':''}" style="padding:0;overflow:hidden">
                 <!-- Unit image -->
                 <div class="unit-card-img" style="${u.image_url?'':'background:'+gradBg}">
                   ${u.image_url?`<img src="${u.image_url}" alt="${u.unit_number}" loading="lazy"/>`:'🏡'}
                   <div class="unit-status-badge" style="background:${stBg};color:${stCol}">${(u.status||'available').toUpperCase()}</div>
                   ${uGsas?`<div style="position:absolute;bottom:7px;left:8px;font-size:10px;font-weight:700;background:rgba(0,0,0,.55);color:#86efac;padding:2px 7px;border-radius:var(--rfull);backdrop-filter:blur(4px)">🌿 GSAS ${uGsas}</div>`:''}
+                  ${cPrice?`<div style="position:absolute;top:7px;left:8px;font-size:10px;font-weight:700;background:rgba(239,68,68,.85);color:#fff;padding:2px 8px;border-radius:var(--rfull);backdrop-filter:blur(4px)">🏷 ${cPrice.discountPct}% OFF</div>`:''}
                 </div>
                 <!-- Unit info -->
                 <div style="padding:12px">
@@ -1873,8 +1924,19 @@ async function openProjectPanel(projectId){
                       <div style="font-size:14px;font-weight:800;color:var(--navy)">${u.unit_number||u.id}</div>
                       <div style="font-size:11px;color:var(--g500)">${u.type||'Unit'}</div>
                     </div>
-                    ${u.price?`<div style="font-size:15px;font-weight:800;color:var(--teal)">OMR ${Number(u.price).toLocaleString()}</div>`:''}
+                    <div style="text-align:right">
+                      ${cPrice
+                        ? `<div style="font-size:11px;color:var(--g400);text-decoration:line-through;line-height:1.2">OMR ${Number(cPrice.original).toLocaleString()}</div>
+                           <div style="font-size:15px;font-weight:800;color:#dc2626;line-height:1.2">OMR ${Number(cPrice.final).toLocaleString()}</div>`
+                        : (u.price?`<div style="font-size:15px;font-weight:800;color:var(--teal)">OMR ${Number(u.price).toLocaleString()}</div>`:'')
+                      }
+                    </div>
                   </div>
+                  ${cPrice?`
+                  <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:11px">
+                    <div style="font-weight:700;color:#dc2626;margin-bottom:2px">🏷 ${cPrice.campaignName}</div>
+                    <div style="color:var(--g600)">Save <b>OMR ${Number(cPrice.discountAmt).toLocaleString()}</b> (${cPrice.discountPct}% off) · Expires ${expFmt}</div>
+                  </div>`:''}
                   <!-- Specs row -->
                   <div style="display:flex;gap:8px;font-size:11px;color:var(--g600);margin-bottom:8px;flex-wrap:wrap">
                     ${u.bedrooms?`<span>🛏 ${u.bedrooms} Bed</span>`:''}
@@ -1882,11 +1944,10 @@ async function openProjectPanel(projectId){
                     ${u.area_sqm?`<span>📐 ${u.area_sqm} m²</span>`:''}
                     ${uGsas?`<span style="color:${isDemo?'#16a34a':'var(--teal)'};font-weight:600">${uRate}% p.a.</span>`:''}
                   </div>
-                  ${u.discount_percent?`<div style="font-size:11px;color:var(--ok);font-weight:600;margin-bottom:6px">🏷 ${u.discount_percent}% discount</div>`:''}
                   <!-- Action buttons -->
                   ${u.status!=='sold'?`
                   <div style="display:flex;gap:6px;margin-top:4px">
-                    <button class="btn-ghost" style="flex:1;font-size:11px;padding:6px 0" onclick="openAffordCalc('${u.id}',${u.price||0},${uGsas},${uRate})">
+                    <button class="btn-ghost" style="flex:1;font-size:11px;padding:6px 0" onclick="openAffordCalc('${u.id}',${dispPrice},${uGsas},${uRate})">
                       📊 Affordability
                     </button>
                     <button class="prop-btn${isDemo?' eco-btn':''}" style="flex:1;font-size:11px;padding:6px 0" onclick="openWizardFromUnit('${u.id}','${projectId}')">
@@ -1980,14 +2041,19 @@ function openWizardFromUnit(unitId, projectId){
   wizProjectId = projectId;
   wizSource    = 'partner';
   wizProductId = null;
+  // Find best active campaign for this unit
+  const unitCamp   = getBestCampaignForUnit(unit||{type:''}, projectId);
+  const unitCPrice = (unit?.price && unitCamp) ? calcCampaignPrice(unit.price, unitCamp) : null;
   wizState     = {
     unitId, projectId, projectName: proj?.name||'',
-    propertyValue: unit?.price||0,
-    gsasScore:     unit?.gsas_score||proj?.gsas_overall_score||proj?.gsas_score||0,
-    unitNumber:    unit?.unit_number||unitId,
-    unitType:      unit?.type||'',
-    unitAreaSqm:   unit?.area_sqm||0,
-    unitBedrooms:  unit?.bedrooms||0,
+    propertyValue:     unitCPrice ? unitCPrice.final : (unit?.price||0),
+    propertyValueOrig: unit?.price||0,
+    campaignDiscount:  unitCPrice,   // full discount object or null
+    gsasScore:         unit?.gsas_score||proj?.gsas_overall_score||proj?.gsas_score||0,
+    unitNumber:        unit?.unit_number||unitId,
+    unitType:          unit?.type||'',
+    unitAreaSqm:       unit?.area_sqm||0,
+    unitBedrooms:      unit?.bedrooms||0,
   };
   const wt = document.getElementById('wiz-title');
   if(wt) wt.textContent = 'Home Loan Application';
@@ -2472,18 +2538,28 @@ async function loadUnitPicker(projId){
     grid.innerHTML = units.map(u=>{
       const unavail = u.status==='sold';
       const gradBg = isDemo?'linear-gradient(135deg,#0d4a26,#0a5c3a)':'linear-gradient(135deg,#003B5C,#007F86)';
-      return `<div class="unit-pick-card${u.id===wizUnitId?' selected':''}${unavail?' unavailable':''}" id="upc-${u.id}" onclick="${unavail?'':'selectWizUnit(\''+u.id+'\',\''+u.unit_number+'\','+u.price+','+(u.gsas_score||0)+')'}" style="position:relative">
+      // Campaign pricing for wizard picker
+      const uCamp   = getBestCampaignForUnit(u, projId);
+      const uCPrice = u.price ? calcCampaignPrice(u.price, uCamp) : null;
+      const uDispP  = uCPrice ? uCPrice.final : (u.price||0);
+      const priceHtml = uCPrice
+        ? `<div style="font-size:10px;color:var(--g400);text-decoration:line-through;line-height:1.1">OMR ${Number(uCPrice.original).toLocaleString()}</div>
+           <div class="upc-price" style="color:#dc2626">OMR ${Number(uCPrice.final).toLocaleString()}</div>
+           <div style="font-size:9px;color:#dc2626;font-weight:700;margin-top:1px">🏷 ${uCPrice.discountPct}% off · ${uCPrice.campaignName}</div>`
+        : (u.price?`<div class="upc-price">OMR ${Number(u.price).toLocaleString()}</div>`:'<div class="upc-price" style="color:var(--g400)">TBC</div>');
+      return `<div class="unit-pick-card${u.id===wizUnitId?' selected':''}${unavail?' unavailable':''}" id="upc-${u.id}" onclick="${unavail?'':'selectWizUnit(\''+u.id+'\',\''+u.unit_number+'\','+uDispP+','+(u.gsas_score||0)+')'}" style="position:relative">
         <div class="upc-sel-chk">✓</div>
         <div class="upc-img" style="${u.image_url?'':gradBg}">
           ${u.image_url?`<img src="${u.image_url}" alt="${u.unit_number}"/>`:'🏡'}
           <div class="upc-status-badge" style="background:${statusBg[u.status]||'var(--g200)'};color:${statusColor[u.status]||'var(--g700)'}">
             ${(u.status||'').toUpperCase()}
           </div>
+          ${uCPrice?`<div style="position:absolute;top:4px;left:4px;background:rgba(220,38,38,.85);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:var(--rfull)">🏷 ${uCPrice.discountPct}% OFF</div>`:''}
         </div>
         <div class="upc-body">
           <div class="upc-num">${u.unit_number||u.id}</div>
           <div class="upc-type">${(u.type||'unit').replace(/_/g,' ')}</div>
-          <div class="upc-price">${u.price?'OMR '+Number(u.price).toLocaleString():'TBC'}</div>
+          ${priceHtml}
           <div class="upc-meta">
             ${u.bedrooms?`<span>🛏 ${u.bedrooms}BR</span>`:''}
             ${u.area_sqm?`<span>📐 ${u.area_sqm}m²</span>`:''}
@@ -2557,7 +2633,9 @@ function prodEffRate(prod, gsasScore){
 
 /* ── STEP 3: Financing — Product selection (dropdown) + Live calculator ── */
 function stepFinancing(){
-  const propVal  = wizState.propertyValue || 200000;
+  const propVal  = wizState.propertyValue || 200000;   // already discounted if campaign applies
+  const origVal  = wizState.propertyValueOrig || propVal;
+  const campDisc = wizState.campaignDiscount || null;  // { discountPct, discountAmt, final, campaignName, expiresOn }
   const gsas     = wizState.gsasScore || 0;
   const salary   = wizState.salary || 3200;
 
@@ -2638,6 +2716,22 @@ function stepFinancing(){
       </div>`;
     }
   }
+
+  // ── Sales campaign price banner (shown when a campaign applies to the selected unit) ──
+  const campExpFmt = campDisc ? new Date(campDisc.expiresOn).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '';
+  const campBanner = campDisc ? `
+  <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.25);border-radius:var(--r8);padding:12px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start">
+    <span style="font-size:18px;flex-shrink:0">🏷</span>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:3px">${campDisc.campaignName}</div>
+      <div style="font-size:12px;color:var(--g700)">
+        Original price: <span style="text-decoration:line-through;color:var(--g400)">OMR ${Number(origVal).toLocaleString()}</span>
+        &nbsp;→&nbsp; <b style="color:#dc2626">OMR ${Number(campDisc.final).toLocaleString()}</b>
+        &nbsp;(save OMR ${Number(campDisc.discountAmt).toLocaleString()} — ${campDisc.discountPct}% off)
+      </div>
+      <div style="font-size:11px;color:var(--g500);margin-top:3px">⏰ Campaign expires ${campExpFmt}</div>
+    </div>
+  </div>` : '';
 
   // ── Build dropdown options ──
   const dropdownOpts = homeProds.map(p => {
@@ -2821,6 +2915,7 @@ function stepFinancing(){
     <div class="step-title">Select Product &amp; Calculate</div>
     <div class="step-sub">All rates, limits, and green discounts are loaded live from the product database.</div>
 
+    ${campBanner}
     ${recBanner}
 
     <!-- Product dropdown -->
@@ -3881,6 +3976,10 @@ function stepReview(){
   const ltv    = (amt/(amt+dp))*100;
   const sv     = Math.max(0,pmt(amt,baseRate,ten*12)*ten*12 - m*ten*12);
   const srcLabel = wizSource==='partner'?'🤝 Partner Property':'🏠 BYO Custom Property';
+  // ── Campaign discount rows (if a campaign price was applied) ──
+  const revCamp = wizState.campaignDiscount || null;
+  const revCampExpFmt = revCamp ? new Date(revCamp.expiresOn).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '';
+  const propValOrig = wizState.propertyValueOrig || (revCamp ? revCamp.original : amt+dp);
   const rows=[
     ['Product',        selProd?.name || 'Home Loan'],
     ['Applicant',      name],
@@ -3888,6 +3987,14 @@ function stepReview(){
     ['Property',       prop],
     ['Property Source',srcLabel],
     ['Contractor',     wizState.contractorName||'Al Jazeera Constructions LLC'],
+    ...(revCamp ? [
+      ['Listed Price',   `<span style="text-decoration:line-through;color:var(--g400)">OMR ${Number(revCamp.original).toLocaleString()}</span>`],
+      ['Campaign',       `<span style="color:#dc2626;font-weight:700">🏷 ${revCamp.campaignName} — ${revCamp.discountPct}% off</span>`],
+      ['Discounted Price',`<span style="color:#dc2626;font-weight:700">OMR ${Number(revCamp.final).toLocaleString()} <small style="font-weight:400;color:var(--g500)">(save OMR ${Number(revCamp.discountAmt).toLocaleString()})</small></span>`],
+      ['Offer Expires',  `<span style="color:var(--g600)">${revCampExpFmt}</span>`],
+    ] : [
+      ['Property Value', fmtOMR(amt+dp)],
+    ]),
     ['Loan Amount',    fmtOMR(amt)],
     ['Down Payment',   fmtOMR(dp)],
     ['Interest Rate',  rate.toFixed(2)+'% '+rateNote],
@@ -4189,6 +4296,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
   loadProducts();
   loadProjects();
+  loadActiveCampaigns();
   showPage('home');
   // Tracking tab — reload when visiting
   document.querySelector('[data-page="tracking"]')?.addEventListener('click',()=>{

@@ -23,6 +23,7 @@ import { ruleMatricesApi } from './api/rule-matrices'
 import { productVersionsApi } from './api/product-versions'
 import { complianceTagsApi } from './api/compliance-tags'
 import { workflowTemplatesApi } from './api/workflow-templates'
+import { campaignsApi } from './api/campaigns'
 
 // Node.js env — replaces Cloudflare Bindings
 export const env = {
@@ -63,6 +64,7 @@ app.route('/api/v1/markets', marketsApi)
 app.route('/api/v1/rule-matrices', ruleMatricesApi)
 app.route('/api/v1/compliance-tags', complianceTagsApi)
 app.route('/api/v1/workflow-templates', workflowTemplatesApi)
+app.route('/api/v1/campaigns', campaignsApi)
 // Product versions are nested under products path
 app.route('/api/v1', productVersionsApi)
 
