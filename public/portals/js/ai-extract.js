@@ -85,17 +85,22 @@ function _tryExtractStage2Fields(plain) {
   const minAmt = plain.match(/omr\s*([\d,]+)\s*to\s*omr\s*[\d,]+/i);
   if (minAmt) { const v = parseInt(minAmt[1].replace(/,/g,'')); if (v >= 1000 && v <= 200000) pend('min_amount', v); }
 
-  // max_term
-  const maxT = plain.match(/(?:term|year)[^0-9]*(\d{1,2})\s*years?/i)
-            || plain.match(/(\d{1,2})\s*years?[^,]*(?:max|term|range)/i)
-            || plain.match(/(?:term|terms?)\s*(?:max|:)?\s*(\d+)\s*yr/i);
+  // max_term — match "up to 25 years", "max 25yr", "5–25 years" (take the LAST/larger number)
+  const maxTRange = plain.match(/\d{1,2}\s*[–\-]\s*(\d{1,2})\s*years?/i);          // "5–25 years" → 25
+  const maxTExplicit = plain.match(/(?:up\s+to|max(?:imum)?|term\s+(?:up\s+to|max))[^0-9]*(\d{1,2})\s*years?/i)
+                    || plain.match(/(?:term|terms?)\s*(?:max|:)?\s*(\d+)\s*yr/i)
+                    || plain.match(/(\d{1,2})\s*years?[^,]*(?:max|maximum|ceiling)/i);
+  const maxT = maxTRange || maxTExplicit;
   if (maxT) { const v = parseInt(maxT[1]); if (v >= 5 && v <= 35) pend('max_term', v); }
 
-  // min_term
-  const minT = plain.match(/(?:term\s+range\s+of|from)\s*(\d{1,2})\s*(?:to|–|-)/i);
+  // min_term — match "from 5 to 25", "5–25 year", "term range of 5", "minimum term 5", "min 5 years"
+  const minT = plain.match(/(?:term\s+range\s+of|from)\s*(\d{1,2})\s*(?:to|–|-)/i)
+            || plain.match(/(\d{1,2})\s*[–\-]\s*\d{1,2}\s*years?/i)
+            || plain.match(/(?:minimum\s+(?:term|of)|min\.?\s+term)[^0-9]*(\d{1,2})\s*years?/i)
+            || plain.match(/min[^0-9]*(\d{1,2})\s*years?[^,]*(?:term|range)/i);
   if (minT) { const v = parseInt(minT[1]); if (v >= 1 && v <= 15) pend('min_term', v); }
   else if ((aiDraftConfig.max_term || _pendingConfig.max_term) && aiDraftConfig.min_term == null && _pendingConfig.min_term == null) {
-    pend('min_term', 3);
+    pend('min_term', 5); // default to 5 for home loans (CBO minimum for mortgages)
   }
 
   // No card update here — pending fields shown only after user confirms

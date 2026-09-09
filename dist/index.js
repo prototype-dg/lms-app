@@ -6582,7 +6582,7 @@ $.use("/api/*", Pe()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await R.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "b3ffb05";
+var xt = "9817fa2";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

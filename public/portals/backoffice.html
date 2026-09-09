@@ -3815,7 +3815,7 @@ function showNewProductModal() {
       name, status:'draft', created_by: currentUserId(), user_id: currentUserId(), user_name: currentUserName(),
       category: document.getElementById('newCat').value,
       description: document.getElementById('newDesc').value,
-      base_rate: 5.5, max_ltv: 90, max_dbr: 60, max_term: 25, min_term: 1,
+      base_rate: 5.5, max_ltv: 90, max_dbr: 60, max_term: 25, min_term: 5,
       min_amount: 10000, max_amount: 500000,
     };
     const r = await fetch('/api/v1/products', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
