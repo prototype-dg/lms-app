@@ -77,8 +77,8 @@ app.patch('/:id', async (c) => {
   const id   = c.req.param('id')
   const body = await c.req.json()
   const ts   = now()
-  const allowed = ['status', 'name', 'discount', 'start_date', 'end_date',
-                   'velocity_boost', 'commission', 'budget', 'notes']
+  const allowed = ['status', 'name', 'unit_type', 'project_id', 'discount',
+                   'start_date', 'end_date', 'velocity_boost', 'commission', 'budget', 'notes']
   const fields: string[] = []
   const vals: any[]      = []
   for (const k of allowed) {
