@@ -321,6 +321,8 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
     product_draft: aiReply.product_draft || null,
     rules_draft: aiReply.rules_draft || null,
     schema_draft: aiReply.schema_draft || null,
+    draft_hint: aiReply.draft_hint || null,
+    stage_update_hint: aiReply.stage_update_hint || null,
   })
   } catch (outerErr: any) {
     // Always return JSON — never let a plain-text 500 reach the frontend
@@ -434,7 +436,33 @@ app.post('/products/:id/stage-update', async (c) => {
   const existing = await c.env.DB.prepare('SELECT id, status, configuration FROM products WHERE id = ?').bind(productId).first() as any
   if (!existing) return c.json({ success: false, error: 'Product not found' }, 404)
 
-  if (stage === 2) {
+  if (stage === 1) {
+    // ── Stage 1: Product model — name, description, category, pge_stage ────
+    // Called by PGE AI drawer when action='create_draft' fires (Stage 1 confirm).
+    // The product already exists in DB (PGE opens against an existing product).
+    // We update its name/description/category and advance pge_stage to 1.
+    const s1Updates: string[] = []
+    const s1Vals: any[] = []
+    if (fields.name)        { s1Updates.push('name=?');        s1Vals.push(fields.name) }
+    if (fields.description) { s1Updates.push('description=?'); s1Vals.push(fields.description) }
+    if (fields.category)    { s1Updates.push('category=?');    s1Vals.push(fields.category) }
+    if (fields.segment) {
+      // Store segment inside portal_config JSON
+      const pc = (() => { try { return JSON.parse(existing?.portal_config || '{}') } catch { return {} } })()
+      pc.segment = fields.segment
+      s1Updates.push('portal_config=?'); s1Vals.push(JSON.stringify(pc))
+    }
+    if (s1Updates.length === 0) {
+      // At minimum just advance the stage marker
+      await c.env.DB.prepare('UPDATE products SET pge_stage=1, updated_at=? WHERE id=?')
+        .bind(ts, productId).run()
+    } else {
+      await c.env.DB.prepare(
+        `UPDATE products SET ${s1Updates.join(',')}, pge_stage=1, updated_at=? WHERE id=?`
+      ).bind(...s1Vals, ts, productId).run()
+    }
+
+  } else if (stage === 2) {
     // ── Stage 2: Core configuration fields ─────────────────────────────────
     const updates: string[] = []
     const vals: any[] = []

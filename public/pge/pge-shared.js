@@ -89,6 +89,10 @@
     getTemplates:() => api('GET', '/workflow-templates'),
     aiChat:      (productId, message, thread) =>
       api('POST', '/ai/products/chat', { product_id: productId, message, thread }),
+    aiStageUpdate: (productId, body) =>
+      api('POST', `/ai/products/${productId}/stage-update`, {
+        user_id: SYS_USER.id, user_name: SYS_USER.name, ...body,
+      }),
   };
 
   /* ── Toast ── */
