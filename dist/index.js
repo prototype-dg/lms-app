@@ -136,7 +136,7 @@ var h = (e, t, n) => {
 			} else r += "/" + e;
 		}
 	}), n.filter((e, t, n) => n.indexOf(e) === t);
-}, A = (e) => e.indexOf("%") === -1 ? e : w(e, F), j = (e) => (e.indexOf("+") !== -1 && (e = e.replace(/\+/g, " ")), A(e)), M = (e, t, n) => {
+}, A = (e) => e.indexOf("%") === -1 ? e : w(e, P), j = (e) => (e.indexOf("+") !== -1 && (e = e.replace(/\+/g, " ")), A(e)), M = (e, t, n) => {
 	let r = e.indexOf("#", 8);
 	r !== -1 && (e = e.slice(0, r));
 	let i;
@@ -166,7 +166,7 @@ var h = (e, t, n) => {
 		r === -1 ? c = "" : (c = e.slice(r + 1, t === -1 ? void 0 : t), i && (c = j(c))), n ? (a[s] && Array.isArray(a[s]) || (a[s] = []), a[s].push(c)) : a[s] ??= c;
 	}
 	return t ? a[t] : a;
-}, N = M, P = (e, t) => M(e, t, !0), F = decodeURIComponent, I = class {
+}, ee = M, N = (e, t) => M(e, t, !0), P = decodeURIComponent, F = class {
 	raw;
 	#e;
 	#t;
@@ -195,10 +195,10 @@ var h = (e, t, n) => {
 		return this.#t[1] ? this.#t[1][e] : e;
 	}
 	query(e) {
-		return N(this.url, e);
+		return ee(this.url, e);
 	}
 	queries(e) {
-		return P(this.url, e);
+		return N(this.url, e);
 	}
 	header(e) {
 		if (e) return this.raw.headers.get(e) ?? void 0;
@@ -255,14 +255,14 @@ var h = (e, t, n) => {
 	get routePath() {
 		return this.#t[0].map(([[, e]]) => e)[this.routeIndex].path;
 	}
-}, L = {
+}, I = {
 	Stringify: 1,
 	BeforeStream: 2,
 	Stream: 3
-}, R = (e, t) => {
+}, L = (e, t) => {
 	let n = new String(e);
 	return n.isEscaped = !0, n.callbacks = t, n;
-}, z = async (e, t, n, r, i) => {
+}, R = async (e, t, n, r, i) => {
 	typeof e == "object" && !(e instanceof String) && (e instanceof Promise || (e = e.toString()), e instanceof Promise && (e = await e));
 	let a = e.callbacks;
 	if (!a?.length) return Promise.resolve(e);
@@ -271,9 +271,9 @@ var h = (e, t, n) => {
 		phase: t,
 		buffer: i,
 		context: r
-	}))).then((e) => Promise.all(e.filter(Boolean).map((e) => z(e, t, !1, r, i))).then(() => i[0]));
-	return n ? R(await o, a) : o;
-}, ee = "text/plain; charset=UTF-8", te = (e, t) => ({
+	}))).then((e) => Promise.all(e.filter(Boolean).map((e) => R(e, t, !1, r, i))).then(() => i[0]));
+	return n ? L(await o, a) : o;
+}, z = "text/plain; charset=UTF-8", te = (e, t) => ({
 	"Content-Type": e,
 	...t
 }), ne = (e, t) => new Response(e, t), re = class {
@@ -296,7 +296,7 @@ var h = (e, t, n) => {
 		this.#e = e, t && (this.#i = t.executionCtx, this.env = t.env, this.#c = t.notFoundHandler, this.#d = t.path, this.#u = t.matchResult);
 	}
 	get req() {
-		return this.#t ??= new I(this.#e, this.#d, this.#u), this.#t;
+		return this.#t ??= new F(this.#e, this.#d, this.#u), this.#t;
 	}
 	get event() {
 		if (this.#i && "respondWith" in this.#i) return this.#i;
@@ -373,11 +373,11 @@ var h = (e, t, n) => {
 	}
 	newResponse = (...e) => this.#f(...e);
 	body = (e, t, n) => this.#f(e, t, n);
-	text = (e, t, n) => !this.#l && !this.#r && !t && !n && !this.finalized ? new Response(e) : this.#f(e, t, te(ee, n));
+	text = (e, t, n) => !this.#l && !this.#r && !t && !n && !this.finalized ? new Response(e) : this.#f(e, t, te(z, n));
 	json = (e, t, n) => this.#f(JSON.stringify(e), t, te("application/json", n));
 	html = (e, t, n) => {
 		let r = (e) => this.#f(e, t, te("text/html; charset=UTF-8", n));
-		return typeof e == "object" ? z(e, L.Stringify, !1, {}).then(r) : r(e);
+		return typeof e == "object" ? R(e, I.Stringify, !1, {}).then(r) : r(e);
 	};
 	redirect = (e, t) => {
 		let n = String(e);
@@ -2590,7 +2590,10 @@ function Be(e, t, n) {
 	};
 }
 function Ve(e, t, n) {
-	let r = e.toLowerCase(), i = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great") || r.includes("continue") || r.includes("use") || r.includes("keep") || r.includes("proceed"), a = n || [], o = a.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), s = o.some((e) => e.includes("clone") || e.includes("from scratch") || e.includes("product model") || e.includes("stage 1")), c = o.some((e) => e.includes("islamic") || e.includes("murabaha") || e.includes("conventional") || e.includes("structure")), l = o.some((e) => e.includes("target segment") || e.includes("omani nationals") || e.includes("expat") || e.includes("income band")), u = o.some((e) => e.includes("product name") || e.includes("sohar green") || e.includes("sohar eco") || e.includes("ecohome") || e.includes("confirm the name") || e.includes("shall i use") || e.includes("for the product name") || e.includes("i suggest") && e.includes("name")), d = o.some((e) => e.includes("base rate") && e.includes("ltv") && e.includes("dbr") && e.includes("term") || e.includes("stage 2") && e.includes("core configuration") && e.includes("base rate") || e.includes("all standard loan parameters")), f = o.some((e) => e.includes("discount tier") || e.includes("green discount") || e.includes("gsas score band")), p = o.some((e) => e.includes("arrangement fee") || e.includes("early settlement") && e.includes("1%") || e.includes("gsas re-validation fee")), m = o.some((e) => e.includes("17 eligibility rules") || e.includes("gsas minimum") || e.includes("stage 3") && e.includes("credit risk")), h = o.some((e) => e.includes("10-step workflow") || e.includes("10-step approval workflow") || e.includes("more human touchpoints in the automated phase") || e.includes("should i configure automated processing")), g = o.some((e) => e.includes("stage 4 complete") || e.includes("10-step approval workflow configured") || e.includes("approval workflow set") || e.includes("approval workflow configured") || e.includes("workflow is now configured") || e.includes("workflow has been configured") || e.includes("nci ekyc") && e.includes("muscat municipality") || e.includes("workflow") && e.includes("10 steps") || e.includes("workflow") && e.includes("10-step") && e.includes("stage 5")), _ = o.some((e) => e.includes("shall i apply these compliance parameters") || e.includes("compliance parameters, or do you want to adjust") || e.includes("stage 5 complete") || e.includes("compliance parameters applied") || e.includes("basel iii") && e.includes("ifrs9") && e.includes("aml risk score")), v = o.some((e) => e.includes("ready to publish") || e.includes("confirm &amp; publish") || e.includes("confirm & publish") || e.includes("click confirm") || e.includes("stage 6") && (e.includes("portfolio target") || e.includes("break-even") || e.includes("nim ~")) || e.includes("stage 6") && e.includes("everything is configured")), y = [...a.map((e) => e.content || ""), e].join(" ").toLowerCase(), b = y.includes("green") || y.includes("gsas") || y.includes("esg") || y.includes("sustainable"), x = !b && (y.includes("auto") || y.includes("car") || y.includes("vehicle")), S = !b && !x && (y.includes("personal") || y.includes("unsecured") || y.includes("consumer")), C = !b && !x && !S && (y.includes("sme") || y.includes("business") || y.includes("working capital")), w = (() => {
+	let r = e.toLowerCase(), i = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great") || r.includes("continue") || r.includes("use") || r.includes("keep") || r.includes("proceed"), a = n || [], o = a.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), s = o.some((e) => e.includes("clone") || e.includes("from scratch") || e.includes("product model") || e.includes("stage 1")), c = o.some((e) => e.includes("islamic") || e.includes("murabaha") || e.includes("conventional") || e.includes("structure")), l = o.some((e) => e.includes("target segment") || e.includes("omani nationals") || e.includes("expat") || e.includes("income band")), u = o.some((e) => e.includes("product name") || e.includes("sohar green") || e.includes("sohar eco") || e.includes("ecohome") || e.includes("confirm the name") || e.includes("shall i use") || e.includes("for the product name") || e.includes("i suggest") && e.includes("name")), d = o.some((e) => e.includes("base rate") && e.includes("ltv") && e.includes("dbr") && e.includes("term") || e.includes("stage 2") && e.includes("core configuration") && e.includes("base rate") || e.includes("all standard loan parameters")), f = o.some((e) => e.includes("discount tier") || e.includes("green discount") || e.includes("gsas score band")), p = o.some((e) => e.includes("arrangement fee") || e.includes("early settlement") && e.includes("1%") || e.includes("gsas re-validation fee")), m = o.some((e) => e.includes("17 eligibility rules") || e.includes("gsas minimum") || e.includes("stage 3") && e.includes("credit risk")), h = o.some((e) => e.includes("10-step workflow") || e.includes("10-step approval workflow") || e.includes("more human touchpoints in the automated phase") || e.includes("should i configure automated processing")), g = o.some((e) => e.includes("stage 4 complete") || e.includes("10-step approval workflow configured") || e.includes("approval workflow set") || e.includes("approval workflow configured") || e.includes("workflow is now configured") || e.includes("workflow has been configured") || e.includes("nci ekyc") && e.includes("muscat municipality") || e.includes("workflow") && e.includes("10 steps") || e.includes("workflow") && e.includes("10-step") && e.includes("stage 5")), _ = o.some((e) => e.includes("shall i apply these compliance parameters") || e.includes("compliance parameters, or do you want to adjust") || e.includes("stage 5 complete") || e.includes("compliance parameters applied") || e.includes("basel iii") && e.includes("ifrs9") && e.includes("aml risk score")), v = o.some((e) => {
+		let t = e.toLowerCase();
+		return t.includes("ready to publish") || t.includes("confirm & publish") || t.includes("confirm &amp; publish") || t.includes("click confirm") || t.includes("everything is configured") || t.includes("all 6 stages are complete") || t.includes("stage 6 complete") || t.includes("stage 6") && (t.includes("portfolio target") || t.includes("break-even") || t.includes("nim ~") || t.includes("nim:") || t.includes("net interest margin") || t.includes("yr1") || t.includes("year 1") || t.includes("simulation complete") || t.includes("simulation results")) || t.includes("simulation") && t.includes("complete") && t.includes("ready") || t.includes("portfolio simulation") && t.includes("stress test") || t.includes("12-month portfolio") || t.includes("24-month portfolio");
+	}), y = [...a.map((e) => e.content || ""), e].join(" ").toLowerCase(), b = y.includes("green") || y.includes("gsas") || y.includes("esg") || y.includes("sustainable"), x = !b && (y.includes("auto") || y.includes("car") || y.includes("vehicle")), S = !b && !x && (y.includes("personal") || y.includes("unsecured") || y.includes("consumer")), C = !b && !x && !S && (y.includes("sme") || y.includes("business") || y.includes("working capital")), w = (() => {
 		let e = r.match(/\b(7[0-9]|80|85|90)\b/);
 		return e ? parseInt(e[1]) : 70;
 	})(), T = b ? "Sohar Green Home Finance – GSAS" : x ? "Auto Finance" : S ? "Personal Finance" : C ? "SME Working Capital" : "Home Finance";
@@ -2732,8 +2735,27 @@ function Ve(e, t, n) {
 			if (t >= 1e4) return t;
 		}
 		return null;
-	})(), N = E ?? 5.25, P = D ?? 90, F = O ?? 55, I = k ?? 5, L = A ?? 25, R = j ?? 25e3, z = M ?? 5e5, ee = !i && (r.includes("increase") || r.includes("decrease") || r.includes("reduce") || r.includes("change") || r.includes("set ") || r.includes("make it") || r.includes("adjust") || r.includes("raise") || r.includes("lower") || r.includes("higher") || r.includes("more") || r.includes("less") || /\d/.test(r));
-	if (d && !f && !p && ee && !(r.includes("discount tier") || r.includes("arrangement fee") || r.includes("early settlement"))) {
+	})(), ee = (() => {
+		if (M != null) return M;
+		for (let e = o.length - 1; e >= 0; e--) {
+			let t = o[e].toLowerCase(), n = t.match(/omr\s*[\d,k]+\s*[–\-]\s*omr?\s*([\d,]+)(?:m\b)?/) || t.match(/omr\s*[\d,k]+\s*[–\-]\s*([\d,.]+)\s*m\b/);
+			if (n) {
+				let e = n[1].replace(/,/g, ""), t = e.includes(".") ? parseFloat(e) * 1e6 : parseInt(e);
+				if (t >= 1e5 && t <= 5e6) return t;
+			}
+			if ((t.includes("1m") || t.includes("1,000,000") || t.includes("1 million")) && (t.includes("amount") || t.includes("omr") || t.includes("max"))) return 1e6;
+			if (t.includes("750,000") && t.includes("omr")) return 75e4;
+			if (t.includes("600,000") && t.includes("omr")) return 6e5;
+			let r = t.match(/(?:max(?:imum)?\s+(?:loan\s+)?amount|amount\s+range)[^omr]*omr\s*[\d,k]+\s*[–\-]\s*omr?\s*([\d,]+)/);
+			if (r) {
+				let e = parseInt(r[1].replace(/,/g, ""));
+				if (e >= 1e5 && e <= 5e6) return e;
+			}
+			if (t.includes("all standard loan parameters") || t.includes("all of these, or would you like to adjust")) break;
+		}
+		return 5e5;
+	})(), N = E ?? 5.25, P = D ?? 90, F = O ?? 55, I = k ?? 5, L = A ?? 25, R = j ?? 25e3, z = ee, te = !i && (r.includes("increase") || r.includes("decrease") || r.includes("reduce") || r.includes("change") || r.includes("set ") || r.includes("make it") || r.includes("adjust") || r.includes("raise") || r.includes("lower") || r.includes("higher") || r.includes("more") || r.includes("less") || /\d/.test(r));
+	if (d && !f && !p && te && !(r.includes("discount tier") || r.includes("arrangement fee") || r.includes("early settlement"))) {
 		let e = (e) => e >= 1e6 ? `OMR ${(e / 1e6).toFixed(e % 1e6 == 0 ? 0 : 1)}M` : `OMR ${e.toLocaleString()}`;
 		return {
 			message: `Noted — updating that parameter. Here are all standard loan parameters with your change applied:<br><br><strong>Base rate:</strong> <strong>${N}%</strong> p.a.<br><strong>LTV:</strong> <strong>${P}%</strong> first home · <strong>${Math.min(P, 80)}%</strong> subsequent/expat<br><strong>DBR:</strong> <strong>${F}%</strong> of net income<br><strong>Term:</strong> <strong>${I} – ${L} years</strong><br><strong>Loan amount:</strong> <strong>${e(R)} – ${e(z)}</strong><br><br><strong>Confirmed — shall I apply all of these, or is there anything else to adjust?</strong>`,
@@ -2790,7 +2812,7 @@ function Ve(e, t, n) {
 			schema_draft: null
 		};
 	}
-	if (d && i && !f && b && !p) return {
+	if (d && i && !f && b && !p && !m) return {
 		message: `Standard parameters confirmed — ${N}% rate, ${P}% LTV, ${F}% DBR, ${I}–${L}yr, OMR ${R.toLocaleString()}–${z.toLocaleString()}.<br><br><strong>ESG Green Discount tiers</strong> — this is what differentiates a real green product from a standard one:<br><br>&bull; <strong>GSAS Score ≥ 85 (Gold/Platinum)</strong> → −0.75% discount → effective rate <strong>${(N - .75).toFixed(2)}%</strong><br>&bull; <strong>GSAS Score 70–84 (Silver)</strong> → −0.50% discount → effective rate <strong>${(N - .5).toFixed(2)}%</strong><br>&bull; <strong>GSAS Score &lt; 70</strong> → <span style="color:#f87171">NOT eligible</span> (product requires minimum Silver certification)<br><br>These tiers incentivise customers to choose higher-rated green properties. Oman's GORD manages GSAS ratings under OS GSO 3000:2025.<br><br><strong>Should I apply these discount tiers, or do you want different GSAS score thresholds or discount spreads?</strong>`,
 		current_stage: 2,
 		show_roadmap: !1,
@@ -2844,7 +2866,7 @@ function Ve(e, t, n) {
 		rules_draft: null,
 		schema_draft: null
 	};
-	if (!p && (f || d && i && !b)) return {
+	if (!p && !m && !v && (f || d && i && !b)) return {
 		message: (b ? "ESG discount tiers confirmed — 0.75% Gold/Platinum (≥85), 0.5% Silver (70–84)." : "Standard loan parameters confirmed.") + `<br><br><strong>Fee structure:</strong><br><br>Under CBO Consumer Protection Circular 2018/2, all fees must be disclosed upfront. Recommended:<br><br>&bull; <strong>Arrangement fee</strong>: 1% of loan amount, capped at OMR 500 — standard market rate${b ? ", waived for GSAS Platinum (≥90 score) as an additional green incentive" : ""}<br>&bull; <strong>Early settlement penalty</strong>: 1% of outstanding balance (CBO maximum allowed)${b ? " — or waived after year 5 to encourage refinancing into newer green products" : ""}<br>&bull; <strong>Valuation fee</strong>: actual cost (OMR 200–800 depending on property) — pass-through to customer<br>` + (b ? "&bull; <strong>GSAS re-validation fee</strong>: OMR 150 (charged at certificate renewal, every 3 years) — new ESG-specific fee<br>" : "") + "<br><strong>Should I apply this fee structure, or modify any of these?</strong>",
 		current_stage: 2,
 		show_roadmap: !1,
@@ -3346,11 +3368,23 @@ function Ve(e, t, n) {
 				}
 			}
 			for (let e = o.length - 1; e >= 0; e--) {
-				let t = o[e], n = t.match(/(?:updated?\s+to|changed?\s+to|set\s+(?:at|to)|confirmed[:\s]+).*?omr\s*([\d,]+)/i) || t.match(/(?:new\s+max(?:imum)?|revised\s+max(?:imum)?)\s*(?:is|:)?\s*omr\s*([\d,]+)/i);
-				if (n) {
-					let e = parseInt(n[1].replace(/,/g, ""));
+				let t = o[e], n = t.toLowerCase(), r = t.match(/(?:updated?\s+to|changed?\s+to|set\s+(?:at|to)|confirmed[:\s]+).*?omr\s*([\d,]+)/i) || t.match(/(?:new\s+max(?:imum)?|revised\s+max(?:imum)?)\s*(?:is|:)?\s*omr\s*([\d,]+)/i);
+				if (r) {
+					let e = parseInt(r[1].replace(/,/g, ""));
 					if (e >= 5e4 && e <= 5e6) return e;
 				}
+				let i = n.match(/omr\s*[\d,k]+\s*[–\-]\s*omr?\s*([\d,]+)(?:m\b)?/) || n.match(/omr\s*[\d,k]+\s*[–\-]\s*([\d,.]+)\s*m\b/);
+				if (i) {
+					let e = i[1].replace(/,/g, ""), t = e.includes(".") ? parseFloat(e) * 1e6 : parseInt(e);
+					if (t >= 1e5 && t <= 5e6) return t;
+				}
+				if ((n.includes("1,000,000") || n.includes("1m") && n.includes("omr")) && (n.includes("amount") || n.includes("loan") || n.includes("max"))) return 1e6;
+				let a = t.match(/(?:loan\s+amount|amount\s+range|max(?:imum)?)[:\s]+OMR[^0-9]*([\d,]+)/i);
+				if (a) {
+					let e = parseInt(a[1].replace(/,/g, ""));
+					if (e >= 1e5 && e <= 5e6) return e;
+				}
+				if (n.includes("all standard loan parameters") || n.includes("shall i apply all of these")) break;
 			}
 			return 5e5;
 		})(), s = (() => {
@@ -3781,10 +3815,10 @@ J.get("/full/:appId", async (e) => {
 		e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'application' AND entity_id = ?").bind(r.id).all(),
 		r.unit_id ? e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'unit' AND entity_id = ?").bind(r.unit_id).all() : Promise.resolve({ results: [] }),
 		r.project_id ? e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'project' AND entity_id = ?").bind(r.project_id).all() : Promise.resolve({ results: [] })
-	]), f = l.results || [], p = u.results || [], m = d.results || [], h = (e) => f.find((t) => t.doc_type === e) || p.find((t) => t.doc_type === e) || m.find((t) => t.doc_type === e), g = h("gsas_cert"), _ = h("epc_report"), v = h("eia_approval"), y = g ? JSON.parse(g.extracted_data || "{}") : {}, b = _ ? JSON.parse(_.extracted_data || "{}") : {}, x = v ? JSON.parse(v.extracted_data || "{}") : {}, S = r.salary_omr || r.salary || 0, C = r.loan_amount || 0, w = r.loan_term || 25, T = r.applied_rate || 5.5, E = r.property_value || C / .8, D = T / 100 / 12, O = w * 12, k = D > 0 ? C * D * (1 + D) ** +O / ((1 + D) ** +O - 1) : C / O, A = r.dbr || (S > 0 ? Math.round(k / S * 100 * 10) / 10 : null), j = r.ltv || (E > 0 ? Math.round(C / E * 100 * 10) / 10 : null), M = r.malaa_score || r.credit_score || null, N = T + 3.5, P = (() => {
-		let e = N / 100 / 12;
+	]), f = l.results || [], p = u.results || [], m = d.results || [], h = (e) => f.find((t) => t.doc_type === e) || p.find((t) => t.doc_type === e) || m.find((t) => t.doc_type === e), g = h("gsas_cert"), _ = h("epc_report"), v = h("eia_approval"), y = g ? JSON.parse(g.extracted_data || "{}") : {}, b = _ ? JSON.parse(_.extracted_data || "{}") : {}, x = v ? JSON.parse(v.extracted_data || "{}") : {}, S = r.salary_omr || r.salary || 0, C = r.loan_amount || 0, w = r.loan_term || 25, T = r.applied_rate || 5.5, E = r.property_value || C / .8, D = T / 100 / 12, O = w * 12, k = D > 0 ? C * D * (1 + D) ** +O / ((1 + D) ** +O - 1) : C / O, A = r.dbr || (S > 0 ? Math.round(k / S * 100 * 10) / 10 : null), j = r.ltv || (E > 0 ? Math.round(C / E * 100 * 10) / 10 : null), M = r.malaa_score || r.credit_score || null, ee = T + 3.5, N = (() => {
+		let e = ee / 100 / 12;
 		return C * e * (1 + e) ** +O / ((1 + e) ** +O - 1);
-	})(), F = S > 0 ? Math.round(P / S * 100 * 10) / 10 : null, I = F === null ? (r.stress_test_passed, !0) : F <= 60, L = r.gsas_min_score || 70, R = r.gsas_premium_score || 85, z = r.green_dbr || r.max_dbr || 55, ee = r.max_ltv || 90, te = {
+	})(), P = S > 0 ? Math.round(N / S * 100 * 10) / 10 : null, F = P === null ? (r.stress_test_passed, !0) : P <= 60, I = r.gsas_min_score || 70, L = r.gsas_premium_score || 85, R = r.green_dbr || r.max_dbr || 55, z = r.max_ltv || 90, te = {
 		A: 5,
 		B: 4,
 		C: 3,
@@ -3796,15 +3830,15 @@ J.get("/full/:appId", async (e) => {
 			status: g?.validation_status || "pending",
 			confidence: g?.ai_confidence || 0,
 			score: y.overall_score || r.gsas_score,
-			min_score: L,
-			premium_score: R,
+			min_score: I,
+			premium_score: L,
 			rating: y.rating || (r.gsas_score >= 90 ? "Platinum" : r.gsas_score >= 75 ? "Gold" : r.gsas_score >= 60 ? "Silver" : "Unknown"),
 			certificate_number: y.certificate_number || "N/A",
 			expiry: y.expiry_date || "N/A",
 			issuer: y.issuer || "N/A",
 			rule_ref: a.find((e) => e.metric === "gsas_score")?.regulatory_reference || "OS GSO 3000:2025",
-			passes_threshold: (r.gsas_score || 0) >= L,
-			passes_premium: (r.gsas_score || 0) >= R,
+			passes_threshold: (r.gsas_score || 0) >= I,
+			passes_premium: (r.gsas_score || 0) >= L,
 			color: g?.validation_status === "auto_verified" ? "green" : g?.validation_status === "manual_review" ? "amber" : "red",
 			filename: g?.filename || null,
 			file_url: g?.file_url || null,
@@ -3848,15 +3882,15 @@ J.get("/full/:appId", async (e) => {
 	}, ie = {
 		dbr: {
 			value: A,
-			max: z,
-			status: A === null || A <= z ? "pass" : "fail",
-			label: `Max ${z}% — ${r.product_name || "product"} green DBR limit`
+			max: R,
+			status: A === null || A <= R ? "pass" : "fail",
+			label: `Max ${R}% — ${r.product_name || "product"} green DBR limit`
 		},
 		ltv: {
 			value: j,
-			max: ee,
-			status: j === null || j <= ee ? "pass" : "fail",
-			label: `Max ${ee}% — ${r.product_name || "product"} LTV ceiling`
+			max: z,
+			status: j === null || j <= z ? "pass" : "fail",
+			label: `Max ${z}% — ${r.product_name || "product"} LTV ceiling`
 		},
 		malaa_score: {
 			value: M,
@@ -3865,10 +3899,10 @@ J.get("/full/:appId", async (e) => {
 			label: "Min 650 — CBO Credit Bureau minimum"
 		},
 		stress_test: {
-			passed: I,
-			rate: parseFloat(N.toFixed(2)),
-			stress_dbr: F,
-			label: `CBO +350bps shock: ${N.toFixed(2)}% — threshold 60%`
+			passed: F,
+			rate: parseFloat(ee.toFixed(2)),
+			stress_dbr: P,
+			label: `CBO +350bps shock: ${ee.toFixed(2)}% — threshold 60%`
 		},
 		monthly_payment: Math.round(k),
 		property_value: Math.round(E)
@@ -3882,7 +3916,7 @@ J.get("/full/:appId", async (e) => {
 				case "gsas_score": return r.gsas_score;
 				case "credit_score": return M;
 				case "loan_term": return w;
-				case "stress_rate": return N;
+				case "stress_rate": return ee;
 				case "epc_rating": return te;
 				case "esg_docs_complete": return g && _ ? 1 : 0;
 				case "eia_approval":
@@ -6979,7 +7013,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "350d47d";
+var xt = "cf996ea";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

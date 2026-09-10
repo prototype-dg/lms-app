@@ -1612,13 +1612,32 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
   // Must NOT fire on the Stage 5→6 transition text ("Stage 6 — Simulation. Are you ready...")
   // because that message does not contain the product_draft or simulation data yet.
   // Only the actual Stage 6 response contains 'ready to publish' / 'confirm & publish'.
-  const hasAskedConfirm = assistantMsgs.some(m =>
-    m.includes('ready to publish') || m.includes('confirm &amp; publish') ||
-    m.includes('confirm & publish') || m.includes('click confirm') ||
-    // Portfolio projection text appears ONLY in the actual Stage 6 simulation message
-    (m.includes('stage 6') && (m.includes('portfolio target') || m.includes('break-even') || m.includes('nim ~'))) ||
-    (m.includes('stage 6') && m.includes('everything is configured'))
-  )
+  // BUG C FIX (part 2): Broadened patterns to cover GPT text variations.
+  // GPT may say "Portfolio target:" (capital P, colon) while old check looked for lowercase.
+  // Also catches "everything is configured", "all 6 stages", "stage 6 complete",
+  // any NIM/break-even mention (unique to Stage 6 simulation response).
+  const hasAskedConfirm = assistantMsgs.some(m => {
+    const ml = m.toLowerCase()
+    return ml.includes('ready to publish') || ml.includes('confirm & publish') ||
+      ml.includes('confirm &amp; publish') || ml.includes('click confirm') ||
+      ml.includes('everything is configured') ||
+      ml.includes('all 6 stages are complete') ||
+      ml.includes('stage 6 complete') ||
+      // Portfolio projection text — unique to Stage 6 simulation response
+      (ml.includes('stage 6') && (
+        ml.includes('portfolio target') || ml.includes('break-even') ||
+        ml.includes('nim ~') || ml.includes('nim:') || ml.includes('net interest margin') ||
+        ml.includes('yr1') || ml.includes('year 1') ||
+        ml.includes('simulation complete') || ml.includes('simulation results')
+      )) ||
+      // "Simulation complete" is what GPT writes when user says "run simulation"
+      (ml.includes('simulation') && ml.includes('complete') && ml.includes('ready')) ||
+      // Scripted fallback Stage 6 uses "Portfolio Simulation" heading — unique to stage 6
+      (ml.includes('portfolio simulation') && ml.includes('stress test')) ||
+      // Stage 6 action field check — if the response we stored in assistantMsgs
+      // was from a stage=6 response (current_stage indicator)
+      (ml.includes('12-month portfolio') || ml.includes('24-month portfolio'))
+  })
 
   // Product type detection from full conversation context
   const fullContext = [...history.map((m: any) => m.content || ''), message].join(' ').toLowerCase()
@@ -1770,9 +1789,50 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
     if (lower.includes('1m') || lower.includes('1 million') || lower.includes('1,000,000')) return 1000000
     if (/\b750k\b|750,000/.test(lower)) return 750000
     if (/\b600k\b|600,000/.test(lower)) return 600000
-    const m = lower.match(/max(?:imum)?[^\d]*(\d[\d,]*)/);
+    const m = lower.match(/max(?:imum)?[^\d]*(\d[\d,]*)/);  
     if (m) { const v = parseInt(m[1].replace(/,/g, '')); if (v >= 10000) return v }
     return null
+  })()
+  // BUG B FIX: q1MaxAmt must persist across turns.
+  // Problem: updMaxAmount only reads the CURRENT message. When the user says
+  // "increase max to 1M" → q1MaxAmt=1000000 for THAT turn (correct).
+  // Next turn user says "Confirmed" → updMaxAmount=null → q1MaxAmt falls back
+  // to 500000. Stage 2 DB write then saves 500K, overwriting the user's 1M.
+  // Fix: scan ALL prior ASSISTANT messages (newest-first) for the last echoed
+  // amount confirmation. The Stage 2 Q1-repeat echo block always says
+  // "OMR 25,000–1,000,000" or "OMR 25K–1M" when max was changed to 1M.
+  const q1MaxAmtPersisted = (() => {
+    if (updMaxAmount != null) return updMaxAmount  // current message wins
+    // Scan assistant messages newest-first for echoed amount range confirmation
+    for (let i = assistantMsgs.length - 1; i >= 0; i--) {
+      const am = assistantMsgs[i].toLowerCase()
+      // Pattern 1: "omr 25,000–1,000,000" or "omr 25K–1M" range echo from Q1-repeat block
+      // We want the UPPER bound of the range
+      const rangeM = am.match(/omr\s*[\d,k]+\s*[–\-]\s*omr?\s*([\d,]+)(?:m\b)?/)
+        || am.match(/omr\s*[\d,k]+\s*[–\-]\s*([\d,.]+)\s*m\b/)  // "25K–1M" style
+      if (rangeM) {
+        const raw = rangeM[1].replace(/,/g, '')
+        const v = raw.includes('.') ? parseFloat(raw) * 1000000 : parseInt(raw)
+        if (v >= 100000 && v <= 5000000) return v
+      }
+      // Pattern 2: explicit 1M / 1,000,000 anywhere in assistant message about amount
+      if ((am.includes('1m') || am.includes('1,000,000') || am.includes('1 million')) &&
+          (am.includes('amount') || am.includes('omr') || am.includes('max'))) return 1000000
+      if (am.includes('750,000') && am.includes('omr')) return 750000
+      if (am.includes('600,000') && am.includes('omr')) return 600000
+      // Pattern 3: "amount range omr 25,000–X" where X is the max
+      const maxM = am.match(/(?:max(?:imum)?\s+(?:loan\s+)?amount|amount\s+range)[^omr]*omr\s*[\d,k]+\s*[–\-]\s*omr?\s*([\d,]+)/)
+      if (maxM) {
+        const v = parseInt(maxM[1].replace(/,/g, ''))
+        if (v >= 100000 && v <= 5000000) return v
+      }
+      // Stop searching once we hit the Stage 2 Q1 recommendation message (contains 500,000 as default)
+      // Don't let the DEFAULT recommendation "OMR 25,000 – 500,000" pollute our search
+      // when user explicitly raised it — the Q1-repeat echo block comes AFTER the recommendation.
+      // We identify the initial Q1 message by the phrase "all standard loan parameters"
+      if (am.includes('all standard loan parameters') || am.includes('all of these, or would you like to adjust')) break
+    }
+    return 500000  // true default — only if no prior assistant message confirmed a different amount
   })()
   // Current Q1 params (defaults overridden by anything extracted above)
   const q1BaseRate = updBaseRate ?? 5.25
@@ -1781,7 +1841,7 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
   const q1MinTerm  = updMinTerm  ?? 5
   const q1MaxTerm  = updMaxTerm  ?? 25
   const q1MinAmt   = updMinAmount ?? 25000
-  const q1MaxAmt   = updMaxAmount ?? 500000
+  const q1MaxAmt   = q1MaxAmtPersisted
 
   // Helper: detect a change-request (digit or adjustment keyword, not a plain yes)
   const isParamChangeRequest = !isYes && (
@@ -1823,7 +1883,11 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
 
   // ── STAGE 2 Q2: ESG discount tiers (green products only, one focused question) ──
   // Entered when Q1 has been confirmed (isYes), green product, ESG not yet asked.
-  if (hasAskedStage2 && isYes && !hasAskedStage2b && ctxGreen && !hasAskedStage2f) {
+  // BUG A FIX: Must also guard !hasAskedStage3 — without it, when user says "yes" to
+  // the Stage 3 rules listing, all four conditions are true (hasAskedStage2=true,
+  // isYes=true, !hasAskedStage2b=true, ctxGreen=true) and this block fires BEFORE
+  // the Stage 3 handler at line 1910, regressing the conversation back to ESG tiers.
+  if (hasAskedStage2 && isYes && !hasAskedStage2b && ctxGreen && !hasAskedStage2f && !hasAskedStage3) {
     return {
       message: `Standard parameters confirmed — ${q1BaseRate}% rate, ${q1MaxLtv}% LTV, ${q1MaxDbr}% DBR, ${q1MinTerm}–${q1MaxTerm}yr, OMR ${q1MinAmt.toLocaleString()}–${q1MaxAmt.toLocaleString()}.<br><br>` +
         `<strong>ESG Green Discount tiers</strong> — this is what differentiates a real green product from a standard one:<br><br>` +
@@ -1851,7 +1915,14 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
   // ── STAGE 2 Q3: Fees (one focused question for both green and non-green) ──────
   // Green path:     Q2 (ESG) confirmed → fees
   // Non-green path: Q1 confirmed → fees directly
-  const readyForFees = !hasAskedStage2f && (
+  // BUG C FIX: Must guard !hasAskedStage3 and !hasAskedConfirm.
+  // Without !hasAskedStage3: when hasAskedStage2b=true (ESG confirmed) and user
+  // later sends any message (including "run simulation"), readyForFees=true fires
+  // because (hasAskedStage2b) alone is enough — Stage 2b being done should NOT
+  // continue re-triggering fees after Stage 3 has been asked.
+  // Without !hasAskedConfirm: any post-Stage-6 message with hasAskedStage2b=true
+  // and !hasAskedStage2f=true (fees never asked in that session) also fires fees.
+  const readyForFees = !hasAskedStage2f && !hasAskedStage3 && !hasAskedConfirm && (
     (hasAskedStage2b) ||                          // green: after ESG confirmed
     (hasAskedStage2 && isYes && !ctxGreen)        // non-green: after standard params confirmed
   )
@@ -2130,17 +2201,37 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
           if (v >= 50000 && v <= 5000000) return v
         }
       }
-      // Check assistant confirmation messages for the last EXPLICITLY CONFIRMED amount.
-      // Scan newest-first so the most recent assistant confirmation wins.
-      // Deliberately skip the scripted Stage 2 Q1 recommendation fallback line
-      // by only matching confirmation-style phrases, not recommendation phrases.
+      // BUG D FIX: Scan assistant messages newest-first for the last confirmed amount.
+      // The Stage 2 Q1-repeat echo block (when user said "increase max to 1M") looks like:
+      //   "Loan amount: OMR 25,000–1,000,000" or "amount range OMR 25K–1M"
+      // Previous pattern only matched "updated to / confirmed: OMR X" phrases —
+      // that never appears in the scripted fallback echo block, so it always fell through
+      // to return 500000 even after user confirmed 1M.
       for (let i = assistantMsgs.length - 1; i >= 0; i--) {
         const am = assistantMsgs[i]
-        // Only match messages that look like a user-confirmed value being echoed back:
-        // "amount updated to OMR 300,000" / "set at OMR 300,000" / "confirmed: OMR 300,000"
-        const m = am.match(/(?:updated?\s+to|changed?\s+to|set\s+(?:at|to)|confirmed[:\s]+).*?omr\s*([\d,]+)/i)
+        const aml = am.toLowerCase()
+        // Pattern 1 (original): explicit confirmation phrases
+        const m1 = am.match(/(?:updated?\s+to|changed?\s+to|set\s+(?:at|to)|confirmed[:\s]+).*?omr\s*([\d,]+)/i)
           || am.match(/(?:new\s+max(?:imum)?|revised\s+max(?:imum)?)\s*(?:is|:)?\s*omr\s*([\d,]+)/i)
-        if (m) { const v = parseInt(m[1].replace(/,/g,'')); if (v >= 50000 && v <= 5000000) return v }
+        if (m1) { const v = parseInt(m1[1].replace(/,/g,'')); if (v >= 50000 && v <= 5000000) return v }
+        // Pattern 2 (NEW): range format "OMR 25,000–1,000,000" or "OMR 25K–1M" — take upper bound
+        // This is the format used by the Stage 2 Q1-repeat echo block AND the Stage 2 complete message.
+        const m2 = aml.match(/omr\s*[\d,k]+\s*[–\-]\s*omr?\s*([\d,]+)(?:m\b)?/)
+          || aml.match(/omr\s*[\d,k]+\s*[–\-]\s*([\d,.]+)\s*m\b/)
+        if (m2) {
+          const raw = m2[1].replace(/,/g, '')
+          const v = raw.includes('.') ? parseFloat(raw) * 1000000 : parseInt(raw)
+          if (v >= 100000 && v <= 5000000) return v
+        }
+        // Pattern 3 (NEW): explicit large amounts mentioned alongside "amount" or "omr" context
+        if ((aml.includes('1,000,000') || aml.includes('1m') && aml.includes('omr')) &&
+            (aml.includes('amount') || aml.includes('loan') || aml.includes('max'))) return 1000000
+        // Pattern 4 (NEW): "loan amount: OMR 25,000–1,000,000" label:value format
+        const m4 = am.match(/(?:loan\s+amount|amount\s+range|max(?:imum)?)[:\s]+OMR[^0-9]*([\d,]+)/i)
+        if (m4) { const v = parseInt(m4[1].replace(/,/g,'')); if (v >= 100000 && v <= 5000000) return v }
+        // Stop before the initial Stage 2 Q1 RECOMMENDATION message (contains 500,000 as default)
+        // to avoid the initial recommendation polluting our search when user raised the amount
+        if (aml.includes('all standard loan parameters') || aml.includes('shall i apply all of these')) break
       }
       // Final fallback: only use 500,000 — do NOT scan full context since the scripted
       // Stage 2 Q1 message always mentions "500,000" which would hide any user correction.

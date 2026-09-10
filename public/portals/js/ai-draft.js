@@ -39,10 +39,13 @@ function resetDraftState() {
 }
 
 /* ── _isUserConfirm ──────────────────────────────────────────────────────── */
+// BUG F FIX (part 2): Added "run simulation", "publish", "all good", "approved", "all of these"
+// to the confirm pattern. These phrases appear in the actual chat transcript and must flush
+// pending buffers so aiDraftConfig is populated before the stage-update API call reads it.
 function _isUserConfirm(msg) {
   const t = msg.toLowerCase().trim();
-  return /^(yes|ok|okay|sure|proceed|confirm|confirmed|agree|agreed|good|great|looks good|perfect|correct|approved|approve|go ahead|sounds good|that.s (right|correct|good|fine)|continue|next|let.?s go|do it|set it|set that|lock it|lock that|accepted|accept|ready|done|fine|yep|yup|👍)/.test(t)
-      || /\b(yes|ok|okay|confirm|proceed|approve|agreed|correct|go ahead|looks good|sounds good)\b/.test(t);
+  return /^(yes|ok|okay|sure|proceed|confirm|confirmed|agree|agreed|good|great|looks good|perfect|correct|approved|approve|go ahead|sounds good|that.s (right|correct|good|fine)|continue|next|let.?s go|do it|set it|set that|lock it|lock that|accepted|accept|ready|done|fine|yep|yup|all good|all of these|run simulation|publish|no these values are ok|no,? these|these are ok|these values|that works|that.s fine|go|apply|use that|use these|👍)/.test(t)
+      || /\b(yes|ok|okay|confirm|proceed|approve|agreed|correct|go ahead|looks good|sounds good|all good|run simulation|publish)\b/.test(t);
 }
 
 /* ── _flushPending ───────────────────────────────────────────────────────── */

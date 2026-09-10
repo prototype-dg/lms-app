@@ -39,14 +39,30 @@ function extractStage2Turn(rawMsg) {
 
 /* ── _tryExtractStage2Fields ─────────────────────────────────────────────── *
  * Shared extractor: reads plain text → buffers into _pendingConfig.
- * Skips any field already confirmed (aiDraftConfig) or already pending.       */
+ * BUG F FIX: Two pend strategies:
+ *   pend(key, val)      — seed-only: skip if already confirmed OR pending (stable fields)
+ *   pendAmt(key, val)   — amount fields: ALWAYS update pending if value differs from current.
+ *                         This lets the Q1-repeat echo block ("OMR 25,000–1,000,000") correctly
+ *                         overwrite the initial default 500,000 that was seeded from the Q1 message.
+ *                         Skips if field is already CONFIRMED (aiDraftConfig) since confirmed
+ *                         values are committed on user affirmation and should not be overwritten
+ *                         by subsequent extraction of the same stage's text. */
 function _tryExtractStage2Fields(plain) {
   let seeded = false;
 
+  // Seed-only: write only if neither confirmed nor pending (stable fields like rates, terms)
   function pend(key, val) {
     if (aiDraftConfig[key] == null && _pendingConfig[key] == null && val != null) {
       _pendingConfig[key] = val; seeded = true;
     }
+  }
+
+  // Amount-aware: ALWAYS update pending when value changes — allows "increase max to 1M"
+  // to overwrite the initial 500K seed. Never overwrites confirmed (aiDraftConfig) values.
+  function pendAmt(key, val) {
+    if (val == null) return;
+    if (aiDraftConfig[key] != null) return; // already confirmed — don't touch
+    if (_pendingConfig[key] !== val) { _pendingConfig[key] = val; seeded = true; }
   }
 
   // base_rate
@@ -75,15 +91,27 @@ function _tryExtractStage2Fields(plain) {
     if (vals.length) pend('max_dbr', Math.min(...vals));
   }
 
-  // max_amount
-  const amtRange = plain.match(/omr\s*[\d,]+\s*to\s*omr\s*([\d,]+)/i);
-  const amtSingle = plain.match(/(?:max(?:imum)?|up\s+to)\s+omr\s*([\d,]+)/i);
-  const amtRaw = amtRange || amtSingle;
-  if (amtRaw) { const v = parseInt(amtRaw[1].replace(/,/g,'')); if (v >= 10000) pend('max_amount', v); }
+  // max_amount — use pendAmt so Q1-repeat echo block ("OMR 25,000–1,000,000") updates the value
+  // even if an earlier turn already seeded 500,000 into _pendingConfig.
+  // Also handle en-dash range format ("OMR 25,000–1,000,000" / "OMR 25K–1M").
+  const amtRangeTo  = plain.match(/omr\s*[\d,]+\s*to\s*omr\s*([\d,]+)/i);           // "omr X to omr Y"
+  const amtRangeDash = plain.match(/omr\s*[\d,.k]+\s*[–\-]\s*omr?\s*([\d,.]+)\s*m?\b/i); // "omr X – omr Y" or "X – YM"
+  const amtDashM     = plain.match(/omr\s*[\d,k]+\s*[–\-]\s*([\d.]+)\s*m\b/i);      // "omr 25K – 1M"
+  const amtSingle    = plain.match(/(?:max(?:imum)?|up\s+to)\s+omr\s*([\d,]+)/i);
+  // Priority: range with 'to' > range with dash > single value
+  const amtRaw = amtRangeTo || amtDashM || amtRangeDash || amtSingle;
+  if (amtRaw) {
+    const raw = amtRaw[1].replace(/,/g, '');
+    const v = raw.toLowerCase().endsWith('m') || amtDashM
+      ? parseFloat(raw) * 1000000
+      : parseInt(raw);
+    if (v >= 10000 && v <= 5000000) pendAmt('max_amount', v);
+  }
 
   // min_amount
-  const minAmt = plain.match(/omr\s*([\d,]+)\s*to\s*omr\s*[\d,]+/i);
-  if (minAmt) { const v = parseInt(minAmt[1].replace(/,/g,'')); if (v >= 1000 && v <= 200000) pend('min_amount', v); }
+  const minAmt = plain.match(/omr\s*([\d,]+)\s*(?:to|\u2013|-)\s*omr\s*[\d,]/i)   // "omr X to/– omr Y"
+              || plain.match(/omr\s*([\d,]+)\s*(?:to|\u2013|-)\s*[\d]/i);           // "omr X – Y"
+  if (minAmt) { const v = parseInt(minAmt[1].replace(/,/g,'')); if (v >= 1000 && v <= 200000) pendAmt('min_amount', v); }
 
   // max_term — match "up to 25 years", "max 25yr", "5–25 years" (take the LAST/larger number)
   const maxTRange = plain.match(/\d{1,2}\s*[–\-]\s*(\d{1,2})\s*years?/i);          // "5–25 years" → 25
