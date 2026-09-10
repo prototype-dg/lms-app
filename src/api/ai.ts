@@ -93,13 +93,14 @@ STAGE 1 — PRODUCT MODEL (ask these sub-questions in order):
   1d. Product name (suggest one, e.g. "Sohar Green Home Finance – GSAS Premium").
   Emit set_field for name and description once confirmed.
 
-STAGE 2 — CORE CONFIGURATION (ask these sub-questions in order):
-  2a. Base rate and pricing structure. Give specific recommendation with CBO ceiling reference.
-  2b. ESG-specific discount tiers (if green product): GSAS score bands → rate discounts.
-  2c. LTV bands: standard vs green (CBO allows up to 90% for green). First home vs non-first.
-  2d. DBR: standard 50%, green buffer 55% (CBO Circular 2026-12 §3.2 allows relaxed DBR for green products).
-  2e. Term range (min/max years) and amount range (OMR min/max).
-  2f. Fees: arrangement fee (suggest 1% capped at OMR 500), early settlement penalty (per CBO rules: 1% max).
+STAGE 2 — CORE CONFIGURATION (THREE focused questions — one per turn):
+  Q1 (ONE turn — ALL standard loan parameters together): Base rate · LTV bands · DBR · term range · amount range.
+     Give specific recommendations for all of them in ONE message. User confirms or adjusts any.
+     If user requests a change (e.g. "increase max to 1M"), echo ALL current Q1 params with change applied and re-ask "Confirmed — all of these?" — do NOT advance until user confirms the full set.
+     Recommended defaults: rate 5.25%, LTV 90%/80%, DBR 55% (green) or 50% (standard), term 5–25yr, OMR 25K–500K.
+  Q2 (ONE turn — ESG tiers only, green products only): GSAS score bands → rate discounts (Gold ≥85 → −0.75%, Silver 70–84 → −0.5%).
+     Skip entirely for non-green products — go straight from Q1 to fees.
+  Q3 (ONE turn — fees only): Arrangement fee (1% capped OMR 500), early settlement (1% max per CBO), valuation fee, GSAS re-validation fee (green only).
   Emit set_field events for each confirmed value.
 
 STAGE 3 — ELIGIBILITY RULES (for Green Home Loan, generate ALL of these):
@@ -1506,16 +1507,21 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
     m.includes('ecohome') || m.includes('confirm the name') || m.includes('shall i use') ||
     m.includes('for the product name') || m.includes('i suggest') && m.includes('name')
   )
-  const hasAskedStage2  = assistantMsgs.some(m => m.includes('base rate') || m.includes('pricing structure') || m.includes('stage 2') || m.includes('5.25%'))
-  const hasAskedStage2b = assistantMsgs.some(m => m.includes('discount tier') || m.includes('green discount') || m.includes('gsas score band'))
-  const hasAskedStage2c = assistantMsgs.some(m =>
-    m.includes('ltv band') || m.includes('loan-to-value') ||
-    (m.includes('ltv') && m.includes('first home') && m.includes('subsequent')) ||
-    m.includes('90% ltv') || m.includes('ltv settings')
+  // ── Stage 2 detection flags (3-question design) ────────────────────────
+  // Q1 = ALL standard params (rate + LTV + DBR + terms + amounts) in ONE turn
+  // Q2 = ESG discount tiers (green products only) in ONE turn
+  // Q3 = Fees in ONE turn
+  // hasAskedStage2 fires when Q1 has been presented (the combined standard-params question).
+  const hasAskedStage2  = assistantMsgs.some(m =>
+    // Q1 unique marker: combined question references rate AND term AND ltv together
+    (m.includes('base rate') && m.includes('ltv') && m.includes('dbr') && m.includes('term')) ||
+    // Fallback: Stage 2 heading with rate or legacy 5.25% references
+    (m.includes('stage 2') && m.includes('core configuration') && m.includes('base rate')) ||
+    m.includes('all standard loan parameters')
   )
-  const hasAskedStage2d = assistantMsgs.some(m => m.includes('dbr') && (m.includes('55%') || m.includes('stage 2') || m.includes('debt burden')))
-  const hasAskedStage2e = assistantMsgs.some(m => m.includes('term range') || m.includes('amount range') || m.includes('omr 10,000') || m.includes('min/max'))
-  const hasAskedStage2f = assistantMsgs.some(m => m.includes('arrangement fee') || m.includes('early settlement') || m.includes('fee'))
+  const hasAskedStage2b = assistantMsgs.some(m => m.includes('discount tier') || m.includes('green discount') || m.includes('gsas score band'))
+  // hasAskedStage2c / 2d / 2e removed — all standard params now in ONE turn (Q1)
+  const hasAskedStage2f = assistantMsgs.some(m => m.includes('arrangement fee') || (m.includes('early settlement') && m.includes('1%')) || m.includes('gsas re-validation fee'))
   // Stage 3 QUESTION marker — must be UNIQUE to the stage-3 question turn only.
   // Do NOT use 'eligibility rules' or 'workflow' — Stage 3 COMPLETION message also contains both.
   // Use '17 eligibility rules' (question) or 'gsas minimum' (question text).
@@ -1668,27 +1674,25 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
     }
   }
 
-  // ── STAGE 2a: Base rate and pricing ──────────────────────────────────────
+  // ── STAGE 2 Q1: ALL standard params in ONE focused question ─────────────
+  // Covers: base_rate + LTV + DBR + term_range + amount_range all in ONE message.
   if (hasAskedStage1d && !hasAskedStage2) {
     const nameConfirmed = isYes ? 'Sohar Green Home Finance – GSAS' : (message.length > 3 && message.length < 80 ? message.trim() : 'Sohar Green Home Finance – GSAS')
     return {
       message: `✅ <strong>Stage 1 complete.</strong> Product model defined — "${nameConfirmed}", conventional, cloned from Standard Home Loan.<br><br>` +
         `<strong>Stage 2 — Core Configuration</strong><br><br>` +
-        `<strong>Pricing structure recommendation:</strong><br><br>` +
-        `Base rate: <strong>5.25%</strong> per annum (10 bps below Standard Home Loan at 5.35%) — a modest incentive for green adoption without significant NIM compression.<br><br>` +
-        `CBO Circular 2026-12 §3.1 permits preferential pricing for green-certified products. Our current cost of funds is ~3.8%, giving a spread of ~1.45% — acceptable for this asset class.<br><br>` +
-        `<strong>Shall I set the base rate at 5.25%, or would you like to adjust it?</strong>`,
+        `Here are my recommendations for all standard loan parameters — confirm or adjust any:<br><br>` +
+        `<strong>Base rate:</strong> <strong>5.25%</strong> p.a. (10 bps below Standard Home Loan 5.35% — modest green incentive; CBO Circular 2026-12 §3.1 permits preferential green pricing; cost of funds ~3.8%, spread ~1.45%)<br>` +
+        `<strong>LTV:</strong> <strong>90%</strong> first home · <strong>80%</strong> subsequent/expat (CBO Circular BM/REG/2019/74 §7 — GSAS certification provides quality collateral assurance)<br>` +
+        `<strong>DBR:</strong> <strong>55%</strong> of net income (CBO Circular 2026-12 §3.2 allows +5% relaxation for green-certified financing — standard is 50%)<br>` +
+        `<strong>Term:</strong> <strong>5 – 25 years</strong> (CBO minimum 5yr, CBO ceiling 25yr for residential mortgages)<br>` +
+        `<strong>Loan amount:</strong> <strong>OMR 25,000 – 500,000</strong> (minimum keeps GSAS certification cost ~OMR 3–8K economical; above 500K → Commercial Real Estate)<br><br>` +
+        `<strong>Shall I apply all of these, or would you like to adjust any parameter?</strong>`,
       current_stage: 2, show_roadmap: false,
-      // 'create_draft' tells frontend to call POST /api/v1/ai/products/create-draft
-      // and store the returned product_id as aiDraftProductId.
       action: 'create_draft',
-      // draft_hint carries Stage 1 metadata so frontend can pass it to create-draft
       draft_hint: {
-        name: nameConfirmed,
-        clone_from_id: 'p001',
-        category: 'home_loan',
-        segment: ctxGreen ? 'hnw' : 'retail',
-        structure: 'conventional',
+        name: nameConfirmed, clone_from_id: 'p001', category: 'home_loan',
+        segment: ctxGreen ? 'hnw' : 'retail', structure: 'conventional',
         description: 'Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on sustainability score. Supports Oman Vision 2040 and CBO green finance objectives.',
       },
       ui_events: [
@@ -1701,104 +1705,129 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
     }
   }
 
-  // ── STAGE 2b: Green discount tiers ───────────────────────────────────────
-  if (hasAskedStage2 && !hasAskedStage2b && ctxGreen) {
+  // ── Stage 2 Q1 param helpers (used by change-echo block, Q2, Q3, and Stage 3 DB write) ─
+  // Parse any updated values from the current user message; fall back to defaults.
+  const updBaseRate = (() => {
+    const m = lower.match(/(?:base\s*)?rate[^\d]*(\d+(?:\.\d+)?)/)
+    if (m) return parseFloat(m[1])
+    if (/5\.\d\d/.test(lower)) { const n = lower.match(/5\.(\d\d)/); if (n) return parseFloat('5.' + n[1]) }
+    return null
+  })()
+  const updMaxLtv   = (() => { const m = lower.match(/ltv[^\d]*(\d+)/); if (m) return parseInt(m[1]); const m2 = lower.match(/(\d+)%?\s*ltv/); return m2 ? parseInt(m2[1]) : null })()
+  const updMaxDbr   = (() => { const m = lower.match(/dbr[^\d]*(\d+)/); if (m) return parseInt(m[1]); const m2 = lower.match(/(\d+)%?\s*dbr/); return m2 ? parseInt(m2[1]) : null })()
+  const updMinTerm  = (() => { const m = lower.match(/min(?:imum)?\s*term[^\d]*(\d+)/); return m ? parseInt(m[1]) : null })()
+  const updMaxTerm  = (() => { const m = lower.match(/max(?:imum)?\s*term[^\d]*(\d+)/); return m ? parseInt(m[1]) : null })()
+  const updMinAmount = (() => {
+    const m = lower.match(/min(?:imum)?[^\d]*(\d[\d,]*)/);
+    if (m) { const v = parseInt(m[1].replace(/,/g, '')); if (v >= 1000) return v }
+    return null
+  })()
+  const updMaxAmount = (() => {
+    if (lower.includes('1m') || lower.includes('1 million') || lower.includes('1,000,000')) return 1000000
+    if (/\b750k\b|750,000/.test(lower)) return 750000
+    if (/\b600k\b|600,000/.test(lower)) return 600000
+    const m = lower.match(/max(?:imum)?[^\d]*(\d[\d,]*)/);
+    if (m) { const v = parseInt(m[1].replace(/,/g, '')); if (v >= 10000) return v }
+    return null
+  })()
+  // Current Q1 params (defaults overridden by anything extracted above)
+  const q1BaseRate = updBaseRate ?? 5.25
+  const q1MaxLtv   = updMaxLtv   ?? 90
+  const q1MaxDbr   = updMaxDbr   ?? 55
+  const q1MinTerm  = updMinTerm  ?? 5
+  const q1MaxTerm  = updMaxTerm  ?? 25
+  const q1MinAmt   = updMinAmount ?? 25000
+  const q1MaxAmt   = updMaxAmount ?? 500000
+
+  // Helper: detect a change-request (digit or adjustment keyword, not a plain yes)
+  const isParamChangeRequest = !isYes && (
+    lower.includes('increase') || lower.includes('decrease') || lower.includes('reduce') ||
+    lower.includes('change') || lower.includes('set ') || lower.includes('make it') ||
+    lower.includes('adjust') || lower.includes('raise') || lower.includes('lower') ||
+    lower.includes('higher') || lower.includes('more') || lower.includes('less') ||
+    /\d/.test(lower)
+  )
+
+  // ── STAGE 2 Q1 REPEAT: user changed a value within standard params ─────────
+  // Echo ALL current Q1 params with the change applied; re-ask for full confirmation.
+  if (hasAskedStage2 && !hasAskedStage2b && !hasAskedStage2f && isParamChangeRequest &&
+      !(lower.includes('discount tier') || lower.includes('arrangement fee') || lower.includes('early settlement'))) {
+    const fmtAmt = (v: number) => v >= 1000000 ? `OMR ${(v/1000000).toFixed(v%1000000===0?0:1)}M` : `OMR ${v.toLocaleString()}`
     return {
-      message: `Base rate set at 5.25%. Confirmed.<br><br>` +
+      message: `Noted — updating that parameter. Here are all standard loan parameters with your change applied:<br><br>` +
+        `<strong>Base rate:</strong> <strong>${q1BaseRate}%</strong> p.a.<br>` +
+        `<strong>LTV:</strong> <strong>${q1MaxLtv}%</strong> first home · <strong>${Math.min(q1MaxLtv, 80)}%</strong> subsequent/expat<br>` +
+        `<strong>DBR:</strong> <strong>${q1MaxDbr}%</strong> of net income<br>` +
+        `<strong>Term:</strong> <strong>${q1MinTerm} – ${q1MaxTerm} years</strong><br>` +
+        `<strong>Loan amount:</strong> <strong>${fmtAmt(q1MinAmt)} – ${fmtAmt(q1MaxAmt)}</strong><br><br>` +
+        `<strong>Confirmed — shall I apply all of these, or is there anything else to adjust?</strong>`,
+      current_stage: 2, show_roadmap: false, action: 'none',
+      ui_events: [
+        { type: 'set_tab', tab: 'pricing' },
+        { type: 'set_field', field: 'base_rate', value: q1BaseRate },
+        { type: 'set_field', field: 'max_ltv', value: q1MaxLtv },
+        { type: 'set_field', field: 'max_dbr', value: q1MaxDbr },
+        { type: 'set_field', field: 'min_term', value: q1MinTerm },
+        { type: 'set_field', field: 'max_term', value: q1MaxTerm },
+        { type: 'set_field', field: 'min_amount', value: q1MinAmt },
+        { type: 'set_field', field: 'max_amount', value: q1MaxAmt },
+        { type: 'highlight_field', field: updMaxAmount ? 'max_amount' : updBaseRate ? 'base_rate' : updMaxLtv ? 'max_ltv' : 'max_amount' },
+      ],
+      product_draft: null, rules_draft: null, schema_draft: null,
+    }
+  }
+
+  // ── STAGE 2 Q2: ESG discount tiers (green products only, one focused question) ──
+  // Entered when Q1 has been confirmed (isYes), green product, ESG not yet asked.
+  if (hasAskedStage2 && isYes && !hasAskedStage2b && ctxGreen && !hasAskedStage2f) {
+    return {
+      message: `Standard parameters confirmed — ${q1BaseRate}% rate, ${q1MaxLtv}% LTV, ${q1MaxDbr}% DBR, ${q1MinTerm}–${q1MaxTerm}yr, OMR ${q1MinAmt.toLocaleString()}–${q1MaxAmt.toLocaleString()}.<br><br>` +
         `<strong>ESG Green Discount tiers</strong> — this is what differentiates a real green product from a standard one:<br><br>` +
-        `&bull; <strong>GSAS Score ≥ 85 (Gold/Platinum)</strong> → −0.75% discount → effective rate <strong>4.50%</strong><br>` +
-        `&bull; <strong>GSAS Score 70–84 (Silver)</strong> → −0.50% discount → effective rate <strong>4.75%</strong><br>` +
+        `&bull; <strong>GSAS Score ≥ 85 (Gold/Platinum)</strong> → −0.75% discount → effective rate <strong>${(q1BaseRate - 0.75).toFixed(2)}%</strong><br>` +
+        `&bull; <strong>GSAS Score 70–84 (Silver)</strong> → −0.50% discount → effective rate <strong>${(q1BaseRate - 0.50).toFixed(2)}%</strong><br>` +
         `&bull; <strong>GSAS Score &lt; 70</strong> → <span style="color:#f87171">NOT eligible</span> (product requires minimum Silver certification)<br><br>` +
-        `These tiers incentivise customers to choose higher-rated green properties. Oman's GORD (Gulf Organisation for Research & Development) manages GSAS ratings under OS GSO 3000:2025.<br><br>` +
+        `These tiers incentivise customers to choose higher-rated green properties. Oman's GORD manages GSAS ratings under OS GSO 3000:2025.<br><br>` +
         `<strong>Should I apply these discount tiers, or do you want different GSAS score thresholds or discount spreads?</strong>`,
       current_stage: 2, show_roadmap: false, action: 'none',
       ui_events: [
         { type: 'set_tab', tab: 'pricing' },
-        { type: 'set_field', field: 'base_rate', value: 5.25 },
+        { type: 'set_field', field: 'base_rate', value: q1BaseRate },
+        { type: 'set_field', field: 'max_ltv', value: q1MaxLtv },
+        { type: 'set_field', field: 'max_dbr', value: q1MaxDbr },
+        { type: 'set_field', field: 'min_term', value: q1MinTerm },
+        { type: 'set_field', field: 'max_term', value: q1MaxTerm },
+        { type: 'set_field', field: 'min_amount', value: q1MinAmt },
+        { type: 'set_field', field: 'max_amount', value: q1MaxAmt },
         { type: 'highlight_field', field: 'base_rate' },
       ],
       product_draft: null, rules_draft: null, schema_draft: null,
     }
   }
 
-  // ── STAGE 2c: LTV bands ───────────────────────────────────────────────────
-  if ((hasAskedStage2b || (hasAskedStage2 && !ctxGreen)) && !hasAskedStage2c) {
+  // ── STAGE 2 Q3: Fees (one focused question for both green and non-green) ──────
+  // Green path:     Q2 (ESG) confirmed → fees
+  // Non-green path: Q1 confirmed → fees directly
+  const readyForFees = !hasAskedStage2f && (
+    (hasAskedStage2b) ||                          // green: after ESG confirmed
+    (hasAskedStage2 && isYes && !ctxGreen)        // non-green: after standard params confirmed
+  )
+  if (readyForFees) {
     return {
-      message: `Green discount tiers confirmed — 0.75% for Gold/Platinum (≥85), 0.5% for Silver (70–84).<br><br>` +
-        `<strong>Loan-to-Value (LTV) bands:</strong><br><br>` +
-        `Under CBO Circular BM/REG/2019/74, residential mortgages are capped at:<br>` +
-        `&bull; <strong>First home purchase</strong>: up to <strong>90% LTV</strong><br>` +
-        `&bull; <strong>Second/subsequent property</strong>: up to <strong>80% LTV</strong><br>` +
-        `&bull; <strong>Expat customers</strong>: max <strong>80% LTV</strong> regardless of purchase number<br><br>` +
-        `For a green home loan, I recommend keeping the CBO maximum (90% for first home, 80% otherwise) — the GSAS certification already provides quality collateral assurance through certified construction standards.<br><br>` +
-        `<strong>Shall I configure LTV at 90% (first home) / 80% (subsequent/expat), or do you want stricter limits?</strong>`,
+      message: (ctxGreen ? `ESG discount tiers confirmed — 0.75% Gold/Platinum (≥85), 0.5% Silver (70–84).` : `Standard loan parameters confirmed.`) +
+        `<br><br><strong>Fee structure:</strong><br><br>` +
+        `Under CBO Consumer Protection Circular 2018/2, all fees must be disclosed upfront. Recommended:<br><br>` +
+        `&bull; <strong>Arrangement fee</strong>: 1% of loan amount, capped at OMR 500 — standard market rate${ctxGreen ? ', waived for GSAS Platinum (≥90 score) as an additional green incentive' : ''}<br>` +
+        `&bull; <strong>Early settlement penalty</strong>: 1% of outstanding balance (CBO maximum allowed)${ctxGreen ? ' — or waived after year 5 to encourage refinancing into newer green products' : ''}<br>` +
+        `&bull; <strong>Valuation fee</strong>: actual cost (OMR 200–800 depending on property) — pass-through to customer<br>` +
+        (ctxGreen ? `&bull; <strong>GSAS re-validation fee</strong>: OMR 150 (charged at certificate renewal, every 3 years) — new ESG-specific fee<br>` : '') +
+        `<br><strong>Should I apply this fee structure, or modify any of these?</strong>`,
       current_stage: 2, show_roadmap: false, action: 'none',
       ui_events: [
         { type: 'set_field', field: 'gsas_min_score', value: 70 },
         { type: 'set_field', field: 'gsas_premium_score', value: 85 },
-        { type: 'set_field', field: 'green_discount_premium', value: 0.75 },
-        { type: 'set_field', field: 'green_discount_standard', value: 0.5 },
-        { type: 'highlight_field', field: 'green_discount_premium' },
-      ],
-      product_draft: null, rules_draft: null, schema_draft: null,
-    }
-  }
-
-  // ── STAGE 2d: DBR ─────────────────────────────────────────────────────────
-  if (hasAskedStage2c && !hasAskedStage2d) {
-    return {
-      message: `LTV set: 90% first home, 80% subsequent/expat. Confirmed.<br><br>` +
-        `<strong>Debt Burden Ratio (DBR) limit:</strong><br><br>` +
-        `Standard CBO maximum is 50% of net monthly income. However, <strong>CBO Circular 2026-12 §3.2 explicitly allows an enhanced DBR of up to 55% for green-certified financing products</strong> — a 5% relaxation designed to incentivise green uptake.<br><br>` +
-        `My recommendation:<br>` +
-        `&bull; <strong>55% DBR</strong> for green-certified loans (using the CBO allowance)<br>` +
-        `&bull; <strong>50% DBR</strong> standard safety floor for all other cases<br><br>` +
-        `This gives customers slightly more headroom when purchasing green properties, directly supporting adoption.<br><br>` +
-        `<strong>Shall I set DBR at 55% for this green product, or do you prefer the standard 50%?</strong>`,
-      current_stage: 2, show_roadmap: false, action: 'none',
-      ui_events: [
-        { type: 'set_field', field: 'max_ltv', value: 90 },
-        { type: 'highlight_field', field: 'max_ltv' },
-      ],
-      product_draft: null, rules_draft: null, schema_draft: null,
-    }
-  }
-
-  // ── STAGE 2e: Term and amount ranges ─────────────────────────────────────
-  if (hasAskedStage2d && !hasAskedStage2e) {
-    return {
-      message: `DBR at 55% confirmed — using CBO green finance allowance (Circular 2026-12 §3.2).<br><br>` +
-        `<strong>Term and amount ranges:</strong><br><br>` +
-        `&bull; <strong>Term</strong>: min <strong>5 years</strong>, max <strong>25 years</strong> (CBO ceiling for residential mortgages; CBO minimum for mortgages is 5 years). For green, no reason to shorten — longer terms support larger green property purchases.<br>` +
-        `&bull; <strong>Minimum loan</strong>: <strong>OMR 25,000</strong> — below this, the GSAS certification cost (~OMR 3,000–8,000) makes the product uneconomical for the customer<br>` +
-        `&bull; <strong>Maximum loan</strong>: <strong>OMR 500,000</strong> — our standard residential cap; above this goes to Commercial Real Estate<br><br>` +
-        `<strong>Are these ranges acceptable — 5–25 years, OMR 25K–500K — or do you want to adjust?</strong>`,
-      current_stage: 2, show_roadmap: false, action: 'none',
-      ui_events: [
-        { type: 'set_field', field: 'max_dbr', value: 55 },
-        { type: 'highlight_field', field: 'max_dbr' },
-      ],
-      product_draft: null, rules_draft: null, schema_draft: null,
-    }
-  }
-
-  // ── STAGE 2f: Fees ────────────────────────────────────────────────────────
-  if (hasAskedStage2e && !hasAskedStage2f) {
-    return {
-      message: `Term and amounts set: 5–25 years, OMR 25,000–500,000. Confirmed.<br><br>` +
-        `<strong>Fee structure:</strong><br><br>` +
-        `Under CBO Consumer Protection Circular 2018/2, all fees must be disclosed upfront. Recommended:<br><br>` +
-        `&bull; <strong>Arrangement fee</strong>: 1% of loan amount, capped at OMR 500 — standard market rate, waived for GSAS Platinum (≥90 score) as an additional green incentive<br>` +
-        `&bull; <strong>Early settlement penalty</strong>: 1% of outstanding balance (CBO maximum allowed) — or waived after year 5 to encourage refinancing into newer green products<br>` +
-        `&bull; <strong>Valuation fee</strong>: actual cost (OMR 200–800 depending on property) — pass-through to customer<br>` +
-        `&bull; <strong>GSAS re-validation fee</strong>: OMR 150 (charged at certificate renewal, every 3 years) — new ESG-specific fee<br><br>` +
-        `<strong>Should I apply this fee structure, or modify any of these?</strong>`,
-      current_stage: 2, show_roadmap: false, action: 'none',
-      ui_events: [
-        { type: 'set_field', field: 'min_amount', value: 25000 },
-        { type: 'set_field', field: 'max_amount', value: 500000 },
-        { type: 'set_field', field: 'max_term', value: 25 },
-        { type: 'highlight_field', field: 'max_amount' },
+        { type: 'set_field', field: 'green_discount_premium', value: ctxGreen ? 0.75 : 0 },
+        { type: 'set_field', field: 'green_discount_standard', value: ctxGreen ? 0.5 : 0 },
+        { type: 'highlight_field', field: ctxGreen ? 'green_discount_premium' : 'max_amount' },
       ],
       product_draft: null, rules_draft: null, schema_draft: null,
     }
@@ -1806,9 +1835,10 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
 
   // ── STAGE 3: Eligibility Rules ────────────────────────────────────────────
   if (hasAskedStage2f && !hasAskedStage3) {
+    const fmtAmt2 = (v: number) => v >= 1000000 ? `OMR ${(v/1000000).toFixed(v%1000000===0?0:1)}M` : `OMR ${(v/1000).toFixed(0)}K`
     return {
       message: `✅ <strong>Stage 2 complete.</strong> Full pricing and configuration set:<br>` +
-        `Rate 5.25% · Green discount 0.75%/0.5% · LTV 90/80% · DBR 55% · OMR 25K–500K · Term 5–25yr<br><br>` +
+        `Rate ${q1BaseRate}%${ctxGreen ? ` · Green discount ${(q1BaseRate-0.75).toFixed(2)}%/${(q1BaseRate-0.50).toFixed(2)}%` : ''} · LTV ${q1MaxLtv}/${Math.min(q1MaxLtv,80)}% · DBR ${q1MaxDbr}% · ${fmtAmt2(q1MinAmt)}–${fmtAmt2(q1MaxAmt)} · Term ${q1MinTerm}–${q1MaxTerm}yr<br><br>`+
         `<strong>Stage 3 — Eligibility Rules</strong><br><br>` +
         `I'll now generate <strong>17 eligibility rules</strong> covering 5 categories: credit risk, collateral, ESG/green, income & employment, and documentation. All rules are cited against specific CBO circulars and OS GSO standards.<br><br>` +
         `One key decision before I generate: <strong>GSAS minimum score</strong>:<br>` +
@@ -1822,10 +1852,10 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
       stage_update_hint: {
         stage: 2,
         fields: {
-          base_rate: 5.25, max_ltv: 90, max_dbr: 55, green_dbr: 55,
-          min_term: 5, max_term: 25, min_amount: 25000, max_amount: 500000,
+          base_rate: q1BaseRate, max_ltv: q1MaxLtv, max_dbr: q1MaxDbr, green_dbr: q1MaxDbr,
+          min_term: q1MinTerm, max_term: q1MaxTerm, min_amount: q1MinAmt, max_amount: q1MaxAmt,
           gsas_min_score: 70, gsas_premium_score: 85,
-          green_discount_premium: 0.75, green_discount_standard: 0.5,
+          green_discount_premium: ctxGreen ? 0.75 : 0, green_discount_standard: ctxGreen ? 0.5 : 0,
         },
       },
       ui_events: [], product_draft: null, rules_draft: null, schema_draft: null,
@@ -2058,7 +2088,7 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
       }
       // Check assistant confirmation messages for the last EXPLICITLY CONFIRMED amount.
       // Scan newest-first so the most recent assistant confirmation wins.
-      // Deliberately skip the scripted Stage 2e "OMR 25,000–500,000" fallback line
+      // Deliberately skip the scripted Stage 2 Q1 recommendation fallback line
       // by only matching confirmation-style phrases, not recommendation phrases.
       for (let i = assistantMsgs.length - 1; i >= 0; i--) {
         const am = assistantMsgs[i]
@@ -2069,7 +2099,7 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         if (m) { const v = parseInt(m[1].replace(/,/g,'')); if (v >= 50000 && v <= 5000000) return v }
       }
       // Final fallback: only use 500,000 — do NOT scan full context since the scripted
-      // Stage 2e message always mentions "500,000" which would hide any user correction.
+      // Stage 2 Q1 message always mentions "500,000" which would hide any user correction.
       return 500000
     })()
 

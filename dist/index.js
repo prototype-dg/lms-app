@@ -136,7 +136,7 @@ var h = (e, t, n) => {
 			} else r += "/" + e;
 		}
 	}), n.filter((e, t, n) => n.indexOf(e) === t);
-}, A = (e) => e.indexOf("%") === -1 ? e : w(e, ne), j = (e) => (e.indexOf("+") !== -1 && (e = e.replace(/\+/g, " ")), A(e)), M = (e, t, n) => {
+}, A = (e) => e.indexOf("%") === -1 ? e : w(e, F), j = (e) => (e.indexOf("+") !== -1 && (e = e.replace(/\+/g, " ")), A(e)), M = (e, t, n) => {
 	let r = e.indexOf("#", 8);
 	r !== -1 && (e = e.slice(0, r));
 	let i;
@@ -166,7 +166,7 @@ var h = (e, t, n) => {
 		r === -1 ? c = "" : (c = e.slice(r + 1, t === -1 ? void 0 : t), i && (c = j(c))), n ? (a[s] && Array.isArray(a[s]) || (a[s] = []), a[s].push(c)) : a[s] ??= c;
 	}
 	return t ? a[t] : a;
-}, ee = M, te = (e, t) => M(e, t, !0), ne = decodeURIComponent, re = class {
+}, N = M, P = (e, t) => M(e, t, !0), F = decodeURIComponent, I = class {
 	raw;
 	#e;
 	#t;
@@ -195,10 +195,10 @@ var h = (e, t, n) => {
 		return this.#t[1] ? this.#t[1][e] : e;
 	}
 	query(e) {
-		return ee(this.url, e);
+		return N(this.url, e);
 	}
 	queries(e) {
-		return te(this.url, e);
+		return P(this.url, e);
 	}
 	header(e) {
 		if (e) return this.raw.headers.get(e) ?? void 0;
@@ -255,14 +255,14 @@ var h = (e, t, n) => {
 	get routePath() {
 		return this.#t[0].map(([[, e]]) => e)[this.routeIndex].path;
 	}
-}, ie = {
+}, L = {
 	Stringify: 1,
 	BeforeStream: 2,
 	Stream: 3
-}, ae = (e, t) => {
+}, R = (e, t) => {
 	let n = new String(e);
 	return n.isEscaped = !0, n.callbacks = t, n;
-}, oe = async (e, t, n, r, i) => {
+}, z = async (e, t, n, r, i) => {
 	typeof e == "object" && !(e instanceof String) && (e instanceof Promise || (e = e.toString()), e instanceof Promise && (e = await e));
 	let a = e.callbacks;
 	if (!a?.length) return Promise.resolve(e);
@@ -271,12 +271,12 @@ var h = (e, t, n) => {
 		phase: t,
 		buffer: i,
 		context: r
-	}))).then((e) => Promise.all(e.filter(Boolean).map((e) => oe(e, t, !1, r, i))).then(() => i[0]));
-	return n ? ae(await o, a) : o;
-}, se = "text/plain; charset=UTF-8", ce = (e, t) => ({
+	}))).then((e) => Promise.all(e.filter(Boolean).map((e) => z(e, t, !1, r, i))).then(() => i[0]));
+	return n ? R(await o, a) : o;
+}, ee = "text/plain; charset=UTF-8", te = (e, t) => ({
 	"Content-Type": e,
 	...t
-}), N = (e, t) => new Response(e, t), le = class {
+}), ne = (e, t) => new Response(e, t), re = class {
 	#e;
 	#t;
 	env = {};
@@ -296,7 +296,7 @@ var h = (e, t, n) => {
 		this.#e = e, t && (this.#i = t.executionCtx, this.env = t.env, this.#c = t.notFoundHandler, this.#d = t.path, this.#u = t.matchResult);
 	}
 	get req() {
-		return this.#t ??= new re(this.#e, this.#d, this.#u), this.#t;
+		return this.#t ??= new I(this.#e, this.#d, this.#u), this.#t;
 	}
 	get event() {
 		if (this.#i && "respondWith" in this.#i) return this.#i;
@@ -307,11 +307,11 @@ var h = (e, t, n) => {
 		throw Error("This context has no ExecutionContext");
 	}
 	get res() {
-		return this.#a ||= N(null, { headers: this.#l ??= new Headers() });
+		return this.#a ||= ne(null, { headers: this.#l ??= new Headers() });
 	}
 	set res(e) {
 		if (this.#a && e) {
-			e = N(e.body, e);
+			e = ne(e.body, e);
 			for (let [t, n] of this.#a.headers.entries()) if (t !== "content-type") {
 				if (t === "set-cookie") {
 					let t = this.#a.headers.getSetCookie();
@@ -329,7 +329,7 @@ var h = (e, t, n) => {
 		this.#s = e;
 	};
 	header = (e, t, n) => {
-		this.finalized && (this.#a = N(this.#a.body, this.#a));
+		this.finalized && (this.#a = ne(this.#a.body, this.#a));
 		let r = this.#a ? this.#a.headers : this.#l ??= new Headers();
 		t === void 0 ? r.delete(e) : n?.append ? r.append(e, t) : r.set(e, t);
 	};
@@ -366,25 +366,25 @@ var h = (e, t, n) => {
 				}
 			}
 		}
-		return N(e, {
+		return ne(e, {
 			status: typeof t == "number" ? t : t?.status ?? this.#r,
 			headers: r ?? n
 		});
 	}
 	newResponse = (...e) => this.#f(...e);
 	body = (e, t, n) => this.#f(e, t, n);
-	text = (e, t, n) => !this.#l && !this.#r && !t && !n && !this.finalized ? new Response(e) : this.#f(e, t, ce(se, n));
-	json = (e, t, n) => this.#f(JSON.stringify(e), t, ce("application/json", n));
+	text = (e, t, n) => !this.#l && !this.#r && !t && !n && !this.finalized ? new Response(e) : this.#f(e, t, te(ee, n));
+	json = (e, t, n) => this.#f(JSON.stringify(e), t, te("application/json", n));
 	html = (e, t, n) => {
-		let r = (e) => this.#f(e, t, ce("text/html; charset=UTF-8", n));
-		return typeof e == "object" ? oe(e, ie.Stringify, !1, {}).then(r) : r(e);
+		let r = (e) => this.#f(e, t, te("text/html; charset=UTF-8", n));
+		return typeof e == "object" ? z(e, L.Stringify, !1, {}).then(r) : r(e);
 	};
 	redirect = (e, t) => {
 		let n = String(e);
 		return this.header("Location", /[^\x00-\xFF]/.test(n) ? encodeURI(n) : n), this.newResponse(null, t ?? 302);
 	};
-	notFound = () => (this.#c ??= () => N(), this.#c(this));
-}, ue = [
+	notFound = () => (this.#c ??= () => ne(), this.#c(this));
+}, ie = [
 	"get",
 	"post",
 	"put",
@@ -392,13 +392,13 @@ var h = (e, t, n) => {
 	"options",
 	"patch",
 	"query"
-], de = "Can not add a route since the matcher is already built.", fe = class extends Error {}, pe = "__COMPOSED_HANDLER", me = (e) => e.text("404 Not Found", 404), he = (e, t) => {
+], ae = "Can not add a route since the matcher is already built.", oe = class extends Error {}, se = "__COMPOSED_HANDLER", ce = (e) => e.text("404 Not Found", 404), le = (e, t) => {
 	if ("getResponse" in e) {
 		let n = e.getResponse();
 		return t.newResponse(n.body, n);
 	}
 	return console.error(e), t.text("Internal Server Error", 500);
-}, ge = class e {
+}, ue = class e {
 	get;
 	post;
 	put;
@@ -415,7 +415,7 @@ var h = (e, t, n) => {
 	#e = "/";
 	routes = [];
 	constructor(e = {}) {
-		[...ue, "all"].forEach((e) => {
+		[...ie, "all"].forEach((e) => {
 			this[e] = (t, ...n) => (typeof t == "string" ? this.#e = t : this.#r(e, this.#e, t), n.forEach((t) => {
 				this.#r(e, this.#e, t);
 			}), this);
@@ -440,13 +440,13 @@ var h = (e, t, n) => {
 		});
 		return t.errorHandler = this.errorHandler, t.#n = this.#n, t.routes = this.routes, t;
 	}
-	#n = me;
-	errorHandler = he;
+	#n = ce;
+	errorHandler = le;
 	route(e, t) {
 		let n = this.basePath(e);
 		return t.routes.map((e) => {
 			let r;
-			t.errorHandler === he ? r = e.handler : (r = async (n, r) => (await o([], t.errorHandler)(n, () => e.handler(n, r))).res, r[pe] = e.handler), n.#r(e.method, e.path, r, e.basePath);
+			t.errorHandler === le ? r = e.handler : (r = async (n, r) => (await o([], t.errorHandler)(n, () => e.handler(n, r))).res, r[se] = e.handler), n.#r(e.method, e.path, r, e.basePath);
 		}), this;
 	}
 	basePath(e) {
@@ -496,7 +496,7 @@ var h = (e, t, n) => {
 	}
 	#a(e, t, n, r) {
 		if (r === "HEAD") return (async () => new Response(null, await this.#a(e, t, n, "GET")))();
-		let i = this.getPath(e, { env: n }), a = this.router.match(r, i), s = new le(e, {
+		let i = this.getPath(e, { env: n }), a = this.router.match(r, i), s = new re(e, {
 			path: i,
 			matchResult: a,
 			env: n,
@@ -532,13 +532,13 @@ var h = (e, t, n) => {
 			e.respondWith(this.#a(e.request, e, void 0, e.request.method));
 		});
 	};
-}, P = () => /* @__PURE__ */ Object.create(null), _e = [];
-function ve(e, t) {
+}, B = () => /* @__PURE__ */ Object.create(null), de = [];
+function fe(e, t) {
 	let n = this.buildAllMatchers(), r = ((e, t) => {
 		let r = n[e] || n.ALL, i = r[2][t];
 		if (i) return i;
 		let a = t.match(r[0]);
-		if (!a) return [[], _e];
+		if (!a) return [[], de];
 		let o = a.indexOf("", 1);
 		return [r[1][o], a];
 	});
@@ -546,14 +546,14 @@ function ve(e, t) {
 }
 //#endregion
 //#region node_modules/hono/dist/router/reg-exp-router/node.js
-var ye = "[^/]+", be = "(?:|/.*)", F = /* @__PURE__ */ Symbol(), xe = /* @__PURE__ */ new Set(".\\+*[^]$()");
-function Se(e, t) {
+var pe = "[^/]+", me = "(?:|/.*)", he = /* @__PURE__ */ Symbol(), ge = /* @__PURE__ */ new Set(".\\+*[^]$()");
+function _e(e, t) {
 	return e.length === 1 ? t.length === 1 ? e < t ? -1 : 1 : -1 : t.length === 1 ? 1 : e === ".*" || e === "(?:|/.*)" ? t === "(?:|/.*)" ? -1 : 1 : t === ".*" || t === "(?:|/.*)" ? -1 : e === "[^/]+" ? 1 : t === "[^/]+" ? -1 : e.length === t.length ? e < t ? -1 : 1 : t.length - e.length;
 }
-var Ce = class e {
+var ve = class e {
 	#e;
 	#t;
-	#n = P();
+	#n = B();
 	insert(t, n, r, i, a) {
 		let o = this;
 		for (let n = 0, a = t.length; n < a; n++) {
@@ -564,43 +564,43 @@ var Ce = class e {
 			] : [
 				"",
 				"",
-				ye
+				pe
 			] : null : s === "/*" ? [
 				"",
 				"",
-				be
+				me
 			] : s.match(/^\:([^\{\}]+)(?:\{(.+)\})?$/), l;
 			if (c) {
 				let t = c[1], n = c[2] || "[^/]+";
-				if (t && c[2] && (n === ".*" || (n = n.replace(/^\((?!\?:)(?=[^)]+\)$)/, "(?:"), /\((?!\?:)/.test(n)) || n.length === 1 && xe.has(n))) throw F;
+				if (t && c[2] && (n === ".*" || (n = n.replace(/^\((?!\?:)(?=[^)]+\)$)/, "(?:"), /\((?!\?:)/.test(n)) || n.length === 1 && ge.has(n))) throw he;
 				if (l = o.#n[n], !l) {
 					if (n !== ".*" && n !== "(?:|/.*)") {
-						for (let e in o.#n) if ((n.length > 1 || e.length > 1) && e !== ".*" && e !== "(?:|/.*)") throw F;
+						for (let e in o.#n) if ((n.length > 1 || e.length > 1) && e !== ".*" && e !== "(?:|/.*)") throw he;
 					}
 					l = o.#n[n] = new e();
 				}
 				t !== "" && (l.#t ??= i.varIndex++, r.push([t, l.#t]));
 			} else if (l = o.#n[s], !l) {
-				for (let e in o.#n) if (e.length > 1 && e !== ".*" && e !== "(?:|/.*)") throw F;
+				for (let e in o.#n) if (e.length > 1 && e !== ".*" && e !== "(?:|/.*)") throw he;
 				l = o.#n[s] = new e();
 			}
 			o = l;
 		}
-		if (o.#e !== void 0) throw F;
+		if (o.#e !== void 0) throw he;
 		o.#e = a ? -1 : n;
 	}
 	buildRegExpStr() {
-		let e = Object.keys(this.#n).sort(Se).map((e) => {
+		let e = Object.keys(this.#n).sort(_e).map((e) => {
 			let t = this.#n[e], n = t.buildRegExpStr();
-			return n === "" ? "" : (typeof t.#t == "number" ? `(${e})@${t.#t}` : xe.has(e) ? `\\${e}` : e) + n;
+			return n === "" ? "" : (typeof t.#t == "number" ? `(${e})@${t.#t}` : ge.has(e) ? `\\${e}` : e) + n;
 		}).filter(Boolean);
 		return typeof this.#e == "number" && this.#e !== -1 && e.unshift(`#${this.#e}`), e.length === 0 ? "" : e.length === 1 ? e[0] : "(?:" + e.join("|") + ")";
 	}
-}, we = class {
+}, ye = class {
 	#e = { varIndex: 0 };
-	#t = new Ce();
+	#t = new ve();
 	#n = 0;
-	paths = P();
+	paths = B();
 	insert(e, t) {
 		if (t) {
 			this.#t.insert(e.split(""), 0, [], this.#e, !0);
@@ -638,64 +638,64 @@ var Ce = class e {
 			r
 		];
 	}
-}, Te = P();
-function Ee(e) {
-	return Te[e] ??= RegExp(`^${e.replace(/\/:[^/{}]+(?:\{\[\^\/]\+})?(?=[/{]|$)|\/?\*$|([.\\+*[^\]$()?{}|])/g, (e, t) => t ? `\\${t}` : e === "/*" ? be : e === "*" ? ".*" : `/:${ye}`)}$`);
+}, be = B();
+function xe(e) {
+	return be[e] ??= RegExp(`^${e.replace(/\/:[^/{}]+(?:\{\[\^\/]\+})?(?=[/{]|$)|\/?\*$|([.\\+*[^\]$()?{}|])/g, (e, t) => t ? `\\${t}` : e === "/*" ? me : e === "*" ? ".*" : `/:${pe}`)}$`);
 }
-function De(e, t) {
-	for (let n of Object.keys(e).sort((e, t) => t.length - e.length)) if (Ee(n).test(t)) return [...e[n]];
+function Se(e, t) {
+	for (let n of Object.keys(e).sort((e, t) => t.length - e.length)) if (xe(n).test(t)) return [...e[n]];
 }
-var Oe = class {
+var Ce = class {
 	name = "RegExpRouter";
 	#e;
 	#t;
 	#n;
 	constructor() {
-		this.#e = { ALL: P() }, this.#t = { ALL: P() }, this.#n = { ALL: new we() };
+		this.#e = { ALL: B() }, this.#t = { ALL: B() }, this.#n = { ALL: new ye() };
 	}
 	#r(e, t) {
 		try {
 			this.#n[e].insert(t, !/\*|\/:/.test(t));
 		} catch (e) {
-			throw e === F ? new fe(t) : e;
+			throw e === he ? new oe(t) : e;
 		}
 	}
 	add(e, t, n) {
 		let r = this.#e, i = this.#t;
-		if (!r) throw Error(de);
+		if (!r) throw Error(ae);
 		if (!r[e]) {
-			this.#n[e] = new we();
+			this.#n[e] = new ye();
 			for (let t of [r, i]) {
-				t[e] = P();
+				t[e] = B();
 				for (let n in t.ALL) t[e][n] = [...t.ALL[n]], this.#r(e, n);
 			}
 		}
 		t === "/*" && (t = "*");
 		let a = e === "ALL" ? Object.keys(r) : [e];
 		if (/\*$/.test(t)) {
-			let e = Ee(t);
-			for (let e of a) r[e][t] || (this.#r(e, t), r[e][t] = De(r[e], t) || De(r.ALL, t) || []);
+			let e = xe(t);
+			for (let e of a) r[e][t] || (this.#r(e, t), r[e][t] = Se(r[e], t) || Se(r.ALL, t) || []);
 			for (let o of [r, i]) for (let r of a) for (let i in o[r]) e.test(i) && o[r][i].push([n, t]);
 			return;
 		}
 		let o = k(t) || [t];
-		for (let e of o) for (let t of a) i[t][e] || (this.#r(t, e), i[t][e] = De(r[t], e) || De(r.ALL, e) || []), i[t][e].push([n, e]);
+		for (let e of o) for (let t of a) i[t][e] || (this.#r(t, e), i[t][e] = Se(r[t], e) || Se(r.ALL, e) || []), i[t][e].push([n, e]);
 	}
-	match = ve;
+	match = fe;
 	buildAllMatchers() {
-		let e = P();
+		let e = B();
 		for (let t of Object.keys(this.#t)) e[t] = this.#i(t);
-		return this.#e = this.#t = this.#n = void 0, Te = P(), e;
+		return this.#e = this.#t = this.#n = void 0, be = B(), e;
 	}
 	#i(e) {
-		let t = this.#e[e], n = this.#t[e], r = this.#n[e], i = P(), a = [], [o, s, c] = r.buildRegExp();
+		let t = this.#e[e], n = this.#t[e], r = this.#n[e], i = B(), a = [], [o, s, c] = r.buildRegExp();
 		for (let e of [t, n]) for (let t in e) {
 			let n = e[t], o = r.paths[t];
 			if (!o) {
-				i[t] = [n.map(([e]) => [e, P()]), _e];
+				i[t] = [n.map(([e]) => [e, B()]), de];
 				continue;
 			}
-			a[o[0]] = n.map(([e, t]) => [e, r.paths[t][1].reduceRight((e, [t], n) => (e[t] = c[o[1][n][1]], e), P())]);
+			a[o[0]] = n.map(([e, t]) => [e, r.paths[t][1].reduceRight((e, [t], n) => (e[t] = c[o[1][n][1]], e), B())]);
 		}
 		return [
 			o,
@@ -703,7 +703,7 @@ var Oe = class {
 			i
 		];
 	}
-}, ke = class {
+}, we = class {
 	name = "SmartRouter";
 	#e = [];
 	#t = [];
@@ -711,7 +711,7 @@ var Oe = class {
 		this.#e = e.routers;
 	}
 	add(e, t, n) {
-		if (!this.#t) throw Error(de);
+		if (!this.#t) throw Error(ae);
 		this.#t.push([
 			e,
 			t,
@@ -727,7 +727,7 @@ var Oe = class {
 				for (let e = 0, t = r.length; e < t; e++) i.add(...r[e]);
 				o = i.match(e, t);
 			} catch (e) {
-				if (e instanceof fe) continue;
+				if (e instanceof oe) continue;
 				throw e;
 			}
 			this.match = i.match.bind(i), this.#e = [i], this.#t = void 0;
@@ -740,12 +740,12 @@ var Oe = class {
 		if (this.#t || this.#e.length !== 1) throw Error("No active router has been determined yet.");
 		return this.#e[0];
 	}
-}, Ae = P(), je = 0, Me = class e {
+}, Te = B(), Ee = 0, De = class e {
 	#e = [];
-	#t = P();
+	#t = B();
 	#n = [];
 	#r;
-	#i = Ae;
+	#i = Te;
 	insert(t, n, r) {
 		let i = this, a = y(n), o = /* @__PURE__ */ new Set(), s = 0;
 		for (let t of a) {
@@ -755,14 +755,14 @@ var Oe = class {
 		i.#e.push({ [t]: {
 			handler: r,
 			possibleKeys: [...o],
-			score: ++je
+			score: ++Ee
 		} });
 	}
 	#a(e, t, n, r, i) {
 		for (let a = 0, o = t.#e.length; a < o; a++) {
 			let o = t.#e[a], s = o[n] || o.ALL;
 			if (s) {
-				s.params = P(), e.push(s);
+				s.params = B(), e.push(s);
 				for (let e = 0, t = s.possibleKeys.length; e < t; e++) {
 					let t = s.possibleKeys[e];
 					s.params[t] = i?.[t] && !e ? i[t] : r[t] ?? i?.[t];
@@ -772,7 +772,7 @@ var Oe = class {
 	}
 	search(e, t) {
 		let n = [];
-		this.#i = Ae;
+		this.#i = Te;
 		let r = [this], i = v(t), a = [], o = i.length, s = null;
 		for (let c = 0; c < o; c++) {
 			let l = i[c], u = c === o - 1, d = [];
@@ -780,7 +780,7 @@ var Oe = class {
 				let p = r[f], m = p.#t[l];
 				m && (m.#i = p.#i, u ? (m.#t["*"] && this.#a(n, m.#t["*"], e, p.#i), this.#a(n, m, e, p.#i)) : d.push(m));
 				for (let r of p.#n) {
-					let f = r.#r, m = p.#i === Ae ? {} : { ...p.#i };
+					let f = r.#r, m = p.#i === Te ? {} : { ...p.#i };
 					if (typeof f == "string") {
 						(f === "*" || l.startsWith(f.slice(0, -1))) && (this.#a(n, r, e, p.#i), f === "*" && (r.#i = m, d.push(r)));
 						continue;
@@ -814,20 +814,20 @@ var Oe = class {
 		}
 		return n[1] && n.sort((e, t) => e.score - t.score), [n.map(({ handler: e, params: t }) => [e, t])];
 	}
-}, Ne = class {
+}, Oe = class {
 	name = "TrieRouter";
-	#e = new Me();
+	#e = new De();
 	add(e, t, n) {
 		for (let r of k(t) || [t]) this.#e.insert(e, r, n);
 	}
 	match(e, t) {
 		return this.#e.search(e, t);
 	}
-}, I = class extends ge {
+}, V = class extends ue {
 	constructor(e = {}) {
-		super(e), this.router = e.router ?? new ke({ routers: [new Oe(), new Ne()] });
+		super(e), this.router = e.router ?? new we({ routers: [new Ce(), new Oe()] });
 	}
-}, Pe = (e) => {
+}, ke = (e) => {
 	let t = {
 		origin: "*",
 		allowMethods: [
@@ -872,11 +872,11 @@ var Oe = class {
 		}
 		await o(), t.origin !== "*" && e.header("Vary", "Origin", { append: !0 });
 	};
-}, Fe = process.env.DB_PATH || "./data/app.db", Ie = r.dirname(Fe);
-n.existsSync(Ie) || n.mkdirSync(Ie, { recursive: !0 });
-var L = new t(Fe);
-L.pragma("journal_mode = WAL"), L.pragma("foreign_keys = ON");
-var Le = [
+}, Ae = process.env.DB_PATH || "./data/app.db", je = r.dirname(Ae);
+n.existsSync(je) || n.mkdirSync(je, { recursive: !0 });
+var H = new t(Ae);
+H.pragma("journal_mode = WAL"), H.pragma("foreign_keys = ON");
+var Me = [
 	"./migrations/0001_initial.sql",
 	"./migrations/0002_seed.sql",
 	"./migrations/0003_portal_columns.sql",
@@ -890,29 +890,29 @@ var Le = [
 	"./migrations/0011_portal_auth.sql",
 	"./migrations/0012_sales_campaigns.sql"
 ];
-function Re() {
+function Ne() {
 	let e = r.resolve("./migrations");
 	if (!n.existsSync(e)) {
 		console.log("[db-adapter] migrations/ directory not found — skipping auto-migration");
 		return;
 	}
-	if (L.exec("\n    CREATE TABLE IF NOT EXISTS schema_migrations (\n      filename TEXT PRIMARY KEY,\n      applied_at TEXT DEFAULT (datetime('now'))\n    )\n  "), L.prepare("SELECT COUNT(*) as n FROM schema_migrations").get().n === 0 && L.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='products'").get()) {
-		let e = L.prepare("PRAGMA table_info(products)").all(), t = e.length;
-		console.log(`[db-adapter] Adopting pre-existing DB (products has ${t} columns) — marking migrations as applied`), L.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0001_initial.sql"), L.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0002_seed.sql"), e.some((e) => e.name === "portal_visible") && L.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0003_portal_columns.sql");
-		let n = L.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='project_images'").get(), r = L.prepare("PRAGMA table_info(projects)").all().some((e) => e.name === "image_urls");
-		(n || r) && L.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0004_project_images.sql");
+	if (H.exec("\n    CREATE TABLE IF NOT EXISTS schema_migrations (\n      filename TEXT PRIMARY KEY,\n      applied_at TEXT DEFAULT (datetime('now'))\n    )\n  "), H.prepare("SELECT COUNT(*) as n FROM schema_migrations").get().n === 0 && H.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='products'").get()) {
+		let e = H.prepare("PRAGMA table_info(products)").all(), t = e.length;
+		console.log(`[db-adapter] Adopting pre-existing DB (products has ${t} columns) — marking migrations as applied`), H.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0001_initial.sql"), H.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0002_seed.sql"), e.some((e) => e.name === "portal_visible") && H.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0003_portal_columns.sql");
+		let n = H.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='project_images'").get(), r = H.prepare("PRAGMA table_info(projects)").all().some((e) => e.name === "image_urls");
+		(n || r) && H.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run("0004_project_images.sql");
 	}
 	console.log("[db-adapter] Running auto-migrations...");
-	for (let e of Le) {
+	for (let e of Me) {
 		let t = r.resolve(e);
 		if (!n.existsSync(t)) {
 			console.log(`[db-adapter] Migration not found, skipping: ${e}`);
 			continue;
 		}
 		let i = r.basename(e);
-		if (L.prepare("SELECT 1 FROM schema_migrations WHERE filename = ?").get(i)) {
+		if (H.prepare("SELECT 1 FROM schema_migrations WHERE filename = ?").get(i)) {
 			if (i === "0002_seed.sql") {
-				if (L.prepare("SELECT COUNT(*) as n FROM products").get().n === 0) console.log("[db-adapter] Seed marked applied but products table is empty — re-running seed"), L.prepare("DELETE FROM schema_migrations WHERE filename = ?").run(i);
+				if (H.prepare("SELECT COUNT(*) as n FROM products").get().n === 0) console.log("[db-adapter] Seed marked applied but products table is empty — re-running seed"), H.prepare("DELETE FROM schema_migrations WHERE filename = ?").run(i);
 				else {
 					console.log(`[db-adapter] Already applied, skipping: ${e}`);
 					continue;
@@ -924,18 +924,18 @@ function Re() {
 		}
 		try {
 			let r = n.readFileSync(t, "utf8");
-			L.exec(r), L.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run(i), console.log(`[db-adapter] Applied: ${e}`);
+			H.exec(r), H.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run(i), console.log(`[db-adapter] Applied: ${e}`);
 		} catch (t) {
 			let n = t instanceof Error ? t.message : String(t);
-			if (n.includes("already exists") || n.includes("duplicate column")) L.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run(i), console.log(`[db-adapter] Already applied (idempotent): ${e}`);
+			if (n.includes("already exists") || n.includes("duplicate column")) H.prepare("INSERT OR IGNORE INTO schema_migrations (filename) VALUES (?)").run(i), console.log(`[db-adapter] Already applied (idempotent): ${e}`);
 			else throw console.error(`[db-adapter] Error applying ${e}:`, n), t;
 		}
 	}
-	let t = L.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
+	let t = H.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
 	console.log("[db-adapter] Tables:", t.map((e) => e.name).join(", "));
 }
-Re();
-function ze(e, t) {
+Ne();
+function Pe(e, t) {
 	try {
 		let n = e.run(...t);
 		return {
@@ -950,45 +950,45 @@ function ze(e, t) {
 		throw e;
 	}
 }
-function Be(e, t = []) {
+function Fe(e, t = []) {
 	return {
 		all: async () => ({
-			results: L.prepare(e).all(...t),
+			results: H.prepare(e).all(...t),
 			success: !0,
 			meta: {
 				last_row_id: 0,
 				changes: 0
 			}
 		}),
-		first: async () => L.prepare(e).get(...t) ?? null,
-		run: async () => ze(L.prepare(e), t)
+		first: async () => H.prepare(e).get(...t) ?? null,
+		run: async () => Pe(H.prepare(e), t)
 	};
 }
-var R = { prepare: (e) => ({
-	bind: (...t) => Be(e, t),
-	all: () => Be(e, []).all(),
-	first: () => Be(e, []).first(),
-	run: () => Be(e, []).run()
+var Ie = { prepare: (e) => ({
+	bind: (...t) => Fe(e, t),
+	all: () => Fe(e, []).all(),
+	first: () => Fe(e, []).first(),
+	run: () => Fe(e, []).run()
 }) };
 //#endregion
 //#region src/lib/db.ts
-function z(e = "") {
+function U(e = "") {
 	return `${e}${Date.now().toString(36)}${Math.random().toString(36).substring(2, 8)}`;
 }
-function B() {
+function W() {
 	return (/* @__PURE__ */ new Date()).toISOString().replace("T", " ").split(".")[0];
 }
-async function V(e, { userId: t = "system", userName: n = "System", userRole: r = "system", action: i, entityType: a, entityId: o, details: s = {}, source: c = "manual", aiConfidence: l, regulatoryReference: u }) {
-	let d = z("al");
-	await e.prepare("\n    INSERT INTO audit_logs (id, user_id, user_name, user_role, action, entity_type, entity_id, details, source, ai_confidence, regulatory_reference, created_at)\n    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n  ").bind(d, t, n, r, i, a || null, o || null, JSON.stringify(s), c, l || null, u || null, B()).run();
+async function G(e, { userId: t = "system", userName: n = "System", userRole: r = "system", action: i, entityType: a, entityId: o, details: s = {}, source: c = "manual", aiConfidence: l, regulatoryReference: u }) {
+	let d = U("al");
+	await e.prepare("\n    INSERT INTO audit_logs (id, user_id, user_name, user_role, action, entity_type, entity_id, details, source, ai_confidence, regulatory_reference, created_at)\n    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n  ").bind(d, t, n, r, i, a || null, o || null, JSON.stringify(s), c, l || null, u || null, W()).run();
 }
 //#endregion
 //#region src/api/products.ts
-var H = new I();
-H.get("/", async (e) => {
+var K = new V();
+K.get("/", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT * FROM products ORDER BY category, name").all();
 	return e.json({ products: t });
-}), H.get("/:id", async (e) => {
+}), K.get("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(t).first();
 	if (!n) return e.json({ error: "Not found" }, 404);
 	let { results: r } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id = ? ORDER BY category, name").bind(t).all(), i = { ...n }, a = [];
@@ -1003,9 +1003,9 @@ H.get("/", async (e) => {
 		product: i,
 		rules: r
 	});
-}), H.post("/", async (e) => {
-	let t = await e.req.json(), n = z("p"), r = B();
-	return await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr, \n    green_dbr, min_term, max_term, gsas_min_score, gsas_premium_score, green_discount_premium,\n    green_discount_standard, ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors, configuration, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.name, t.code || null, t.description || null, t.category || "home_loan", t.status || "draft", t.base_rate || 5.5, t.max_ltv || 90, t.max_dbr || 60, t.green_dbr || 55, t.min_term || 5, t.max_term || 25, t.gsas_min_score || 70, t.gsas_premium_score || 85, t.green_discount_premium || .75, t.green_discount_standard || .5, t.ai_confidence_threshold || 90, (t.allow_byop, 1), (t.allow_partner_inventory, 1), JSON.stringify(t.required_docs || []), JSON.stringify(t.esg_required_docs || []), JSON.stringify(t.approved_materials || []), JSON.stringify(t.approved_vendors || []), JSON.stringify(t.configuration || {}), t.created_by || "u001", r, r).run(), await V(e.env.DB, {
+}), K.post("/", async (e) => {
+	let t = await e.req.json(), n = U("p"), r = W();
+	return await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr, \n    green_dbr, min_term, max_term, gsas_min_score, gsas_premium_score, green_discount_premium,\n    green_discount_standard, ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors, configuration, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.name, t.code || null, t.description || null, t.category || "home_loan", t.status || "draft", t.base_rate || 5.5, t.max_ltv || 90, t.max_dbr || 60, t.green_dbr || 55, t.min_term || 5, t.max_term || 25, t.gsas_min_score || 70, t.gsas_premium_score || 85, t.green_discount_premium || .75, t.green_discount_standard || .5, t.ai_confidence_threshold || 90, (t.allow_byop, 1), (t.allow_partner_inventory, 1), JSON.stringify(t.required_docs || []), JSON.stringify(t.esg_required_docs || []), JSON.stringify(t.approved_materials || []), JSON.stringify(t.approved_vendors || []), JSON.stringify(t.configuration || {}), t.created_by || "u001", r, r).run(), await G(e.env.DB, {
 		userId: t.created_by || "u001",
 		userName: "Fatima Al-Rashdi",
 		userRole: "product_manager",
@@ -1017,11 +1017,11 @@ H.get("/", async (e) => {
 		id: n,
 		success: !0
 	});
-}), H.post("/clone/:id", async (e) => {
+}), K.post("/clone/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.req.json(), r = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(t).first();
 	if (!r) return e.json({ error: "Source not found" }, 404);
-	let i = z("p"), a = B();
-	return await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,\n    green_dbr, min_term, max_term, min_amount, max_amount, gsas_min_score, gsas_premium_score, \n    green_discount_premium, green_discount_standard, ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors, configuration, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(i, n.name || r.name + " (Copy)", null, r.description, r.category, "draft", r.base_rate, r.max_ltv, r.max_dbr, r.green_dbr, r.min_term, r.max_term, r.min_amount, r.max_amount, r.gsas_min_score, r.gsas_premium_score, r.green_discount_premium, r.green_discount_standard, r.ai_confidence_threshold, r.allow_byop, r.allow_partner_inventory, r.required_docs, r.esg_required_docs, r.approved_materials, r.approved_vendors, r.configuration, n.user_id || "u001", a, a).run(), await V(e.env.DB, {
+	let i = U("p"), a = W();
+	return await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,\n    green_dbr, min_term, max_term, min_amount, max_amount, gsas_min_score, gsas_premium_score, \n    green_discount_premium, green_discount_standard, ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors, configuration, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(i, n.name || r.name + " (Copy)", null, r.description, r.category, "draft", r.base_rate, r.max_ltv, r.max_dbr, r.green_dbr, r.min_term, r.max_term, r.min_amount, r.max_amount, r.gsas_min_score, r.gsas_premium_score, r.green_discount_premium, r.green_discount_standard, r.ai_confidence_threshold, r.allow_byop, r.allow_partner_inventory, r.required_docs, r.esg_required_docs, r.approved_materials, r.approved_vendors, r.configuration, n.user_id || "u001", a, a).run(), await G(e.env.DB, {
 		userId: n.user_id || "u001",
 		userName: "Fatima Al-Rashdi",
 		userRole: "product_manager",
@@ -1037,9 +1037,9 @@ H.get("/", async (e) => {
 		id: i,
 		success: !0
 	});
-}), H.patch("/:id", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json(), r = B(), i = Object.entries(n).filter(([e]) => e !== "user_id" && e !== "user_name").map(([e, t]) => `${e} = ?`).join(", "), a = Object.entries(n).filter(([e]) => e !== "user_id" && e !== "user_name").map(([, e]) => typeof e == "object" ? JSON.stringify(e) : e);
-	return i ? (await e.env.DB.prepare(`UPDATE products SET ${i}, updated_at = ? WHERE id = ?`).bind(...a, r, t).run(), await V(e.env.DB, {
+}), K.patch("/:id", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json(), r = W(), i = Object.entries(n).filter(([e]) => e !== "user_id" && e !== "user_name").map(([e, t]) => `${e} = ?`).join(", "), a = Object.entries(n).filter(([e]) => e !== "user_id" && e !== "user_name").map(([, e]) => typeof e == "object" ? JSON.stringify(e) : e);
+	return i ? (await e.env.DB.prepare(`UPDATE products SET ${i}, updated_at = ? WHERE id = ?`).bind(...a, r, t).run(), await G(e.env.DB, {
 		userId: n.user_id || "u001",
 		userName: n.user_name || "Fatima Al-Rashdi",
 		userRole: "product_manager",
@@ -1048,8 +1048,8 @@ H.get("/", async (e) => {
 		entityId: t,
 		details: n
 	}), e.json({ success: !0 })) : e.json({ success: !0 });
-}), H.post("/:id/publish", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json().catch(() => ({})), r = B(), i = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(t).first();
+}), K.post("/:id/publish", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json().catch(() => ({})), r = W(), i = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(t).first();
 	if (!i) return e.json({ error: "Not found" }, 404);
 	let a = i.name, o = [], s = "", c = e.env.OPENAI_API_KEY;
 	if (c) try {
@@ -1090,7 +1090,7 @@ Product: ${i.name}. Description: ${i.description}. Base rate: ${i.base_rate}%.${
 		`Up to OMR ${Math.round(i.max_amount / 1e3)}K financing`
 	]);
 	let l = JSON.parse(i.esg_required_docs || "[]");
-	return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n    portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, updated_at=? WHERE id=?").bind(+(l.length > 0), a, JSON.stringify(o), s, r, r, t).run(), await V(e.env.DB, {
+	return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n    portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?, updated_at=? WHERE id=?").bind(+(l.length > 0), a, JSON.stringify(o), s, r, r, t).run(), await G(e.env.DB, {
 		userId: n.user_id || "u001",
 		userName: n.user_name || "Fatima Al-Rashdi",
 		userRole: "product_manager",
@@ -1109,12 +1109,12 @@ Product: ${i.name}. Description: ${i.description}. Base rate: ${i.base_rate}%.${
 		portal_hero_title: a,
 		portal_highlights: o
 	});
-}), H.get("/:id/rules", async (e) => {
+}), K.get("/:id/rules", async (e) => {
 	let t = e.req.param("id"), { results: n } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id = ? OR product_id IS NULL ORDER BY category, name").bind(t).all();
 	return e.json({ rules: n });
-}), H.post("/:id/rules", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json(), r = z("r");
-	return await e.env.DB.prepare("\n    INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value, \n    threshold_condition, action_on_breach, severity, regulatory_reference, source, ai_confidence,\n    description, is_active, created_by, created_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(r, t, n.name, n.category || "general", n.metric, n.operator || "<=", n.threshold_value || null, n.threshold_condition || null, n.action_on_breach || "reject", n.severity || "hard", n.regulatory_reference || null, n.source || "manual", n.ai_confidence || null, n.description || null, 1, n.user_id || "u001", B()).run(), await V(e.env.DB, {
+}), K.post("/:id/rules", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json(), r = U("r");
+	return await e.env.DB.prepare("\n    INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value, \n    threshold_condition, action_on_breach, severity, regulatory_reference, source, ai_confidence,\n    description, is_active, created_by, created_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(r, t, n.name, n.category || "general", n.metric, n.operator || "<=", n.threshold_value || null, n.threshold_condition || null, n.action_on_breach || "reject", n.severity || "hard", n.regulatory_reference || null, n.source || "manual", n.ai_confidence || null, n.description || null, 1, n.user_id || "u001", W()).run(), await G(e.env.DB, {
 		userId: n.user_id || "u001",
 		userName: "Fatima Al-Rashdi",
 		userRole: "product_manager",
@@ -1128,7 +1128,7 @@ Product: ${i.name}. Description: ${i.description}. Base rate: ${i.base_rate}%.${
 		id: r,
 		success: !0
 	});
-}), H.patch("/:productId/rules/:ruleId", async (e) => {
+}), K.patch("/:productId/rules/:ruleId", async (e) => {
 	let { productId: t, ruleId: n } = e.req.param(), r = await e.req.json(), i = [
 		"name",
 		"category",
@@ -1144,7 +1144,7 @@ Product: ${i.name}. Description: ${i.description}. Base rate: ${i.base_rate}%.${
 	], a = Object.keys(r).filter((e) => i.includes(e));
 	if (!a.length) return e.json({ error: "No valid fields" }, 400);
 	let o = `UPDATE rules SET ${a.map((e) => `${e}=?`).join(",")} WHERE id=? AND product_id=?`;
-	return await e.env.DB.prepare(o).bind(...a.map((e) => r[e]), n, t).run(), await V(e.env.DB, {
+	return await e.env.DB.prepare(o).bind(...a.map((e) => r[e]), n, t).run(), await G(e.env.DB, {
 		userId: r.user_id || "u001",
 		userName: r.user_name || "System",
 		userRole: "product_manager",
@@ -1153,10 +1153,10 @@ Product: ${i.name}. Description: ${i.description}. Base rate: ${i.base_rate}%.${
 		entityId: n,
 		details: r
 	}), e.json({ success: !0 });
-}), H.delete("/:productId/rules/:ruleId", async (e) => {
+}), K.delete("/:productId/rules/:ruleId", async (e) => {
 	let { productId: t, ruleId: n } = e.req.param();
 	return await e.env.DB.prepare("DELETE FROM rules WHERE id=? AND product_id=?").bind(n, t).run(), e.json({ success: !0 });
-}), H.get("/rule-templates", async (e) => {
+}), K.get("/rule-templates", async (e) => {
 	let t = e.req.query("category"), n = "SELECT * FROM rule_templates WHERE 1=1", r = [];
 	t && (n += " AND category=?", r.push(t)), n += " ORDER BY category, name";
 	let { results: i } = r.length ? await e.env.DB.prepare(n).bind(...r).all() : await e.env.DB.prepare(n).all();
@@ -1164,8 +1164,8 @@ Product: ${i.name}. Description: ${i.description}. Base rate: ${i.base_rate}%.${
 });
 //#endregion
 //#region src/api/applications.ts
-var Ve = new I();
-Ve.get("/:id", async (e) => {
+var Le = new V();
+Le.get("/:id", async (e) => {
 	let t = e.req.param("id"), n = t.startsWith("GHL") || t.startsWith("HL"), r = await e.env.DB.prepare(n ? "SELECT a.*, c.name as customer_display_name, c.salary_omr, c.credit_score, c.employer, c.phone, c.email, c.civil_id, c.nationality,\n          p.name as product_name, p.gsas_min_score, p.gsas_premium_score, p.green_discount_premium,\n          p.approved_materials, p.approved_vendors, p.ai_confidence_threshold, p.esg_required_docs,\n          u.unit_number, u.area_sqm, u.bedrooms, u.bathrooms, u.features,\n          pr.name as project_name, pr.developer_id, pr.gsas_score as project_gsas_score\n         FROM applications a\n         LEFT JOIN customers c ON a.customer_id = c.id\n         LEFT JOIN products p ON a.product_id = p.id\n         LEFT JOIN units u ON a.unit_id = u.id\n         LEFT JOIN projects pr ON a.project_id = pr.id\n         WHERE a.reference = ?" : "SELECT a.*, c.name as customer_display_name, c.salary_omr, c.credit_score, c.employer, c.phone, c.email, c.civil_id, c.nationality,\n          p.name as product_name, p.gsas_min_score, p.gsas_premium_score, p.green_discount_premium,\n          p.approved_materials, p.approved_vendors, p.ai_confidence_threshold, p.esg_required_docs,\n          u.unit_number, u.area_sqm, u.bedrooms, u.bathrooms, u.features,\n          pr.name as project_name, pr.developer_id, pr.gsas_score as project_gsas_score\n         FROM applications a\n         LEFT JOIN customers c ON a.customer_id = c.id\n         LEFT JOIN products p ON a.product_id = p.id\n         LEFT JOIN units u ON a.unit_id = u.id\n         LEFT JOIN projects pr ON a.project_id = pr.id\n         WHERE a.id = ?").bind(t).first();
 	if (!r) return e.json({ error: "Not found" }, 404);
 	let { results: i } = await e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = ? AND entity_id = ?").bind("application", r.id).all(), { results: a } = await e.env.DB.prepare("SELECT * FROM construction_stages WHERE application_id = ? ORDER BY stage_number").bind(r.id).all();
@@ -1174,8 +1174,8 @@ Ve.get("/:id", async (e) => {
 		documents: i,
 		stages: a
 	});
-}), Ve.post("/", async (e) => {
-	let t = await e.req.json(), n = z("app"), r = B(), i = t.loan_amount || 2e5, a = t.loan_term || 25, o = t.gsas_score || 0, s = 5.5, c = s;
+}), Le.post("/", async (e) => {
+	let t = await e.req.json(), n = U("app"), r = W(), i = t.loan_amount || 2e5, a = t.loan_term || 25, o = t.gsas_score || 0, s = 5.5, c = s;
 	o >= 85 ? c = 4.75 : o >= 70 && (c = 5);
 	let l = c / 100 / 12, u = a * 12, d = i * (l * (1 + l) ** +u) / ((1 + l) ** +u - 1), f = i * (s / 100 / 12 * 1.0045833333333334 ** u) / (1.0045833333333334 ** u - 1), p = (f - d) * u, m = await e.env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(t.customer_id).first(), h = m?.salary_omr || 3200, g = Math.round(d / h * 100), _ = t.property_value || i * 1.25, v = Math.round(i / _ * 100), y = `${t.product_id === "p009" ? "GHL" : "HL"}-${Math.floor(Math.random() * 9e5) + 1e5}`;
 	if (await e.env.DB.prepare("\n    INSERT INTO applications (id, reference, product_id, customer_id, customer_name, unit_id, project_id,\n    loan_amount, loan_term, property_address, property_source, property_area_sqm, gsas_score, epc_rating,\n    applied_rate, standard_rate, monthly_payment, standard_monthly_payment, lifetime_saving,\n    dbr, ltv, stress_test_rate, stress_test_passed, malaa_score, status, esg_verification_status,\n    escrow_amount, tracking_url, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, y, t.product_id, t.customer_id, m?.name || t.customer_name, t.unit_id || null, t.project_id || null, i, a, t.property_address || "", t.property_source || "partner", t.property_area_sqm || null, o, t.epc_rating || null, c, s, Math.round(d * 100) / 100, Math.round(f * 100) / 100, Math.round(p * 100) / 100, g, v, 9, 1, m?.credit_score || 750, "submitted", "pending", i, `https://sib.om/track/${y}`, r, r).run(), t.product_id === "p009") for (let t of [
@@ -1207,8 +1207,8 @@ Ve.get("/:id", async (e) => {
 			pct: 20,
 			material: "Energy-Efficient Appliances"
 		}
-	]) await e.env.DB.prepare("\n        INSERT INTO construction_stages (id, application_id, stage_number, stage_name, description, tranche_amount, tranche_percentage, required_material, status, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?)\n      ").bind(z("st"), n, t.num, t.name, t.desc, Math.round(i * t.pct / 100), t.pct, t.material, t.num === 1 ? "active" : "locked", r).run();
-	return await V(e.env.DB, {
+	]) await e.env.DB.prepare("\n        INSERT INTO construction_stages (id, application_id, stage_number, stage_name, description, tranche_amount, tranche_percentage, required_material, status, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?)\n      ").bind(U("st"), n, t.num, t.name, t.desc, Math.round(i * t.pct / 100), t.pct, t.material, t.num === 1 ? "active" : "locked", r).run();
+	return await G(e.env.DB, {
 		userId: t.customer_id || "u020",
 		userName: m?.name || "Customer",
 		userRole: "customer",
@@ -1233,9 +1233,9 @@ Ve.get("/:id", async (e) => {
 		tracking_url: `https://sib.om/track/${y}`,
 		success: !0
 	});
-}), Ve.patch("/:id/status", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json(), r = B(), i = "status = ?, updated_at = ?", a = [n.status, r];
-	return n.status === "approved" && n.compliance && (i += ", compliance_approved_by = ?, compliance_approved_at = ?", a.push(n.user_id, r)), n.status === "approved" && n.risk && (i += ", risk_approved_by = ?, risk_approved_at = ?", a.push(n.user_id, r)), n.esg_verification_status && (i += ", esg_verification_status = ?", a.push(n.esg_verification_status)), a.push(t), await e.env.DB.prepare(`UPDATE applications SET ${i} WHERE id = ?`).bind(...a).run(), await V(e.env.DB, {
+}), Le.patch("/:id/status", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json(), r = W(), i = "status = ?, updated_at = ?", a = [n.status, r];
+	return n.status === "approved" && n.compliance && (i += ", compliance_approved_by = ?, compliance_approved_at = ?", a.push(n.user_id, r)), n.status === "approved" && n.risk && (i += ", risk_approved_by = ?, risk_approved_at = ?", a.push(n.user_id, r)), n.esg_verification_status && (i += ", esg_verification_status = ?", a.push(n.esg_verification_status)), a.push(t), await e.env.DB.prepare(`UPDATE applications SET ${i} WHERE id = ?`).bind(...a).run(), await G(e.env.DB, {
 		userId: n.user_id || "system",
 		userName: n.user_name || "System",
 		userRole: n.user_role || "system",
@@ -1244,7 +1244,7 @@ Ve.get("/:id", async (e) => {
 		entityId: t,
 		details: { new_status: n.status }
 	}), e.json({ success: !0 });
-}), Ve.post("/calculate", async (e) => {
+}), Le.post("/calculate", async (e) => {
 	let { loan_amount: t, loan_term: n, gsas_score: r, product_id: i } = await e.req.json(), a = (i ? await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(i).first() : null)?.base_rate || 5.5, o = a, s = "Standard Rate";
 	r >= 85 ? (o = a - .75, s = "Green Premium (0.75% discount)") : r >= 70 && (o = a - .5, s = "Green Standard (0.5% discount)");
 	let c = o / 100 / 12, l = n * 12, u = t * (c * (1 + c) ** +l) / ((1 + c) ** +l - 1), d = a / 100 / 12, f = t * (d * (1 + d) ** +l) / ((1 + d) ** +l - 1);
@@ -1260,8 +1260,8 @@ Ve.get("/:id", async (e) => {
 });
 //#endregion
 //#region src/api/ai.ts
-var U = new I();
-U.post("/products/chat", async (e) => {
+var q = new V();
+q.post("/products/chat", async (e) => {
 	try {
 		let { thread_id: t, message: n, context: r = {}, user_id: i = "u001", user_name: a = "Fatima Al-Rashdi" } = await e.req.json(), o = e.env.OPENAI_API_KEY, s = null, c = [], l = t;
 		if (l && (s = await e.env.DB.prepare("SELECT * FROM ai_threads WHERE id = ?").bind(l).first(), s)) try {
@@ -1269,7 +1269,7 @@ U.post("/products/chat", async (e) => {
 		} catch {
 			c = [];
 		}
-		(!l || !s) && (l = z("thr"), c = []);
+		(!l || !s) && (l = U("thr"), c = []);
 		let { results: u } = await e.env.DB.prepare("SELECT title, content, source FROM knowledge_base ORDER BY category").all(), d = u.map((e) => `[${e.source}] ${e.title}: ${e.content}`).join("\n\n"), { results: f } = await e.env.DB.prepare("SELECT id, name, code, base_rate, max_ltv, max_dbr, max_term FROM products WHERE status = 'active' ORDER BY name").all(), p = `You are a Senior Banking Product Architect at Sohar International Bank, Oman.
 You have 20+ years of experience in Islamic and conventional banking product design, CBO regulatory compliance, ESG/green finance, credit risk modelling, and digital banking workflow design.
 You are NOT a generic assistant. You are a domain expert who knows exactly what questions to ask, what parameters matter, and what regulators require.
@@ -1318,13 +1318,14 @@ STAGE 1 — PRODUCT MODEL (ask these sub-questions in order):
   1d. Product name (suggest one, e.g. "Sohar Green Home Finance – GSAS Premium").
   Emit set_field for name and description once confirmed.
 
-STAGE 2 — CORE CONFIGURATION (ask these sub-questions in order):
-  2a. Base rate and pricing structure. Give specific recommendation with CBO ceiling reference.
-  2b. ESG-specific discount tiers (if green product): GSAS score bands → rate discounts.
-  2c. LTV bands: standard vs green (CBO allows up to 90% for green). First home vs non-first.
-  2d. DBR: standard 50%, green buffer 55% (CBO Circular 2026-12 §3.2 allows relaxed DBR for green products).
-  2e. Term range (min/max years) and amount range (OMR min/max).
-  2f. Fees: arrangement fee (suggest 1% capped at OMR 500), early settlement penalty (per CBO rules: 1% max).
+STAGE 2 — CORE CONFIGURATION (THREE focused questions — one per turn):
+  Q1 (ONE turn — ALL standard loan parameters together): Base rate · LTV bands · DBR · term range · amount range.
+     Give specific recommendations for all of them in ONE message. User confirms or adjusts any.
+     If user requests a change (e.g. "increase max to 1M"), echo ALL current Q1 params with change applied and re-ask "Confirmed — all of these?" — do NOT advance until user confirms the full set.
+     Recommended defaults: rate 5.25%, LTV 90%/80%, DBR 55% (green) or 50% (standard), term 5–25yr, OMR 25K–500K.
+  Q2 (ONE turn — ESG tiers only, green products only): GSAS score bands → rate discounts (Gold ≥85 → −0.75%, Silver 70–84 → −0.5%).
+     Skip entirely for non-green products — go straight from Q1 to fees.
+  Q3 (ONE turn — fees only): Arrangement fee (1% capped OMR 500), early settlement (1% max per CBO), valuation fee, GSAS re-validation fee (green only).
   Emit set_field events for each confirmed value.
 
 STAGE 3 — ELIGIBILITY RULES (for Green Home Loan, generate ALL of these):
@@ -1410,7 +1411,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 }`, m = {
 			role: "user",
 			content: n,
-			timestamp: B()
+			timestamp: W()
 		};
 		c.push(m);
 		let h = {
@@ -1447,7 +1448,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 				let e = r.choices[0].message.content, t = e.match(/\{[\s\S]*\}/);
 				if (t) {
 					if (h = JSON.parse(t[0]), h.current_stage < 6 && (h.product_draft = null), h.current_stage >= 6 && !h.product_draft) {
-						let e = Ge(n, c.length, c);
+						let e = Ve(n, c.length, c);
 						e.product_draft && (h.product_draft = e.product_draft), e.schema_draft && !h.schema_draft && (h.schema_draft = e.schema_draft);
 					}
 					h.current_stage < 3 && (h.rules_draft = null), h.current_stage >= 6 && (h.rules_draft = null), h.current_stage > 1 && (h.show_roadmap = !1);
@@ -1465,17 +1466,17 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 				} else h.message = e;
 			}
 		} catch {
-			h = Ge(n, c.length, c);
+			h = Ve(n, c.length, c);
 		}
-		else h = Ge(n, c.length, c);
+		else h = Ve(n, c.length, c);
 		let g = {
 			role: "assistant",
 			content: h.message,
-			timestamp: B(),
+			timestamp: W(),
 			metadata: { action: h.action }
 		};
 		c.push(g);
-		let _ = B(), v = {};
+		let _ = W(), v = {};
 		if (s?.result) try {
 			v = JSON.parse(s.result);
 		} catch {
@@ -1506,9 +1507,9 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			_error: t?.message || "unknown"
 		}, 200);
 	}
-}), U.post("/products/create-draft", async (e) => {
+}), q.post("/products/create-draft", async (e) => {
 	try {
-		let { thread_id: t, clone_from_id: n = "p001", name: r, description: i = "", category: a = "home_loan", segment: o = "retail", structure: s = "conventional", user_id: c = "u001", user_name: l = "Fatima Al-Rashdi" } = await e.req.json(), u = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(n).first(), d = z("p"), f = `DRAFT-${Date.now().toString(36).toUpperCase()}`, p = B();
+		let { thread_id: t, clone_from_id: n = "p001", name: r, description: i = "", category: a = "home_loan", segment: o = "retail", structure: s = "conventional", user_id: c = "u001", user_name: l = "Fatima Al-Rashdi" } = await e.req.json(), u = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(n).first(), d = U("p"), f = `DRAFT-${Date.now().toString(36).toUpperCase()}`, p = W();
 		await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status,\n      base_rate, max_ltv, max_dbr, green_dbr, min_term, max_term, min_amount, max_amount,\n      gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n      ai_confidence_threshold, allow_byop, allow_partner_inventory,\n      required_docs, esg_required_docs, approved_materials, approved_vendors,\n      configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(d, r, f, i, a, "draft", u?.base_rate ?? 5.5, u?.max_ltv ?? 90, u?.max_dbr ?? 60, u?.green_dbr ?? 55, u?.min_term ?? 5, u?.max_term ?? 25, u?.min_amount ?? 1e4, u?.max_amount ?? 5e5, u?.gsas_min_score ?? 70, u?.gsas_premium_score ?? 85, u?.green_discount_premium ?? .75, u?.green_discount_standard ?? .5, 90, 1, 1, u?.required_docs ?? JSON.stringify([
 			"salary_cert",
 			"civil_id",
@@ -1518,7 +1519,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			segment: o,
 			structure: s,
 			ai_draft: !0
-		}), 0, 0, 1, c, p, p).run(), t && await e.env.DB.prepare("UPDATE ai_threads SET product_id=?, updated_at=? WHERE id=?").bind(d, p, t).run(), await V(e.env.DB, {
+		}), 0, 0, 1, c, p, p).run(), t && await e.env.DB.prepare("UPDATE ai_threads SET product_id=?, updated_at=? WHERE id=?").bind(d, p, t).run(), await G(e.env.DB, {
 			userId: c,
 			userName: l,
 			userRole: "product_manager",
@@ -1545,9 +1546,9 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			_error: t?.message
 		}, 200);
 	}
-}), U.post("/products/:id/stage-update", async (e) => {
+}), q.post("/products/:id/stage-update", async (e) => {
 	try {
-		let t = e.req.param("id"), { stage: n, fields: r = {}, rules: i = [], workflow_nodes: a = [], compliance: o = {}, simulation: s = {}, thread_id: c, user_id: l = "u001", user_name: u = "Fatima Al-Rashdi" } = await e.req.json(), d = B(), f = await e.env.DB.prepare("SELECT id, status, configuration FROM products WHERE id = ?").bind(t).first();
+		let t = e.req.param("id"), { stage: n, fields: r = {}, rules: i = [], workflow_nodes: a = [], compliance: o = {}, simulation: s = {}, thread_id: c, user_id: l = "u001", user_name: u = "Fatima Al-Rashdi" } = await e.req.json(), d = W(), f = await e.env.DB.prepare("SELECT id, status, configuration FROM products WHERE id = ?").bind(t).first();
 		if (!f) return e.json({
 			success: !1,
 			error: "Product not found"
@@ -1574,7 +1575,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			if (i.length > 0) {
 				await e.env.DB.prepare("DELETE FROM rules WHERE product_id=? AND source='ai_generated'").bind(t).run();
 				for (let n of i) {
-					let r = z("r");
+					let r = U("r");
 					await e.env.DB.prepare("\n          INSERT INTO rules (id, product_id, name, category, metric, operator,\n            threshold_value, threshold_condition, action_on_breach, severity,\n            regulatory_reference, source, ai_confidence, description, is_active, created_by, created_at)\n          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n        ").bind(r, t, n.name, n.category || "eligibility", n.metric, n.operator, n.threshold_value ?? null, n.threshold_condition ?? null, n.action_on_breach || "reject", n.severity || "hard", n.regulatory_reference ?? null, "ai_generated", n.ai_confidence ?? null, n.description ?? null, 1, l, d).run();
 				}
 				await e.env.DB.prepare("UPDATE products SET pge_stage=3, updated_at=? WHERE id=?").bind(d, t).run();
@@ -1654,7 +1655,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			_error: t?.message
 		}, 200);
 	}
-}), U.post("/products/confirm", async (e) => {
+}), q.post("/products/confirm", async (e) => {
 	try {
 		let t = await e.req.json(), { thread_id: n, product_draft: r, rules_draft: i, schema_draft: a, user_id: o = "u001", user_name: s = "Fatima Al-Rashdi" } = t, c = Array.isArray(t.workflow_nodes) ? t.workflow_nodes : [], l = t.draft_product_id;
 		if (l) {
@@ -1663,7 +1664,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 				success: !1,
 				error: "Draft product not found"
 			}, 404);
-			let r = B(), i = (t.esg_required_docs || "") !== "[]" && (t.esg_required_docs || "") !== "", a = `${t.name} — From ${t.base_rate}% p.a.`, c = i ? [
+			let r = W(), i = (t.esg_required_docs || "") !== "[]" && (t.esg_required_docs || "") !== "", a = `${t.name} — From ${t.base_rate}% p.a.`, c = i ? [
 				`Up to ${t.green_discount_premium}% rate discount`,
 				"GSAS-certified properties only",
 				"Supports Oman Vision 2040"
@@ -1699,7 +1700,7 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${i ? `Green discount: up to ${t
 				}
 			} catch {}
 			let { results: f } = await e.env.DB.prepare("SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1").bind(l).all(), p = f?.length > 0 ? 6 : t.pge_stage || 1;
-			return await e.env.DB.prepare("\n      UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n        portal_hero_title=?, portal_highlights=?, portal_card_badge=?,\n        pge_stage=?, is_demo_product=1, published_at=?, updated_at=? WHERE id=?\n    ").bind(+!!i, a, JSON.stringify(c), u, p, r, r, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({ product_id: l }), r, n).run(), await V(e.env.DB, {
+			return await e.env.DB.prepare("\n      UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n        portal_hero_title=?, portal_highlights=?, portal_card_badge=?,\n        pge_stage=?, is_demo_product=1, published_at=?, updated_at=? WHERE id=?\n    ").bind(+!!i, a, JSON.stringify(c), u, p, r, r, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({ product_id: l }), r, n).run(), await G(e.env.DB, {
 				userId: o,
 				userName: s,
 				userRole: "product_manager",
@@ -1751,7 +1752,7 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${i ? `Green discount: up to ${t
 		if (!r && n) {
 			let t = await e.env.DB.prepare("SELECT messages FROM ai_threads WHERE id = ?").bind(n).first();
 			if (t?.messages) try {
-				let e = JSON.parse(t.messages), n = Ge("confirm", e.length, e);
+				let e = JSON.parse(t.messages), n = Ve("confirm", e.length, e);
 				n.product_draft && (r = n.product_draft, !i && n.rules_draft && (i = n.rules_draft), !a && n.schema_draft && (a = n.schema_draft));
 			} catch {}
 		}
@@ -1759,7 +1760,7 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${i ? `Green discount: up to ${t
 			success: !1,
 			error: "No product draft found. Please complete the AI conversation first."
 		}, 400);
-		let u = z("p"), d = B(), f = {};
+		let u = U("p"), d = W(), f = {};
 		a && (f.gsas_schema = a);
 		let p = r.clone_from_id ? await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(r.clone_from_id).first() : null, m = r.name || "Green Home Loan – ESG", h = `GHL-${Date.now().toString(36).toUpperCase()}`;
 		await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,\n    green_dbr, min_term, max_term, min_amount, max_amount,\n    gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n    ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors,\n    configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(u, m, h, r.description || p?.description || "", r.category || "home_loan", "draft", r.base_rate || p?.base_rate || 5.5, r.max_ltv || p?.max_ltv || 90, r.max_dbr || p?.max_dbr || 60, r.green_dbr || 55, r.min_term || p?.min_term || 5, r.max_term || p?.max_term || 25, r.min_amount || p?.min_amount || 1e4, r.max_amount || p?.max_amount || 5e5, r.gsas_min_score || 70, r.gsas_premium_score || 85, r.green_discount_premium || .75, r.green_discount_standard || .5, 90, 1, 1, JSON.stringify(r.required_docs || (p ? JSON.parse(p.required_docs || "[]") : [
@@ -1788,7 +1789,7 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${i ? `Green discount: up to ${t
 		]), JSON.stringify(f), 0, 0, 1, o, d, d).run();
 		let g = [];
 		if (i && Array.isArray(i)) for (let t of i) {
-			let n = z("r");
+			let n = U("r");
 			await e.env.DB.prepare("\n        INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value,\n        threshold_condition, action_on_breach, severity, regulatory_reference, source,\n        ai_confidence, description, is_active, created_by, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n      ").bind(n, u, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach || "reject", t.severity || "hard", t.regulatory_reference || null, "ai_generated", t.ai_confidence || null, t.description || null, 1, o, d).run(), g.push(n);
 		}
 		try {
@@ -2086,7 +2087,7 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 		return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?,\n     pge_stage=?, is_demo_product=1, updated_at=? WHERE id=?").bind(+!!x, v, JSON.stringify(y), b, d, S, d, u).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(u, JSON.stringify({
 			product_id: u,
 			rule_ids: g
-		}), d, n).run(), await V(e.env.DB, {
+		}), d, n).run(), await G(e.env.DB, {
 			userId: o,
 			userName: s,
 			userRole: "product_manager",
@@ -2116,7 +2117,7 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 			_error: t?.message || "unknown"
 		}, 200);
 	}
-}), U.post("/rules/generate", async (e) => {
+}), q.post("/rules/generate", async (e) => {
 	let { text: t, product_id: n, user_id: r = "u001", user_name: i = "Fatima Al-Rashdi" } = await e.req.json(), a = e.env.OPENAI_API_KEY;
 	try {
 		let o = await callOpenAI(t, "You are a banking regulatory compliance AI for Sohar International Bank in Oman. \nYou extract regulatory rules from regulatory text and convert them to structured JSON rule definitions.\nReturn ONLY valid JSON matching this schema:\n{\n  \"rules\": [{\n    \"name\": \"string\",\n    \"category\": \"creditworthiness|collateral|product|esg|compliance|stress_test|eligibility\",\n    \"metric\": \"string (e.g. DBR, LTV, credit_score, gsas_score)\",\n    \"operator\": \"<=|>=|=|in|between\",\n    \"threshold_value\": number or null,\n    \"threshold_condition\": \"string or null (for conditional rules)\",\n    \"action_on_breach\": \"reject|flag|warning\",\n    \"severity\": \"hard|soft\",\n    \"description\": \"string\",\n    \"regulatory_reference\": \"string\",\n    \"ai_confidence\": number (0-100)\n  }],\n  \"related_regulations\": [{\"title\": \"string\", \"reference\": \"string\", \"relevance\": \"string\"}],\n  \"analysis_summary\": \"string\"\n}", a, "gpt-4o"), s;
@@ -2131,10 +2132,10 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 			};
 		}
 		if (s.rules && n) for (let t of s.rules) {
-			let i = z("r");
-			await e.env.DB.prepare("\n          INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value, threshold_condition,\n          action_on_breach, severity, regulatory_reference, source, ai_confidence, description, is_active, created_by, created_at)\n          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n        ").bind(i, n, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach, t.severity, t.regulatory_reference, "ai_generated", t.ai_confidence, t.description, 0, r, B()).run();
+			let i = U("r");
+			await e.env.DB.prepare("\n          INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value, threshold_condition,\n          action_on_breach, severity, regulatory_reference, source, ai_confidence, description, is_active, created_by, created_at)\n          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n        ").bind(i, n, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach, t.severity, t.regulatory_reference, "ai_generated", t.ai_confidence, t.description, 0, r, W()).run();
 		}
-		return await V(e.env.DB, {
+		return await G(e.env.DB, {
 			userId: r,
 			userName: i,
 			userRole: "product_manager",
@@ -2149,10 +2150,10 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 			aiConfidence: s.rules?.[0]?.ai_confidence
 		}), e.json(s);
 	} catch {
-		return e.json(He(t));
+		return e.json(Re(t));
 	}
-}), U.post("/documents/validate", async (e) => {
-	let { doc_type: t, extracted_text: n, entity_id: r, entity_type: i = "project", user_id: a = "system" } = await e.req.json(), o = e.env.OPENAI_API_KEY, s = Ue(t);
+}), q.post("/documents/validate", async (e) => {
+	let { doc_type: t, extracted_text: n, entity_id: r, entity_type: i = "project", user_id: a = "system" } = await e.req.json(), o = e.env.OPENAI_API_KEY, s = ze(t);
 	try {
 		let r = `Document type: ${t}\nExtracted text: ${n || "N/A (using demo mode)"}`, i = await callOpenAI(r, "You are an AI document validation system for Sohar International Bank's Green Home Loan program.\nValidate the provided document against Oman banking and ESG regulatory standards.\nReturn ONLY valid JSON:\n{\n  \"doc_type\": \"gsas_cert|epc_report|eia_approval|civil_id|salary_cert|invoice\",\n  \"extracted_fields\": {},\n  \"validation_results\": [{\"field\": \"string\", \"value\": \"string\", \"status\": \"pass|fail|warning\", \"message\": \"string\"}],\n  \"overall_status\": \"auto_verified|manual_review|rejected\",\n  \"ai_confidence\": number (0-100),\n  \"confidence_reason\": \"string\",\n  \"recommendation\": \"string\"\n}", o, "gpt-4o"), a;
 		try {
@@ -2165,7 +2166,7 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 	} catch {
 		return e.json(s);
 	}
-}), U.post("/reports/generate", async (e) => {
+}), q.post("/reports/generate", async (e) => {
 	let { prompt: t, report_type: n = "compliance", user_id: r = "u002", app_ref: i, context: a } = await e.req.json(), o = e.env.OPENAI_API_KEY, s = null, c = [];
 	if (i || a?.application?.reference || a?.application?.id) {
 		let t = i || a?.application?.reference || a?.application?.id, n = t.startsWith("GHL") || t.startsWith("HL");
@@ -2198,13 +2199,13 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 			let e = t.match(/\{[\s\S]*\}/);
 			n = JSON.parse(e ? e[0] : t);
 		} catch {
-			n = We(l || [], s, a);
+			n = Be(l || [], s, a);
 		}
 		return e.json(n);
 	} catch {
-		return e.json(We(l || [], s, a));
+		return e.json(Be(l || [], s, a));
 	}
-}), U.post("/invoice/validate", async (e) => {
+}), q.post("/invoice/validate", async (e) => {
 	let { filename: t, application_id: n } = await e.req.json(), r = await e.env.DB.prepare("SELECT p.approved_materials, p.approved_vendors FROM applications a JOIN products p ON a.product_id = p.id WHERE a.id = ?").bind(n).first();
 	return r && JSON.parse(r.approved_materials || "[]"), r && JSON.parse(r.approved_vendors || "[]"), e.json({
 		ocr_extracted: {
@@ -2248,7 +2249,7 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 		ai_confidence: 94,
 		recommendation: "Stage 1 completion verified. Green material confirmed. Payment authorised."
 	});
-}), U.post("/schema/generate", async (e) => (await e.req.json(), e.json({
+}), q.post("/schema/generate", async (e) => (await e.req.json(), e.json({
 	schema_type: "gsas_certificate_validation",
 	fields: [
 		{
@@ -2291,7 +2292,7 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 	ai_confidence: 96,
 	regulatory_reference: "OS GSO 3000:2025, Section 4.2"
 })));
-function He(e) {
+function Re(e) {
 	let t = e.toLowerCase().includes("dbr") || e.toLowerCase().includes("debt burden");
 	return e.toLowerCase().includes("gsas") || e.toLowerCase().includes("green"), t ? {
 		rules: [{
@@ -2342,7 +2343,7 @@ function He(e) {
 		analysis_summary: "Extracted GSAS score threshold and certification requirements."
 	};
 }
-function Ue(e) {
+function ze(e) {
 	let t = {
 		gsas_cert: {
 			doc_type: "gsas_cert",
@@ -2478,7 +2479,7 @@ function Ue(e) {
 	};
 	return t[e] || t.gsas_cert;
 }
-function We(e, t, n) {
+function Be(e, t, n) {
 	let r = t || n?.application || null, i = n?.product || null, a = n?.credit_metrics || null, o = n?.esg_status || null, s = i?.name || r?.product_name || "Green Home Loan", c = r?.reference || "N/A", l = r?.customer_name || "Applicant", u = a?.dbr?.value, d = a?.ltv?.value, f = r?.gsas_score, p = o?.epc?.rating || r?.epc_rating || "—", m = i?.green_dbr || i?.max_dbr || 55, h = i?.max_ltv || 90, g = i?.gsas_min_score || 70, _ = a?.stress_test?.passed !== !1, v = (n?.rules_summary || []).filter((e) => e.status !== "unknown").map((e) => `${e.name}: ${e.status?.toUpperCase() || "N/A"}${e.value == null ? "" : " (" + e.value + ")"}`).join("; ") || "Rule evaluation data not available", y = e.filter((e) => e.status === "approved").length, b = e.filter((e) => e.status === "rejected").length, x = e.length - y - b, S = e.length ? Math.round(e.reduce((e, t) => e + (t.gsas_score || 0), 0) / e.length) : f || 89;
 	return {
 		title: r ? `${s} — Compliance Report: ${c}` : `${s} – ESG Compliance Report`,
@@ -2554,12 +2555,12 @@ function We(e, t, n) {
 		]
 	};
 }
-function Ge(e, t, n) {
-	let r = e.toLowerCase(), i = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great") || r.includes("continue") || r.includes("use") || r.includes("keep") || r.includes("proceed"), a = n || [], o = a.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), s = o.some((e) => e.includes("clone") || e.includes("from scratch") || e.includes("product model") || e.includes("stage 1")), c = o.some((e) => e.includes("islamic") || e.includes("murabaha") || e.includes("conventional") || e.includes("structure")), l = o.some((e) => e.includes("target segment") || e.includes("omani nationals") || e.includes("expat") || e.includes("income band")), u = o.some((e) => e.includes("product name") || e.includes("sohar green") || e.includes("sohar eco") || e.includes("ecohome") || e.includes("confirm the name") || e.includes("shall i use") || e.includes("for the product name") || e.includes("i suggest") && e.includes("name")), d = o.some((e) => e.includes("base rate") || e.includes("pricing structure") || e.includes("stage 2") || e.includes("5.25%")), f = o.some((e) => e.includes("discount tier") || e.includes("green discount") || e.includes("gsas score band")), p = o.some((e) => e.includes("ltv band") || e.includes("loan-to-value") || e.includes("ltv") && e.includes("first home") && e.includes("subsequent") || e.includes("90% ltv") || e.includes("ltv settings")), m = o.some((e) => e.includes("dbr") && (e.includes("55%") || e.includes("stage 2") || e.includes("debt burden"))), h = o.some((e) => e.includes("term range") || e.includes("amount range") || e.includes("omr 10,000") || e.includes("min/max")), g = o.some((e) => e.includes("arrangement fee") || e.includes("early settlement") || e.includes("fee")), _ = o.some((e) => e.includes("17 eligibility rules") || e.includes("gsas minimum") || e.includes("stage 3") && e.includes("credit risk")), v = o.some((e) => e.includes("10-step workflow") || e.includes("10-step approval workflow") || e.includes("more human touchpoints in the automated phase") || e.includes("should i configure automated processing")), y = o.some((e) => e.includes("stage 4 complete") || e.includes("10-step approval workflow configured") || e.includes("approval workflow set") || e.includes("approval workflow configured") || e.includes("workflow is now configured") || e.includes("workflow has been configured") || e.includes("nci ekyc") && e.includes("muscat municipality") || e.includes("workflow") && e.includes("10 steps") || e.includes("workflow") && e.includes("10-step") && e.includes("stage 5")), b = o.some((e) => e.includes("shall i apply these compliance parameters") || e.includes("compliance parameters, or do you want to adjust") || e.includes("stage 5 complete") || e.includes("compliance parameters applied") || e.includes("basel iii") && e.includes("ifrs9") && e.includes("aml risk score")), x = o.some((e) => e.includes("ready to publish") || e.includes("confirm &amp; publish") || e.includes("confirm & publish") || e.includes("click confirm") || e.includes("stage 6") && (e.includes("portfolio target") || e.includes("break-even") || e.includes("nim ~")) || e.includes("stage 6") && e.includes("everything is configured")), S = [...a.map((e) => e.content || ""), e].join(" ").toLowerCase(), C = S.includes("green") || S.includes("gsas") || S.includes("esg") || S.includes("sustainable"), w = !C && (S.includes("auto") || S.includes("car") || S.includes("vehicle")), T = !C && !w && (S.includes("personal") || S.includes("unsecured") || S.includes("consumer")), E = !C && !w && !T && (S.includes("sme") || S.includes("business") || S.includes("working capital")), D = (() => {
+function Ve(e, t, n) {
+	let r = e.toLowerCase(), i = r.includes("yes") || r.includes("ok") || r.includes("proceed") || r.includes("confirm") || r.includes("clone") || r.includes("standard") || r.includes("agree") || r.includes("sounds good") || r.includes("go ahead") || r.includes("correct") || r.includes("apply") || r.includes("sure") || r.includes("fine") || r.includes("good") || r.includes("perfect") || r.includes("great") || r.includes("continue") || r.includes("use") || r.includes("keep") || r.includes("proceed"), a = n || [], o = a.filter((e) => e.role === "assistant").map((e) => (e.content || "").toLowerCase()), s = o.some((e) => e.includes("clone") || e.includes("from scratch") || e.includes("product model") || e.includes("stage 1")), c = o.some((e) => e.includes("islamic") || e.includes("murabaha") || e.includes("conventional") || e.includes("structure")), l = o.some((e) => e.includes("target segment") || e.includes("omani nationals") || e.includes("expat") || e.includes("income band")), u = o.some((e) => e.includes("product name") || e.includes("sohar green") || e.includes("sohar eco") || e.includes("ecohome") || e.includes("confirm the name") || e.includes("shall i use") || e.includes("for the product name") || e.includes("i suggest") && e.includes("name")), d = o.some((e) => e.includes("base rate") && e.includes("ltv") && e.includes("dbr") && e.includes("term") || e.includes("stage 2") && e.includes("core configuration") && e.includes("base rate") || e.includes("all standard loan parameters")), f = o.some((e) => e.includes("discount tier") || e.includes("green discount") || e.includes("gsas score band")), p = o.some((e) => e.includes("arrangement fee") || e.includes("early settlement") && e.includes("1%") || e.includes("gsas re-validation fee")), m = o.some((e) => e.includes("17 eligibility rules") || e.includes("gsas minimum") || e.includes("stage 3") && e.includes("credit risk")), h = o.some((e) => e.includes("10-step workflow") || e.includes("10-step approval workflow") || e.includes("more human touchpoints in the automated phase") || e.includes("should i configure automated processing")), g = o.some((e) => e.includes("stage 4 complete") || e.includes("10-step approval workflow configured") || e.includes("approval workflow set") || e.includes("approval workflow configured") || e.includes("workflow is now configured") || e.includes("workflow has been configured") || e.includes("nci ekyc") && e.includes("muscat municipality") || e.includes("workflow") && e.includes("10 steps") || e.includes("workflow") && e.includes("10-step") && e.includes("stage 5")), _ = o.some((e) => e.includes("shall i apply these compliance parameters") || e.includes("compliance parameters, or do you want to adjust") || e.includes("stage 5 complete") || e.includes("compliance parameters applied") || e.includes("basel iii") && e.includes("ifrs9") && e.includes("aml risk score")), v = o.some((e) => e.includes("ready to publish") || e.includes("confirm &amp; publish") || e.includes("confirm & publish") || e.includes("click confirm") || e.includes("stage 6") && (e.includes("portfolio target") || e.includes("break-even") || e.includes("nim ~")) || e.includes("stage 6") && e.includes("everything is configured")), y = [...a.map((e) => e.content || ""), e].join(" ").toLowerCase(), b = y.includes("green") || y.includes("gsas") || y.includes("esg") || y.includes("sustainable"), x = !b && (y.includes("auto") || y.includes("car") || y.includes("vehicle")), S = !b && !x && (y.includes("personal") || y.includes("unsecured") || y.includes("consumer")), C = !b && !x && !S && (y.includes("sme") || y.includes("business") || y.includes("working capital")), w = (() => {
 		let e = r.match(/\b(7[0-9]|80|85|90)\b/);
 		return e ? parseInt(e[1]) : 70;
-	})(), O = C ? "Sohar Green Home Finance – GSAS" : w ? "Auto Finance" : T ? "Personal Finance" : E ? "SME Working Capital" : "Home Finance";
-	if (!s && !C && !w && !T && !E) return {
+	})(), T = b ? "Sohar Green Home Finance – GSAS" : x ? "Auto Finance" : S ? "Personal Finance" : C ? "SME Working Capital" : "Home Finance";
+	if (!s && !b && !x && !S && !C) return {
 		message: "I can help you create a new fully-regulated banking product from scratch — I'll guide you through all 6 stages, ask the right expert questions, and automatically populate the configuration on screen.<br><br><strong>What type of product would you like to create?</strong><br><br>🏠 <strong>Green Home Loan</strong> (GSAS/ESG-certified mortgages)<br>🏠 <strong>Standard Home Loan</strong> (conventional or Islamic Murabaha)<br>🚗 <strong>Auto Finance</strong> (personal or fleet)<br>💳 <strong>Personal Finance</strong> (salary-backed unsecured)<br>🏢 <strong>SME Finance</strong> (working capital, equipment, trade)<br>🎓 <strong>Education Finance</strong><br>🏗️ <strong>Commercial Real Estate</strong>",
 		current_stage: 0,
 		show_roadmap: !1,
@@ -2570,9 +2571,9 @@ function Ge(e, t, n) {
 		schema_draft: null
 	};
 	if (!s) {
-		let e = C ? "Standard Home Loan (5.5% base, LTV 90%, DBR 60%, term 25yr)" : w ? "Auto Finance – Personal (6.5% base, LTV 80%, DBR 55%)" : T ? "Personal Finance (8.5% base, DBR 45%)" : E ? "SME Working Capital (7.0% base, DBR 50%)" : "Standard Home Loan";
+		let e = b ? "Standard Home Loan (5.5% base, LTV 90%, DBR 60%, term 25yr)" : x ? "Auto Finance – Personal (6.5% base, LTV 80%, DBR 55%)" : S ? "Personal Finance (8.5% base, DBR 45%)" : C ? "SME Working Capital (7.0% base, DBR 50%)" : "Standard Home Loan";
 		return {
-			message: C ? `Excellent choice. A <strong>Green Home Loan linked to GSAS certification</strong> is a strategically important product — it aligns with CBO Circular 2026-12 on green finance and Oman Vision 2040 sustainability targets.<br><br><strong>Stage 1 — Product Model</strong><br><br>The closest base is our existing <em>${e}</em>. We'd inherit the core credit parameters and then layer on ESG-specific attributes (GSAS score bands, green discounts, ESG document requirements).<br><br><strong>Would you like to clone from Standard Home Loan as a starting point, or configure everything from scratch?</strong>` : `Good. I'll help configure this as a CBO-compliant <strong>${O}</strong> for the Omani market.<br><br><strong>Stage 1 — Product Model</strong><br><br>Closest existing product: <em>${e}</em>.<br><br><strong>Shall we clone from this as a base?</strong>`,
+			message: b ? `Excellent choice. A <strong>Green Home Loan linked to GSAS certification</strong> is a strategically important product — it aligns with CBO Circular 2026-12 on green finance and Oman Vision 2040 sustainability targets.<br><br><strong>Stage 1 — Product Model</strong><br><br>The closest base is our existing <em>${e}</em>. We'd inherit the core credit parameters and then layer on ESG-specific attributes (GSAS score bands, green discounts, ESG document requirements).<br><br><strong>Would you like to clone from Standard Home Loan as a starting point, or configure everything from scratch?</strong>` : `Good. I'll help configure this as a CBO-compliant <strong>${T}</strong> for the Omani market.<br><br><strong>Stage 1 — Product Model</strong><br><br>Closest existing product: <em>${e}</em>.<br><br><strong>Shall we clone from this as a base?</strong>`,
 			current_stage: 1,
 			show_roadmap: !0,
 			action: "none",
@@ -2604,7 +2605,7 @@ function Ge(e, t, n) {
 	};
 	if (s && c && l && !u) {
 		r.includes("both") || r.includes("all");
-		let e = r.includes("national") && !r.includes("both"), t = r.includes("affluent") || r.includes("2,000") || r.includes("2000"), n = C ? t ? "Sohar Green Home Finance – GSAS Premium" : "Sohar Green Home Finance – GSAS" : `${O}`;
+		let e = r.includes("national") && !r.includes("both"), t = r.includes("affluent") || r.includes("2,000") || r.includes("2000"), n = b ? t ? "Sohar Green Home Finance – GSAS Premium" : "Sohar Green Home Finance – GSAS" : `${T}`;
 		return {
 			message: `Segment noted — ${e ? "Omani nationals" : "nationals and expats"}, ${t ? "affluent tier (OMR 2K+)" : "mass and affluent"}.<br><br>For the product name, I suggest: <strong>"${n}"</strong><br><br>This follows our naming convention: Bank · Product Type · Variant. The GSAS suffix signals the ESG positioning immediately to customers and regulators.<br><br><strong>Shall I use "${n}", or do you have a different name in mind?</strong>`,
 			current_stage: 1,
@@ -2619,7 +2620,7 @@ function Ge(e, t, n) {
 	if (u && !d) {
 		let t = i ? "Sohar Green Home Finance – GSAS" : e.length > 3 && e.length < 80 ? e.trim() : "Sohar Green Home Finance – GSAS";
 		return {
-			message: `✅ <strong>Stage 1 complete.</strong> Product model defined — "${t}", conventional, cloned from Standard Home Loan.<br><br><strong>Stage 2 — Core Configuration</strong><br><br><strong>Pricing structure recommendation:</strong><br><br>Base rate: <strong>5.25%</strong> per annum (10 bps below Standard Home Loan at 5.35%) — a modest incentive for green adoption without significant NIM compression.<br><br>CBO Circular 2026-12 §3.1 permits preferential pricing for green-certified products. Our current cost of funds is ~3.8%, giving a spread of ~1.45% — acceptable for this asset class.<br><br><strong>Shall I set the base rate at 5.25%, or would you like to adjust it?</strong>`,
+			message: `✅ <strong>Stage 1 complete.</strong> Product model defined — "${t}", conventional, cloned from Standard Home Loan.<br><br><strong>Stage 2 — Core Configuration</strong><br><br>Here are my recommendations for all standard loan parameters — confirm or adjust any:<br><br><strong>Base rate:</strong> <strong>5.25%</strong> p.a. (10 bps below Standard Home Loan 5.35% — modest green incentive; CBO Circular 2026-12 §3.1 permits preferential green pricing; cost of funds ~3.8%, spread ~1.45%)<br><strong>LTV:</strong> <strong>90%</strong> first home · <strong>80%</strong> subsequent/expat (CBO Circular BM/REG/2019/74 §7 — GSAS certification provides quality collateral assurance)<br><strong>DBR:</strong> <strong>55%</strong> of net income (CBO Circular 2026-12 §3.2 allows +5% relaxation for green-certified financing — standard is 50%)<br><strong>Term:</strong> <strong>5 – 25 years</strong> (CBO minimum 5yr, CBO ceiling 25yr for residential mortgages)<br><strong>Loan amount:</strong> <strong>OMR 25,000 – 500,000</strong> (minimum keeps GSAS certification cost ~OMR 3–8K economical; above 500K → Commercial Real Estate)<br><br><strong>Shall I apply all of these, or would you like to adjust any parameter?</strong>`,
 			current_stage: 2,
 			show_roadmap: !1,
 			action: "create_draft",
@@ -2627,7 +2628,7 @@ function Ge(e, t, n) {
 				name: t,
 				clone_from_id: "p001",
 				category: "home_loan",
-				segment: C ? "hnw" : "retail",
+				segment: b ? "hnw" : "retail",
 				structure: "conventional",
 				description: "Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on sustainability score. Supports Oman Vision 2040 and CBO green finance objectives."
 			},
@@ -2656,8 +2657,107 @@ function Ge(e, t, n) {
 			schema_draft: null
 		};
 	}
-	if (d && !f && C) return {
-		message: "Base rate set at 5.25%. Confirmed.<br><br><strong>ESG Green Discount tiers</strong> — this is what differentiates a real green product from a standard one:<br><br>&bull; <strong>GSAS Score ≥ 85 (Gold/Platinum)</strong> → −0.75% discount → effective rate <strong>4.50%</strong><br>&bull; <strong>GSAS Score 70–84 (Silver)</strong> → −0.50% discount → effective rate <strong>4.75%</strong><br>&bull; <strong>GSAS Score &lt; 70</strong> → <span style=\"color:#f87171\">NOT eligible</span> (product requires minimum Silver certification)<br><br>These tiers incentivise customers to choose higher-rated green properties. Oman's GORD (Gulf Organisation for Research & Development) manages GSAS ratings under OS GSO 3000:2025.<br><br><strong>Should I apply these discount tiers, or do you want different GSAS score thresholds or discount spreads?</strong>",
+	let E = (() => {
+		let e = r.match(/(?:base\s*)?rate[^\d]*(\d+(?:\.\d+)?)/);
+		if (e) return parseFloat(e[1]);
+		if (/5\.\d\d/.test(r)) {
+			let e = r.match(/5\.(\d\d)/);
+			if (e) return parseFloat("5." + e[1]);
+		}
+		return null;
+	})(), D = (() => {
+		let e = r.match(/ltv[^\d]*(\d+)/);
+		if (e) return parseInt(e[1]);
+		let t = r.match(/(\d+)%?\s*ltv/);
+		return t ? parseInt(t[1]) : null;
+	})(), O = (() => {
+		let e = r.match(/dbr[^\d]*(\d+)/);
+		if (e) return parseInt(e[1]);
+		let t = r.match(/(\d+)%?\s*dbr/);
+		return t ? parseInt(t[1]) : null;
+	})(), k = (() => {
+		let e = r.match(/min(?:imum)?\s*term[^\d]*(\d+)/);
+		return e ? parseInt(e[1]) : null;
+	})(), A = (() => {
+		let e = r.match(/max(?:imum)?\s*term[^\d]*(\d+)/);
+		return e ? parseInt(e[1]) : null;
+	})(), j = (() => {
+		let e = r.match(/min(?:imum)?[^\d]*(\d[\d,]*)/);
+		if (e) {
+			let t = parseInt(e[1].replace(/,/g, ""));
+			if (t >= 1e3) return t;
+		}
+		return null;
+	})(), M = (() => {
+		if (r.includes("1m") || r.includes("1 million") || r.includes("1,000,000")) return 1e6;
+		if (/\b750k\b|750,000/.test(r)) return 75e4;
+		if (/\b600k\b|600,000/.test(r)) return 6e5;
+		let e = r.match(/max(?:imum)?[^\d]*(\d[\d,]*)/);
+		if (e) {
+			let t = parseInt(e[1].replace(/,/g, ""));
+			if (t >= 1e4) return t;
+		}
+		return null;
+	})(), N = E ?? 5.25, P = D ?? 90, F = O ?? 55, I = k ?? 5, L = A ?? 25, R = j ?? 25e3, z = M ?? 5e5, ee = !i && (r.includes("increase") || r.includes("decrease") || r.includes("reduce") || r.includes("change") || r.includes("set ") || r.includes("make it") || r.includes("adjust") || r.includes("raise") || r.includes("lower") || r.includes("higher") || r.includes("more") || r.includes("less") || /\d/.test(r));
+	if (d && !f && !p && ee && !(r.includes("discount tier") || r.includes("arrangement fee") || r.includes("early settlement"))) {
+		let e = (e) => e >= 1e6 ? `OMR ${(e / 1e6).toFixed(e % 1e6 == 0 ? 0 : 1)}M` : `OMR ${e.toLocaleString()}`;
+		return {
+			message: `Noted — updating that parameter. Here are all standard loan parameters with your change applied:<br><br><strong>Base rate:</strong> <strong>${N}%</strong> p.a.<br><strong>LTV:</strong> <strong>${P}%</strong> first home · <strong>${Math.min(P, 80)}%</strong> subsequent/expat<br><strong>DBR:</strong> <strong>${F}%</strong> of net income<br><strong>Term:</strong> <strong>${I} – ${L} years</strong><br><strong>Loan amount:</strong> <strong>${e(R)} – ${e(z)}</strong><br><br><strong>Confirmed — shall I apply all of these, or is there anything else to adjust?</strong>`,
+			current_stage: 2,
+			show_roadmap: !1,
+			action: "none",
+			ui_events: [
+				{
+					type: "set_tab",
+					tab: "pricing"
+				},
+				{
+					type: "set_field",
+					field: "base_rate",
+					value: N
+				},
+				{
+					type: "set_field",
+					field: "max_ltv",
+					value: P
+				},
+				{
+					type: "set_field",
+					field: "max_dbr",
+					value: F
+				},
+				{
+					type: "set_field",
+					field: "min_term",
+					value: I
+				},
+				{
+					type: "set_field",
+					field: "max_term",
+					value: L
+				},
+				{
+					type: "set_field",
+					field: "min_amount",
+					value: R
+				},
+				{
+					type: "set_field",
+					field: "max_amount",
+					value: z
+				},
+				{
+					type: "highlight_field",
+					field: M ? "max_amount" : E ? "base_rate" : D ? "max_ltv" : "max_amount"
+				}
+			],
+			product_draft: null,
+			rules_draft: null,
+			schema_draft: null
+		};
+	}
+	if (d && i && !f && b && !p) return {
+		message: `Standard parameters confirmed — ${N}% rate, ${P}% LTV, ${F}% DBR, ${I}–${L}yr, OMR ${R.toLocaleString()}–${z.toLocaleString()}.<br><br><strong>ESG Green Discount tiers</strong> — this is what differentiates a real green product from a standard one:<br><br>&bull; <strong>GSAS Score ≥ 85 (Gold/Platinum)</strong> → −0.75% discount → effective rate <strong>${(N - .75).toFixed(2)}%</strong><br>&bull; <strong>GSAS Score 70–84 (Silver)</strong> → −0.50% discount → effective rate <strong>${(N - .5).toFixed(2)}%</strong><br>&bull; <strong>GSAS Score &lt; 70</strong> → <span style="color:#f87171">NOT eligible</span> (product requires minimum Silver certification)<br><br>These tiers incentivise customers to choose higher-rated green properties. Oman's GORD manages GSAS ratings under OS GSO 3000:2025.<br><br><strong>Should I apply these discount tiers, or do you want different GSAS score thresholds or discount spreads?</strong>`,
 		current_stage: 2,
 		show_roadmap: !1,
 		action: "none",
@@ -2669,7 +2769,37 @@ function Ge(e, t, n) {
 			{
 				type: "set_field",
 				field: "base_rate",
-				value: 5.25
+				value: N
+			},
+			{
+				type: "set_field",
+				field: "max_ltv",
+				value: P
+			},
+			{
+				type: "set_field",
+				field: "max_dbr",
+				value: F
+			},
+			{
+				type: "set_field",
+				field: "min_term",
+				value: I
+			},
+			{
+				type: "set_field",
+				field: "max_term",
+				value: L
+			},
+			{
+				type: "set_field",
+				field: "min_amount",
+				value: R
+			},
+			{
+				type: "set_field",
+				field: "max_amount",
+				value: z
 			},
 			{
 				type: "highlight_field",
@@ -2680,8 +2810,8 @@ function Ge(e, t, n) {
 		rules_draft: null,
 		schema_draft: null
 	};
-	if ((f || d && !C) && !p) return {
-		message: "Green discount tiers confirmed — 0.75% for Gold/Platinum (≥85), 0.5% for Silver (70–84).<br><br><strong>Loan-to-Value (LTV) bands:</strong><br><br>Under CBO Circular BM/REG/2019/74, residential mortgages are capped at:<br>&bull; <strong>First home purchase</strong>: up to <strong>90% LTV</strong><br>&bull; <strong>Second/subsequent property</strong>: up to <strong>80% LTV</strong><br>&bull; <strong>Expat customers</strong>: max <strong>80% LTV</strong> regardless of purchase number<br><br>For a green home loan, I recommend keeping the CBO maximum (90% for first home, 80% otherwise) — the GSAS certification already provides quality collateral assurance through certified construction standards.<br><br><strong>Shall I configure LTV at 90% (first home) / 80% (subsequent/expat), or do you want stricter limits?</strong>",
+	if (!p && (f || d && i && !b)) return {
+		message: (b ? "ESG discount tiers confirmed — 0.75% Gold/Platinum (≥85), 0.5% Silver (70–84)." : "Standard loan parameters confirmed.") + `<br><br><strong>Fee structure:</strong><br><br>Under CBO Consumer Protection Circular 2018/2, all fees must be disclosed upfront. Recommended:<br><br>&bull; <strong>Arrangement fee</strong>: 1% of loan amount, capped at OMR 500 — standard market rate${b ? ", waived for GSAS Platinum (≥90 score) as an additional green incentive" : ""}<br>&bull; <strong>Early settlement penalty</strong>: 1% of outstanding balance (CBO maximum allowed)${b ? " — or waived after year 5 to encourage refinancing into newer green products" : ""}<br>&bull; <strong>Valuation fee</strong>: actual cost (OMR 200–800 depending on property) — pass-through to customer<br>` + (b ? "&bull; <strong>GSAS re-validation fee</strong>: OMR 150 (charged at certificate renewal, every 3 years) — new ESG-specific fee<br>" : "") + "<br><strong>Should I apply this fee structure, or modify any of these?</strong>",
 		current_stage: 2,
 		show_roadmap: !1,
 		action: "none",
@@ -2699,115 +2829,54 @@ function Ge(e, t, n) {
 			{
 				type: "set_field",
 				field: "green_discount_premium",
-				value: .75
+				value: b ? .75 : 0
 			},
 			{
 				type: "set_field",
 				field: "green_discount_standard",
-				value: .5
+				value: b ? .5 : 0
 			},
 			{
 				type: "highlight_field",
-				field: "green_discount_premium"
+				field: b ? "green_discount_premium" : "max_amount"
 			}
 		],
 		product_draft: null,
 		rules_draft: null,
 		schema_draft: null
 	};
-	if (p && !m) return {
-		message: "LTV set: 90% first home, 80% subsequent/expat. Confirmed.<br><br><strong>Debt Burden Ratio (DBR) limit:</strong><br><br>Standard CBO maximum is 50% of net monthly income. However, <strong>CBO Circular 2026-12 §3.2 explicitly allows an enhanced DBR of up to 55% for green-certified financing products</strong> — a 5% relaxation designed to incentivise green uptake.<br><br>My recommendation:<br>&bull; <strong>55% DBR</strong> for green-certified loans (using the CBO allowance)<br>&bull; <strong>50% DBR</strong> standard safety floor for all other cases<br><br>This gives customers slightly more headroom when purchasing green properties, directly supporting adoption.<br><br><strong>Shall I set DBR at 55% for this green product, or do you prefer the standard 50%?</strong>",
-		current_stage: 2,
-		show_roadmap: !1,
-		action: "none",
-		ui_events: [{
-			type: "set_field",
-			field: "max_ltv",
-			value: 90
-		}, {
-			type: "highlight_field",
-			field: "max_ltv"
-		}],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	};
-	if (m && !h) return {
-		message: "DBR at 55% confirmed — using CBO green finance allowance (Circular 2026-12 §3.2).<br><br><strong>Term and amount ranges:</strong><br><br>&bull; <strong>Term</strong>: min <strong>5 years</strong>, max <strong>25 years</strong> (CBO ceiling for residential mortgages; CBO minimum for mortgages is 5 years). For green, no reason to shorten — longer terms support larger green property purchases.<br>&bull; <strong>Minimum loan</strong>: <strong>OMR 25,000</strong> — below this, the GSAS certification cost (~OMR 3,000–8,000) makes the product uneconomical for the customer<br>&bull; <strong>Maximum loan</strong>: <strong>OMR 500,000</strong> — our standard residential cap; above this goes to Commercial Real Estate<br><br><strong>Are these ranges acceptable — 5–25 years, OMR 25K–500K — or do you want to adjust?</strong>",
-		current_stage: 2,
-		show_roadmap: !1,
-		action: "none",
-		ui_events: [{
-			type: "set_field",
-			field: "max_dbr",
-			value: 55
-		}, {
-			type: "highlight_field",
-			field: "max_dbr"
-		}],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	};
-	if (h && !g) return {
-		message: "Term and amounts set: 5–25 years, OMR 25,000–500,000. Confirmed.<br><br><strong>Fee structure:</strong><br><br>Under CBO Consumer Protection Circular 2018/2, all fees must be disclosed upfront. Recommended:<br><br>&bull; <strong>Arrangement fee</strong>: 1% of loan amount, capped at OMR 500 — standard market rate, waived for GSAS Platinum (≥90 score) as an additional green incentive<br>&bull; <strong>Early settlement penalty</strong>: 1% of outstanding balance (CBO maximum allowed) — or waived after year 5 to encourage refinancing into newer green products<br>&bull; <strong>Valuation fee</strong>: actual cost (OMR 200–800 depending on property) — pass-through to customer<br>&bull; <strong>GSAS re-validation fee</strong>: OMR 150 (charged at certificate renewal, every 3 years) — new ESG-specific fee<br><br><strong>Should I apply this fee structure, or modify any of these?</strong>",
-		current_stage: 2,
-		show_roadmap: !1,
-		action: "none",
-		ui_events: [
-			{
-				type: "set_field",
-				field: "min_amount",
-				value: 25e3
+	if (p && !m) {
+		let e = (e) => e >= 1e6 ? `OMR ${(e / 1e6).toFixed(e % 1e6 == 0 ? 0 : 1)}M` : `OMR ${(e / 1e3).toFixed(0)}K`;
+		return {
+			message: `✅ <strong>Stage 2 complete.</strong> Full pricing and configuration set:<br>Rate ${N}%${b ? ` · Green discount ${(N - .75).toFixed(2)}%/${(N - .5).toFixed(2)}%` : ""} · LTV ${P}/${Math.min(P, 80)}% · DBR ${F}% · ${e(R)}–${e(z)} · Term ${I}–${L}yr<br><br><strong>Stage 3 — Eligibility Rules</strong><br><br>I'll now generate <strong>17 eligibility rules</strong> covering 5 categories: credit risk, collateral, ESG/green, income & employment, and documentation. All rules are cited against specific CBO circulars and OS GSO standards.<br><br>One key decision before I generate: <strong>GSAS minimum score</strong>:<br>&bull; <strong>70 (Silver minimum)</strong> — broader market eligibility, higher volume, lower average green quality<br>&bull; <strong>75 (stricter Silver)</strong> — better ESG positioning, may reduce addressable market by ~20%<br><br><strong>Which GSAS minimum should I use: 70 or 75?</strong>`,
+			current_stage: 3,
+			show_roadmap: !1,
+			action: "stage_update",
+			stage_update_hint: {
+				stage: 2,
+				fields: {
+					base_rate: N,
+					max_ltv: P,
+					max_dbr: F,
+					green_dbr: F,
+					min_term: I,
+					max_term: L,
+					min_amount: R,
+					max_amount: z,
+					gsas_min_score: 70,
+					gsas_premium_score: 85,
+					green_discount_premium: b ? .75 : 0,
+					green_discount_standard: b ? .5 : 0
+				}
 			},
-			{
-				type: "set_field",
-				field: "max_amount",
-				value: 5e5
-			},
-			{
-				type: "set_field",
-				field: "max_term",
-				value: 25
-			},
-			{
-				type: "highlight_field",
-				field: "max_amount"
-			}
-		],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	};
-	if (g && !_) return {
-		message: "✅ <strong>Stage 2 complete.</strong> Full pricing and configuration set:<br>Rate 5.25% · Green discount 0.75%/0.5% · LTV 90/80% · DBR 55% · OMR 25K–500K · Term 5–25yr<br><br><strong>Stage 3 — Eligibility Rules</strong><br><br>I'll now generate <strong>17 eligibility rules</strong> covering 5 categories: credit risk, collateral, ESG/green, income & employment, and documentation. All rules are cited against specific CBO circulars and OS GSO standards.<br><br>One key decision before I generate: <strong>GSAS minimum score</strong>:<br>&bull; <strong>70 (Silver minimum)</strong> — broader market eligibility, higher volume, lower average green quality<br>&bull; <strong>75 (stricter Silver)</strong> — better ESG positioning, may reduce addressable market by ~20%<br><br><strong>Which GSAS minimum should I use: 70 or 75?</strong>",
-		current_stage: 3,
-		show_roadmap: !1,
-		action: "stage_update",
-		stage_update_hint: {
-			stage: 2,
-			fields: {
-				base_rate: 5.25,
-				max_ltv: 90,
-				max_dbr: 55,
-				green_dbr: 55,
-				min_term: 5,
-				max_term: 25,
-				min_amount: 25e3,
-				max_amount: 5e5,
-				gsas_min_score: 70,
-				gsas_premium_score: 85,
-				green_discount_premium: .75,
-				green_discount_standard: .5
-			}
-		},
-		ui_events: [],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	};
-	if (_ && !v) {
-		let e = r.includes("75") ? 75 : r.includes("70") ? 70 : D >= 70 ? D : 70, t = [
+			ui_events: [],
+			product_draft: null,
+			rules_draft: null,
+			schema_draft: null
+		};
+	}
+	if (m && !h) {
+		let e = r.includes("75") ? 75 : r.includes("70") ? 70 : w >= 70 ? w : 70, t = [
 			{
 				name: "DBR ≤ 55% (Loans > OMR 100K)",
 				category: "creditworthiness",
@@ -3051,7 +3120,7 @@ function Ge(e, t, n) {
 			schema_draft: null
 		};
 	}
-	if (v && !y) {
+	if (h && !g) {
 		let e = [
 			{
 				id: "n1",
@@ -3166,7 +3235,7 @@ function Ge(e, t, n) {
 			schema_draft: null
 		};
 	}
-	if (y && !b) return {
+	if (g && !_) return {
 		message: "<strong>Stage 5 — Compliance Classification</strong><br><br>For regulatory reporting, I recommend classifying this product as follows:<br>&bull; <strong>Basel III risk weight</strong>: 75% (residential retail mortgage, LTV ≤90% per CBO BM/REG/2019/74 Schedule 3)<br>&bull; <strong>IFRS 9 provisioning</strong>: 1.5% Stage 1 ECL (higher than standard 1.0% due to green portfolio concentration, per IFRS 9 §5.5)<br>&bull; <strong>CBO classification</strong>: Green Finance (reportable under Circular 2026-12 §7 monthly ESG portfolio return)<br>&bull; <strong>AML risk tier</strong>: LOW (eKYC + OCB auto-verified; green property reduces beneficial ownership complexity)<br>&bull; <strong>Regulatory tags</strong>: #CLIMATE_RISK · #ESG_ELIGIBILITY · #GREEN_FINANCING · #OMAN_VISION_2040<br><br><strong>Shall I apply these compliance parameters, or do you want to adjust the risk weight or provisioning rate?</strong>",
 		current_stage: 5,
 		show_roadmap: !1,
@@ -3179,7 +3248,7 @@ function Ge(e, t, n) {
 		rules_draft: null,
 		schema_draft: null
 	};
-	if (b && !x) {
+	if (_ && !v) {
 		let e = a.filter((e) => e.role === "user").map((e) => (e.content || "").toLowerCase()), t = [...o, ...e].join(" "), n = "Sohar Green Home Finance – GSAS", r = o.find((e) => /stage\s+1\s+complete/i.test(e));
 		if (r) {
 			let e = r.match(/stage\s+1\s+complete[\u2014\u2013\-\.\s]+([A-Z][^,\n]{3,59}),/i) || r.match(/"([^"]{4,60})"/);
@@ -3529,8 +3598,8 @@ function Ge(e, t, n) {
 }
 //#endregion
 //#region src/api/compliance.ts
-var W = new I();
-W.get("/esg/:appId", async (e) => {
+var J = new V();
+J.get("/esg/:appId", async (e) => {
 	let t = e.req.param("appId"), n = t.startsWith("GHL") || t.startsWith("HL"), r = await e.env.DB.prepare(n ? "SELECT * FROM applications WHERE reference = ?" : "SELECT * FROM applications WHERE id = ?").bind(t).first();
 	if (!r) return e.json({ error: "Not found" }, 404);
 	let { results: i } = await e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'project' AND entity_id = ?").bind(r.project_id || "").all(), { results: a } = await e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'application' AND entity_id = ?").bind(r.id).all();
@@ -3566,8 +3635,8 @@ W.get("/esg/:appId", async (e) => {
 			issuer: f.issuer || "N/A",
 			color: l?.validation_status === "auto_verified" ? "green" : l?.validation_status === "manual_review" ? "amber" : "red"
 		},
-		ai_recommendation: Ke(s, c, l),
-		overall_esg_status: qe(s, c, l)
+		ai_recommendation: He(s, c, l),
+		overall_esg_status: Ue(s, c, l)
 	}, k = {
 		dbr: {
 			value: x,
@@ -3601,9 +3670,9 @@ W.get("/esg/:appId", async (e) => {
 		credit_metrics: k,
 		application: r
 	});
-}), W.post("/:appId/approve-esg", async (e) => {
-	let t = e.req.param("appId"), n = await e.req.json(), r = B();
-	return await e.env.DB.prepare("\n    UPDATE applications SET esg_verification_status = 'approved', status = 'credit_review', \n    compliance_approved_by = ?, compliance_approved_at = ?, updated_at = ? WHERE id = ?\n  ").bind(n.user_id || "u002", r, r, t).run(), await V(e.env.DB, {
+}), J.post("/:appId/approve-esg", async (e) => {
+	let t = e.req.param("appId"), n = await e.req.json(), r = W();
+	return await e.env.DB.prepare("\n    UPDATE applications SET esg_verification_status = 'approved', status = 'credit_review', \n    compliance_approved_by = ?, compliance_approved_at = ?, updated_at = ? WHERE id = ?\n  ").bind(n.user_id || "u002", r, r, t).run(), await G(e.env.DB, {
 		userId: n.user_id || "u002",
 		userName: n.user_name || "Aisha Al-Balushi",
 		userRole: "compliance_officer",
@@ -3616,9 +3685,9 @@ W.get("/esg/:appId", async (e) => {
 		success: !0,
 		new_status: "credit_review"
 	});
-}), W.post("/:appId/approve-risk", async (e) => {
-	let t = e.req.param("appId"), n = await e.req.json(), r = B();
-	return await e.env.DB.prepare("\n    UPDATE applications SET status = 'approved', risk_approved_by = ?, risk_approved_at = ?, updated_at = ? WHERE id = ?\n  ").bind(n.user_id || "u003", r, r, t).run(), await V(e.env.DB, {
+}), J.post("/:appId/approve-risk", async (e) => {
+	let t = e.req.param("appId"), n = await e.req.json(), r = W();
+	return await e.env.DB.prepare("\n    UPDATE applications SET status = 'approved', risk_approved_by = ?, risk_approved_at = ?, updated_at = ? WHERE id = ?\n  ").bind(n.user_id || "u003", r, r, t).run(), await G(e.env.DB, {
 		userId: n.user_id || "u003",
 		userName: n.user_name || "Omar Al-Mantheri",
 		userRole: "risk_officer",
@@ -3630,9 +3699,9 @@ W.get("/esg/:appId", async (e) => {
 		success: !0,
 		new_status: "approved"
 	});
-}), W.post("/:appId/reject", async (e) => {
+}), J.post("/:appId/reject", async (e) => {
 	let t = e.req.param("appId"), n = await e.req.json();
-	return await e.env.DB.prepare("UPDATE applications SET status = 'rejected', rejection_reason = ?, updated_at = ? WHERE id = ?").bind(n.reason, B(), t).run(), await V(e.env.DB, {
+	return await e.env.DB.prepare("UPDATE applications SET status = 'rejected', rejection_reason = ?, updated_at = ? WHERE id = ?").bind(n.reason, W(), t).run(), await G(e.env.DB, {
 		userId: n.user_id || "u002",
 		userName: n.user_name || "Aisha Al-Balushi",
 		userRole: "compliance_officer",
@@ -3642,7 +3711,7 @@ W.get("/esg/:appId", async (e) => {
 		details: { reason: n.reason }
 	}), e.json({ success: !0 });
 });
-function Ke(e, t, n) {
+function He(e, t, n) {
 	let r = [];
 	return (!e || e.validation_status === "pending") && r.push("GSAS certificate pending validation"), t?.validation_status === "manual_review" && r.push("EPC requires manual visual check (88% confidence – image quality)"), (!n || n.validation_status === "pending") && r.push("EIA clearance pending"), r.length === 0 ? {
 		action: "Approve",
@@ -3658,7 +3727,7 @@ function Ke(e, t, n) {
 		confidence: 70
 	};
 }
-function qe(e, t, n) {
+function Ue(e, t, n) {
 	let r = [
 		e?.validation_status,
 		t?.validation_status,
@@ -3666,7 +3735,7 @@ function qe(e, t, n) {
 	];
 	return r.includes("rejected") ? "rejected" : r.includes("manual_review") ? "review_required" : r.every((e) => e === "auto_verified" || e === "approved") ? "verified" : "pending";
 }
-W.get("/full/:appId", async (e) => {
+J.get("/full/:appId", async (e) => {
 	let t = e.req.param("appId"), n = t.startsWith("GHL") || t.startsWith("HL"), r = await e.env.DB.prepare(n ? "SELECT a.*, p.name as product_name, p.base_rate, p.max_ltv, p.max_dbr, p.green_dbr,\n                p.gsas_min_score, p.gsas_premium_score, p.green_discount_premium, p.green_discount_standard,\n                p.ai_confidence_threshold, p.esg_required_docs as prod_esg_required_docs,\n                p.approved_materials as prod_approved_materials, p.approved_vendors as prod_approved_vendors,\n                p.min_amount, p.max_amount, p.min_term, p.max_term,\n                u.unit_number, u.area_sqm, u.bedrooms, u.bathrooms, u.features as unit_features,\n                pr.name as project_name, pr.location as project_location, pr.gsas_score as project_gsas_score,\n                pr.epc_rating as project_epc_rating, pr.eia_reference as project_eia_reference,\n                pr.total_units as project_total_units, pr.developer_id\n         FROM applications a\n         LEFT JOIN products p  ON a.product_id  = p.id\n         LEFT JOIN units    u  ON a.unit_id      = u.id\n         LEFT JOIN projects pr ON a.project_id   = pr.id\n         WHERE a.reference = ?" : "SELECT a.*, p.name as product_name, p.base_rate, p.max_ltv, p.max_dbr, p.green_dbr,\n                p.gsas_min_score, p.gsas_premium_score, p.green_discount_premium, p.green_discount_standard,\n                p.ai_confidence_threshold, p.esg_required_docs as prod_esg_required_docs,\n                p.approved_materials as prod_approved_materials, p.approved_vendors as prod_approved_vendors,\n                p.min_amount, p.max_amount, p.min_term, p.max_term,\n                u.unit_number, u.area_sqm, u.bedrooms, u.bathrooms, u.features as unit_features,\n                pr.name as project_name, pr.location as project_location, pr.gsas_score as project_gsas_score,\n                pr.epc_rating as project_epc_rating, pr.eia_reference as project_eia_reference,\n                pr.total_units as project_total_units, pr.developer_id\n         FROM applications a\n         LEFT JOIN products p  ON a.product_id  = p.id\n         LEFT JOIN units    u  ON a.unit_id      = u.id\n         LEFT JOIN projects pr ON a.project_id   = pr.id\n         WHERE a.id = ?").bind(t).first();
 	if (!r) return e.json({ error: "Not found" }, 404);
 	let { results: i } = await e.env.DB.prepare("SELECT * FROM rules WHERE is_active = 1 AND (product_id = ? OR product_id IS NULL) ORDER BY severity DESC, category").bind(r.product_id || "").all(), a = (i || []).filter((e) => e.category === "esg"), o = (i || []).filter((e) => [
@@ -3678,30 +3747,30 @@ W.get("/full/:appId", async (e) => {
 		e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'application' AND entity_id = ?").bind(r.id).all(),
 		r.unit_id ? e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'unit' AND entity_id = ?").bind(r.unit_id).all() : Promise.resolve({ results: [] }),
 		r.project_id ? e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'project' AND entity_id = ?").bind(r.project_id).all() : Promise.resolve({ results: [] })
-	]), f = l.results || [], p = u.results || [], m = d.results || [], h = (e) => f.find((t) => t.doc_type === e) || p.find((t) => t.doc_type === e) || m.find((t) => t.doc_type === e), g = h("gsas_cert"), _ = h("epc_report"), v = h("eia_approval"), y = g ? JSON.parse(g.extracted_data || "{}") : {}, b = _ ? JSON.parse(_.extracted_data || "{}") : {}, x = v ? JSON.parse(v.extracted_data || "{}") : {}, S = r.salary_omr || r.salary || 0, C = r.loan_amount || 0, w = r.loan_term || 25, T = r.applied_rate || 5.5, E = r.property_value || C / .8, D = T / 100 / 12, O = w * 12, k = D > 0 ? C * D * (1 + D) ** +O / ((1 + D) ** +O - 1) : C / O, A = r.dbr || (S > 0 ? Math.round(k / S * 100 * 10) / 10 : null), j = r.ltv || (E > 0 ? Math.round(C / E * 100 * 10) / 10 : null), M = r.malaa_score || r.credit_score || null, ee = T + 3.5, te = (() => {
-		let e = ee / 100 / 12;
+	]), f = l.results || [], p = u.results || [], m = d.results || [], h = (e) => f.find((t) => t.doc_type === e) || p.find((t) => t.doc_type === e) || m.find((t) => t.doc_type === e), g = h("gsas_cert"), _ = h("epc_report"), v = h("eia_approval"), y = g ? JSON.parse(g.extracted_data || "{}") : {}, b = _ ? JSON.parse(_.extracted_data || "{}") : {}, x = v ? JSON.parse(v.extracted_data || "{}") : {}, S = r.salary_omr || r.salary || 0, C = r.loan_amount || 0, w = r.loan_term || 25, T = r.applied_rate || 5.5, E = r.property_value || C / .8, D = T / 100 / 12, O = w * 12, k = D > 0 ? C * D * (1 + D) ** +O / ((1 + D) ** +O - 1) : C / O, A = r.dbr || (S > 0 ? Math.round(k / S * 100 * 10) / 10 : null), j = r.ltv || (E > 0 ? Math.round(C / E * 100 * 10) / 10 : null), M = r.malaa_score || r.credit_score || null, N = T + 3.5, P = (() => {
+		let e = N / 100 / 12;
 		return C * e * (1 + e) ** +O / ((1 + e) ** +O - 1);
-	})(), ne = S > 0 ? Math.round(te / S * 100 * 10) / 10 : null, re = ne === null ? (r.stress_test_passed, !0) : ne <= 60, ie = r.gsas_min_score || 70, ae = r.gsas_premium_score || 85, oe = r.green_dbr || r.max_dbr || 55, se = r.max_ltv || 90, ce = {
+	})(), F = S > 0 ? Math.round(P / S * 100 * 10) / 10 : null, I = F === null ? (r.stress_test_passed, !0) : F <= 60, L = r.gsas_min_score || 70, R = r.gsas_premium_score || 85, z = r.green_dbr || r.max_dbr || 55, ee = r.max_ltv || 90, te = {
 		A: 5,
 		B: 4,
 		C: 3,
 		D: 2,
 		E: 1,
 		F: 0
-	}[b.rating || r.epc_rating || "A"] ?? 5, N = a.find((e) => e.metric === "epc_rating")?.threshold_value || 3, le = {
+	}[b.rating || r.epc_rating || "A"] ?? 5, ne = a.find((e) => e.metric === "epc_rating")?.threshold_value || 3, re = {
 		gsas: {
 			status: g?.validation_status || "pending",
 			confidence: g?.ai_confidence || 0,
 			score: y.overall_score || r.gsas_score,
-			min_score: ie,
-			premium_score: ae,
+			min_score: L,
+			premium_score: R,
 			rating: y.rating || (r.gsas_score >= 90 ? "Platinum" : r.gsas_score >= 75 ? "Gold" : r.gsas_score >= 60 ? "Silver" : "Unknown"),
 			certificate_number: y.certificate_number || "N/A",
 			expiry: y.expiry_date || "N/A",
 			issuer: y.issuer || "N/A",
 			rule_ref: a.find((e) => e.metric === "gsas_score")?.regulatory_reference || "OS GSO 3000:2025",
-			passes_threshold: (r.gsas_score || 0) >= ie,
-			passes_premium: (r.gsas_score || 0) >= ae,
+			passes_threshold: (r.gsas_score || 0) >= L,
+			passes_premium: (r.gsas_score || 0) >= R,
 			color: g?.validation_status === "auto_verified" ? "green" : g?.validation_status === "manual_review" ? "amber" : "red",
 			filename: g?.filename || null,
 			file_url: g?.file_url || null,
@@ -3713,7 +3782,7 @@ W.get("/full/:appId", async (e) => {
 			confidence: _?.ai_confidence || 0,
 			rating: b.rating || r.epc_rating || "A",
 			min_rating: "C",
-			passes: ce >= N,
+			passes: te >= ne,
 			expiry: b.expiry_date || "N/A",
 			assessor: b.assessor || "N/A",
 			energy_kwh: b.energy_consumption || "N/A",
@@ -3740,20 +3809,20 @@ W.get("/full/:appId", async (e) => {
 			doc_id: v?.id || null,
 			doc_source: v ? f.find((e) => e.doc_type === "eia_approval") ? "application" : p.find((e) => e.doc_type === "eia_approval") ? "unit" : "project" : null
 		},
-		ai_recommendation: Ke(g, _, v),
-		overall_esg_status: qe(g, _, v)
-	}, ue = {
+		ai_recommendation: He(g, _, v),
+		overall_esg_status: Ue(g, _, v)
+	}, ie = {
 		dbr: {
 			value: A,
-			max: oe,
-			status: A === null || A <= oe ? "pass" : "fail",
-			label: `Max ${oe}% — ${r.product_name || "product"} green DBR limit`
+			max: z,
+			status: A === null || A <= z ? "pass" : "fail",
+			label: `Max ${z}% — ${r.product_name || "product"} green DBR limit`
 		},
 		ltv: {
 			value: j,
-			max: se,
-			status: j === null || j <= se ? "pass" : "fail",
-			label: `Max ${se}% — ${r.product_name || "product"} LTV ceiling`
+			max: ee,
+			status: j === null || j <= ee ? "pass" : "fail",
+			label: `Max ${ee}% — ${r.product_name || "product"} LTV ceiling`
 		},
 		malaa_score: {
 			value: M,
@@ -3762,14 +3831,14 @@ W.get("/full/:appId", async (e) => {
 			label: "Min 650 — CBO Credit Bureau minimum"
 		},
 		stress_test: {
-			passed: re,
-			rate: parseFloat(ee.toFixed(2)),
-			stress_dbr: ne,
-			label: `CBO +350bps shock: ${ee.toFixed(2)}% — threshold 60%`
+			passed: I,
+			rate: parseFloat(N.toFixed(2)),
+			stress_dbr: F,
+			label: `CBO +350bps shock: ${N.toFixed(2)}% — threshold 60%`
 		},
 		monthly_payment: Math.round(k),
 		property_value: Math.round(E)
-	}, de = (e) => {
+	}, ae = (e) => {
 		let t = (() => {
 			switch (e.metric) {
 				case "DBR":
@@ -3779,8 +3848,8 @@ W.get("/full/:appId", async (e) => {
 				case "gsas_score": return r.gsas_score;
 				case "credit_score": return M;
 				case "loan_term": return w;
-				case "stress_rate": return ee;
-				case "epc_rating": return ce;
+				case "stress_rate": return N;
+				case "epc_rating": return te;
 				case "esg_docs_complete": return g && _ ? 1 : 0;
 				case "eia_approval":
 				case "eia_required": return +!!v;
@@ -3817,9 +3886,9 @@ W.get("/full/:appId", async (e) => {
 			status: i ? "pass" : "fail",
 			value: t
 		};
-	}, fe = c.map((e) => ({
+	}, oe = c.map((e) => ({
 		...e,
-		evaluation: de(e)
+		evaluation: ae(e)
 	}));
 	return e.json({
 		application: r,
@@ -3841,10 +3910,10 @@ W.get("/full/:appId", async (e) => {
 			esg: a,
 			credit: o,
 			collateral: s,
-			all_evaluated: fe
+			all_evaluated: oe
 		},
-		esg_status: le,
-		credit_metrics: ue,
+		esg_status: re,
+		credit_metrics: ie,
 		documents: {
 			gsas: g || null,
 			epc: _ || null,
@@ -3853,14 +3922,14 @@ W.get("/full/:appId", async (e) => {
 			all_proj: m
 		}
 	});
-}), W.get("/queue", async (e) => {
+}), J.get("/queue", async (e) => {
 	let { results: t } = await e.env.DB.prepare("\n    SELECT a.*, p.name as product_name, p.base_rate, p.gsas_premium_score,\n           p.green_discount_premium\n    FROM applications a\n    LEFT JOIN products p ON a.product_id = p.id\n    ORDER BY a.created_at DESC\n    LIMIT 100\n  ").all(), n = (t || []).map((e) => {
 		let t = e.loan_amount >= 2e5 || e.esg_verification_status === "pending" && e.gsas_score || e.created_at && e.created_at.startsWith((/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
 		return {
 			...e,
 			priority: t ? "high" : "normal",
 			customer_display_name: e.customer_name,
-			manual_checks: Je(e)
+			manual_checks: We(e)
 		};
 	});
 	return e.json({
@@ -3868,11 +3937,11 @@ W.get("/full/:appId", async (e) => {
 		total: n.length
 	});
 });
-function Je(e) {
+function We(e) {
 	let t = [];
 	return e.gsas_score || t.push("GSAS score not provided — manual verification required"), e.esg_verification_status === "pending" && t.push("ESG documents pending review"), e.dbr && parseFloat(e.dbr) > 40 && t.push(`DBR ${e.dbr}% exceeds 40% threshold — credit officer sign-off needed`), e.loan_amount >= 2e5 && t.push("High-value loan (≥OMR 200k) — senior credit approval required"), e.gsas_score && e.gsas_score >= (e.gsas_premium_score || 85) && e.green_discount_premium > 0 && t.push(`GSAS ${e.gsas_score} qualifies for ${e.green_discount_premium}% green premium discount — verify certificate`), t;
 }
-W.get("/summary", async (e) => {
+J.get("/summary", async (e) => {
 	let { results: t } = await e.env.DB.prepare("\n    SELECT a.id, a.reference, a.status, a.loan_amount, a.gsas_score, a.epc_rating,\n           a.dbr, a.ltv, a.esg_verification_status, a.malaa_score,\n           a.applied_rate, a.loan_term, a.created_at, a.updated_at,\n           COALESCE(a.customer_name, cust.name) AS customer_display,\n           p.name  AS product_name,\n           p.id    AS product_id,\n           p.max_dbr, p.max_ltv, p.gsas_min_score\n    FROM applications a\n    LEFT JOIN products  p    ON a.product_id  = p.id\n    LEFT JOIN customers cust ON a.customer_id = cust.id\n    ORDER BY a.created_at DESC\n  ").all(), n = t || [], r = n.length, i = {};
 	for (let e of n) i[e.status] = (i[e.status] || 0) + 1;
 	let a = {};
@@ -3912,8 +3981,8 @@ W.get("/summary", async (e) => {
 });
 //#endregion
 //#region src/api/projects.ts
-var G = new I();
-G.get("/:id", async (e) => {
+var Y = new V();
+Y.get("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT p.*, d.company_name as developer_name, d.contact_name, d.email as developer_email \n     FROM projects p LEFT JOIN developers d ON p.developer_id = d.id WHERE p.id = ?").bind(t).first();
 	if (!n) return e.json({ error: "Not found" }, 404);
 	let { results: r } = await e.env.DB.prepare("SELECT * FROM units WHERE project_id = ? ORDER BY unit_number").bind(t).all(), { results: i } = await e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = ? AND entity_id = ?").bind("project", t).all();
@@ -3922,9 +3991,9 @@ G.get("/:id", async (e) => {
 		units: r,
 		documents: i
 	});
-}), G.post("/", async (e) => {
-	let t = await e.req.json(), n = z("proj"), r = t.code || `PROJ-${Date.now().toString(36).toUpperCase()}`, i = B();
-	return await e.env.DB.prepare("\n    INSERT INTO projects (id, developer_id, name, code, location, governorate, type, total_units, available_units, geo_json, status, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.developer_id || "d001", t.name, r, t.location, t.governorate || "Muscat", t.type || "villa", t.total_units || 0, t.total_units || 0, t.geo_json || "{}", "draft", i, i).run(), await V(e.env.DB, {
+}), Y.post("/", async (e) => {
+	let t = await e.req.json(), n = U("proj"), r = t.code || `PROJ-${Date.now().toString(36).toUpperCase()}`, i = W();
+	return await e.env.DB.prepare("\n    INSERT INTO projects (id, developer_id, name, code, location, governorate, type, total_units, available_units, geo_json, status, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.developer_id || "d001", t.name, r, t.location, t.governorate || "Muscat", t.type || "villa", t.total_units || 0, t.total_units || 0, t.geo_json || "{}", "draft", i, i).run(), await G(e.env.DB, {
 		userId: t.user_id || "u010",
 		userName: "Ahmed Al-Hinai",
 		userRole: "developer",
@@ -3940,9 +4009,9 @@ G.get("/:id", async (e) => {
 		code: r,
 		success: !0
 	});
-}), G.post("/:id/publish", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json().catch(() => ({})), r = B();
-	return await e.env.DB.prepare("UPDATE projects SET status = ?, listing_visible = 1, green_eligible = 1, updated_at = ? WHERE id = ?").bind("active", r, t).run(), await V(e.env.DB, {
+}), Y.post("/:id/publish", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json().catch(() => ({})), r = W();
+	return await e.env.DB.prepare("UPDATE projects SET status = ?, listing_visible = 1, green_eligible = 1, updated_at = ? WHERE id = ?").bind("active", r, t).run(), await G(e.env.DB, {
 		userId: n.user_id || "u010",
 		userName: "Ahmed Al-Hinai",
 		userRole: "developer",
@@ -3954,17 +4023,17 @@ G.get("/:id", async (e) => {
 		success: !0,
 		listing_visible: !0
 	});
-}), G.get("/:id/units", async (e) => {
+}), Y.get("/:id/units", async (e) => {
 	let t = e.req.param("id"), { results: n } = await e.env.DB.prepare("SELECT * FROM units WHERE project_id = ? ORDER BY unit_number").bind(t).all();
 	return e.json({ units: n });
-}), G.post("/:id/units", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json(), r = z("unit"), i = B();
+}), Y.post("/:id/units", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json(), r = U("unit"), i = W();
 	return await e.env.DB.prepare("\n    INSERT INTO units (id, project_id, unit_number, type, area_sqm, bedrooms, bathrooms, price, lat, lng, status, features, created_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(r, t, n.unit_number, n.type || "villa", n.area_sqm || 0, n.bedrooms || 3, n.bathrooms || 2, n.price || 0, n.lat || 0, n.lng || 0, n.status || "available", n.features || "[]", i).run(), e.json({
 		id: r,
 		success: !0
 	});
-}), G.post("/:id/update-meta", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json(), r = B(), i = [], a = [];
+}), Y.post("/:id/update-meta", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json(), r = W(), i = [], a = [];
 	for (let e of [
 		"hero_image_url",
 		"marketing_tagline",
@@ -3981,16 +4050,16 @@ G.get("/:id", async (e) => {
 		"listing_visible"
 	]) n[e] !== void 0 && (i.push(`${e}=?`), a.push(n[e]));
 	return i.length ? (a.push(r, t), await e.env.DB.prepare(`UPDATE projects SET ${i.join(",")}, updated_at=? WHERE id=?`).bind(...a).run(), e.json({ success: !0 })) : e.json({ success: !0 });
-}), G.get("/units/:unitId", async (e) => {
+}), Y.get("/units/:unitId", async (e) => {
 	let t = e.req.param("unitId"), n = await e.env.DB.prepare("SELECT u.*, p.name as project_name, p.gsas_score, p.gsas_rating, p.location, p.eia_reference,\n     d.company_name as developer_name FROM units u \n     LEFT JOIN projects p ON u.project_id = p.id \n     LEFT JOIN developers d ON p.developer_id = d.id WHERE u.id = ?").bind(t).first();
 	return n ? e.json({ unit: n }) : e.json({ error: "Not found" }, 404);
 });
 //#endregion
 //#region src/api/documents.ts
-var Ye = new I();
-Ye.post("/analyze", async (e) => {
-	let { doc_type: t, filename: n, entity_id: r, entity_type: i = "project", user_id: a = "system" } = await e.req.json(), o = Xe(t, n), s = z("doc"), c = B();
-	return await e.env.DB.prepare("\n    INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, extracted_data, ai_confidence, validation_status, validation_notes, created_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?)\n  ").bind(s, i, r, t, n, JSON.stringify(o.extracted_fields), o.ai_confidence, o.overall_status, o.recommendation, c).run(), await V(e.env.DB, {
+var Ge = new V();
+Ge.post("/analyze", async (e) => {
+	let { doc_type: t, filename: n, entity_id: r, entity_type: i = "project", user_id: a = "system" } = await e.req.json(), o = Ke(t, n), s = U("doc"), c = W();
+	return await e.env.DB.prepare("\n    INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, extracted_data, ai_confidence, validation_status, validation_notes, created_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?)\n  ").bind(s, i, r, t, n, JSON.stringify(o.extracted_fields), o.ai_confidence, o.overall_status, o.recommendation, c).run(), await G(e.env.DB, {
 		userId: "system",
 		userName: "System AI",
 		userRole: "system",
@@ -4008,9 +4077,9 @@ Ye.post("/analyze", async (e) => {
 		...o,
 		document_id: s
 	});
-}), Ye.patch("/:id/override", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json(), r = B();
-	return await e.env.DB.prepare("\n    UPDATE documents SET validation_status = 'approved', validation_notes = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ?\n  ").bind(`Manual override: ${n.reason}`, n.user_id, r, t).run(), await V(e.env.DB, {
+}), Ge.patch("/:id/override", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json(), r = W();
+	return await e.env.DB.prepare("\n    UPDATE documents SET validation_status = 'approved', validation_notes = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ?\n  ").bind(`Manual override: ${n.reason}`, n.user_id, r, t).run(), await G(e.env.DB, {
 		userId: n.user_id || "u002",
 		userName: n.user_name || "Aisha Al-Balushi",
 		userRole: "compliance_officer",
@@ -4024,7 +4093,7 @@ Ye.post("/analyze", async (e) => {
 		regulatoryReference: n.regulatory_reference
 	}), e.json({ success: !0 });
 });
-function Xe(e, t) {
+function Ke(e, t) {
 	let n = {
 		gsas_cert: {
 			doc_type: "gsas_cert",
@@ -4240,7 +4309,7 @@ function Xe(e, t) {
 	};
 	return n[e] || n.civil_id;
 }
-Ye.get("/serve", async (e) => {
+Ge.get("/serve", async (e) => {
 	let t = e.req.query("url"), n = e.req.query("filename") || "document";
 	if (!t) return e.json({ error: "url query param required" }, 400);
 	if (!t.includes(".blob.core.windows.net")) return e.json({ error: "Invalid blob URL" }, 400);
@@ -4286,11 +4355,11 @@ Ye.get("/serve", async (e) => {
 });
 //#endregion
 //#region src/api/escrow.ts
-var Ze = new I();
-Ze.post("/:appId/complete-stage", async (e) => {
+var qe = new V();
+qe.post("/:appId/complete-stage", async (e) => {
 	e.req.param("appId");
-	let { stage_id: t, invoice_filename: n, user_id: r = "u011", user_name: i = "Rashid Al-Hassani" } = await e.req.json(), a = B();
-	return await e.env.DB.prepare("\n    UPDATE construction_stages SET status = 'completed', ai_validated = 1, ai_confidence = 94, completed_at = ? WHERE id = ?\n  ").bind(a, t).run(), await V(e.env.DB, {
+	let { stage_id: t, invoice_filename: n, user_id: r = "u011", user_name: i = "Rashid Al-Hassani" } = await e.req.json(), a = W();
+	return await e.env.DB.prepare("\n    UPDATE construction_stages SET status = 'completed', ai_validated = 1, ai_confidence = 94, completed_at = ? WHERE id = ?\n  ").bind(a, t).run(), await G(e.env.DB, {
 		userId: r,
 		userName: i,
 		userRole: "contractor",
@@ -4349,11 +4418,11 @@ Ze.post("/:appId/complete-stage", async (e) => {
 			recommendation: "Stage 1 completion verified. Green material confirmed. Payment initiation in progress."
 		}
 	});
-}), Ze.post("/:appId/release-tranche", async (e) => {
-	let t = e.req.param("appId"), { stage_id: n, amount: r, user_id: i = "u004", user_name: a = "Khalid Al-Rawahi" } = await e.req.json(), o = B(), s = `TRX-${(/* @__PURE__ */ new Date()).getFullYear()}-${String((/* @__PURE__ */ new Date()).getMonth() + 1).padStart(2, "0")}-${String((/* @__PURE__ */ new Date()).getDate()).padStart(2, "0")}-${Math.floor(Math.random() * 9e3 + 1e3)}`;
+}), qe.post("/:appId/release-tranche", async (e) => {
+	let t = e.req.param("appId"), { stage_id: n, amount: r, user_id: i = "u004", user_name: a = "Khalid Al-Rawahi" } = await e.req.json(), o = W(), s = `TRX-${(/* @__PURE__ */ new Date()).getFullYear()}-${String((/* @__PURE__ */ new Date()).getMonth() + 1).padStart(2, "0")}-${String((/* @__PURE__ */ new Date()).getDate()).padStart(2, "0")}-${Math.floor(Math.random() * 9e3 + 1e3)}`;
 	await e.env.DB.prepare("\n    UPDATE construction_stages SET status = 'paid', payment_reference = ?, paid_at = ? WHERE id = ?\n  ").bind(s, o, n).run();
 	let c = await e.env.DB.prepare("SELECT * FROM construction_stages WHERE id = ?").bind(n).first();
-	return c && await e.env.DB.prepare("\n      UPDATE construction_stages SET status = 'active' \n      WHERE application_id = ? AND stage_number = ? AND status = 'locked'\n    ").bind(t, c.stage_number + 1).run(), await e.env.DB.prepare("\n    UPDATE applications SET escrow_released = escrow_released + ?, status = 'disbursed', updated_at = ? WHERE id = ?\n  ").bind(r, o, t).run(), await V(e.env.DB, {
+	return c && await e.env.DB.prepare("\n      UPDATE construction_stages SET status = 'active' \n      WHERE application_id = ? AND stage_number = ? AND status = 'locked'\n    ").bind(t, c.stage_number + 1).run(), await e.env.DB.prepare("\n    UPDATE applications SET escrow_released = escrow_released + ?, status = 'disbursed', updated_at = ? WHERE id = ?\n  ").bind(r, o, t).run(), await G(e.env.DB, {
 		userId: i,
 		userName: a,
 		userRole: "operations",
@@ -4373,8 +4442,8 @@ Ze.post("/:appId/complete-stage", async (e) => {
 });
 //#endregion
 //#region src/api/audit.ts
-var Qe = new I();
-Qe.get("/", async (e) => {
+var Je = new V();
+Je.get("/", async (e) => {
 	let t = parseInt(e.req.query("limit") || "50"), n = parseInt(e.req.query("offset") || "0"), r = e.req.query("action") || "", i = e.req.query("entity_type") || "", a = e.req.query("user_id") || "", o = "SELECT al.*,\n    CASE\n      WHEN al.entity_type = 'application' THEN (SELECT reference FROM applications WHERE id = al.entity_id)\n      WHEN al.entity_type = 'product'     THEN (SELECT name     FROM products     WHERE id = al.entity_id)\n      WHEN al.entity_type = 'rule'        THEN (SELECT name     FROM rules        WHERE id = al.entity_id)\n      ELSE NULL\n    END as entity_label\n  FROM audit_logs al WHERE 1=1", s = [];
 	r && (o += " AND al.action LIKE ?", s.push(`%${r}%`)), i && (o += " AND al.entity_type = ?", s.push(i)), a && (o += " AND al.user_id = ?", s.push(a)), o += " ORDER BY al.created_at DESC LIMIT ? OFFSET ?", s.push(Math.min(t, 200), n);
 	let { results: c } = await e.env.DB.prepare(o).bind(...s).all(), l = await e.env.DB.prepare("SELECT COUNT(*) as total FROM audit_logs WHERE 1=1").first();
@@ -4382,8 +4451,8 @@ Qe.get("/", async (e) => {
 		audit_logs: c || [],
 		total: l?.total || 0
 	});
-}), Qe.post("/", async (e) => {
-	let t = await e.req.json(), n = z("al"), r = B();
+}), Je.post("/", async (e) => {
+	let t = await e.req.json(), n = U("al"), r = W();
 	return await e.env.DB.prepare("\n    INSERT INTO audit_logs (id, user_id, user_name, user_role, action, entity_type, entity_id, details, source, ai_confidence, regulatory_reference, created_at)\n    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n  ").bind(n, t.user_id || "system", t.user_name || "System", t.user_role || "system", t.action || "MANUAL_ENTRY", t.entity_type || null, t.entity_id || null, JSON.stringify(t.details || {}), t.source || "manual", t.ai_confidence || null, t.regulatory_reference || null, r).run(), e.json({
 		success: !0,
 		id: n
@@ -4391,35 +4460,35 @@ Qe.get("/", async (e) => {
 });
 //#endregion
 //#region src/api/users.ts
-var K = new I();
-K.get("/", async (e) => {
+var X = new V();
+X.get("/", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT id, name, name_ar, email, role, department, avatar_initials, status\n     FROM users WHERE status != 'inactive' ORDER BY id").all();
 	return e.json({ users: t });
-}), K.get("/portal", async (e) => {
+}), X.get("/portal", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT id, login, display_name, role, portal_access, allowed_sections, status, created_at, last_login\n     FROM portal_users ORDER BY role, login").all();
 	return e.json({ users: t || [] });
-}), K.post("/portal", async (e) => {
+}), X.post("/portal", async (e) => {
 	let { login: t, password: n, display_name: r, role: i, portal_access: a, allowed_sections: o } = await e.req.json();
 	if (!t || !n || !i) return e.json({ error: "login, password, role required" }, 400);
-	let s = await $e(n), c = z("pu");
-	return await e.env.DB.prepare("\n    INSERT INTO portal_users (id, login, password_hash, display_name, role, portal_access, allowed_sections, status, created_at)\n    VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)\n  ").bind(c, t, s, r || t, i, a || "backoffice", JSON.stringify(o || []), B()).run(), e.json({
+	let s = await Ye(n), c = U("pu");
+	return await e.env.DB.prepare("\n    INSERT INTO portal_users (id, login, password_hash, display_name, role, portal_access, allowed_sections, status, created_at)\n    VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)\n  ").bind(c, t, s, r || t, i, a || "backoffice", JSON.stringify(o || []), W()).run(), e.json({
 		success: !0,
 		id: c
 	});
-}), K.patch("/portal/:id", async (e) => {
+}), X.patch("/portal/:id", async (e) => {
 	let t = e.req.param("id"), { display_name: n, role: r, portal_access: i, allowed_sections: a, status: o, password: s } = await e.req.json();
 	if (s) {
-		let n = await $e(s);
+		let n = await Ye(s);
 		await e.env.DB.prepare("UPDATE portal_users SET password_hash = ? WHERE id = ?").bind(n, t).run();
 	}
 	return n !== void 0 && await e.env.DB.prepare("UPDATE portal_users SET display_name = ? WHERE id = ?").bind(n, t).run(), r !== void 0 && await e.env.DB.prepare("UPDATE portal_users SET role = ? WHERE id = ?").bind(r, t).run(), i !== void 0 && await e.env.DB.prepare("UPDATE portal_users SET portal_access = ? WHERE id = ?").bind(i, t).run(), a !== void 0 && await e.env.DB.prepare("UPDATE portal_users SET allowed_sections = ? WHERE id = ?").bind(JSON.stringify(a), t).run(), o !== void 0 && await e.env.DB.prepare("UPDATE portal_users SET status = ? WHERE id = ?").bind(o, t).run(), e.json({ success: !0 });
-}), K.delete("/portal/:id", async (e) => {
+}), X.delete("/portal/:id", async (e) => {
 	let t = e.req.param("id");
 	return await e.env.DB.prepare("UPDATE portal_users SET status = 'inactive' WHERE id = ?").bind(t).run(), e.json({ success: !0 });
-}), K.get("/:id", async (e) => {
+}), X.get("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(t).first();
 	return n ? e.json({ user: n }) : e.json({ error: "Not found" }, 404);
-}), K.get("/customer/:customerId", async (e) => {
+}), X.get("/customer/:customerId", async (e) => {
 	let t = e.req.param("customerId"), n = await e.env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	if (!n) return e.json({ error: "Not found" }, 404);
 	let { results: r } = await e.env.DB.prepare("SELECT a.*, p.name as product_name FROM applications a LEFT JOIN products p ON a.product_id = p.id WHERE a.customer_id = ? ORDER BY a.created_at DESC").bind(t).all();
@@ -4428,15 +4497,15 @@ K.get("/", async (e) => {
 		applications: r
 	});
 });
-async function $e(e) {
+async function Ye(e) {
 	let t = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(e));
 	return Array.from(new Uint8Array(t)).map((e) => e.toString(16).padStart(2, "0")).join("");
 }
 //#endregion
 //#region src/api/auth.ts
-var et = new I(), tt = 8, nt = !1;
-async function rt(e) {
-	if (nt) return;
+var Xe = new V(), Ze = 8, Qe = !1;
+async function $e(e) {
+	if (Qe) return;
 	await e.prepare("CREATE TABLE IF NOT EXISTS portal_users (\n    id TEXT PRIMARY KEY, login TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,\n    display_name TEXT NOT NULL, role TEXT NOT NULL, portal_access TEXT NOT NULL,\n    allowed_sections TEXT DEFAULT '[]', status TEXT DEFAULT 'active',\n    created_at TEXT DEFAULT (datetime('now')), last_login TEXT\n  )").run().catch(() => {}), await e.prepare("CREATE TABLE IF NOT EXISTS portal_sessions (\n    token TEXT PRIMARY KEY, user_id TEXT NOT NULL, login TEXT NOT NULL,\n    role TEXT NOT NULL, portal_access TEXT NOT NULL, allowed_sections TEXT DEFAULT '[]',\n    expires_at TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now'))\n  )").run().catch(() => {});
 	let t = await e.prepare("SELECT COUNT(*) as n FROM portal_users").first();
 	if (!t || t.n === 0) {
@@ -4498,23 +4567,23 @@ async function rt(e) {
 		];
 		for (let [t, r, i, a, o, s, c] of n) await e.prepare("INSERT OR IGNORE INTO portal_users (id,login,password_hash,display_name,role,portal_access,allowed_sections,status,created_at)\n        VALUES (?,?,?,?,?,?,?,'active','2024-01-01')").bind(t, r, i, a, o, s, c).run().catch(() => {});
 	}
-	nt = !0;
+	Qe = !0;
 }
-async function it(e) {
+async function et(e) {
 	let t = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(e));
 	return Array.from(new Uint8Array(t)).map((e) => e.toString(16).padStart(2, "0")).join("");
 }
-function at(e) {
+function tt(e) {
 	let t = e.req.header("Authorization") || "";
 	return t.startsWith("Bearer ") ? t.slice(7).trim() : null;
 }
-et.post("/login", async (e) => {
-	await rt(e.env.DB);
+Xe.post("/login", async (e) => {
+	await $e(e.env.DB);
 	let { login: t, password: n } = await e.req.json().catch(() => ({}));
 	if (!t || !n) return e.json({ error: "login and password required" }, 400);
-	let r = await it(n), i = await e.env.DB.prepare("SELECT * FROM portal_users WHERE login = ? AND password_hash = ? AND status = 'active'").bind(t, r).first();
+	let r = await et(n), i = await e.env.DB.prepare("SELECT * FROM portal_users WHERE login = ? AND password_hash = ? AND status = 'active'").bind(t, r).first();
 	if (!i) return e.json({ error: "Invalid credentials" }, 401);
-	let a = z("tok"), o = new Date(Date.now() + tt * 3600 * 1e3).toISOString(), s = B();
+	let a = U("tok"), o = new Date(Date.now() + Ze * 3600 * 1e3).toISOString(), s = W();
 	return await e.env.DB.prepare("\n    INSERT INTO portal_sessions (token, user_id, login, role, portal_access, allowed_sections, expires_at, created_at)\n    VALUES (?, ?, ?, ?, ?, ?, ?, ?)\n  ").bind(a, i.id, i.login, i.role, i.portal_access, i.allowed_sections || "[]", o, s).run(), await e.env.DB.prepare("UPDATE portal_users SET last_login = ? WHERE id = ?").bind(s, i.id).run(), e.json({
 		success: !0,
 		token: a,
@@ -4527,12 +4596,12 @@ et.post("/login", async (e) => {
 			allowed_sections: JSON.parse(i.allowed_sections || "[]")
 		}
 	});
-}), et.post("/logout", async (e) => {
-	let t = at(e);
+}), Xe.post("/logout", async (e) => {
+	let t = tt(e);
 	return t && await e.env.DB.prepare("DELETE FROM portal_sessions WHERE token = ?").bind(t).run().catch(() => {}), e.json({ success: !0 });
-}), et.get("/me", async (e) => {
-	await rt(e.env.DB);
-	let t = at(e);
+}), Xe.get("/me", async (e) => {
+	await $e(e.env.DB);
+	let t = tt(e);
 	if (!t) return e.json({ error: "Not authenticated" }, 401);
 	try {
 		let n = await e.env.DB.prepare("SELECT * FROM portal_sessions WHERE token = ? AND expires_at > datetime('now')").bind(t).first();
@@ -4549,22 +4618,22 @@ et.post("/login", async (e) => {
 });
 //#endregion
 //#region src/lib/blob-storage.ts
-var ot = process.env.AZURE_STORAGE_CONNECTION_STRING || "", st = process.env.AZURE_STORAGE_CONTAINER || "lms-documents", ct = null;
-async function lt() {
-	if (!ot) return null;
-	if (ct) return ct;
+var nt = process.env.AZURE_STORAGE_CONNECTION_STRING || "", rt = process.env.AZURE_STORAGE_CONTAINER || "lms-documents", it = null;
+async function at() {
+	if (!nt) return null;
+	if (it) return it;
 	try {
 		let { BlobServiceClient: e } = await import("@azure/storage-blob");
-		return ct = e.fromConnectionString(ot).getContainerClient(st), ct;
+		return it = e.fromConnectionString(nt).getContainerClient(rt), it;
 	} catch (e) {
 		return console.error("[blob-storage] Failed to create BlobServiceClient:", e), null;
 	}
 }
-function ut() {
-	return !!ot;
+function ot() {
+	return !!nt;
 }
-async function dt(e) {
-	let t = await lt();
+async function st(e) {
+	let t = await at();
 	if (!t) return console.warn("[blob-storage] No connection string — file not stored in Azure"), null;
 	let n = e.filename.replace(/[^a-zA-Z0-9._\-]/g, "_"), r = `${e.entityType}s/${e.entityId}/${e.docType}/${Date.now()}-${n}`;
 	try {
@@ -4578,11 +4647,11 @@ async function dt(e) {
 		return console.error("[blob-storage] Upload failed:", e), null;
 	}
 }
-async function ft(e) {
-	let t = await lt();
+async function ct(e) {
+	let t = await at();
 	if (!t) return !1;
 	try {
-		let n = new URL(e).pathname.replace(`/${st}/`, "");
+		let n = new URL(e).pathname.replace(`/${rt}/`, "");
 		return await t.getBlockBlobClient(n).deleteIfExists(), console.log(`[blob-storage] Deleted: ${n}`), !0;
 	} catch (t) {
 		return console.error("[blob-storage] Delete failed for", e, t), !1;
@@ -4590,19 +4659,19 @@ async function ft(e) {
 }
 //#endregion
 //#region src/api/seed.ts
-var pt = new I(), mt = "\nCREATE TABLE IF NOT EXISTS products (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, code TEXT UNIQUE, description TEXT,\n  category TEXT DEFAULT 'home_loan', status TEXT DEFAULT 'draft',\n  base_rate REAL DEFAULT 5.5, max_ltv INTEGER DEFAULT 90, max_dbr INTEGER DEFAULT 60,\n  green_dbr INTEGER DEFAULT 55, min_term INTEGER DEFAULT 5, max_term INTEGER DEFAULT 25,\n  min_amount REAL DEFAULT 10000, max_amount REAL DEFAULT 500000,\n  gsas_min_score INTEGER DEFAULT 0, gsas_premium_score INTEGER DEFAULT 0,\n  green_discount_premium REAL DEFAULT 0.0, green_discount_standard REAL DEFAULT 0.0,\n  ai_confidence_threshold INTEGER DEFAULT 90, allow_byop INTEGER DEFAULT 1,\n  allow_partner_inventory INTEGER DEFAULT 1,\n  required_docs TEXT DEFAULT '[]', esg_required_docs TEXT DEFAULT '[]',\n  approved_materials TEXT DEFAULT '[]', approved_vendors TEXT DEFAULT '[]',\n  configuration TEXT DEFAULT '{}', applications_ytd INTEGER DEFAULT 0,\n  created_by TEXT DEFAULT 'system', created_at TEXT DEFAULT (datetime('now')),\n  updated_at TEXT DEFAULT (datetime('now')),\n  portal_visible INTEGER DEFAULT 0,\n  portal_hero_title TEXT, portal_hero_subtitle TEXT, portal_card_badge TEXT,\n  portal_highlights TEXT DEFAULT '[]',\n  portal_calculator_enabled INTEGER DEFAULT 1,\n  developer_portal_visible INTEGER DEFAULT 0,\n  developer_requirements TEXT DEFAULT '{}',\n  published_at TEXT\n);\n\nCREATE TABLE IF NOT EXISTS rules (\n  id TEXT PRIMARY KEY, product_id TEXT, name TEXT NOT NULL, category TEXT NOT NULL,\n  metric TEXT NOT NULL, operator TEXT NOT NULL, threshold_value REAL,\n  threshold_condition TEXT, action_on_breach TEXT DEFAULT 'reject',\n  severity TEXT DEFAULT 'hard', regulatory_reference TEXT,\n  source TEXT DEFAULT 'manual', ai_confidence REAL, description TEXT,\n  is_active INTEGER DEFAULT 1, created_by TEXT DEFAULT 'system',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS developers (\n  id TEXT PRIMARY KEY, company_name TEXT NOT NULL, cr_number TEXT UNIQUE,\n  contact_name TEXT, email TEXT, phone TEXT, po_box TEXT,\n  status TEXT DEFAULT 'active', verified_at TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS projects (\n  id TEXT PRIMARY KEY, developer_id TEXT, name TEXT NOT NULL, code TEXT UNIQUE,\n  location TEXT, governorate TEXT, type TEXT DEFAULT 'residential',\n  total_units INTEGER DEFAULT 0, available_units INTEGER DEFAULT 0,\n  reserved_units INTEGER DEFAULT 0, sold_units INTEGER DEFAULT 0,\n  gsas_score INTEGER, gsas_rating TEXT, epc_rating TEXT, eia_reference TEXT,\n  geo_json TEXT, status TEXT DEFAULT 'draft',\n  green_eligible INTEGER DEFAULT 0, premium_tier INTEGER DEFAULT 0,\n  created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS units (\n  id TEXT PRIMARY KEY, project_id TEXT, unit_number TEXT NOT NULL,\n  floor_number INTEGER, type TEXT DEFAULT 'villa', area_sqm REAL,\n  bedrooms INTEGER, bathrooms INTEGER, price REAL, lat REAL, lng REAL,\n  status TEXT DEFAULT 'available', features TEXT DEFAULT '[]',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS documents (\n  id TEXT PRIMARY KEY, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL,\n  doc_type TEXT NOT NULL, filename TEXT, file_url TEXT,\n  extracted_data TEXT DEFAULT '{}', ai_confidence REAL,\n  validation_status TEXT DEFAULT 'pending', validation_notes TEXT,\n  reviewed_by TEXT, reviewed_at TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS customers (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, name_ar TEXT, civil_id TEXT UNIQUE,\n  email TEXT, phone TEXT, nationality TEXT DEFAULT 'Omani', employer TEXT,\n  salary_omr REAL, employment_type TEXT DEFAULT 'salaried',\n  credit_score INTEGER DEFAULT 700, existing_dbr REAL DEFAULT 0,\n  sohar_customer_since TEXT, status TEXT DEFAULT 'active',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS applications (\n  id TEXT PRIMARY KEY, reference TEXT UNIQUE NOT NULL, product_id TEXT,\n  customer_id TEXT, customer_name TEXT, unit_id TEXT, project_id TEXT,\n  loan_amount REAL, loan_term INTEGER, property_address TEXT,\n  property_source TEXT DEFAULT 'partner', property_area_sqm REAL,\n  gsas_score INTEGER, epc_rating TEXT, applied_rate REAL, standard_rate REAL DEFAULT 5.5,\n  monthly_payment REAL, standard_monthly_payment REAL, lifetime_saving REAL,\n  dbr REAL, ltv REAL, stress_test_rate REAL DEFAULT 9.0, stress_test_passed INTEGER DEFAULT 0,\n  malaa_score INTEGER, status TEXT DEFAULT 'draft', esg_verification_status TEXT DEFAULT 'pending',\n  compliance_approved_by TEXT, compliance_approved_at TEXT,\n  risk_approved_by TEXT, risk_approved_at TEXT,\n  escrow_amount REAL, escrow_released REAL DEFAULT 0,\n  rejection_reason TEXT, tracking_url TEXT,\n  created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS construction_stages (\n  id TEXT PRIMARY KEY, application_id TEXT, stage_number INTEGER NOT NULL,\n  stage_name TEXT NOT NULL, description TEXT, tranche_amount REAL,\n  tranche_percentage REAL, required_material TEXT, status TEXT DEFAULT 'locked',\n  invoice_doc_id TEXT, ai_validated INTEGER DEFAULT 0, ai_confidence REAL,\n  payment_reference TEXT, completed_at TEXT, paid_at TEXT,\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS users (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, name_ar TEXT, email TEXT UNIQUE NOT NULL,\n  role TEXT NOT NULL, department TEXT, avatar_initials TEXT,\n  status TEXT DEFAULT 'active', created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS audit_logs (\n  id TEXT PRIMARY KEY, user_id TEXT, user_name TEXT, user_role TEXT,\n  action TEXT NOT NULL, entity_type TEXT, entity_id TEXT, details TEXT DEFAULT '{}',\n  source TEXT DEFAULT 'manual', ai_confidence REAL, regulatory_reference TEXT,\n  ip_address TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS knowledge_base (\n  id TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT NOT NULL,\n  content TEXT NOT NULL, source TEXT, effective_date TEXT,\n  tags TEXT DEFAULT '[]', created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS rule_templates (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL,\n  regulatory_source TEXT, template_json TEXT NOT NULL,\n  is_cbo_required INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);\nCREATE INDEX IF NOT EXISTS idx_applications_reference ON applications(reference);\nCREATE INDEX IF NOT EXISTS idx_units_project ON units(project_id);\nCREATE INDEX IF NOT EXISTS idx_documents_entity ON documents(entity_type, entity_id);\nCREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);\nCREATE INDEX IF NOT EXISTS idx_construction_stages_app ON construction_stages(application_id);\n", ht = "\nALTER TABLE products ADD COLUMN portal_visible INTEGER DEFAULT 0;\nALTER TABLE products ADD COLUMN portal_hero_title TEXT;\nALTER TABLE products ADD COLUMN portal_hero_subtitle TEXT;\nALTER TABLE products ADD COLUMN portal_card_badge TEXT;\nALTER TABLE products ADD COLUMN portal_highlights TEXT DEFAULT '[]';\nALTER TABLE products ADD COLUMN portal_calculator_enabled INTEGER DEFAULT 1;\nALTER TABLE products ADD COLUMN developer_portal_visible INTEGER DEFAULT 0;\nALTER TABLE products ADD COLUMN developer_requirements TEXT DEFAULT '{}';\nALTER TABLE products ADD COLUMN published_at TEXT;\nALTER TABLE projects ADD COLUMN listing_visible INTEGER DEFAULT 0;\nALTER TABLE projects ADD COLUMN hero_image_url TEXT;\nALTER TABLE projects ADD COLUMN marketing_tagline TEXT;\nALTER TABLE projects ADD COLUMN price_from REAL;\nALTER TABLE projects ADD COLUMN price_to REAL;\nALTER TABLE projects ADD COLUMN completion_date TEXT;\nALTER TABLE projects ADD COLUMN amenities TEXT DEFAULT '[]';\nCREATE TABLE IF NOT EXISTS ai_threads (\n  id TEXT PRIMARY KEY, user_id TEXT, product_id TEXT, purpose TEXT NOT NULL,\n  messages TEXT DEFAULT '[]', context TEXT DEFAULT '{}', status TEXT DEFAULT 'active',\n  result TEXT DEFAULT '{}', created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\nCREATE TABLE IF NOT EXISTS portal_users (\n  id TEXT PRIMARY KEY,\n  login TEXT UNIQUE NOT NULL,\n  password_hash TEXT NOT NULL,\n  display_name TEXT NOT NULL,\n  role TEXT NOT NULL,\n  portal_access TEXT NOT NULL,\n  allowed_sections TEXT DEFAULT '[]',\n  status TEXT DEFAULT 'active',\n  created_at TEXT DEFAULT (datetime('now')),\n  last_login TEXT\n);\nCREATE TABLE IF NOT EXISTS portal_sessions (\n  token TEXT PRIMARY KEY,\n  user_id TEXT NOT NULL,\n  login TEXT NOT NULL,\n  role TEXT NOT NULL,\n  portal_access TEXT NOT NULL,\n  allowed_sections TEXT DEFAULT '[]',\n  expires_at TEXT NOT NULL,\n  created_at TEXT DEFAULT (datetime('now'))\n);\n", gt = "\n-- Portal authentication users (password = \"password\" SHA-256)\nINSERT OR IGNORE INTO portal_users VALUES ('pu001','customer01','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','Salim Al-Harthy','customer','customer','[]','active','2024-01-01',null);\nINSERT OR IGNORE INTO portal_users VALUES ('pu002','pm01','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','Fatima Al-Rashdi','product_manager','backoffice','[\"products\",\"applications\",\"rules\",\"workflows\",\"users\",\"ai_studio\"]','active','2024-01-01',null);\nINSERT OR IGNORE INTO portal_users VALUES ('pu003','compliance01','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','Aisha Al-Balushi','compliance_officer','backoffice','[\"compliance\"]','active','2024-01-01',null);\nINSERT OR IGNORE INTO portal_users VALUES ('pu004','rm01','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','Omar Al-Mantheri','risk_officer','backoffice','[\"risk\"]','active','2024-01-01',null);\nINSERT OR IGNORE INTO portal_users VALUES ('pu005','admin','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','System Administrator','admin','all','[]','active','2024-01-01',null);\nINSERT OR IGNORE INTO portal_users VALUES ('pu006','developer01','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','Ahmed Al-Hinai','developer','developer','[]','active','2024-01-01',null);\n\nINSERT OR IGNORE INTO users VALUES ('u001','Fatima Al-Rashdi','فاطمة الراشدي','fatima@sib.om','product_manager','Product Management','FA','active','2024-01-15');\nINSERT OR IGNORE INTO users VALUES ('u002','Aisha Al-Balushi','عائشة البلوشي','aisha@sib.om','compliance_officer','Compliance & ESG','AB','active','2023-06-01');\nINSERT OR IGNORE INTO users VALUES ('u003','Omar Al-Mantheri','عمر المنذري','omar@sib.om','risk_officer','Credit Risk','OM','active','2023-03-15');\nINSERT OR IGNORE INTO users VALUES ('u004','Khalid Al-Rawahi','خالد الرواحي','khalid@sib.om','operations','Operations','KR','active','2022-09-01');\nINSERT OR IGNORE INTO users VALUES ('u010','Ahmed Al-Hinai','أحمد الهنائي','ahmed@almadaen.om','developer','Al Madaen Real Estate','AH','active','2023-11-01');\nINSERT OR IGNORE INTO users VALUES ('u011','Rashid Al-Hassani','راشد الحساني','rashid@aljazeera-const.om','contractor','Al Jazeera Constructions','RH','active','2024-02-01');\nINSERT OR IGNORE INTO users VALUES ('u020','Salim Al-Harthy','سالم الحارثي','salim@gmail.com','customer',null,'SH','active','2019-05-10');\n\nINSERT OR IGNORE INTO customers VALUES ('c001','Salim Al-Harthy','سالم الحارثي','84521789','salim@gmail.com','+968 9921 3344','Omani','Ministry of Heritage & Tourism',3200,'salaried',750,0,'2019-05-10','active','2019-05-10');\nINSERT OR IGNORE INTO customers VALUES ('c002','Mariam Al-Siyabi','مريم السيابي','91234567','mariam@hotmail.com','+968 9955 1122','Omani','Oman Oil Company',4500,'salaried',780,12,'2020-03-22','active','2020-03-22');\nINSERT OR IGNORE INTO customers VALUES ('c003','Hassan Al-Amri','حسن العامري','78654321','hassan@gmail.com','+968 9977 8899','Omani','Bank Muscat',2800,'salaried',710,18,'2021-07-15','active','2021-07-15');\n\nINSERT OR IGNORE INTO products VALUES ('p001','Standard Home Loan','SHL-STANDARD','Flagship home financing for Omani nationals and residents. Fixed and variable rate options, top-up facility, and bundled insurance. CBO-compliant with full credit assessment.','home_loan','active',5.5,90,60,60,5,25,10000,500000,0,0,0.0,0.0,90,1,1,'[\"civil_id\",\"salary_certificate\",\"utility_bill\",\"property_deed\",\"independent_valuation_report\",\"bank_statements_3m\",\"employer_letter\"]','[]','[]','[]','{\"features\":[\"Fixed and variable rate options\",\"Top-up facility available\",\"Insurance bundled\",\"Salary transfer preferred\"]}',4847,'u001','2024-01-10','2025-12-15');\nINSERT OR IGNORE INTO products VALUES ('p002','Auto Finance – Personal','AFL-PERSONAL','Financing for personal vehicles including sedans, SUVs, and electric vehicles. Competitive flat rate, quick 48-hour approval, covers new and used vehicles up to 5 years old.','auto_loan','active',4.9,85,55,55,1,7,3000,80000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"salary_certificate\",\"vehicle_proforma_invoice\",\"driving_license\",\"insurance_quotation\",\"bank_statements_3m\"]','[]','[]','[]','{\"features\":[\"Covers new & used vehicles\",\"48-hour credit decision\",\"EV purchase supported\",\"Comprehensive insurance required\"]}',1923,'u001','2023-06-01','2025-11-20');\nINSERT OR IGNORE INTO products VALUES ('p003','Personal Loan','PL-UNSECURED','Unsecured personal financing for salaried employees of approved employers. No collateral required. Flat competitive rate for medical, travel, home renovation and other personal needs.','personal_loan','active',7.5,0,45,45,1,5,1000,30000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"salary_certificate\",\"employer_letter\",\"bank_statements_3m\",\"approved_employer_confirmation\"]','[]','[]','[]','{\"features\":[\"No collateral required\",\"Approved employer list\",\"Competitive fixed rate\",\"Loan protector insurance available\"]}',3241,'u001','2023-01-15','2025-10-01');\nINSERT OR IGNORE INTO products VALUES ('p004','SME Working Capital','SME-WORKCAP','Short-term working capital facility for small and medium enterprises registered in Oman. Revolving or term structure. Supports payroll, inventory procurement, and operational growth.','sme','active',6.5,70,65,65,1,3,5000,200000,0,0,0.0,0.0,85,0,0,'[\"commercial_registration_certificate\",\"memorandum_of_association\",\"audited_financials_2yr\",\"bank_statements_6m\",\"cr_extract\",\"tax_clearance_certificate\",\"business_profile\"]','[]','[]','[]','{\"features\":[\"For Oman-registered SMEs\",\"Revolving or term facility\",\"Supports payroll & growth\",\"MOCI-verified CR required\"]}',892,'u001','2023-08-10','2025-09-15');\nINSERT OR IGNORE INTO products VALUES ('p005','Home Equity Line','HELOC-STANDARD','Revolving credit facility secured against existing owned property. Access equity without selling. Ideal for large purchases, education, or business funding. Second charge behind primary mortgage.','home_loan','active',6.0,75,55,55,5,15,20000,300000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"property_title_deed\",\"independent_valuation_report\",\"salary_certificate\",\"bank_statements_3m\",\"existing_mortgage_statement\",\"noc_from_primary_lender\"]','[]','[]','[]','{\"features\":[\"Use your property equity\",\"Revolving credit line\",\"Up to OMR 300,000\",\"No early settlement penalty\"]}',567,'u001','2024-03-01','2025-08-20');\nINSERT OR IGNORE INTO products VALUES ('p006','Commercial Property Finance','CPF-COMMERCIAL','Financing for commercial properties including offices, retail units, and warehouses. Available to Omani-registered companies and sole proprietors. Full corporate credit assessment applies.','commercial','active',6.8,70,65,65,5,20,50000,2000000,0,0,0.0,0.0,85,0,0,'[\"commercial_registration_certificate\",\"memorandum_of_association\",\"audited_financials_3yr\",\"bank_statements_12m\",\"property_title_deed\",\"independent_valuation_report\",\"lease_agreements\",\"board_resolution\"]','[]','[]','[]','{\"features\":[\"For offices, retail & warehouses\",\"Up to OMR 2,000,000\",\"Flexible repayment structures\",\"Lease income considered\"]}',234,'u001','2023-09-01','2025-07-10');\nINSERT OR IGNORE INTO products VALUES ('p007','Expat Home Finance','EHL-EXPAT','Home financing for expatriate professionals working in Oman. Stricter LTV (max 75%) per CBO regulations. Employer NOC required. Available for IZ-approved freehold zones.','home_loan','active',6.0,75,55,55,5,20,15000,400000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"passport_copy\",\"valid_work_permit_residence_card\",\"salary_certificate\",\"noc_from_employer\",\"property_deed_freehold_zone\",\"independent_valuation_report\",\"bank_statements_6m\"]','[]','[]','[]','{\"features\":[\"Expatriate professionals\",\"LTV up to 75%\",\"Freehold zone properties\",\"Employer NOC required\"]}',1102,'u001','2024-01-20','2025-12-01');\nINSERT OR IGNORE INTO products VALUES ('p008','Education Finance','EDU-FINANCE','Financing for higher education expenses including tuition, accommodation, and study materials at approved universities in Oman and abroad. Deferred repayment option available.','education','archived',8.0,0,45,45,1,8,500,20000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"university_offer_letter_or_enrollment\",\"salary_certificate\",\"fee_schedule_from_institution\",\"bank_statements_3m\"]','[]','[]','[]','{\"features\":[\"Approved universities list\",\"Deferred repayment option\",\"Covers tuition & accommodation\",\"Loan protector insurance\"]}',445,'u001','2022-01-01','2024-06-01');\n-- Green Home Loan is created LIVE during the presentation (Act 1).\n\nINSERT OR IGNORE INTO rules VALUES ('r001',null,'DBR Maximum Limit','creditworthiness','DBR','<=',60,null,'reject','hard','CBO Circular 2024-01, Section 3.1','manual',null,'Debt Burden Ratio must not exceed 60% of gross monthly income',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r002',null,'LTV Maximum – Salaried Omani','collateral','LTV','<=',90,'nationality=Omani AND employment=salaried','reject','hard','CBO Circular 2024-01, Section 4.2','manual',null,'LTV max 90% for salaried Omani nationals',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r003',null,'LTV Maximum – Expat','collateral','LTV','<=',75,'nationality!=Omani','reject','hard','CBO Circular 2024-01, Section 4.3','manual',null,'LTV max 75% for expatriates',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r004',null,'Minimum Loan Term','product','loan_term','>=',5,null,'reject','hard','Bank Policy BP-2024-HL-001','manual',null,'Minimum loan term 5 years',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r005',null,'Maximum Loan Term','product','loan_term','<=',25,null,'reject','hard','CBO Circular 2024-01, Section 5.1','manual',null,'Maximum loan term 25 years',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r006',null,'Minimum Credit Score','creditworthiness','credit_score','>=',650,null,'reject','hard','Bank Policy BP-2024-CR-002','manual',null,'Minimum MALAA credit score 650',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r007',null,'CBO Stress Test – Rate Hike','stress_test','stress_rate','<=',9,null,'reject','hard','CBO Circular 2025-07, Section 2.3','manual',null,'Simulate +350bps rate hike; DBR must not exceed 70%',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r008',null,'Minimum Salary – Home Loan','eligibility','salary_omr','>=',400,null,'reject','soft','Bank Policy BP-2024-HL-003','manual',null,'Minimum monthly salary OMR 400',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r009',null,'Property Valuation Required','collateral','valuation_required','=',1,null,'reject','hard','CBO Circular 2024-01, Section 6.1','manual',null,'Independent valuation mandatory',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r010',null,'AML Sanctions Screening','compliance','sanctions_clear','=',1,null,'reject','hard','CBO AML/CFT Rules 2022, Section 8','manual',null,'Customer must pass sanctions screening',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r011',null,'KYC Completeness Check','compliance','kyc_complete','=',1,null,'reject','hard','CBO AML/CFT Rules 2022, Section 5.2','manual',null,'All KYC documents must be verified',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r012',null,'GSAS Score – Green Entry','esg','gsas_score','>=',70,null,'reject','hard','OS GSO 3000:2025, Section 4.2','manual',null,'Minimum GSAS score 70 for Green Home Loan',1,'system','2026-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r013',null,'EPC Rating Minimum','esg','epc_rating','in',null,'A,B,C','reject','hard','OEESC Section 5.1','manual',null,'EPC minimum rating C required',1,'system','2026-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r014',null,'EIA Clearance – Large Projects','esg','eia_required','=',1,'units>20','reject','hard','Environment Authority Decision 107/2023','manual',null,'EIA clearance mandatory for >20 units',1,'system','2026-01-01');\n-- r015 (Green DBR Buffer) is generated LIVE by AI during Act 1.\n\nINSERT OR IGNORE INTO developers VALUES ('d001','Al Madaen Real Estate','CR-2019-45821','Ahmed Al-Hinai','ahmed@almadaen.om','+968 2434 5566','PO Box 1234, Muscat','active','2023-11-15','2019-03-01');\nINSERT OR IGNORE INTO developers VALUES ('d002','Muscat Hills Development','CR-2018-33201','Sara Al-Lawati','sara@muscathills.om','+968 2488 9900','PO Box 567, Muscat','active','2022-09-20','2018-07-10');\nINSERT OR IGNORE INTO developers VALUES ('d003','Gulf Horizon Properties','CR-2021-78543','Khalid Al-Farsi','khalid@gulfhorizon.om','+968 2456 7788','PO Box 890, Sohar','active','2024-01-05','2021-02-15');\n\nINSERT OR IGNORE INTO projects VALUES ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',36,12,8,16,78,'Gold','B','EIA/2024/201','{\"type\":\"FeatureCollection\",\"features\":[]}','active',1,0,'2024-06-15','2025-11-30',1,'/static/img/proj001_hero.jpg','Waterfront living with premium amenities in the heart of Muscat',95000,185000,NULL,'[\"Swimming Pool\",\"Gym\",\"24/7 Security\",\"Covered Parking\",\"Children''s Play Area\"]');\nINSERT OR IGNORE INTO projects VALUES ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',18,18,0,0,82,'Gold','A',null,'{\"type\":\"FeatureCollection\",\"features\":[]}','active',1,0,'2025-01-10','2025-12-01',1,'/static/img/proj002_hero.jpg','Spacious villas with panoramic views near Muscat International Airport',145000,220000,NULL,'[\"Private Garden\",\"Rooftop Terrace\",\"Central A/C\",\"Smart Home\",\"Visitor Parking\"]');\nINSERT OR IGNORE INTO projects VALUES ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',60,0,0,60,null,null,null,null,'{\"type\":\"FeatureCollection\",\"features\":[]}','archived',0,0,'2023-05-01','2025-06-30',0,'/static/img/proj003_hero.jpg',null,null,null,null,'[]');\nINSERT OR IGNORE INTO projects VALUES ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',24,0,0,0,null,null,null,null,'{\"type\":\"FeatureCollection\",\"features\":[]}','draft',0,0,'2026-08-31','2026-08-31',0,'/static/img/proj004_hero.jpg',null,null,null,null,'[]');\n\n-- EcoVillage units and documents are uploaded LIVE during Act 2.\n\nINSERT OR IGNORE INTO applications VALUES ('app001','HL-240892','p001','c002','Mariam Al-Siyabi',null,'proj001',250000,20,'Al Mouj Residences, Unit A12, Muscat','partner',142,null,null,5.5,5.5,1608.82,1608.82,0,46,78,9.0,1,780,'approved','verified','u002','2024-09-15','u003','2024-09-16',250000,0,null,null,'2024-09-14','2024-09-16');\nINSERT OR IGNORE INTO applications VALUES ('app002','HL-241156','p001','c003','Hassan Al-Amri',null,null,120000,15,'Plot 45, Al Ghubra North, Muscat','byop',200,null,null,5.5,5.5,980.12,980.12,0,36,72,9.0,1,710,'credit_review','pending',null,null,null,null,120000,0,null,null,'2024-12-01','2024-12-03');\n-- GHL-250001 (app003) and construction stages are created LIVE during Acts 3-5.\n\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb001','CBO Circular 2026-12 – DBR Rules','regulatory','The Central Bank of Oman requires DBR shall not exceed 60% of gross monthly income. For green financing, banks apply a 5% buffer, limiting DBR to 55%.','CBO Circular 2026-12','2026-01-01','[\"DBR\",\"housing\",\"green\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb002','OS GSO 3000:2025 – GSAS Standards','esg','GSAS certificates must contain: Certificate Number (GSAS-YYYY-NNN), Issuer (GORD), Issue Date, Expiry Date, Overall Score (0-100), Rating. Minimum score 70 for green financing.','OS GSO 3000:2025','2025-01-01','[\"GSAS\",\"ESG\",\"certification\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb003','Oman PDPL – Royal Decree 6/2022','compliance','PDPL requires explicit consent, secure storage, right to erasure, mandatory breach notification within 72 hours.','Royal Decree 6/2022','2022-02-01','[\"PDPL\",\"data\",\"privacy\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb004','OEESC – EPC Requirements','esg','Energy Performance Certificates required for all new residential developments. Minimum rating C for green financing. Scale A+ to G.','OEESC Section 5.1','2024-01-01','[\"EPC\",\"energy\",\"efficiency\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb005','Environment Authority Decision 107/2023','esg','EIA clearance mandatory for residential developments exceeding 20 units. Reference format: EIA/YYYY/NNN. Valid 3 years.','Environment Authority Decision 107/2023','2023-07-15','[\"EIA\",\"environment\",\"assessment\"]','2026-08-31');\n\nINSERT OR IGNORE INTO audit_logs VALUES ('al001','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p001','{\"status\":\"active\",\"product_name\":\"Standard Home Loan\"}','manual',null,null,'10.10.50.15','2024-01-10 09:00:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al002','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p002','{\"status\":\"active\",\"product_name\":\"Auto Finance - Personal\"}','manual',null,null,'10.10.50.15','2023-06-01 10:00:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al003','u002','Aisha Al-Balushi','compliance_officer','APPLICATION_APPROVED','application','app001','{\"reference\":\"HL-240892\",\"customer\":\"Mariam Al-Siyabi\",\"amount\":250000}','manual',null,'CBO Circular 2024-01','10.10.50.22','2024-09-15 14:30:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al004','u003','Omar Al-Mantheri','risk_officer','CREDIT_REVIEW_APPROVED','application','app001','{\"reference\":\"HL-240892\",\"dbr\":46,\"ltv\":78,\"stress_test\":\"passed\"}','manual',null,'CBO Circular 2024-01','10.10.50.33','2024-09-16 11:00:00');\n";
-pt.post("/run", async (e) => {
+var lt = new V(), ut = "\nCREATE TABLE IF NOT EXISTS products (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, code TEXT UNIQUE, description TEXT,\n  category TEXT DEFAULT 'home_loan', status TEXT DEFAULT 'draft',\n  base_rate REAL DEFAULT 5.5, max_ltv INTEGER DEFAULT 90, max_dbr INTEGER DEFAULT 60,\n  green_dbr INTEGER DEFAULT 55, min_term INTEGER DEFAULT 5, max_term INTEGER DEFAULT 25,\n  min_amount REAL DEFAULT 10000, max_amount REAL DEFAULT 500000,\n  gsas_min_score INTEGER DEFAULT 0, gsas_premium_score INTEGER DEFAULT 0,\n  green_discount_premium REAL DEFAULT 0.0, green_discount_standard REAL DEFAULT 0.0,\n  ai_confidence_threshold INTEGER DEFAULT 90, allow_byop INTEGER DEFAULT 1,\n  allow_partner_inventory INTEGER DEFAULT 1,\n  required_docs TEXT DEFAULT '[]', esg_required_docs TEXT DEFAULT '[]',\n  approved_materials TEXT DEFAULT '[]', approved_vendors TEXT DEFAULT '[]',\n  configuration TEXT DEFAULT '{}', applications_ytd INTEGER DEFAULT 0,\n  created_by TEXT DEFAULT 'system', created_at TEXT DEFAULT (datetime('now')),\n  updated_at TEXT DEFAULT (datetime('now')),\n  portal_visible INTEGER DEFAULT 0,\n  portal_hero_title TEXT, portal_hero_subtitle TEXT, portal_card_badge TEXT,\n  portal_highlights TEXT DEFAULT '[]',\n  portal_calculator_enabled INTEGER DEFAULT 1,\n  developer_portal_visible INTEGER DEFAULT 0,\n  developer_requirements TEXT DEFAULT '{}',\n  published_at TEXT\n);\n\nCREATE TABLE IF NOT EXISTS rules (\n  id TEXT PRIMARY KEY, product_id TEXT, name TEXT NOT NULL, category TEXT NOT NULL,\n  metric TEXT NOT NULL, operator TEXT NOT NULL, threshold_value REAL,\n  threshold_condition TEXT, action_on_breach TEXT DEFAULT 'reject',\n  severity TEXT DEFAULT 'hard', regulatory_reference TEXT,\n  source TEXT DEFAULT 'manual', ai_confidence REAL, description TEXT,\n  is_active INTEGER DEFAULT 1, created_by TEXT DEFAULT 'system',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS developers (\n  id TEXT PRIMARY KEY, company_name TEXT NOT NULL, cr_number TEXT UNIQUE,\n  contact_name TEXT, email TEXT, phone TEXT, po_box TEXT,\n  status TEXT DEFAULT 'active', verified_at TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS projects (\n  id TEXT PRIMARY KEY, developer_id TEXT, name TEXT NOT NULL, code TEXT UNIQUE,\n  location TEXT, governorate TEXT, type TEXT DEFAULT 'residential',\n  total_units INTEGER DEFAULT 0, available_units INTEGER DEFAULT 0,\n  reserved_units INTEGER DEFAULT 0, sold_units INTEGER DEFAULT 0,\n  gsas_score INTEGER, gsas_rating TEXT, epc_rating TEXT, eia_reference TEXT,\n  geo_json TEXT, status TEXT DEFAULT 'draft',\n  green_eligible INTEGER DEFAULT 0, premium_tier INTEGER DEFAULT 0,\n  created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS units (\n  id TEXT PRIMARY KEY, project_id TEXT, unit_number TEXT NOT NULL,\n  floor_number INTEGER, type TEXT DEFAULT 'villa', area_sqm REAL,\n  bedrooms INTEGER, bathrooms INTEGER, price REAL, lat REAL, lng REAL,\n  status TEXT DEFAULT 'available', features TEXT DEFAULT '[]',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS documents (\n  id TEXT PRIMARY KEY, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL,\n  doc_type TEXT NOT NULL, filename TEXT, file_url TEXT,\n  extracted_data TEXT DEFAULT '{}', ai_confidence REAL,\n  validation_status TEXT DEFAULT 'pending', validation_notes TEXT,\n  reviewed_by TEXT, reviewed_at TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS customers (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, name_ar TEXT, civil_id TEXT UNIQUE,\n  email TEXT, phone TEXT, nationality TEXT DEFAULT 'Omani', employer TEXT,\n  salary_omr REAL, employment_type TEXT DEFAULT 'salaried',\n  credit_score INTEGER DEFAULT 700, existing_dbr REAL DEFAULT 0,\n  sohar_customer_since TEXT, status TEXT DEFAULT 'active',\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS applications (\n  id TEXT PRIMARY KEY, reference TEXT UNIQUE NOT NULL, product_id TEXT,\n  customer_id TEXT, customer_name TEXT, unit_id TEXT, project_id TEXT,\n  loan_amount REAL, loan_term INTEGER, property_address TEXT,\n  property_source TEXT DEFAULT 'partner', property_area_sqm REAL,\n  gsas_score INTEGER, epc_rating TEXT, applied_rate REAL, standard_rate REAL DEFAULT 5.5,\n  monthly_payment REAL, standard_monthly_payment REAL, lifetime_saving REAL,\n  dbr REAL, ltv REAL, stress_test_rate REAL DEFAULT 9.0, stress_test_passed INTEGER DEFAULT 0,\n  malaa_score INTEGER, status TEXT DEFAULT 'draft', esg_verification_status TEXT DEFAULT 'pending',\n  compliance_approved_by TEXT, compliance_approved_at TEXT,\n  risk_approved_by TEXT, risk_approved_at TEXT,\n  escrow_amount REAL, escrow_released REAL DEFAULT 0,\n  rejection_reason TEXT, tracking_url TEXT,\n  created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS construction_stages (\n  id TEXT PRIMARY KEY, application_id TEXT, stage_number INTEGER NOT NULL,\n  stage_name TEXT NOT NULL, description TEXT, tranche_amount REAL,\n  tranche_percentage REAL, required_material TEXT, status TEXT DEFAULT 'locked',\n  invoice_doc_id TEXT, ai_validated INTEGER DEFAULT 0, ai_confidence REAL,\n  payment_reference TEXT, completed_at TEXT, paid_at TEXT,\n  created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS users (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, name_ar TEXT, email TEXT UNIQUE NOT NULL,\n  role TEXT NOT NULL, department TEXT, avatar_initials TEXT,\n  status TEXT DEFAULT 'active', created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS audit_logs (\n  id TEXT PRIMARY KEY, user_id TEXT, user_name TEXT, user_role TEXT,\n  action TEXT NOT NULL, entity_type TEXT, entity_id TEXT, details TEXT DEFAULT '{}',\n  source TEXT DEFAULT 'manual', ai_confidence REAL, regulatory_reference TEXT,\n  ip_address TEXT, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS knowledge_base (\n  id TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT NOT NULL,\n  content TEXT NOT NULL, source TEXT, effective_date TEXT,\n  tags TEXT DEFAULT '[]', created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE TABLE IF NOT EXISTS rule_templates (\n  id TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT NOT NULL,\n  regulatory_source TEXT, template_json TEXT NOT NULL,\n  is_cbo_required INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now'))\n);\n\nCREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);\nCREATE INDEX IF NOT EXISTS idx_applications_reference ON applications(reference);\nCREATE INDEX IF NOT EXISTS idx_units_project ON units(project_id);\nCREATE INDEX IF NOT EXISTS idx_documents_entity ON documents(entity_type, entity_id);\nCREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);\nCREATE INDEX IF NOT EXISTS idx_construction_stages_app ON construction_stages(application_id);\n", dt = "\nALTER TABLE products ADD COLUMN portal_visible INTEGER DEFAULT 0;\nALTER TABLE products ADD COLUMN portal_hero_title TEXT;\nALTER TABLE products ADD COLUMN portal_hero_subtitle TEXT;\nALTER TABLE products ADD COLUMN portal_card_badge TEXT;\nALTER TABLE products ADD COLUMN portal_highlights TEXT DEFAULT '[]';\nALTER TABLE products ADD COLUMN portal_calculator_enabled INTEGER DEFAULT 1;\nALTER TABLE products ADD COLUMN developer_portal_visible INTEGER DEFAULT 0;\nALTER TABLE products ADD COLUMN developer_requirements TEXT DEFAULT '{}';\nALTER TABLE products ADD COLUMN published_at TEXT;\nALTER TABLE projects ADD COLUMN listing_visible INTEGER DEFAULT 0;\nALTER TABLE projects ADD COLUMN hero_image_url TEXT;\nALTER TABLE projects ADD COLUMN marketing_tagline TEXT;\nALTER TABLE projects ADD COLUMN price_from REAL;\nALTER TABLE projects ADD COLUMN price_to REAL;\nALTER TABLE projects ADD COLUMN completion_date TEXT;\nALTER TABLE projects ADD COLUMN amenities TEXT DEFAULT '[]';\nCREATE TABLE IF NOT EXISTS ai_threads (\n  id TEXT PRIMARY KEY, user_id TEXT, product_id TEXT, purpose TEXT NOT NULL,\n  messages TEXT DEFAULT '[]', context TEXT DEFAULT '{}', status TEXT DEFAULT 'active',\n  result TEXT DEFAULT '{}', created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now'))\n);\nCREATE TABLE IF NOT EXISTS portal_users (\n  id TEXT PRIMARY KEY,\n  login TEXT UNIQUE NOT NULL,\n  password_hash TEXT NOT NULL,\n  display_name TEXT NOT NULL,\n  role TEXT NOT NULL,\n  portal_access TEXT NOT NULL,\n  allowed_sections TEXT DEFAULT '[]',\n  status TEXT DEFAULT 'active',\n  created_at TEXT DEFAULT (datetime('now')),\n  last_login TEXT\n);\nCREATE TABLE IF NOT EXISTS portal_sessions (\n  token TEXT PRIMARY KEY,\n  user_id TEXT NOT NULL,\n  login TEXT NOT NULL,\n  role TEXT NOT NULL,\n  portal_access TEXT NOT NULL,\n  allowed_sections TEXT DEFAULT '[]',\n  expires_at TEXT NOT NULL,\n  created_at TEXT DEFAULT (datetime('now'))\n);\n", ft = "\n-- Portal authentication users (password = \"password\" SHA-256)\nINSERT OR IGNORE INTO portal_users VALUES ('pu001','customer01','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','Salim Al-Harthy','customer','customer','[]','active','2024-01-01',null);\nINSERT OR IGNORE INTO portal_users VALUES ('pu002','pm01','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','Fatima Al-Rashdi','product_manager','backoffice','[\"products\",\"applications\",\"rules\",\"workflows\",\"users\",\"ai_studio\"]','active','2024-01-01',null);\nINSERT OR IGNORE INTO portal_users VALUES ('pu003','compliance01','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','Aisha Al-Balushi','compliance_officer','backoffice','[\"compliance\"]','active','2024-01-01',null);\nINSERT OR IGNORE INTO portal_users VALUES ('pu004','rm01','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','Omar Al-Mantheri','risk_officer','backoffice','[\"risk\"]','active','2024-01-01',null);\nINSERT OR IGNORE INTO portal_users VALUES ('pu005','admin','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','System Administrator','admin','all','[]','active','2024-01-01',null);\nINSERT OR IGNORE INTO portal_users VALUES ('pu006','developer01','5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8','Ahmed Al-Hinai','developer','developer','[]','active','2024-01-01',null);\n\nINSERT OR IGNORE INTO users VALUES ('u001','Fatima Al-Rashdi','فاطمة الراشدي','fatima@sib.om','product_manager','Product Management','FA','active','2024-01-15');\nINSERT OR IGNORE INTO users VALUES ('u002','Aisha Al-Balushi','عائشة البلوشي','aisha@sib.om','compliance_officer','Compliance & ESG','AB','active','2023-06-01');\nINSERT OR IGNORE INTO users VALUES ('u003','Omar Al-Mantheri','عمر المنذري','omar@sib.om','risk_officer','Credit Risk','OM','active','2023-03-15');\nINSERT OR IGNORE INTO users VALUES ('u004','Khalid Al-Rawahi','خالد الرواحي','khalid@sib.om','operations','Operations','KR','active','2022-09-01');\nINSERT OR IGNORE INTO users VALUES ('u010','Ahmed Al-Hinai','أحمد الهنائي','ahmed@almadaen.om','developer','Al Madaen Real Estate','AH','active','2023-11-01');\nINSERT OR IGNORE INTO users VALUES ('u011','Rashid Al-Hassani','راشد الحساني','rashid@aljazeera-const.om','contractor','Al Jazeera Constructions','RH','active','2024-02-01');\nINSERT OR IGNORE INTO users VALUES ('u020','Salim Al-Harthy','سالم الحارثي','salim@gmail.com','customer',null,'SH','active','2019-05-10');\n\nINSERT OR IGNORE INTO customers VALUES ('c001','Salim Al-Harthy','سالم الحارثي','84521789','salim@gmail.com','+968 9921 3344','Omani','Ministry of Heritage & Tourism',3200,'salaried',750,0,'2019-05-10','active','2019-05-10');\nINSERT OR IGNORE INTO customers VALUES ('c002','Mariam Al-Siyabi','مريم السيابي','91234567','mariam@hotmail.com','+968 9955 1122','Omani','Oman Oil Company',4500,'salaried',780,12,'2020-03-22','active','2020-03-22');\nINSERT OR IGNORE INTO customers VALUES ('c003','Hassan Al-Amri','حسن العامري','78654321','hassan@gmail.com','+968 9977 8899','Omani','Bank Muscat',2800,'salaried',710,18,'2021-07-15','active','2021-07-15');\n\nINSERT OR IGNORE INTO products VALUES ('p001','Standard Home Loan','SHL-STANDARD','Flagship home financing for Omani nationals and residents. Fixed and variable rate options, top-up facility, and bundled insurance. CBO-compliant with full credit assessment.','home_loan','active',5.5,90,60,60,5,25,10000,500000,0,0,0.0,0.0,90,1,1,'[\"civil_id\",\"salary_certificate\",\"utility_bill\",\"property_deed\",\"independent_valuation_report\",\"bank_statements_3m\",\"employer_letter\"]','[]','[]','[]','{\"features\":[\"Fixed and variable rate options\",\"Top-up facility available\",\"Insurance bundled\",\"Salary transfer preferred\"]}',4847,'u001','2024-01-10','2025-12-15');\nINSERT OR IGNORE INTO products VALUES ('p002','Auto Finance – Personal','AFL-PERSONAL','Financing for personal vehicles including sedans, SUVs, and electric vehicles. Competitive flat rate, quick 48-hour approval, covers new and used vehicles up to 5 years old.','auto_loan','active',4.9,85,55,55,1,7,3000,80000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"salary_certificate\",\"vehicle_proforma_invoice\",\"driving_license\",\"insurance_quotation\",\"bank_statements_3m\"]','[]','[]','[]','{\"features\":[\"Covers new & used vehicles\",\"48-hour credit decision\",\"EV purchase supported\",\"Comprehensive insurance required\"]}',1923,'u001','2023-06-01','2025-11-20');\nINSERT OR IGNORE INTO products VALUES ('p003','Personal Loan','PL-UNSECURED','Unsecured personal financing for salaried employees of approved employers. No collateral required. Flat competitive rate for medical, travel, home renovation and other personal needs.','personal_loan','active',7.5,0,45,45,1,5,1000,30000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"salary_certificate\",\"employer_letter\",\"bank_statements_3m\",\"approved_employer_confirmation\"]','[]','[]','[]','{\"features\":[\"No collateral required\",\"Approved employer list\",\"Competitive fixed rate\",\"Loan protector insurance available\"]}',3241,'u001','2023-01-15','2025-10-01');\nINSERT OR IGNORE INTO products VALUES ('p004','SME Working Capital','SME-WORKCAP','Short-term working capital facility for small and medium enterprises registered in Oman. Revolving or term structure. Supports payroll, inventory procurement, and operational growth.','sme','active',6.5,70,65,65,1,3,5000,200000,0,0,0.0,0.0,85,0,0,'[\"commercial_registration_certificate\",\"memorandum_of_association\",\"audited_financials_2yr\",\"bank_statements_6m\",\"cr_extract\",\"tax_clearance_certificate\",\"business_profile\"]','[]','[]','[]','{\"features\":[\"For Oman-registered SMEs\",\"Revolving or term facility\",\"Supports payroll & growth\",\"MOCI-verified CR required\"]}',892,'u001','2023-08-10','2025-09-15');\nINSERT OR IGNORE INTO products VALUES ('p005','Home Equity Line','HELOC-STANDARD','Revolving credit facility secured against existing owned property. Access equity without selling. Ideal for large purchases, education, or business funding. Second charge behind primary mortgage.','home_loan','active',6.0,75,55,55,5,15,20000,300000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"property_title_deed\",\"independent_valuation_report\",\"salary_certificate\",\"bank_statements_3m\",\"existing_mortgage_statement\",\"noc_from_primary_lender\"]','[]','[]','[]','{\"features\":[\"Use your property equity\",\"Revolving credit line\",\"Up to OMR 300,000\",\"No early settlement penalty\"]}',567,'u001','2024-03-01','2025-08-20');\nINSERT OR IGNORE INTO products VALUES ('p006','Commercial Property Finance','CPF-COMMERCIAL','Financing for commercial properties including offices, retail units, and warehouses. Available to Omani-registered companies and sole proprietors. Full corporate credit assessment applies.','commercial','active',6.8,70,65,65,5,20,50000,2000000,0,0,0.0,0.0,85,0,0,'[\"commercial_registration_certificate\",\"memorandum_of_association\",\"audited_financials_3yr\",\"bank_statements_12m\",\"property_title_deed\",\"independent_valuation_report\",\"lease_agreements\",\"board_resolution\"]','[]','[]','[]','{\"features\":[\"For offices, retail & warehouses\",\"Up to OMR 2,000,000\",\"Flexible repayment structures\",\"Lease income considered\"]}',234,'u001','2023-09-01','2025-07-10');\nINSERT OR IGNORE INTO products VALUES ('p007','Expat Home Finance','EHL-EXPAT','Home financing for expatriate professionals working in Oman. Stricter LTV (max 75%) per CBO regulations. Employer NOC required. Available for IZ-approved freehold zones.','home_loan','active',6.0,75,55,55,5,20,15000,400000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"passport_copy\",\"valid_work_permit_residence_card\",\"salary_certificate\",\"noc_from_employer\",\"property_deed_freehold_zone\",\"independent_valuation_report\",\"bank_statements_6m\"]','[]','[]','[]','{\"features\":[\"Expatriate professionals\",\"LTV up to 75%\",\"Freehold zone properties\",\"Employer NOC required\"]}',1102,'u001','2024-01-20','2025-12-01');\nINSERT OR IGNORE INTO products VALUES ('p008','Education Finance','EDU-FINANCE','Financing for higher education expenses including tuition, accommodation, and study materials at approved universities in Oman and abroad. Deferred repayment option available.','education','archived',8.0,0,45,45,1,8,500,20000,0,0,0.0,0.0,90,0,0,'[\"civil_id\",\"university_offer_letter_or_enrollment\",\"salary_certificate\",\"fee_schedule_from_institution\",\"bank_statements_3m\"]','[]','[]','[]','{\"features\":[\"Approved universities list\",\"Deferred repayment option\",\"Covers tuition & accommodation\",\"Loan protector insurance\"]}',445,'u001','2022-01-01','2024-06-01');\n-- Green Home Loan is created LIVE during the presentation (Act 1).\n\nINSERT OR IGNORE INTO rules VALUES ('r001',null,'DBR Maximum Limit','creditworthiness','DBR','<=',60,null,'reject','hard','CBO Circular 2024-01, Section 3.1','manual',null,'Debt Burden Ratio must not exceed 60% of gross monthly income',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r002',null,'LTV Maximum – Salaried Omani','collateral','LTV','<=',90,'nationality=Omani AND employment=salaried','reject','hard','CBO Circular 2024-01, Section 4.2','manual',null,'LTV max 90% for salaried Omani nationals',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r003',null,'LTV Maximum – Expat','collateral','LTV','<=',75,'nationality!=Omani','reject','hard','CBO Circular 2024-01, Section 4.3','manual',null,'LTV max 75% for expatriates',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r004',null,'Minimum Loan Term','product','loan_term','>=',5,null,'reject','hard','Bank Policy BP-2024-HL-001','manual',null,'Minimum loan term 5 years',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r005',null,'Maximum Loan Term','product','loan_term','<=',25,null,'reject','hard','CBO Circular 2024-01, Section 5.1','manual',null,'Maximum loan term 25 years',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r006',null,'Minimum Credit Score','creditworthiness','credit_score','>=',650,null,'reject','hard','Bank Policy BP-2024-CR-002','manual',null,'Minimum MALAA credit score 650',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r007',null,'CBO Stress Test – Rate Hike','stress_test','stress_rate','<=',9,null,'reject','hard','CBO Circular 2025-07, Section 2.3','manual',null,'Simulate +350bps rate hike; DBR must not exceed 70%',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r008',null,'Minimum Salary – Home Loan','eligibility','salary_omr','>=',400,null,'reject','soft','Bank Policy BP-2024-HL-003','manual',null,'Minimum monthly salary OMR 400',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r009',null,'Property Valuation Required','collateral','valuation_required','=',1,null,'reject','hard','CBO Circular 2024-01, Section 6.1','manual',null,'Independent valuation mandatory',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r010',null,'AML Sanctions Screening','compliance','sanctions_clear','=',1,null,'reject','hard','CBO AML/CFT Rules 2022, Section 8','manual',null,'Customer must pass sanctions screening',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r011',null,'KYC Completeness Check','compliance','kyc_complete','=',1,null,'reject','hard','CBO AML/CFT Rules 2022, Section 5.2','manual',null,'All KYC documents must be verified',1,'system','2024-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r012',null,'GSAS Score – Green Entry','esg','gsas_score','>=',70,null,'reject','hard','OS GSO 3000:2025, Section 4.2','manual',null,'Minimum GSAS score 70 for Green Home Loan',1,'system','2026-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r013',null,'EPC Rating Minimum','esg','epc_rating','in',null,'A,B,C','reject','hard','OEESC Section 5.1','manual',null,'EPC minimum rating C required',1,'system','2026-01-01');\nINSERT OR IGNORE INTO rules VALUES ('r014',null,'EIA Clearance – Large Projects','esg','eia_required','=',1,'units>20','reject','hard','Environment Authority Decision 107/2023','manual',null,'EIA clearance mandatory for >20 units',1,'system','2026-01-01');\n-- r015 (Green DBR Buffer) is generated LIVE by AI during Act 1.\n\nINSERT OR IGNORE INTO developers VALUES ('d001','Al Madaen Real Estate','CR-2019-45821','Ahmed Al-Hinai','ahmed@almadaen.om','+968 2434 5566','PO Box 1234, Muscat','active','2023-11-15','2019-03-01');\nINSERT OR IGNORE INTO developers VALUES ('d002','Muscat Hills Development','CR-2018-33201','Sara Al-Lawati','sara@muscathills.om','+968 2488 9900','PO Box 567, Muscat','active','2022-09-20','2018-07-10');\nINSERT OR IGNORE INTO developers VALUES ('d003','Gulf Horizon Properties','CR-2021-78543','Khalid Al-Farsi','khalid@gulfhorizon.om','+968 2456 7788','PO Box 890, Sohar','active','2024-01-05','2021-02-15');\n\nINSERT OR IGNORE INTO projects VALUES ('proj001','d001','Al Mouj Residences','AMR-2024','Al Mouj, Muscat','Muscat','apartment',36,12,8,16,78,'Gold','B','EIA/2024/201','{\"type\":\"FeatureCollection\",\"features\":[]}','active',1,0,'2024-06-15','2025-11-30',1,'/static/img/proj001_hero.jpg','Waterfront living with premium amenities in the heart of Muscat',95000,185000,NULL,'[\"Swimming Pool\",\"Gym\",\"24/7 Security\",\"Covered Parking\",\"Children''s Play Area\"]');\nINSERT OR IGNORE INTO projects VALUES ('proj002','d001','Seeb Heights Villas','SHV-2025','Airport Heights, Seeb','Muscat','villa',18,18,0,0,82,'Gold','A',null,'{\"type\":\"FeatureCollection\",\"features\":[]}','active',1,0,'2025-01-10','2025-12-01',1,'/static/img/proj002_hero.jpg','Spacious villas with panoramic views near Muscat International Airport',145000,220000,NULL,'[\"Private Garden\",\"Rooftop Terrace\",\"Central A/C\",\"Smart Home\",\"Visitor Parking\"]');\nINSERT OR IGNORE INTO projects VALUES ('proj003','d001','Mabella View Apartments','MVA-2023','Mabella, Muscat','Muscat','apartment',60,0,0,60,null,null,null,null,'{\"type\":\"FeatureCollection\",\"features\":[]}','archived',0,0,'2023-05-01','2025-06-30',0,'/static/img/proj003_hero.jpg',null,null,null,null,'[]');\nINSERT OR IGNORE INTO projects VALUES ('proj004','d001','EcoVillage Muscat','EVM-2026','Seeb, Muscat Governorate','Muscat','villa',24,0,0,0,null,null,null,null,'{\"type\":\"FeatureCollection\",\"features\":[]}','draft',0,0,'2026-08-31','2026-08-31',0,'/static/img/proj004_hero.jpg',null,null,null,null,'[]');\n\n-- EcoVillage units and documents are uploaded LIVE during Act 2.\n\nINSERT OR IGNORE INTO applications VALUES ('app001','HL-240892','p001','c002','Mariam Al-Siyabi',null,'proj001',250000,20,'Al Mouj Residences, Unit A12, Muscat','partner',142,null,null,5.5,5.5,1608.82,1608.82,0,46,78,9.0,1,780,'approved','verified','u002','2024-09-15','u003','2024-09-16',250000,0,null,null,'2024-09-14','2024-09-16');\nINSERT OR IGNORE INTO applications VALUES ('app002','HL-241156','p001','c003','Hassan Al-Amri',null,null,120000,15,'Plot 45, Al Ghubra North, Muscat','byop',200,null,null,5.5,5.5,980.12,980.12,0,36,72,9.0,1,710,'credit_review','pending',null,null,null,null,120000,0,null,null,'2024-12-01','2024-12-03');\n-- GHL-250001 (app003) and construction stages are created LIVE during Acts 3-5.\n\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb001','CBO Circular 2026-12 – DBR Rules','regulatory','The Central Bank of Oman requires DBR shall not exceed 60% of gross monthly income. For green financing, banks apply a 5% buffer, limiting DBR to 55%.','CBO Circular 2026-12','2026-01-01','[\"DBR\",\"housing\",\"green\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb002','OS GSO 3000:2025 – GSAS Standards','esg','GSAS certificates must contain: Certificate Number (GSAS-YYYY-NNN), Issuer (GORD), Issue Date, Expiry Date, Overall Score (0-100), Rating. Minimum score 70 for green financing.','OS GSO 3000:2025','2025-01-01','[\"GSAS\",\"ESG\",\"certification\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb003','Oman PDPL – Royal Decree 6/2022','compliance','PDPL requires explicit consent, secure storage, right to erasure, mandatory breach notification within 72 hours.','Royal Decree 6/2022','2022-02-01','[\"PDPL\",\"data\",\"privacy\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb004','OEESC – EPC Requirements','esg','Energy Performance Certificates required for all new residential developments. Minimum rating C for green financing. Scale A+ to G.','OEESC Section 5.1','2024-01-01','[\"EPC\",\"energy\",\"efficiency\"]','2026-08-31');\nINSERT OR IGNORE INTO knowledge_base VALUES ('kb005','Environment Authority Decision 107/2023','esg','EIA clearance mandatory for residential developments exceeding 20 units. Reference format: EIA/YYYY/NNN. Valid 3 years.','Environment Authority Decision 107/2023','2023-07-15','[\"EIA\",\"environment\",\"assessment\"]','2026-08-31');\n\nINSERT OR IGNORE INTO audit_logs VALUES ('al001','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p001','{\"status\":\"active\",\"product_name\":\"Standard Home Loan\"}','manual',null,null,'10.10.50.15','2024-01-10 09:00:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al002','u001','Fatima Al-Rashdi','product_manager','PRODUCT_PUBLISHED','product','p002','{\"status\":\"active\",\"product_name\":\"Auto Finance - Personal\"}','manual',null,null,'10.10.50.15','2023-06-01 10:00:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al003','u002','Aisha Al-Balushi','compliance_officer','APPLICATION_APPROVED','application','app001','{\"reference\":\"HL-240892\",\"customer\":\"Mariam Al-Siyabi\",\"amount\":250000}','manual',null,'CBO Circular 2024-01','10.10.50.22','2024-09-15 14:30:00');\nINSERT OR IGNORE INTO audit_logs VALUES ('al004','u003','Omar Al-Mantheri','risk_officer','CREDIT_REVIEW_APPROVED','application','app001','{\"reference\":\"HL-240892\",\"dbr\":46,\"ltv\":78,\"stress_test\":\"passed\"}','manual',null,'CBO Circular 2024-01','10.10.50.33','2024-09-16 11:00:00');\n";
+lt.post("/run", async (e) => {
 	let t = e.env.DB;
 	try {
-		let n = mt.split(";").map((e) => e.trim()).filter((e) => e.length > 0);
+		let n = ut.split(";").map((e) => e.trim()).filter((e) => e.length > 0);
 		for (let e of n) try {
 			await t.prepare(e).run();
 		} catch {}
-		let r = ht.split(";").map((e) => e.trim()).filter((e) => e.length > 0);
+		let r = dt.split(";").map((e) => e.trim()).filter((e) => e.length > 0);
 		for (let e of r) try {
 			await t.prepare(e).run();
 		} catch {}
-		let i = gt.split(";").map((e) => e.trim()).filter((e) => e.length > 0 && !e.startsWith("--"));
+		let i = ft.split(";").map((e) => e.trim()).filter((e) => e.length > 0 && !e.startsWith("--"));
 		for (let e of i) try {
 			await t.prepare(e).run();
 		} catch {}
@@ -4616,12 +4685,12 @@ pt.post("/run", async (e) => {
 			error: t.message
 		}, 500);
 	}
-}), pt.post("/purge-applications", async (e) => {
+}), lt.post("/purge-applications", async (e) => {
 	let t = e.env.DB;
 	try {
 		await t.prepare("PRAGMA foreign_keys = OFF").run(), await t.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run();
 		let { results: n } = await t.prepare("SELECT file_url FROM documents WHERE entity_type='application' AND entity_id NOT IN ('app001','app002') AND file_url IS NOT NULL").all();
-		n?.length && await Promise.allSettled(n.map((e) => ft(e.file_url))), await t.prepare("DELETE FROM documents WHERE entity_type='application' AND entity_id NOT IN ('app001','app002')").run(), await t.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run(), await t.prepare("PRAGMA foreign_keys = ON").run();
+		n?.length && await Promise.allSettled(n.map((e) => ct(e.file_url))), await t.prepare("DELETE FROM documents WHERE entity_type='application' AND entity_id NOT IN ('app001','app002')").run(), await t.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run(), await t.prepare("PRAGMA foreign_keys = ON").run();
 		let { results: r } = await t.prepare("SELECT id, reference, customer_name FROM applications ORDER BY created_at").all();
 		return e.json({
 			success: !0,
@@ -4633,7 +4702,7 @@ pt.post("/run", async (e) => {
 			error: n.message
 		}, 500);
 	}
-}), pt.post("/reset-demo", async (e) => {
+}), lt.post("/reset-demo", async (e) => {
 	let t = e.env.DB, n = [
 		"p001",
 		"p002",
@@ -4649,7 +4718,7 @@ pt.post("/run", async (e) => {
 		let r = n.map(() => "?").join(",");
 		await t.prepare("DELETE FROM construction_stages WHERE application_id NOT IN ('app001','app002')").run(), await t.prepare("UPDATE construction_stages SET invoice_doc_id=NULL WHERE invoice_doc_id IS NOT NULL").run();
 		let { results: i } = await t.prepare("SELECT file_url FROM documents\n       WHERE file_url IS NOT NULL\n         AND entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')").all(), { results: a } = await t.prepare("SELECT file_url FROM documents\n       WHERE file_url IS NOT NULL\n         AND entity_type = 'application'\n         AND entity_id NOT IN ('app001','app002')").all(), o = [...(i || []).map((e) => e.file_url).filter(Boolean), ...(a || []).map((e) => e.file_url).filter(Boolean)];
-		o.length > 0 && (console.log(`[reset] Purging ${o.length} blob(s) from Azure storage…`), await Promise.allSettled(o.map((e) => ft(e))), console.log("[reset] Blob purge complete")), await t.prepare("DELETE FROM documents WHERE entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')").run(), await t.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run(), await t.prepare(`DELETE FROM rules WHERE product_id IS NOT NULL AND product_id NOT IN (${r})`).bind(...n).run(), await t.prepare(`DELETE FROM audit_logs WHERE entity_type='product' AND entity_id NOT IN (${r})`).bind(...n).run();
+		o.length > 0 && (console.log(`[reset] Purging ${o.length} blob(s) from Azure storage…`), await Promise.allSettled(o.map((e) => ct(e))), console.log("[reset] Blob purge complete")), await t.prepare("DELETE FROM documents WHERE entity_id NOT IN ('app001','app002','proj001','proj002','proj003','proj004')").run(), await t.prepare("DELETE FROM applications WHERE id NOT IN ('app001','app002')").run(), await t.prepare(`DELETE FROM rules WHERE product_id IS NOT NULL AND product_id NOT IN (${r})`).bind(...n).run(), await t.prepare(`DELETE FROM audit_logs WHERE entity_type='product' AND entity_id NOT IN (${r})`).bind(...n).run();
 		try {
 			await t.prepare(`DELETE FROM ai_threads WHERE product_id IS NOT NULL AND product_id NOT IN (${r})`).bind(...n).run();
 		} catch {}
@@ -5602,14 +5671,14 @@ pt.post("/run", async (e) => {
 });
 //#endregion
 //#region src/api/portal.ts
-var q = new I();
-q.get("/products", async (e) => {
+var Z = new V();
+Z.get("/products", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT id, name, name_ar, code, description, category, status, base_rate,\n     min_amount, max_amount, min_term, max_term, max_ltv, max_dbr,\n     gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n     portal_hero_title, portal_hero_subtitle, portal_card_badge, portal_highlights,\n     portal_calculator_enabled, esg_required_docs, configuration,\n     is_demo_product, published_at\n     FROM products WHERE portal_visible = 1 AND status = 'active'\n     ORDER BY is_demo_product DESC, category, published_at ASC").all();
 	return e.json({
 		products: t,
 		total: t.length
 	});
-}), q.get("/products/:id", async (e) => {
+}), Z.get("/products/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT p.*, \n     (SELECT COUNT(*) FROM applications a WHERE a.product_id = p.id) as total_applications\n     FROM products p WHERE p.id = ? AND p.portal_visible = 1").bind(t).first();
 	if (!n) return e.json({ error: "Not found" }, 404);
 	let { results: r } = await e.env.DB.prepare("SELECT name, category, metric, operator, threshold_value, threshold_condition, severity, description, regulatory_reference\n     FROM rules WHERE (product_id = ? OR product_id IS NULL) AND is_active = 1\n     ORDER BY category, severity DESC").bind(t).all();
@@ -5617,7 +5686,7 @@ q.get("/products", async (e) => {
 		product: n,
 		rules: r
 	});
-}), q.get("/calculator", async (e) => {
+}), Z.get("/calculator", async (e) => {
 	let t = e.req.query("product_id"), n = parseFloat(e.req.query("amount") || "0"), r = parseInt(e.req.query("term") || "25"), i = parseInt(e.req.query("gsas_score") || "0"), a = parseFloat(e.req.query("salary") || "0");
 	if (!t || !n || !r) return e.json({ error: "product_id, amount, and term are required" }, 400);
 	let o = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(t).first();
@@ -5640,13 +5709,13 @@ q.get("/products", async (e) => {
 		green_eligible: i >= (o.gsas_min_score || 70),
 		premium_tier: i >= (o.gsas_premium_score || 85)
 	});
-}), q.get("/projects", async (e) => {
+}), Z.get("/projects", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT p.id, p.name, p.code, p.location, p.governorate, p.type,\n     p.total_units, p.available_units, p.reserved_units, p.sold_units,\n     p.gsas_score, p.gsas_rating, p.epc_rating, p.status, p.green_eligible,\n     p.premium_tier, p.geo_json, p.hero_image_url, p.is_demo_project,\n     p.listing_visible, p.marketing_tagline, p.price_from, p.price_to,\n     p.completion_date, p.amenities, p.created_at,\n     d.company_name as developer_name,\n     (SELECT MIN(u.gsas_score) FROM units u WHERE u.project_id = p.id AND u.gsas_score IS NOT NULL AND u.gsas_score > 0) as unit_gsas_min,\n     (SELECT MAX(u.gsas_score) FROM units u WHERE u.project_id = p.id AND u.gsas_score IS NOT NULL AND u.gsas_score > 0) as unit_gsas_max\n     FROM projects p\n     LEFT JOIN developers d ON p.developer_id = d.id\n     WHERE p.listing_visible = 1 AND p.status = 'active'\n     ORDER BY p.is_demo_project DESC, p.premium_tier DESC, p.created_at DESC").all();
 	return e.json({
 		projects: t,
 		total: t.length
 	});
-}), q.get("/projects/:id", async (e) => {
+}), Z.get("/projects/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT p.*, d.company_name as developer_name, d.contact_name\n     FROM projects p LEFT JOIN developers d ON p.developer_id = d.id\n     WHERE p.id = ? AND p.listing_visible = 1").bind(t).first();
 	if (!n) return e.json({ error: "Not found" }, 404);
 	let { results: r } = await e.env.DB.prepare("SELECT u.*, c.company_name as contractor_name, c.cr_number as contractor_cr,\n     c.contact_name as contractor_contact, c.contact_phone as contractor_phone,\n     c.is_green_certified as contractor_green_certified, c.green_cert_ref as contractor_green_cert_ref\n     FROM units u\n     LEFT JOIN contractors c ON u.contractor_id = c.id\n     WHERE u.project_id = ? ORDER BY u.unit_number").bind(t).all();
@@ -5654,18 +5723,18 @@ q.get("/products", async (e) => {
 		project: n,
 		units: r
 	});
-}), q.get("/projects/:id/contractor", async (e) => {
+}), Z.get("/projects/:id/contractor", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT c.* FROM contractors c\n     INNER JOIN units u ON u.contractor_id = c.id\n     WHERE u.project_id = ? LIMIT 1").bind(t).first();
 	return n ? e.json({ contractor: n }) : e.json({ contractor: null });
-}), q.get("/applications", async (e) => {
+}), Z.get("/applications", async (e) => {
 	let { results: t } = await e.env.DB.prepare("\n    SELECT a.id, a.reference, a.customer_name, a.unit_id, a.project_id,\n           a.loan_amount, a.applied_rate as interest_rate, a.status,\n           a.gsas_score, a.created_at, p.name as product_name,\n           u.unit_number, pr.name as project_name\n    FROM applications a\n    LEFT JOIN products p  ON a.product_id  = p.id\n    LEFT JOIN units u     ON a.unit_id     = u.id\n    LEFT JOIN projects pr ON a.project_id  = pr.id\n    ORDER BY a.created_at DESC\n    LIMIT 200\n  ").all();
 	return e.json({ applications: t || [] });
-}), q.post("/applications", async (e) => {
+}), Z.post("/applications", async (e) => {
 	let { product_id: t, customer_name: n, unit_id: r, project_id: i, loan_amount: a, loan_term: o, property_address: s, property_source: c, gsas_score: l, epc_rating: u, salary: d, civil_id: f, applied_rate: p, documents: m } = await e.req.json(), h = await e.env.DB.prepare("SELECT * FROM products WHERE id = ? AND status = ?").bind(t, "active").first();
 	if (h ||= await e.env.DB.prepare("SELECT * FROM products WHERE category='home_loan' AND status='active' ORDER BY is_demo_product DESC LIMIT 1").first(), !h) return e.json({ error: "Product not found or not active" }, 404);
 	let g = 0;
 	l >= (h.gsas_premium_score || 85) ? g = h.green_discount_premium || 0 : l >= (h.gsas_min_score || 70) && (g = h.green_discount_standard || 0);
-	let _ = parseFloat((h.base_rate - g).toFixed(3)), v = o * 12, y = _ / 100 / 12, b = y > 0 ? a * (y * (1 + y) ** +v) / ((1 + y) ** +v - 1) : a / v, x = h.base_rate / 100 / 12, S = x > 0 ? a * (x * (1 + x) ** +v) / ((1 + x) ** +v - 1) : a / v, C = Math.max(0, Math.round((S - b) * v)), w = d ? parseFloat((b / d * 100).toFixed(1)) : null, T = z("app"), E = B(), D = "GHL-" + Date.now().toString().slice(-6), O = null;
+	let _ = parseFloat((h.base_rate - g).toFixed(3)), v = o * 12, y = _ / 100 / 12, b = y > 0 ? a * (y * (1 + y) ** +v) / ((1 + y) ** +v - 1) : a / v, x = h.base_rate / 100 / 12, S = x > 0 ? a * (x * (1 + x) ** +v) / ((1 + x) ** +v - 1) : a / v, C = Math.max(0, Math.round((S - b) * v)), w = d ? parseFloat((b / d * 100).toFixed(1)) : null, T = U("app"), E = W(), D = "GHL-" + Date.now().toString().slice(-6), O = null;
 	if (f) {
 		let t = await e.env.DB.prepare("SELECT id FROM customers WHERE civil_id = ?").bind(f).first();
 		t && (O = t.id);
@@ -5705,23 +5774,23 @@ q.get("/products", async (e) => {
 		}
 	]) {
 		let n = Math.round(a * t.pct / 100);
-		await e.env.DB.prepare("\n        INSERT INTO construction_stages (id,application_id,stage_number,stage_name,description,tranche_amount,tranche_percentage,required_material,status,created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?)\n      ").bind(z("st"), T, t.num, t.name, t.desc, n, t.pct, t.mat, t.status, E).run();
+		await e.env.DB.prepare("\n        INSERT INTO construction_stages (id,application_id,stage_number,stage_name,description,tranche_amount,tranche_percentage,required_material,status,created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?)\n      ").bind(U("st"), T, t.num, t.name, t.desc, n, t.pct, t.mat, t.status, E).run();
 	}
 	let k = [];
 	if (i) {
 		let { results: t } = await e.env.DB.prepare("SELECT * FROM documents WHERE entity_type = 'project' AND entity_id = ?").bind(i).all();
 		for (let n of t || []) {
-			let t = z("doc");
+			let t = U("doc");
 			await e.env.DB.prepare("\n        INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, file_url,\n          extracted_data, ai_confidence, validation_status, validation_notes, created_at)\n        VALUES (?, 'application', ?, ?, ?, ?, ?, ?, ?, ?, ?)\n      ").bind(t, T, n.doc_type, n.filename, n.file_url || null, n.extracted_data || "{}", n.ai_confidence, n.validation_status, n.validation_notes, E).run(), k.push(t);
 		}
 	}
 	let A = [];
 	if (Array.isArray(m) && m.length > 0) for (let t of m) {
 		if (!t.doc_type) continue;
-		let n = z("doc");
+		let n = U("doc");
 		await e.env.DB.prepare("\n        INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, file_url,\n          extracted_data, ai_confidence, validation_status, validation_notes, created_at)\n        VALUES (?, 'application', ?, ?, ?, ?, ?, ?, ?, ?, ?)\n      ").bind(n, T, t.doc_type, t.filename || t.doc_type, t.url || null, t.ocr_data ? JSON.stringify(t.ocr_data) : "{}", t.ocr_data ? 85 : 0, t.url ? "pending" : "not_applicable", null, E).run(), A.push(n);
 	}
-	return await V(e.env.DB, {
+	return await G(e.env.DB, {
 		userId: O || "portal",
 		userName: n,
 		userRole: "customer",
@@ -5747,7 +5816,7 @@ q.get("/products", async (e) => {
 		docs_transferred: k.length,
 		customer_docs_saved: A.length
 	});
-}), q.get("/applications/:ref/status", async (e) => {
+}), Z.get("/applications/:ref/status", async (e) => {
 	let t = e.req.param("ref"), n = await e.env.DB.prepare("SELECT a.*, p.name as product_name, p.portal_hero_title\n     FROM applications a LEFT JOIN products p ON a.product_id = p.id\n     WHERE a.reference = ?").bind(t).first();
 	if (!n) return e.json({ error: "Application not found" }, 404);
 	let { results: r } = await e.env.DB.prepare("SELECT * FROM construction_stages WHERE application_id = ? ORDER BY stage_number").bind(n.id).all(), { results: i } = await e.env.DB.prepare("SELECT doc_type, filename, validation_status, ai_confidence, created_at FROM documents WHERE entity_type = ? AND entity_id = ?").bind("application", n.id).all(), a = {
@@ -5830,16 +5899,16 @@ q.get("/products", async (e) => {
 		documents: i,
 		created_at: n.created_at
 	});
-}), q.post("/documents/upload", async (e) => {
+}), Z.post("/documents/upload", async (e) => {
 	let t = await e.req.formData(), n = (t.get("doc_type") || "").trim(), r = t.get("file");
 	if (!n || !r) return e.json({ error: "doc_type and file are required" }, 400);
-	if (!ut()) return console.warn("[portal/upload] Azure Storage not configured — returning placeholder"), e.json({
+	if (!ot()) return console.warn("[portal/upload] Azure Storage not configured — returning placeholder"), e.json({
 		url: null,
 		filename: r.name,
 		doc_type: n,
 		stored: !1
 	});
-	let i = Buffer.from(await r.arrayBuffer()), a = r.type || "application/octet-stream", o = await dt({
+	let i = Buffer.from(await r.arrayBuffer()), a = r.type || "application/octet-stream", o = await st({
 		entityType: "application",
 		entityId: `wizard-${Date.now()}`,
 		docType: n,
@@ -5853,7 +5922,7 @@ q.get("/products", async (e) => {
 		doc_type: n,
 		stored: !!o
 	});
-}), q.post("/ocr", async (e) => {
+}), Z.post("/ocr", async (e) => {
 	let { image_base64: t, mime_type: n } = await e.req.json().catch(() => ({}));
 	if (!t) return e.json({ error: "image_base64 required" }, 400);
 	let r = "AIzaSyBqQ4THcUG8wpRZbB2olfZqvR9mI1e-88E", i = (e) => {
@@ -6019,7 +6088,7 @@ q.get("/products", async (e) => {
 			extracted: {}
 		}, 500);
 	}
-}), q.get("/developer/products", async (e) => {
+}), Z.get("/developer/products", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT id, name, code, description, category, base_rate, max_ltv, max_dbr, green_dbr,\n     min_term, max_term, min_amount, max_amount,\n     gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n     allow_partner_inventory, required_docs, esg_required_docs,\n     approved_materials, approved_vendors, ai_confidence_threshold,\n     portal_hero_title, developer_requirements, published_at\n     FROM products WHERE developer_portal_visible = 1 AND status = 'active'\n     ORDER BY published_at ASC").all(), n = await Promise.all(t.map(async (t) => {
 		let { results: n } = await e.env.DB.prepare("SELECT name, category, metric, operator, threshold_value, threshold_condition, severity, description, regulatory_reference\n       FROM rules WHERE (product_id = ? OR (product_id IS NULL AND category IN ('esg','compliance'))) AND is_active = 1\n       ORDER BY category").bind(t.id).all();
 		return {
@@ -6031,9 +6100,9 @@ q.get("/products", async (e) => {
 		products: n,
 		total: n.length
 	});
-}), q.post("/developer/projects", async (e) => {
-	let t = await e.req.json(), n = z("proj"), r = t.code || `PROJ-${Date.now().toString(36).toUpperCase()}`, i = B();
-	return await e.env.DB.prepare("\n    INSERT INTO projects (id, developer_id, name, code, location, governorate, type,\n    total_units, available_units, geo_json, gsas_score, gsas_rating, epc_rating,\n    eia_reference, green_eligible, premium_tier, status, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.developer_id || "d001", t.name, r, t.location, t.governorate || "Muscat", t.type || "villa", t.total_units || 0, t.total_units || 0, JSON.stringify(t.geo_json || {}), t.gsas_score || null, t.gsas_rating || null, t.epc_rating || null, t.eia_reference || null, +!!t.green_eligible, +!!t.premium_tier, "draft", i, i).run(), await V(e.env.DB, {
+}), Z.post("/developer/projects", async (e) => {
+	let t = await e.req.json(), n = U("proj"), r = t.code || `PROJ-${Date.now().toString(36).toUpperCase()}`, i = W();
+	return await e.env.DB.prepare("\n    INSERT INTO projects (id, developer_id, name, code, location, governorate, type,\n    total_units, available_units, geo_json, gsas_score, gsas_rating, epc_rating,\n    eia_reference, green_eligible, premium_tier, status, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.developer_id || "d001", t.name, r, t.location, t.governorate || "Muscat", t.type || "villa", t.total_units || 0, t.total_units || 0, JSON.stringify(t.geo_json || {}), t.gsas_score || null, t.gsas_rating || null, t.epc_rating || null, t.eia_reference || null, +!!t.green_eligible, +!!t.premium_tier, "draft", i, i).run(), await G(e.env.DB, {
 		userId: t.user_id || "u010",
 		userName: "Ahmed Al-Hinai",
 		userRole: "developer",
@@ -6050,7 +6119,7 @@ q.get("/products", async (e) => {
 		code: r,
 		success: !0
 	});
-}), q.post("/developer/projects/:id/documents", async (e) => {
+}), Z.post("/developer/projects/:id/documents", async (e) => {
 	let t = e.req.param("id"), n = e.req.header("content-type") || "", r, i, a = "u010", o = null, s = "application/octet-stream";
 	if (n.includes("multipart/form-data")) {
 		let t = await e.req.formData();
@@ -6110,7 +6179,7 @@ q.get("/products", async (e) => {
 		validation_status: "pending",
 		validation_notes: "Awaiting manual review."
 	}, l = null;
-	o && o.length > 0 && (l = await dt({
+	o && o.length > 0 && (l = await st({
 		entityType: "project",
 		entityId: t,
 		docType: r,
@@ -6118,8 +6187,8 @@ q.get("/products", async (e) => {
 		buffer: o,
 		mimeType: s
 	}));
-	let u = z("doc"), d = B();
-	return await e.env.DB.prepare("\n    INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, file_url,\n    extracted_data, ai_confidence, validation_status, validation_notes, created_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(u, "project", t, r, i, l, JSON.stringify(c.extracted_data), c.ai_confidence, c.validation_status, c.validation_notes, d).run(), r === "gsas_cert" && c.extracted_data.overall_score && await e.env.DB.prepare("UPDATE projects SET gsas_score = ?, gsas_rating = ?, updated_at = ? WHERE id = ?").bind(c.extracted_data.overall_score, c.extracted_data.rating, d, t).run(), r === "epc_report" && c.extracted_data.rating && await e.env.DB.prepare("UPDATE projects SET epc_rating = ?, updated_at = ? WHERE id = ?").bind(c.extracted_data.rating, d, t).run(), r === "eia_approval" && c.extracted_data.reference && await e.env.DB.prepare("UPDATE projects SET eia_reference = ?, updated_at = ? WHERE id = ?").bind(c.extracted_data.reference, d, t).run(), await V(e.env.DB, {
+	let u = U("doc"), d = W();
+	return await e.env.DB.prepare("\n    INSERT INTO documents (id, entity_type, entity_id, doc_type, filename, file_url,\n    extracted_data, ai_confidence, validation_status, validation_notes, created_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(u, "project", t, r, i, l, JSON.stringify(c.extracted_data), c.ai_confidence, c.validation_status, c.validation_notes, d).run(), r === "gsas_cert" && c.extracted_data.overall_score && await e.env.DB.prepare("UPDATE projects SET gsas_score = ?, gsas_rating = ?, updated_at = ? WHERE id = ?").bind(c.extracted_data.overall_score, c.extracted_data.rating, d, t).run(), r === "epc_report" && c.extracted_data.rating && await e.env.DB.prepare("UPDATE projects SET epc_rating = ?, updated_at = ? WHERE id = ?").bind(c.extracted_data.rating, d, t).run(), r === "eia_approval" && c.extracted_data.reference && await e.env.DB.prepare("UPDATE projects SET eia_reference = ?, updated_at = ? WHERE id = ?").bind(c.extracted_data.reference, d, t).run(), await G(e.env.DB, {
 		userId: a,
 		userName: "Ahmed Al-Hinai",
 		userRole: "developer",
@@ -6138,19 +6207,19 @@ q.get("/products", async (e) => {
 		doc_id: u,
 		success: !0,
 		file_url: l,
-		storage_configured: ut(),
+		storage_configured: ot(),
 		...c
 	});
-}), q.get("/developer/projects/:id/documents", async (e) => {
+}), Z.get("/developer/projects/:id/documents", async (e) => {
 	let t = e.req.param("id"), { results: n } = await e.env.DB.prepare("SELECT id, doc_type, filename, file_url, ai_confidence, validation_status, validation_notes,\n            extracted_data, created_at\n     FROM documents WHERE entity_type = 'project' AND entity_id = ?\n     ORDER BY created_at ASC").bind(t).all();
 	return e.json({ documents: n || [] });
-}), q.get("/developer/projects/:id/units", async (e) => {
+}), Z.get("/developer/projects/:id/units", async (e) => {
 	let t = e.req.param("id"), { results: n } = await e.env.DB.prepare("SELECT * FROM units WHERE project_id = ? ORDER BY unit_number").bind(t).all();
 	return e.json({ units: n });
-}), q.post("/developer/projects/:id/units", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json(), r = B(), i = Array.isArray(n.units) ? n.units : [n], a = 0;
+}), Z.post("/developer/projects/:id/units", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json(), r = W(), i = Array.isArray(n.units) ? n.units : [n], a = 0;
 	for (let n of i) {
-		let i = z("unit");
+		let i = U("unit");
 		await e.env.DB.prepare("\n      INSERT OR IGNORE INTO units (id, project_id, unit_number, floor_number, type, area_sqm,\n      bedrooms, bathrooms, price, lat, lng, status, features, image_url, gsas_score, created_at)\n      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n    ").bind(i, t, n.unit_number, n.floor_number || 1, n.type || "villa", n.area_sqm || 0, n.bedrooms || 4, n.bathrooms || 3, n.price || 0, n.lat || null, n.lng || null, n.status || "available", typeof n.features == "string" ? n.features : JSON.stringify(n.features || []), n.image_url || null, n.gsas_score || null, r).run(), a++;
 	}
 	let o = await e.env.DB.prepare("\n    SELECT\n      COUNT(*) as total,\n      SUM(CASE WHEN status='available' THEN 1 ELSE 0 END) as avail\n    FROM units WHERE project_id = ?\n  ").bind(t).first();
@@ -6159,15 +6228,15 @@ q.get("/products", async (e) => {
 		success: !0,
 		units_created: a
 	});
-}), q.post("/developer/projects/:id/publish", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json().catch(() => ({})), r = B();
+}), Z.post("/developer/projects/:id/publish", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json().catch(() => ({})), r = W();
 	return await e.env.DB.prepare("\n    UPDATE projects SET status = 'active', listing_visible = 1, green_eligible = 1, premium_tier = 1,\n    is_demo_project = 1,\n    marketing_tagline = ?, price_from = ?, price_to = ?, amenities = ?,\n    completion_date = ?, updated_at = ? WHERE id = ?\n  ").bind(n.marketing_tagline || "Certified green living — GSAS Gold, EPC A-rated, energy-efficient villas in Seeb", n.price_from || 178e3, n.price_to || 198e3, JSON.stringify(n.amenities || [
 		"GSAS Gold Certified",
 		"Solar Panels",
 		"Smart Home",
 		"EV Charging",
 		"Private Pool Available"
-	]), n.completion_date || "2027-Q4", r, t).run(), await V(e.env.DB, {
+	]), n.completion_date || "2027-Q4", r, t).run(), await G(e.env.DB, {
 		userId: n.user_id || "u010",
 		userName: "Ahmed Al-Hinai",
 		userRole: "developer",
@@ -6182,8 +6251,8 @@ q.get("/products", async (e) => {
 		success: !0,
 		listing_visible: !0
 	});
-}), q.patch("/developer/projects/:id", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json().catch(() => ({})), r = B(), i = [
+}), Z.patch("/developer/projects/:id", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json().catch(() => ({})), r = W(), i = [
 		"hero_image_url",
 		"marketing_tagline",
 		"price_from",
@@ -6203,8 +6272,8 @@ q.get("/products", async (e) => {
 	], a = [], o = [];
 	for (let e of i) n[e] !== void 0 && (a.push(`${e}=?`), o.push(n[e]));
 	return a.length ? (o.push(r, t), await e.env.DB.prepare(`UPDATE projects SET ${a.join(",")}, updated_at=? WHERE id=?`).bind(...o).run(), e.json({ success: !0 })) : e.json({ success: !0 });
-}), q.patch("/developer/projects/:pid/units/:uid", async (e) => {
-	let t = e.req.param("pid"), n = e.req.param("uid"), r = await e.req.json().catch(() => ({})), i = B(), a = [
+}), Z.patch("/developer/projects/:pid/units/:uid", async (e) => {
+	let t = e.req.param("pid"), n = e.req.param("uid"), r = await e.req.json().catch(() => ({})), i = W(), a = [
 		"status",
 		"price",
 		"unit_number",
@@ -6227,7 +6296,7 @@ q.get("/products", async (e) => {
 		await e.env.DB.prepare("UPDATE projects SET total_units=?, available_units=?, reserved_units=?, sold_units=?, updated_at=? WHERE id=?").bind(n?.total || 0, n?.avail || 0, n?.res || 0, n?.sold || 0, i, t).run();
 	}
 	return e.json({ success: !0 });
-}), q.get("/developer/projects", async (e) => {
+}), Z.get("/developer/projects", async (e) => {
 	let t = e.req.query("developer_id") || "d001", { results: n } = await e.env.DB.prepare("SELECT p.*, d.company_name as developer_name,\n     (SELECT COUNT(*) FROM units u WHERE u.project_id = p.id AND u.status = 'available') as units_available,\n     (SELECT COUNT(*) FROM applications a WHERE a.project_id = p.id) as total_applications\n     FROM projects p LEFT JOIN developers d ON p.developer_id = d.id\n     WHERE p.developer_id = ? ORDER BY p.created_at DESC").bind(t).all();
 	return e.json({
 		projects: n,
@@ -6236,17 +6305,17 @@ q.get("/products", async (e) => {
 });
 //#endregion
 //#region src/api/markets.ts
-var J = new I();
-J.get("/", async (e) => {
+var pt = new V();
+pt.get("/", async (e) => {
 	let { results: t } = await e.env.DB.prepare("SELECT * FROM markets ORDER BY is_default DESC, name ASC").all();
 	return e.json({ markets: t });
-}), J.get("/:id", async (e) => {
+}), pt.get("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM markets WHERE id = ?").bind(t).first();
 	return n ? e.json({ market: n }) : e.json({ error: "Market not found" }, 404);
-}), J.get("/default/current", async (e) => {
+}), pt.get("/default/current", async (e) => {
 	let t = await e.env.DB.prepare("SELECT * FROM markets WHERE is_default = 1 AND status = 'active' LIMIT 1").first();
 	return t ? e.json({ market: t }) : e.json({ error: "No default market configured" }, 404);
-}), J.post("/regulatory-profile", async (e) => {
+}), pt.post("/regulatory-profile", async (e) => {
 	let { country: t } = await e.req.json();
 	if (!t) return e.json({ error: "country is required" }, 400);
 	let n = e.env.OPENAI_API_KEY;
@@ -6314,9 +6383,9 @@ Return ONLY a valid JSON object with exactly this structure (no markdown, no cod
 	} catch (t) {
 		return e.json({ error: "Failed to fetch regulatory profile: " + t.message }, 500);
 	}
-}), J.post("/", async (e) => {
-	let t = await e.req.json(), n = z("mkt"), r = B();
-	return t.is_default && await e.env.DB.prepare("UPDATE markets SET is_default = 0").run(), await e.env.DB.prepare("\n    INSERT INTO markets (\n      id, name, name_ar, code, country, country_code,\n      currency_code, currency_name, currency_name_ar, currency_symbol,\n      regulator_name, regulator_name_ar, regulator_full_name, regulator_full_name_ar,\n      locale, rtl_supported, regulatory_defaults, status, is_default, created_by, created_at, updated_at\n    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.name, t.name_ar || null, t.code?.toUpperCase() || n, t.country, t.country_code?.toUpperCase() || "", t.currency_code?.toUpperCase() || "", t.currency_name || "", t.currency_name_ar || null, t.currency_symbol || "", t.regulator_name || "", t.regulator_name_ar || null, t.regulator_full_name || "", t.regulator_full_name_ar || null, t.locale || "en", +!!t.rtl_supported, JSON.stringify(t.regulatory_defaults || {}), t.status || "active", +!!t.is_default, t.created_by || "u001", r, r).run(), await V(e.env.DB, {
+}), pt.post("/", async (e) => {
+	let t = await e.req.json(), n = U("mkt"), r = W();
+	return t.is_default && await e.env.DB.prepare("UPDATE markets SET is_default = 0").run(), await e.env.DB.prepare("\n    INSERT INTO markets (\n      id, name, name_ar, code, country, country_code,\n      currency_code, currency_name, currency_name_ar, currency_symbol,\n      regulator_name, regulator_name_ar, regulator_full_name, regulator_full_name_ar,\n      locale, rtl_supported, regulatory_defaults, status, is_default, created_by, created_at, updated_at\n    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.name, t.name_ar || null, t.code?.toUpperCase() || n, t.country, t.country_code?.toUpperCase() || "", t.currency_code?.toUpperCase() || "", t.currency_name || "", t.currency_name_ar || null, t.currency_symbol || "", t.regulator_name || "", t.regulator_name_ar || null, t.regulator_full_name || "", t.regulator_full_name_ar || null, t.locale || "en", +!!t.rtl_supported, JSON.stringify(t.regulatory_defaults || {}), t.status || "active", +!!t.is_default, t.created_by || "u001", r, r).run(), await G(e.env.DB, {
 		userId: t.created_by || "u001",
 		userName: t.user_name || "System",
 		userRole: "admin",
@@ -6331,8 +6400,8 @@ Return ONLY a valid JSON object with exactly this structure (no markdown, no cod
 		id: n,
 		success: !0
 	});
-}), J.patch("/:id", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json(), r = B();
+}), pt.patch("/:id", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json(), r = W();
 	if (!await e.env.DB.prepare("SELECT * FROM markets WHERE id = ?").bind(t).first()) return e.json({ error: "Market not found" }, 404);
 	n.is_default && await e.env.DB.prepare("UPDATE markets SET is_default = 0 WHERE id != ?").bind(t).run();
 	let i = [], a = [], o = (e, t) => {
@@ -6341,7 +6410,7 @@ Return ONLY a valid JSON object with exactly this structure (no markdown, no cod
 	return o("name", n.name), o("name_ar", n.name_ar), o("currency_code", n.currency_code), o("currency_name", n.currency_name), o("currency_name_ar", n.currency_name_ar), o("currency_symbol", n.currency_symbol), o("regulator_name", n.regulator_name), o("regulator_name_ar", n.regulator_name_ar), o("regulator_full_name", n.regulator_full_name), o("regulator_full_name_ar", n.regulator_full_name_ar), o("locale", n.locale), o("status", n.status), n.is_default !== void 0 && (i.push("is_default = ?"), a.push(+!!n.is_default)), n.regulatory_defaults !== void 0 && (i.push("regulatory_defaults = ?"), a.push(JSON.stringify(n.regulatory_defaults))), i.length === 0 ? e.json({
 		success: !0,
 		message: "No changes"
-	}) : (i.push("updated_at = ?"), a.push(r), a.push(t), await e.env.DB.prepare(`UPDATE markets SET ${i.join(", ")} WHERE id = ?`).bind(...a).run(), await V(e.env.DB, {
+	}) : (i.push("updated_at = ?"), a.push(r), a.push(t), await e.env.DB.prepare(`UPDATE markets SET ${i.join(", ")} WHERE id = ?`).bind(...a).run(), await G(e.env.DB, {
 		userId: n.user_id || "u001",
 		userName: n.user_name || "System",
 		userRole: "admin",
@@ -6353,8 +6422,8 @@ Return ONLY a valid JSON object with exactly this structure (no markdown, no cod
 });
 //#endregion
 //#region src/api/rule-matrices.ts
-var Y = new I();
-Y.get("/", async (e) => {
+var mt = new V();
+mt.get("/", async (e) => {
 	let t = e.req.query("product_id"), n = e.req.query("market_id"), r = "SELECT * FROM rule_matrices WHERE 1=1", i = [];
 	t && (r += " AND product_id = ?", i.push(t)), n && (r += " AND market_id = ?", i.push(n)), r += " ORDER BY name ASC";
 	let { results: a } = await (i.length ? e.env.DB.prepare(r).bind(...i) : e.env.DB.prepare(r)).all();
@@ -6362,12 +6431,12 @@ Y.get("/", async (e) => {
 		matrices: a,
 		total: a.length
 	});
-}), Y.get("/:id", async (e) => {
+}), mt.get("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM rule_matrices WHERE id = ?").bind(t).first();
 	return n ? e.json({ matrix: n }) : e.json({ error: "Matrix not found" }, 404);
-}), Y.post("/", async (e) => {
-	let t = await e.req.json(), n = z("rm"), r = B();
-	return await e.env.DB.prepare("\n    INSERT INTO rule_matrices (\n      id, product_id, market_id, name, name_ar, description, description_ar,\n      row_dimension, row_dimension_label, row_dimension_ar,\n      col_dimension, col_dimension_label, col_dimension_ar,\n      grid_data, output_metric, output_unit,\n      is_active, regulatory_reference, source, ai_confidence,\n      created_by, created_at, updated_at\n    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.product_id || null, t.market_id || null, t.name, t.name_ar || null, t.description || null, t.description_ar || null, t.row_dimension, t.row_dimension_label || t.row_dimension, t.row_dimension_ar || null, t.col_dimension || null, t.col_dimension_label || null, t.col_dimension_ar || null, JSON.stringify(t.grid_data || []), t.output_metric, t.output_unit || null, t.is_active === !1 ? 0 : 1, t.regulatory_reference || null, t.source || "manual", t.ai_confidence || null, t.created_by || "u001", r, r).run(), await V(e.env.DB, {
+}), mt.post("/", async (e) => {
+	let t = await e.req.json(), n = U("rm"), r = W();
+	return await e.env.DB.prepare("\n    INSERT INTO rule_matrices (\n      id, product_id, market_id, name, name_ar, description, description_ar,\n      row_dimension, row_dimension_label, row_dimension_ar,\n      col_dimension, col_dimension_label, col_dimension_ar,\n      grid_data, output_metric, output_unit,\n      is_active, regulatory_reference, source, ai_confidence,\n      created_by, created_at, updated_at\n    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.product_id || null, t.market_id || null, t.name, t.name_ar || null, t.description || null, t.description_ar || null, t.row_dimension, t.row_dimension_label || t.row_dimension, t.row_dimension_ar || null, t.col_dimension || null, t.col_dimension_label || null, t.col_dimension_ar || null, JSON.stringify(t.grid_data || []), t.output_metric, t.output_unit || null, t.is_active === !1 ? 0 : 1, t.regulatory_reference || null, t.source || "manual", t.ai_confidence || null, t.created_by || "u001", r, r).run(), await G(e.env.DB, {
 		userId: t.created_by || "u001",
 		userName: t.user_name || "System",
 		userRole: t.user_role || "product_manager",
@@ -6382,8 +6451,8 @@ Y.get("/", async (e) => {
 		id: n,
 		success: !0
 	});
-}), Y.patch("/:id", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json(), r = B(), i = await e.env.DB.prepare("SELECT * FROM rule_matrices WHERE id = ?").bind(t).first();
+}), mt.patch("/:id", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json(), r = W(), i = await e.env.DB.prepare("SELECT * FROM rule_matrices WHERE id = ?").bind(t).first();
 	if (!i) return e.json({ error: "Matrix not found" }, 404);
 	let a = [], o = [], s = (e, t) => {
 		t !== void 0 && (a.push(`${e} = ?`), o.push(t));
@@ -6391,7 +6460,7 @@ Y.get("/", async (e) => {
 	return s("name", n.name), s("name_ar", n.name_ar), s("description", n.description), s("description_ar", n.description_ar), s("row_dimension", n.row_dimension), s("row_dimension_label", n.row_dimension_label), s("row_dimension_ar", n.row_dimension_ar), s("col_dimension", n.col_dimension), s("col_dimension_label", n.col_dimension_label), s("col_dimension_ar", n.col_dimension_ar), s("output_metric", n.output_metric), s("output_unit", n.output_unit), s("regulatory_reference", n.regulatory_reference), s("is_active", n.is_active === void 0 ? void 0 : +!!n.is_active), n.grid_data !== void 0 && (a.push("grid_data = ?"), o.push(JSON.stringify(n.grid_data))), a.length === 0 ? e.json({
 		success: !0,
 		message: "No changes"
-	}) : (a.push("updated_at = ?"), o.push(r), o.push(t), await e.env.DB.prepare(`UPDATE rule_matrices SET ${a.join(", ")} WHERE id = ?`).bind(...o).run(), await V(e.env.DB, {
+	}) : (a.push("updated_at = ?"), o.push(r), o.push(t), await e.env.DB.prepare(`UPDATE rule_matrices SET ${a.join(", ")} WHERE id = ?`).bind(...o).run(), await G(e.env.DB, {
 		userId: n.user_id || "u001",
 		userName: n.user_name || "System",
 		userRole: n.user_role || "product_manager",
@@ -6400,9 +6469,9 @@ Y.get("/", async (e) => {
 		entityId: t,
 		details: { name: n.name || i.name }
 	}), e.json({ success: !0 }));
-}), Y.delete("/:id", async (e) => {
+}), mt.delete("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.req.json().catch(() => ({})), r = await e.env.DB.prepare("SELECT * FROM rule_matrices WHERE id = ?").bind(t).first();
-	return r ? (await e.env.DB.prepare("DELETE FROM rule_matrices WHERE id = ?").bind(t).run(), await V(e.env.DB, {
+	return r ? (await e.env.DB.prepare("DELETE FROM rule_matrices WHERE id = ?").bind(t).run(), await G(e.env.DB, {
 		userId: n.user_id || "u001",
 		userName: n.user_name || "System",
 		userRole: n.user_role || "product_manager",
@@ -6411,7 +6480,7 @@ Y.get("/", async (e) => {
 		entityId: t,
 		details: { name: r.name }
 	}), e.json({ success: !0 })) : e.json({ error: "Matrix not found" }, 404);
-}), Y.post("/:id/evaluate", async (e) => {
+}), mt.post("/:id/evaluate", async (e) => {
 	let t = e.req.param("id"), { inputs: n } = await e.req.json(), r = await e.env.DB.prepare("SELECT * FROM rule_matrices WHERE id = ?").bind(t).first();
 	if (!r) return e.json({ error: "Matrix not found" }, 404);
 	let i = [];
@@ -6438,7 +6507,7 @@ Y.get("/", async (e) => {
 });
 //#endregion
 //#region src/api/product-versions.ts
-var _t = new I(), vt = {
+var ht = new V(), gt = {
 	1: {
 		en: "Product Model",
 		ar: "نموذج المنتج"
@@ -6464,28 +6533,28 @@ var _t = new I(), vt = {
 		ar: "المحاكاة"
 	}
 };
-_t.get("/products/:productId/versions", async (e) => {
+ht.get("/products/:productId/versions", async (e) => {
 	let t = e.req.param("productId"), { results: n } = await e.env.DB.prepare("\n    SELECT id, product_id, version_number, stage, stage_name,\n           commit_message, created_by, created_by_name, created_by_role, created_at\n    FROM product_versions\n    WHERE product_id = ?\n    ORDER BY version_number DESC\n  ").bind(t).all();
 	return e.json({
 		versions: n,
 		total: n.length
 	});
-}), _t.get("/products/:productId/versions/:versionId", async (e) => {
+}), ht.get("/products/:productId/versions/:versionId", async (e) => {
 	let { productId: t, versionId: n } = e.req.param(), r = await e.env.DB.prepare("\n    SELECT * FROM product_versions WHERE id = ? AND product_id = ?\n  ").bind(n, t).first();
 	return r ? e.json({ version: r }) : e.json({ error: "Version not found" }, 404);
-}), _t.post("/products/:productId/versions/snapshot", async (e) => {
+}), ht.post("/products/:productId/versions/snapshot", async (e) => {
 	let t = e.req.param("productId"), { stage: n, user_id: r, user_name: i, user_role: a } = await e.req.json();
 	if (!n || !r) return e.json({ error: "stage and user_id are required" }, 400);
 	let o = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(t).first();
 	if (!o) return e.json({ error: "Product not found" }, 404);
-	let { results: s } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id = ?").bind(t).all(), { results: c } = await e.env.DB.prepare("SELECT * FROM rule_matrices WHERE product_id = ?").bind(t).all(), l = ((await e.env.DB.prepare("SELECT MAX(version_number) as max_v FROM product_versions WHERE product_id = ?").bind(t).first())?.max_v || 0) + 1, u = vt[n] || {
+	let { results: s } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id = ?").bind(t).all(), { results: c } = await e.env.DB.prepare("SELECT * FROM rule_matrices WHERE product_id = ?").bind(t).all(), l = ((await e.env.DB.prepare("SELECT MAX(version_number) as max_v FROM product_versions WHERE product_id = ?").bind(t).first())?.max_v || 0) + 1, u = gt[n] || {
 		en: `Stage ${n}`,
 		ar: `المرحلة ${n}`
 	}, d = {
 		product: o,
 		rules: s,
 		matrices: c,
-		snapshotAt: B(),
+		snapshotAt: W(),
 		stageCompleted: n,
 		stageName: u.en
 	}, f = `Completed ${u.en}`, p = e.env.OPENAI_API_KEY;
@@ -6540,8 +6609,8 @@ Output ONLY the commit message text, no quotes, no markdown.`, l = (await (await
 		})).json()).choices?.[0]?.message?.content?.trim();
 		l && (f = l);
 	} catch {}
-	let m = z("pv"), h = B();
-	return await e.env.DB.prepare("\n    INSERT INTO product_versions (\n      id, product_id, version_number, stage, stage_name,\n      snapshot, commit_message, created_by, created_by_name, created_by_role, created_at\n    ) VALUES (?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(m, t, l, n, u.en, JSON.stringify(d), f, r, i || r, a || "product_manager", h).run(), await e.env.DB.prepare("\n    UPDATE products SET pge_stage = MAX(COALESCE(pge_stage, 0), ?), updated_at = ?\n    WHERE id = ?\n  ").bind(n, h, t).run(), await V(e.env.DB, {
+	let m = U("pv"), h = W();
+	return await e.env.DB.prepare("\n    INSERT INTO product_versions (\n      id, product_id, version_number, stage, stage_name,\n      snapshot, commit_message, created_by, created_by_name, created_by_role, created_at\n    ) VALUES (?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(m, t, l, n, u.en, JSON.stringify(d), f, r, i || r, a || "product_manager", h).run(), await e.env.DB.prepare("\n    UPDATE products SET pge_stage = MAX(COALESCE(pge_stage, 0), ?), updated_at = ?\n    WHERE id = ?\n  ").bind(n, h, t).run(), await G(e.env.DB, {
 		userId: r,
 		userName: i || r,
 		userRole: a || "product_manager",
@@ -6560,7 +6629,7 @@ Output ONLY the commit message text, no quotes, no markdown.`, l = (await (await
 		commit_message: f,
 		success: !0
 	});
-}), _t.post("/products/:productId/versions/:versionId/revert", async (e) => {
+}), ht.post("/products/:productId/versions/:versionId/revert", async (e) => {
 	let { productId: t, versionId: n } = e.req.param(), r = await e.req.json(), i = await e.env.DB.prepare("SELECT * FROM product_versions WHERE id = ? AND product_id = ?").bind(n, t).first();
 	if (!i) return e.json({ error: "Version not found" }, 404);
 	let a = {};
@@ -6569,10 +6638,10 @@ Output ONLY the commit message text, no quotes, no markdown.`, l = (await (await
 	} catch {
 		return e.json({ error: "Invalid snapshot data" }, 500);
 	}
-	let o = a.product || {}, s = B();
+	let o = a.product || {}, s = W();
 	await e.env.DB.prepare("\n    UPDATE products SET\n      name = ?, description = ?, base_rate = ?, max_ltv = ?, max_dbr = ?,\n      green_dbr = ?, min_term = ?, max_term = ?, min_amount = ?, max_amount = ?,\n      gsas_min_score = ?, gsas_premium_score = ?, green_discount_standard = ?,\n      green_discount_premium = ?, ai_confidence_threshold = ?,\n      required_docs = ?, esg_required_docs = ?, approved_materials = ?,\n      approved_vendors = ?, configuration = ?, schema = ?,\n      workflow_nodes = ?, workflow_edges = ?, workflow_template_id = ?,\n      pge_stage = ?, updated_at = ?\n    WHERE id = ?\n  ").bind(o.name, o.description, o.base_rate, o.max_ltv, o.max_dbr, o.green_dbr, o.min_term, o.max_term, o.min_amount, o.max_amount, o.gsas_min_score, o.gsas_premium_score, o.green_discount_standard, o.green_discount_premium, o.ai_confidence_threshold, o.required_docs, o.esg_required_docs, o.approved_materials, o.approved_vendors, o.configuration, o.schema || "{}", o.workflow_nodes || "[]", o.workflow_edges || "[]", o.workflow_template_id || null, i.stage, s, t).run();
 	let c = await e.env.DB.prepare("SELECT MAX(version_number) as max_v FROM product_versions WHERE product_id = ?").bind(t).first();
-	return await e.env.DB.prepare("\n    INSERT INTO product_versions (\n      id, product_id, version_number, stage, stage_name,\n      snapshot, commit_message, created_by, created_by_name, created_by_role, created_at\n    ) VALUES (?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(z("pv"), t, (c?.max_v || 0) + 1, i.stage, i.stage_name, JSON.stringify(a), `Reverted to v${i.version_number}: "${i.commit_message}"`, r.user_id || "u001", r.user_name || "System", r.user_role || "product_manager", s).run(), await V(e.env.DB, {
+	return await e.env.DB.prepare("\n    INSERT INTO product_versions (\n      id, product_id, version_number, stage, stage_name,\n      snapshot, commit_message, created_by, created_by_name, created_by_role, created_at\n    ) VALUES (?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(U("pv"), t, (c?.max_v || 0) + 1, i.stage, i.stage_name, JSON.stringify(a), `Reverted to v${i.version_number}: "${i.commit_message}"`, r.user_id || "u001", r.user_name || "System", r.user_role || "product_manager", s).run(), await G(e.env.DB, {
 		userId: r.user_id || "u001",
 		userName: r.user_name || "System",
 		userRole: r.user_role || "product_manager",
@@ -6590,8 +6659,8 @@ Output ONLY the commit message text, no quotes, no markdown.`, l = (await (await
 });
 //#endregion
 //#region src/api/compliance-tags.ts
-var X = new I();
-X.get("/", async (e) => {
+var Q = new V();
+Q.get("/", async (e) => {
 	let t = e.req.query("market_id"), n = e.req.query("category"), r = e.req.query("product_category"), i = "SELECT * FROM compliance_tags WHERE 1=1", a = [];
 	t && (i += " AND (market_id = ? OR market_id IS NULL)", a.push(t)), n && (i += " AND category = ?", a.push(n)), i += " ORDER BY category, name ASC";
 	let { results: o } = await (a.length ? e.env.DB.prepare(i).bind(...a) : e.env.DB.prepare(i)).all();
@@ -6606,13 +6675,13 @@ X.get("/", async (e) => {
 		tags: o,
 		total: o.length
 	});
-}), X.get("/product/:productId", async (e) => {
+}), Q.get("/product/:productId", async (e) => {
 	let t = e.req.param("productId"), { results: n } = await e.env.DB.prepare("\n    SELECT ct.*, pct.mapped_at, pct.mapped_by\n    FROM compliance_tags ct\n    JOIN product_compliance_tags pct ON pct.tag_id = ct.id\n    WHERE pct.product_id = ?\n    ORDER BY ct.category, ct.name\n  ").bind(t).all();
 	return e.json({
 		tags: n,
 		total: n.length
 	});
-}), X.get("/product/:productId/gap-analysis", async (e) => {
+}), Q.get("/product/:productId/gap-analysis", async (e) => {
 	let t = e.req.param("productId"), n = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(t).first();
 	if (!n) return e.json({ error: "Product not found" }, 404);
 	let { results: r } = await e.env.DB.prepare("\n    SELECT * FROM compliance_tags\n    WHERE (market_id = ? OR market_id IS NULL)\n    AND severity = 'mandatory'\n    AND is_active = 1\n  ").bind(n.market_id || "mkt001").all(), { results: i } = await e.env.DB.prepare("\n    SELECT tag_id FROM product_compliance_tags WHERE product_id = ?\n  ").bind(t).all(), a = new Set(i.map((e) => e.tag_id)), o = r.filter((e) => {
@@ -6638,11 +6707,11 @@ X.get("/", async (e) => {
 		total_applicable: s.length,
 		coverage_pct: s.length > 0 ? Math.round(c / s.length * 100) : 100
 	});
-}), X.post("/product/:productId/map", async (e) => {
+}), Q.post("/product/:productId/map", async (e) => {
 	let t = e.req.param("productId"), { tag_ids: n, user_id: r, user_name: i } = await e.req.json();
 	if (!n?.length) return e.json({ error: "tag_ids array is required" }, 400);
-	for (let i of n) await e.env.DB.prepare("\n      INSERT OR IGNORE INTO product_compliance_tags (product_id, tag_id, mapped_by, mapped_at)\n      VALUES (?,?,?,?)\n    ").bind(t, i, r || "u001", B()).run();
-	return await V(e.env.DB, {
+	for (let i of n) await e.env.DB.prepare("\n      INSERT OR IGNORE INTO product_compliance_tags (product_id, tag_id, mapped_by, mapped_at)\n      VALUES (?,?,?,?)\n    ").bind(t, i, r || "u001", W()).run();
+	return await G(e.env.DB, {
 		userId: r || "u001",
 		userName: i || "System",
 		userRole: "product_manager",
@@ -6654,9 +6723,9 @@ X.get("/", async (e) => {
 		success: !0,
 		mapped_count: n.length
 	});
-}), X.delete("/product/:productId/map/:tagId", async (e) => {
+}), Q.delete("/product/:productId/map/:tagId", async (e) => {
 	let { productId: t, tagId: n } = e.req.param(), r = await e.req.json().catch(() => ({}));
-	return await e.env.DB.prepare("DELETE FROM product_compliance_tags WHERE product_id = ? AND tag_id = ?").bind(t, n).run(), await V(e.env.DB, {
+	return await e.env.DB.prepare("DELETE FROM product_compliance_tags WHERE product_id = ? AND tag_id = ?").bind(t, n).run(), await G(e.env.DB, {
 		userId: r.user_id || "u001",
 		userName: r.user_name || "System",
 		userRole: "product_manager",
@@ -6665,22 +6734,22 @@ X.get("/", async (e) => {
 		entityId: t,
 		details: { tag_id: n }
 	}), e.json({ success: !0 });
-}), X.post("/", async (e) => {
-	let t = await e.req.json(), n = z("ct"), r = B();
+}), Q.post("/", async (e) => {
+	let t = await e.req.json(), n = U("ct"), r = W();
 	return await e.env.DB.prepare("\n    INSERT INTO compliance_tags (\n      id, market_id, code, name, name_ar, description, description_ar,\n      category, regulatory_reference, severity, applies_to, is_active, created_at\n    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.market_id || "mkt001", t.code?.toUpperCase() || n, t.name, t.name_ar || null, t.description || null, t.description_ar || null, t.category || "general", t.regulatory_reference || null, t.severity || "mandatory", JSON.stringify(t.applies_to || []), 1, r).run(), e.json({
 		id: n,
 		success: !0
 	});
-}), X.patch("/:id", async (e) => {
+}), Q.patch("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.req.json(), r = [], i = [], a = (e, t) => {
 		t !== void 0 && (r.push(`${e} = ?`), i.push(t));
 	};
 	return a("name", n.name), a("name_ar", n.name_ar), a("description", n.description), a("description_ar", n.description_ar), a("category", n.category), a("regulatory_reference", n.regulatory_reference), a("severity", n.severity), n.applies_to !== void 0 && (r.push("applies_to = ?"), i.push(JSON.stringify(n.applies_to))), n.is_active !== void 0 && (r.push("is_active = ?"), i.push(+!!n.is_active)), r.length ? (i.push(t), await e.env.DB.prepare(`UPDATE compliance_tags SET ${r.join(", ")} WHERE id = ?`).bind(...i).run(), e.json({ success: !0 })) : e.json({ success: !0 });
-}), X.delete("/:id", async (e) => (await e.env.DB.prepare("DELETE FROM compliance_tags WHERE id = ?").bind(e.req.param("id")).run(), e.json({ success: !0 })));
+}), Q.delete("/:id", async (e) => (await e.env.DB.prepare("DELETE FROM compliance_tags WHERE id = ?").bind(e.req.param("id")).run(), e.json({ success: !0 })));
 //#endregion
 //#region src/api/workflow-templates.ts
-var Z = new I();
-Z.get("/", async (e) => {
+var _t = new V();
+_t.get("/", async (e) => {
 	let t = e.req.query("market_id"), n = e.req.query("category"), r = "SELECT id, market_id, name, name_ar, description, description_ar, category, is_system, is_active, created_by, created_at FROM workflow_templates WHERE 1=1", i = [];
 	t && (r += " AND (market_id = ? OR market_id IS NULL)", i.push(t)), n && (r += " AND category = ?", i.push(n)), r += " ORDER BY is_system DESC, name ASC";
 	let { results: a } = await (i.length ? e.env.DB.prepare(r).bind(...i) : e.env.DB.prepare(r)).all();
@@ -6688,12 +6757,12 @@ Z.get("/", async (e) => {
 		templates: a,
 		total: a.length
 	});
-}), Z.get("/:id", async (e) => {
+}), _t.get("/:id", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM workflow_templates WHERE id = ?").bind(t).first();
 	return n ? e.json({ template: n }) : e.json({ error: "Template not found" }, 404);
-}), Z.post("/", async (e) => {
-	let t = await e.req.json(), n = z("wft"), r = B();
-	return await e.env.DB.prepare("\n    INSERT INTO workflow_templates (\n      id, market_id, name, name_ar, description, description_ar, category,\n      nodes, edges, is_system, is_active, created_by, created_at, updated_at\n    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.market_id || "mkt001", t.name, t.name_ar || null, t.description || null, t.description_ar || null, t.category || "general", JSON.stringify(t.nodes || []), JSON.stringify(t.edges || []), 0, 1, t.created_by || "u001", r, r).run(), await V(e.env.DB, {
+}), _t.post("/", async (e) => {
+	let t = await e.req.json(), n = U("wft"), r = W();
+	return await e.env.DB.prepare("\n    INSERT INTO workflow_templates (\n      id, market_id, name, name_ar, description, description_ar, category,\n      nodes, edges, is_system, is_active, created_by, created_at, updated_at\n    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.market_id || "mkt001", t.name, t.name_ar || null, t.description || null, t.description_ar || null, t.category || "general", JSON.stringify(t.nodes || []), JSON.stringify(t.edges || []), 0, 1, t.created_by || "u001", r, r).run(), await G(e.env.DB, {
 		userId: t.created_by || "u001",
 		userName: t.user_name || "System",
 		userRole: t.user_role || "product_manager",
@@ -6705,18 +6774,18 @@ Z.get("/", async (e) => {
 		id: n,
 		success: !0
 	});
-}), Z.patch("/:id", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json(), r = B(), i = await e.env.DB.prepare("SELECT * FROM workflow_templates WHERE id = ?").bind(t).first();
+}), _t.patch("/:id", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json(), r = W(), i = await e.env.DB.prepare("SELECT * FROM workflow_templates WHERE id = ?").bind(t).first();
 	if (!i) return e.json({ error: "Template not found" }, 404);
 	if (i.is_system) return e.json({ error: "System templates cannot be modified" }, 403);
 	let a = [], o = [], s = (e, t) => {
 		t !== void 0 && (a.push(`${e} = ?`), o.push(t));
 	};
 	return s("name", n.name), s("name_ar", n.name_ar), s("description", n.description), s("description_ar", n.description_ar), s("category", n.category), n.nodes !== void 0 && (a.push("nodes = ?"), o.push(JSON.stringify(n.nodes))), n.edges !== void 0 && (a.push("edges = ?"), o.push(JSON.stringify(n.edges))), n.is_active !== void 0 && (a.push("is_active = ?"), o.push(+!!n.is_active)), a.length ? (a.push("updated_at = ?"), o.push(r), o.push(t), await e.env.DB.prepare(`UPDATE workflow_templates SET ${a.join(", ")} WHERE id = ?`).bind(...o).run(), e.json({ success: !0 })) : e.json({ success: !0 });
-}), Z.delete("/:id", async (e) => {
+}), _t.delete("/:id", async (e) => {
 	let t = await e.env.DB.prepare("SELECT * FROM workflow_templates WHERE id = ?").bind(e.req.param("id")).first();
 	return t ? t.is_system ? e.json({ error: "System templates cannot be deleted" }, 403) : (await e.env.DB.prepare("DELETE FROM workflow_templates WHERE id = ?").bind(e.req.param("id")).run(), e.json({ success: !0 })) : e.json({ error: "Not found" }, 404);
-}), Z.post("/:id/validate", async (e) => {
+}), _t.post("/:id/validate", async (e) => {
 	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM workflow_templates WHERE id = ?").bind(t).first();
 	if (!n) return e.json({ error: "Template not found" }, 404);
 	let r = [], i = [];
@@ -6726,12 +6795,12 @@ Z.get("/", async (e) => {
 	try {
 		i = JSON.parse(n.edges || "[]");
 	} catch {}
-	return e.json(yt(r, i));
-}), Z.post("/validate/inline", async (e) => {
+	return e.json(vt(r, i));
+}), _t.post("/validate/inline", async (e) => {
 	let { nodes: t, edges: n } = await e.req.json();
-	return e.json(yt(t || [], n || []));
+	return e.json(vt(t || [], n || []));
 });
-function yt(e, t) {
+function vt(e, t) {
 	let n = [], r = [], i = new Set(e.map((e) => e.id)), a = new Set(t.map((e) => e.from)), o = new Set(t.map((e) => e.to)), s = e.filter((e) => e.type === "start"), c = e.filter((e) => e.type === "end");
 	s.length === 0 && n.push({
 		type: "missing_start",
@@ -6795,27 +6864,27 @@ function yt(e, t) {
 }
 //#endregion
 //#region src/api/campaigns.ts
-var Q = new I();
-Q.get("/", async (e) => {
-	let t = e.req.query("status"), n = B().slice(0, 10), r, i;
+var yt = new V();
+yt.get("/", async (e) => {
+	let t = e.req.query("status"), n = W().slice(0, 10), r, i;
 	t === "active" ? (r = "SELECT * FROM sales_campaigns WHERE status = 'active' AND start_date <= ? AND end_date >= ? ORDER BY created_at DESC", i = [n, n]) : t ? (r = "SELECT * FROM sales_campaigns WHERE status = ? ORDER BY created_at DESC", i = [t]) : (r = "SELECT * FROM sales_campaigns ORDER BY created_at DESC", i = []);
 	let { results: a } = await e.env.DB.prepare(r).bind(...i).all();
 	return e.json({ campaigns: a });
-}), Q.post("/", async (e) => {
+}), yt.post("/", async (e) => {
 	let t = await e.req.json(), n = (t.name || "").trim();
 	if (!n) return e.json({ error: "name is required" }, 400);
 	if (!t.start_date) return e.json({ error: "start_date is required" }, 400);
 	if (!t.end_date) return e.json({ error: "end_date is required" }, 400);
-	let r = B(), i = await e.env.DB.prepare("\n    INSERT INTO sales_campaigns\n      (name, project_id, unit_type, discount, velocity_boost, commission,\n       budget, target_units, notes, start_date, end_date, status, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.project_id || "all", t.unit_type || "all", parseFloat(t.discount) || 0, parseFloat(t.velocity_boost) || 0, parseFloat(t.commission) || 0, parseFloat(t.budget) || 0, parseInt(t.target_units) || 0, t.notes || "", t.start_date, t.end_date, t.status || "scheduled", r, r).run();
+	let r = W(), i = await e.env.DB.prepare("\n    INSERT INTO sales_campaigns\n      (name, project_id, unit_type, discount, velocity_boost, commission,\n       budget, target_units, notes, start_date, end_date, status, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(n, t.project_id || "all", t.unit_type || "all", parseFloat(t.discount) || 0, parseFloat(t.velocity_boost) || 0, parseFloat(t.commission) || 0, parseFloat(t.budget) || 0, parseInt(t.target_units) || 0, t.notes || "", t.start_date, t.end_date, t.status || "scheduled", r, r).run();
 	return e.json({
 		id: i.meta.last_row_id,
 		success: !0
 	}, 201);
-}), Q.delete("/:id", async (e) => {
+}), yt.delete("/:id", async (e) => {
 	let t = e.req.param("id");
 	return await e.env.DB.prepare("DELETE FROM sales_campaigns WHERE id = ?").bind(t).run(), e.json({ success: !0 });
-}), Q.patch("/:id", async (e) => {
-	let t = e.req.param("id"), n = await e.req.json(), r = B(), i = [
+}), yt.patch("/:id", async (e) => {
+	let t = e.req.param("id"), n = await e.req.json(), r = W(), i = [
 		"status",
 		"name",
 		"unit_type",
@@ -6834,16 +6903,16 @@ Q.get("/", async (e) => {
 //#endregion
 //#region src/index.tsx
 var bt = {
-	DB: R,
+	DB: Ie,
 	OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
 	GOOGLE_VISION_API_KEY: process.env.GOOGLE_VISION_API_KEY || "",
 	DEMO_MODE: process.env.DEMO_MODE || "true",
 	AZURE_STORAGE_CONNECTION_STRING: process.env.AZURE_STORAGE_CONNECTION_STRING || "",
 	AZURE_STORAGE_CONTAINER: process.env.AZURE_STORAGE_CONTAINER || "lms-documents"
-}, $ = new I();
-$.use("/api/*", Pe()), $.use("*", async (e, t) => {
+}, $ = new V();
+$.use("/api/*", ke()), $.use("*", async (e, t) => {
 	e.set("env", bt), Object.assign(e, { env: bt }), await t();
-}), $.route("/api/v1/products", H), $.route("/api/v1/applications", Ve), $.route("/api/v1/ai", U), $.route("/api/v1/compliance", W), $.route("/api/v1/projects", G), $.route("/api/v1/documents", Ye), $.route("/api/v1/escrow", Ze), $.route("/api/v1/audit", Qe), $.route("/api/v1/users", K), $.route("/api/v1/auth", et), $.route("/api/v1/seed", pt), $.route("/api/v1/portal", q), $.route("/api/v1/markets", J), $.route("/api/v1/rule-matrices", Y), $.route("/api/v1/compliance-tags", X), $.route("/api/v1/workflow-templates", Z), $.route("/api/v1/campaigns", Q), $.route("/api/v1", _t), $.get("/api/v1/img-proxy", async (e) => {
+}), $.route("/api/v1/products", K), $.route("/api/v1/applications", Le), $.route("/api/v1/ai", q), $.route("/api/v1/compliance", J), $.route("/api/v1/projects", Y), $.route("/api/v1/documents", Ge), $.route("/api/v1/escrow", qe), $.route("/api/v1/audit", Je), $.route("/api/v1/users", X), $.route("/api/v1/auth", Xe), $.route("/api/v1/seed", lt), $.route("/api/v1/portal", Z), $.route("/api/v1/markets", pt), $.route("/api/v1/rule-matrices", mt), $.route("/api/v1/compliance-tags", Q), $.route("/api/v1/workflow-templates", _t), $.route("/api/v1/campaigns", yt), $.route("/api/v1", ht), $.get("/api/v1/img-proxy", async (e) => {
 	let t = e.req.query("url");
 	if (!t || !t.startsWith("https://www.genspark.ai/")) return e.text("Invalid URL", 400);
 	try {
@@ -6861,22 +6930,22 @@ $.use("/api/*", Pe()), $.use("*", async (e, t) => {
 }), $.get("/api/v1/rules", async (e) => {
 	let t = e.req.query("product_id"), n = e.req.query("category"), r = "SELECT * FROM rules WHERE 1=1", i = [];
 	t && (r += " AND (product_id = ? OR product_id IS NULL)", i.push(t)), n && (r += " AND category = ?", i.push(n)), r += " ORDER BY category, name";
-	let { results: a } = await (i.length ? R.prepare(r).bind(...i) : R.prepare(r)).all();
+	let { results: a } = await (i.length ? Ie.prepare(r).bind(...i) : Ie.prepare(r)).all();
 	return e.json({
 		rules: a,
 		total: a.length
 	});
 }), $.get("/api/v1/customers", async (e) => {
-	let { results: t } = await R.prepare("SELECT * FROM customers ORDER BY name").all();
+	let { results: t } = await Ie.prepare("SELECT * FROM customers ORDER BY name").all();
 	return e.json({
 		customers: t,
 		total: t.length
 	});
 }), $.get("/api/v1/customers/:id", async (e) => {
-	let t = e.req.param("id"), n = await R.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
+	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "b821541";
+var xt = "77fab43";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
