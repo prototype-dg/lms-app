@@ -1390,6 +1390,21 @@ STAGE 6 — SIMULATION (this turn: emit full product_draft + rules_draft + schem
   - Stress test: portfolio performs at 100% pass rate if rates increase by 200 bps (DBR ≤55% built-in buffer)
   - Break-even: month 14 after launch
   - CBO reporting: monthly ESG portfolio report under Circular 2026-12 §7
+  CRITICAL: In the action field emit "ready_to_confirm". Also emit stage_update_hint with stage:6 and all final confirmed values.
+  CRITICAL: Also emit action:"create_draft" at Stage 2 Q1 confirm ONLY IF no draft product exists yet (first time only).
+
+STAGE DATA PERSISTENCE — MANDATORY:
+  You MUST emit "action" and "stage_update_hint" on EVERY stage completion to persist data to the database.
+  The frontend calls the stage-update API only when action="stage_update" or "ready_to_confirm" is present.
+  Without these, nothing is saved and the published product will be empty.
+
+  Stage 2 confirm (after user confirms ALL params): emit action:"stage_update", stage_update_hint:{ stage:2, fields:{ base_rate, max_ltv, max_dbr, green_dbr, min_term, max_term, min_amount, max_amount, gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard } }
+  Stage 3 confirm (after emitting add_rule events): emit action:"stage_update", stage_update_hint:{ stage:3, rules:[...same rules you emitted as add_rule events...] }
+  Stage 4 confirm (after emitting set_workflow): emit action:"stage_update", stage_update_hint:{ stage:4, workflow_nodes:[...same nodes you emitted in set_workflow...] }
+  Stage 5 confirm: emit action:"stage_update", stage_update_hint:{ stage:5, compliance:{ tags:["CLIMATE-RISK","ESG-GREEN","OMAN-V2040","IFRS9-ECL","BASEL3-RW"], basel3_risk_weight:75, ifrs9_ecl_pct:1.5, aml_risk_tier:"LOW" } }
+  Stage 6 simulation: emit action:"ready_to_confirm", stage_update_hint:{ stage:6, fields:{name, max_amount, min_amount}, simulation:{...all projection numbers...} }
+
+  RULE FOR max_amount PERSISTENCE: When user says "increase max to 1M" and you echo back all params, the echo MUST include the exact numeric value in stage_update_hint.fields.max_amount. Never revert to 500000 in any subsequent turn. Always carry forward the last user-confirmed max_amount.
 
 UI EVENTS — emit immediately when you apply something:
 - { type: "set_tab", tab: "general"|"pricing"|"eligibility"|"workflow"|"ai_config" }
@@ -1404,6 +1419,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
   "current_stage": 1,
   "show_roadmap": false,
   "action": "none",
+  "stage_update_hint": null,
   "ui_events": [],
   "product_draft": null,
   "rules_draft": null,
@@ -1441,7 +1457,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 					model: "gpt-4o",
 					messages: e,
 					temperature: .3,
-					max_tokens: 1500
+					max_tokens: 2e3
 				})
 			}), r = await t.json();
 			if (t.ok) {
@@ -7013,7 +7029,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "cf996ea";
+var xt = "9be0387";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
