@@ -1491,7 +1491,9 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			ui_events: h.ui_events || [],
 			product_draft: h.product_draft || null,
 			rules_draft: h.rules_draft || null,
-			schema_draft: h.schema_draft || null
+			schema_draft: h.schema_draft || null,
+			draft_hint: h.draft_hint || null,
+			stage_update_hint: h.stage_update_hint || null
 		});
 	} catch (t) {
 		return e.json({
@@ -1553,7 +1555,20 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			success: !1,
 			error: "Product not found"
 		}, 404);
-		if (n === 2) {
+		if (n === 1) {
+			let n = [], i = [];
+			if (r.name && (n.push("name=?"), i.push(r.name)), r.description && (n.push("description=?"), i.push(r.description)), r.category && (n.push("category=?"), i.push(r.category)), r.segment) {
+				let e = (() => {
+					try {
+						return JSON.parse(f?.portal_config || "{}");
+					} catch {
+						return {};
+					}
+				})();
+				e.segment = r.segment, n.push("portal_config=?"), i.push(JSON.stringify(e));
+			}
+			n.length === 0 ? await e.env.DB.prepare("UPDATE products SET pge_stage=1, updated_at=? WHERE id=?").bind(d, t).run() : await e.env.DB.prepare(`UPDATE products SET ${n.join(",")}, pge_stage=1, updated_at=? WHERE id=?`).bind(...i, d, t).run();
+		} else if (n === 2) {
 			let n = [], i = [];
 			for (let e of [
 				"base_rate",
@@ -6964,7 +6979,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "3acba44";
+var xt = "350d47d";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
