@@ -280,14 +280,33 @@
   }
 
   function _initSliderDefaults() {
-    const cfg = _prod?.config ? (() => { try { return JSON.parse(_prod.config); } catch { return {}; } })() : {};
+    // Parse configuration field (DB column name) — contains simulation + compliance JSON
+    const configuration = _prod?.configuration
+      ? (() => { try { return JSON.parse(_prod.configuration); } catch { return {}; } })()
+      : {};
+
+    // Also support legacy 'config' field
+    const legacyCfg = _prod?.config
+      ? (() => { try { return JSON.parse(_prod.config); } catch { return {}; } })()
+      : {};
+
+    // Extract AI Studio simulation results if they exist
+    if (configuration.simulation && Object.keys(configuration.simulation).length > 0) {
+      _simData = configuration.simulation;
+    }
+
+    // Seed sliders from product fields (rate, term, ltv, dbr) then fall back to defaults
     SLIDERS.forEach(s => {
       if (_sliderVals[s.key] === undefined) {
-        // prefer saved value from product config
-        const cfgVal = cfg[s.key] !== undefined ? parseFloat(cfg[s.key]) : null;
-        _sliderVals[s.key] = cfgVal !== null && !isNaN(cfgVal)
-          ? Math.min(s.max, Math.max(s.min, cfgVal))
-          : s.def;
+        let prodVal = null;
+        if (s.key === 'rate')  prodVal = _prod?.base_rate  ? parseFloat(_prod.base_rate)  : null;
+        if (s.key === 'term')  prodVal = _prod?.max_term   ? parseFloat(_prod.max_term)   : null;
+        if (s.key === 'ltv')   prodVal = _prod?.max_ltv    ? parseFloat(_prod.max_ltv)    : null;
+        if (s.key === 'dbr')   prodVal = _prod?.max_dbr    ? parseFloat(_prod.max_dbr)    : null;
+        // also check legacy config blob
+        const cfgVal = legacyCfg[s.key] !== undefined ? parseFloat(legacyCfg[s.key]) : null;
+        const val = prodVal ?? (cfgVal !== null && !isNaN(cfgVal) ? cfgVal : null) ?? s.def;
+        _sliderVals[s.key] = Math.min(s.max, Math.max(s.min, val));
       }
     });
   }
@@ -518,8 +537,73 @@
      Product Portfolio Manager view — mirrors AI Studio Stage 6 output:
      pipeline forecast, accounts, portfolio OMR, NIM, P&L 3-yr, break-even, ROI, stress.
   ────────────────────────────────────────────── */
+  /* ──────────────────────────────────────────────
+     AI STUDIO SIMULATION BANNER
+     Shown at top of Portfolio tab when _simData exists.
+     Displays the exact numbers AI Studio computed during Stage 6.
+  ────────────────────────────────────────────── */
+  function _renderAiSimBanner() {
+    if (!_simData) return '';
+    const s = _simData;
+    const fmtM  = v => v != null ? `OMR ${parseFloat(v).toFixed(1)}M` : '—';
+    const fmtPct = v => v != null ? `${parseFloat(v).toFixed(2)}%`    : '—';
+    const fmtNum = v => v != null ? Number(v).toLocaleString()         : '—';
+    const genAt  = s.generated_at ? new Date(s.generated_at).toLocaleString('en-GB', { dateStyle:'medium', timeStyle:'short' }) : '';
+
+    return `
+      <div class="s6-ai-sim-banner">
+        <div class="s6-ai-sim-hdr">
+          <span><i class="fas fa-wand-magic-sparkles"></i> AI Studio Simulation Results</span>
+          <span class="s6-ai-sim-ts">${genAt ? 'Generated ' + genAt : ''}</span>
+        </div>
+        <div class="s6-ai-sim-grid">
+          <div class="s6-ai-sim-cell">
+            <div class="s6-ai-sim-val">${fmtNum(s.yr1_accounts)}</div>
+            <div class="s6-ai-sim-lbl">Yr 1 Accounts</div>
+          </div>
+          <div class="s6-ai-sim-cell">
+            <div class="s6-ai-sim-val">${fmtM(s.yr1_portfolio_omr_m)}</div>
+            <div class="s6-ai-sim-lbl">Yr 1 Portfolio</div>
+          </div>
+          <div class="s6-ai-sim-cell">
+            <div class="s6-ai-sim-val">${fmtPct(s.nim_pct)}</div>
+            <div class="s6-ai-sim-lbl">NIM</div>
+          </div>
+          <div class="s6-ai-sim-cell">
+            <div class="s6-ai-sim-val">${fmtPct(s.base_rate)}</div>
+            <div class="s6-ai-sim-lbl">Base Rate</div>
+          </div>
+          ${s.rate_gold != null ? `<div class="s6-ai-sim-cell">
+            <div class="s6-ai-sim-val s6-ai-sim-green">${fmtPct(s.rate_gold)}</div>
+            <div class="s6-ai-sim-lbl">Rate Gold (GSAS≥85)</div>
+          </div>` : ''}
+          ${s.rate_silver != null ? `<div class="s6-ai-sim-cell">
+            <div class="s6-ai-sim-val s6-ai-sim-green">${fmtPct(s.rate_silver)}</div>
+            <div class="s6-ai-sim-lbl">Rate Silver (GSAS 70-84)</div>
+          </div>` : ''}
+          <div class="s6-ai-sim-cell">
+            <div class="s6-ai-sim-val">${s.break_even_month != null ? s.break_even_month + ' mo' : '—'}</div>
+            <div class="s6-ai-sim-lbl">Break-even</div>
+          </div>
+          <div class="s6-ai-sim-cell">
+            <div class="s6-ai-sim-val">${s.setup_cost_omr_k != null ? 'OMR ' + s.setup_cost_omr_k + 'K' : '—'}</div>
+            <div class="s6-ai-sim-lbl">Setup Cost</div>
+          </div>
+          ${s.conversion_pct != null ? `<div class="s6-ai-sim-cell">
+            <div class="s6-ai-sim-val">${fmtPct(s.conversion_pct)}</div>
+            <div class="s6-ai-sim-lbl">Conversion Rate</div>
+          </div>` : ''}
+        </div>
+        ${s.stress_test ? `<div class="s6-ai-sim-stress"><i class="fas fa-bolt"></i> Stress: ${s.stress_test}</div>` : ''}
+        ${s.compliance  ? `<div class="s6-ai-sim-comply"><i class="fas fa-shield-halved"></i> ${s.compliance}</div>` : ''}
+      </div>
+    `;
+  }
+
   function _renderPortfolioTab(tc) {
     const ar = isAr();
+    // If AI Studio simulation data exists, use it to override calculated portfolio metrics
+    // for the KPI strip and key figures — keeping everything consistent with what AI printed.
     const p  = _calcPortfolioMetrics();
 
     const fmtOMR = v => {
@@ -542,6 +626,7 @@
     ];
 
     tc.innerHTML = `
+      ${_renderAiSimBanner()}
       <div class="s6-portfolio-wrap">
 
         <!-- Segment badge + product info -->

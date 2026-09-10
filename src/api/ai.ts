@@ -514,12 +514,28 @@ app.post('/products/:id/stage-update', async (c) => {
       'UPDATE products SET configuration=?, pge_stage=5, updated_at=? WHERE id=?'
     ).bind(JSON.stringify(config), ts, productId).run()
 
-    // Map compliance tags if any specified
+    // Map compliance tags if any specified.
+    // AI Studio emits shorthand codes (CLIMATE-RISK, ESG-GREEN, IFRS9-ECL, BASEL3-RW, OMAN-V2040).
+    // Map these to real DB compliance_tags codes before lookup.
+    const AI_CODE_MAP: Record<string, string[]> = {
+      'CLIMATE-RISK':   ['GSAS_VERIFICATION', 'EIA_CLEARANCE'],
+      'ESG-GREEN':      ['GSAS_VERIFICATION', 'EPC_REVIEW', 'GREEN_DISCOUNT_AUDIT'],
+      'OMAN-V2040':     ['GSAS_VERIFICATION', 'GREEN_DISCOUNT_AUDIT'],
+      'IFRS9-ECL':      ['CBO_STRESS_TEST'],
+      'BASEL3-RW':      ['CBO_STRESS_TEST', 'CBO_DBR_CAP'],
+      // pass-through: if the code already matches a real DB code, use as-is
+    }
     if (compliance.tags && Array.isArray(compliance.tags)) {
+      const resolvedCodes = new Set<string>()
       for (const code of compliance.tags) {
+        const mapped = AI_CODE_MAP[code]
+        if (mapped) { mapped.forEach(c => resolvedCodes.add(c)) }
+        else         { resolvedCodes.add(code) }   // may be a real DB code already
+      }
+      for (const dbCode of resolvedCodes) {
         const tag: any = await c.env.DB.prepare(
-          "SELECT id FROM compliance_tags WHERE code=? OR tag_code=? LIMIT 1"
-        ).bind(code, code).first().catch(() => null)
+          "SELECT id FROM compliance_tags WHERE code=? LIMIT 1"
+        ).bind(dbCode).first().catch(() => null)
         if (tag?.id) {
           await c.env.DB.prepare(
             "INSERT OR IGNORE INTO product_compliance_tags (product_id, tag_id, mapped_by, mapped_at) VALUES (?,?,?,?)"

@@ -1613,9 +1613,28 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 					return {};
 				}
 			})();
-			if (n.compliance = o, await e.env.DB.prepare("UPDATE products SET configuration=?, pge_stage=5, updated_at=? WHERE id=?").bind(JSON.stringify(n), d, t).run(), o.tags && Array.isArray(o.tags)) for (let n of o.tags) {
-				let r = await e.env.DB.prepare("SELECT id FROM compliance_tags WHERE code=? OR tag_code=? LIMIT 1").bind(n, n).first().catch(() => null);
-				r?.id && await e.env.DB.prepare("INSERT OR IGNORE INTO product_compliance_tags (product_id, tag_id, mapped_by, mapped_at) VALUES (?,?,?,?)").bind(t, r.id, l, d).run().catch(() => {});
+			n.compliance = o, await e.env.DB.prepare("UPDATE products SET configuration=?, pge_stage=5, updated_at=? WHERE id=?").bind(JSON.stringify(n), d, t).run();
+			let r = {
+				"CLIMATE-RISK": ["GSAS_VERIFICATION", "EIA_CLEARANCE"],
+				"ESG-GREEN": [
+					"GSAS_VERIFICATION",
+					"EPC_REVIEW",
+					"GREEN_DISCOUNT_AUDIT"
+				],
+				"OMAN-V2040": ["GSAS_VERIFICATION", "GREEN_DISCOUNT_AUDIT"],
+				"IFRS9-ECL": ["CBO_STRESS_TEST"],
+				"BASEL3-RW": ["CBO_STRESS_TEST", "CBO_DBR_CAP"]
+			};
+			if (o.tags && Array.isArray(o.tags)) {
+				let n = /* @__PURE__ */ new Set();
+				for (let e of o.tags) {
+					let t = r[e];
+					t ? t.forEach((e) => n.add(e)) : n.add(e);
+				}
+				for (let r of n) {
+					let n = await e.env.DB.prepare("SELECT id FROM compliance_tags WHERE code=? LIMIT 1").bind(r).first().catch(() => null);
+					n?.id && await e.env.DB.prepare("INSERT OR IGNORE INTO product_compliance_tags (product_id, tag_id, mapped_by, mapped_at) VALUES (?,?,?,?)").bind(t, n.id, l, d).run().catch(() => {});
+				}
 			}
 		} else if (n === 6) {
 			let n = (() => {
@@ -6945,7 +6964,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "77fab43";
+var xt = "3acba44";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
