@@ -1751,6 +1751,50 @@ async function sendAiChat(productId) {
     // ── NEW PATTERN: stage-update (each stage confirm) ────────────────────
     // When action='stage_update', call the stage-update API with stage data.
     // Works for stages 2–6. The DB product is updated immediately on each confirm.
+
+    // ── FIX: aiDraftProductId absent fallback ─────────────────────────────
+    // If GPT emits stage_update_hint but never emitted create_draft (e.g. it
+    // skipped Rule C, or the user started mid-session), auto-create the draft
+    // product right now so stage-update can proceed.  Without this guard, all
+    // stage-update calls are silently dropped because aiDraftProductId is null.
+    if ((d.action === 'stage_update' || d.action === 'ready_to_confirm') && d.stage_update_hint && !aiDraftProductId) {
+      try {
+        const u = currentUser();
+        // Build the best name we can from context: draft_hint > aiDraftConfig > fallback
+        const autoName = (d.draft_hint && d.draft_hint.name) || aiDraftConfig.name || 'AI Draft Product';
+        const autoBody = {
+          thread_id: aiThreadId,
+          user_id: u.id,
+          user_name: u.name,
+          name: autoName,
+          clone_from_id: (d.draft_hint && d.draft_hint.clone_from_id) || 'p001',
+          category: (d.draft_hint && d.draft_hint.category) || 'home_loan',
+          segment: (d.draft_hint && d.draft_hint.segment) || aiDraftConfig.segment || 'retail',
+          structure: (d.draft_hint && d.draft_hint.structure) || aiDraftConfig.structure || 'reducing_balance',
+          description: (d.draft_hint && d.draft_hint.description) || aiDraftConfig.description || '',
+        };
+        const ar = await fetch('/api/v1/ai/products/create-draft', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(autoBody)
+        });
+        const ad = await ar.json();
+        if (ad.success && ad.product_id) {
+          aiDraftProductId = ad.product_id;
+          // Show an unobtrusive notice in chat so users know the product was auto-created
+          appendChatBubble('assistant',
+            '<div style="margin-top:4px;padding:6px 10px;background:rgba(22,132,91,.12);border:1px solid rgba(22,132,91,.25);border-radius:6px;font-size:.73rem">' +
+            '<i class="fas fa-database" style="color:#4ade80;margin-right:5px"></i>' +
+            '<strong style="color:#4ade80">Draft product auto-created</strong> — ID: ' + aiDraftProductId +
+            '<br><span style="opacity:.5;font-size:.68rem">create_draft was not emitted earlier; created automatically to preserve stage data.</span>' +
+            '</div>'
+          );
+          if (ad.product) _renderDbDraftCard(ad.product);
+        }
+      } catch (e4) {
+        console.warn('auto create-draft fallback error:', e4);
+      }
+    }
+
     if ((d.action === 'stage_update' || d.action === 'ready_to_confirm') && d.stage_update_hint && aiDraftProductId) {
       try {
         const u = currentUser();
@@ -1782,6 +1826,37 @@ async function sendAiChat(productId) {
         if (sd.success && sd.product) {
           // Update draft card to reflect actual DB state
           _renderDbDraftCard(sd.product);
+
+          // ── FIX: Populate client-side arrays from confirmed hint data ──────
+          // aiDraftRules / aiDraftWorkflow drive updateAiDraftCard() (the
+          // expanded floating card above the input).  They are normally filled
+          // by add_rule / set_workflow ui_events, but GPT may skip those when
+          // it goes directly to stage_update_hint.  Sync them here so the card
+          // always shows the real confirmed data after each stage completion.
+          if (hint.stage === 3 && hint.rules && hint.rules.length) {
+            // Merge-in: keep any client rules GPT didn't include (shouldn't
+            // happen, but defensive) and replace any with the same name.
+            const ruleMap = new Map(aiDraftRules.map(r => [r.name, r]));
+            hint.rules.forEach(r => ruleMap.set(r.name, r));
+            aiDraftRules = [...ruleMap.values()];
+            setTimeout(() => updateAiDraftCard(), 200);
+          }
+          if (hint.stage === 4 && hint.workflow_nodes && hint.workflow_nodes.length) {
+            // Full replace — workflow_nodes from the DB is authoritative at Stage 4.
+            aiDraftWorkflow = hint.workflow_nodes.slice();
+            setTimeout(() => updateAiDraftCard(), 200);
+          }
+          // Stage 5: mark compliance flag so the Basel III badge appears.
+          if (hint.stage === 5 && hint.compliance) {
+            aiDraftConfig._compliance = true;
+            setTimeout(() => updateAiDraftCard(), 200);
+          }
+          // Stage 2: sync numeric fields into aiDraftConfig so the card shows
+          // them immediately even before the user re-confirms via ui_events.
+          if (hint.stage === 2 && hint.fields) {
+            Object.assign(aiDraftConfig, hint.fields);
+            setTimeout(() => updateAiDraftCard(), 200);
+          }
         }
       } catch (e3) {
         console.warn('stage-update API error:', e3);
@@ -1820,6 +1895,41 @@ function _renderDbDraftCard(product) {
   const stageLabels = ['', 'Stage 1 — Model', 'Stage 2 — Pricing', 'Stage 3 — Rules', 'Stage 4 — Workflow', 'Stage 5 — Compliance', 'Stage 6 — Simulation'];
   const stageColors = ['', '#6b7280', '#35C6C4', '#4ade80', '#f4b35b', '#a855f7', '#60a5fa'];
 
+  // ── FIX: Extract rule count and workflow count from product.configuration ──
+  // The backend stores rules and workflow nodes inside a JSON `configuration`
+  // column.  Parse it here so we can show real counts instead of a bare "✓".
+  let cfg = {};
+  try { cfg = (typeof product.configuration === 'string') ? JSON.parse(product.configuration) : (product.configuration || {}); } catch (_) {}
+  const dbRules    = Array.isArray(cfg.rules)          ? cfg.rules          : [];
+  const dbWorkflow = Array.isArray(cfg.workflow_nodes)  ? cfg.workflow_nodes : [];
+  const dbCompliance = cfg.compliance || null;
+  const ruleCount  = dbRules.length;
+  const wfCount    = dbWorkflow.length;
+
+  // ── FIX: Also sync client-side arrays so updateAiDraftCard() shows the
+  // same data as the DB card — critical when _renderDbDraftCard is called
+  // from create-draft (Stage 1) or from stage-update after the fallback
+  // auto-create path runs before the hint sync block fires.
+  if (ruleCount > 0 && aiDraftRules.length === 0) {
+    aiDraftRules = dbRules.slice();
+    setTimeout(() => updateAiDraftCard(), 250);
+  }
+  if (wfCount > 0 && aiDraftWorkflow.length === 0) {
+    aiDraftWorkflow = dbWorkflow.slice();
+    setTimeout(() => updateAiDraftCard(), 250);
+  }
+  if (dbCompliance && !aiDraftConfig._compliance) {
+    aiDraftConfig._compliance = true;
+    setTimeout(() => updateAiDraftCard(), 250);
+  }
+
+  // Build stage badge chips for rules / workflow / compliance / simulation
+  const stageBadge = (icon, label, color) =>
+    '<span style="display:inline-flex;align-items:center;gap:3px;font-size:.65rem;' +
+    'background:' + color + '1a;color:' + color + ';border:1px solid ' + color + '44;' +
+    'padding:.08rem .38rem;border-radius:10px;margin-left:5px">' +
+    '<i class="fas fa-' + icon + '" style="font-size:.58rem"></i> ' + label + '</span>';
+
   const card = document.createElement('div');
   card.id = 'ai-db-draft-card';
   card.style.cssText = 'margin:8px 0 4px 0;padding:10px 13px;background:rgba(0,59,92,.35);border:1px solid rgba(53,198,196,.35);border-radius:9px;font-size:.78rem;animation:fadeIn .4s ease';
@@ -1841,13 +1951,26 @@ function _renderDbDraftCard(product) {
       '<div><span style="opacity:.45;font-size:.67rem">Min Amount</span><br><strong>OMR ' + Number(product.min_amount || 0).toLocaleString() + '</strong></div>' +
       '<div><span style="opacity:.45;font-size:.67rem">Max Amount</span><br><strong>OMR ' + Number(product.max_amount || 0).toLocaleString() + '</strong></div>' +
     '</div>' +
-    '<div style="margin-top:6px;font-size:.67rem;color:rgba(255,255,255,.32)">' +
+    // ── FIX: show real counts instead of bare checkmarks ─────────────────
+    '<div style="margin-top:7px;display:flex;align-items:center;flex-wrap:wrap;gap:2px;font-size:.67rem;color:rgba(255,255,255,.32)">' +
       '<i class="fas fa-circle-dot" style="color:#4ade80;font-size:.55rem;margin-right:3px"></i>' +
       'Live in DB · id: ' + product.id +
-      (stage >= 3 ? ' · Rules: ✓' : '') +
-      (stage >= 4 ? ' · Workflow: ✓' : '') +
-      (stage >= 5 ? ' · Compliance: ✓' : '') +
-      (stage >= 6 ? ' · Simulation: ✓' : '') +
+      (stage >= 3
+        ? stageBadge('list-check', ruleCount ? ruleCount + ' rules' : 'Rules ✓', '#4ade80')
+        : '') +
+      (stage >= 4
+        ? stageBadge('sitemap', wfCount ? wfCount + '-step flow' : 'Workflow ✓', '#f4b35b')
+        : '') +
+      (stage >= 5
+        ? stageBadge('shield-halved',
+            dbCompliance && dbCompliance.basel3_risk_weight
+              ? 'Basel III ' + dbCompliance.basel3_risk_weight + '%'
+              : 'Compliance ✓',
+            '#a855f7')
+        : '') +
+      (stage >= 6
+        ? stageBadge('chart-line', 'Simulation ✓', '#60a5fa')
+        : '') +
     '</div>';
   log.appendChild(card);
   log.scrollTop = log.scrollHeight;
