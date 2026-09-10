@@ -1506,9 +1506,221 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			_error: t?.message || "unknown"
 		}, 200);
 	}
+}), U.post("/products/create-draft", async (e) => {
+	try {
+		let { thread_id: t, clone_from_id: n = "p001", name: r, description: i = "", category: a = "home_loan", segment: o = "retail", structure: s = "conventional", user_id: c = "u001", user_name: l = "Fatima Al-Rashdi" } = await e.req.json(), u = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(n).first(), d = z("p"), f = `DRAFT-${Date.now().toString(36).toUpperCase()}`, p = B();
+		await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status,\n      base_rate, max_ltv, max_dbr, green_dbr, min_term, max_term, min_amount, max_amount,\n      gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n      ai_confidence_threshold, allow_byop, allow_partner_inventory,\n      required_docs, esg_required_docs, approved_materials, approved_vendors,\n      configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(d, r, f, i, a, "draft", u?.base_rate ?? 5.5, u?.max_ltv ?? 90, u?.max_dbr ?? 60, u?.green_dbr ?? 55, u?.min_term ?? 5, u?.max_term ?? 25, u?.min_amount ?? 1e4, u?.max_amount ?? 5e5, u?.gsas_min_score ?? 70, u?.gsas_premium_score ?? 85, u?.green_discount_premium ?? .75, u?.green_discount_standard ?? .5, 90, 1, 1, u?.required_docs ?? JSON.stringify([
+			"salary_cert",
+			"civil_id",
+			"property_deed",
+			"valuation_report"
+		]), u?.esg_required_docs ?? JSON.stringify([]), u?.approved_materials ?? JSON.stringify([]), u?.approved_vendors ?? JSON.stringify([]), JSON.stringify({
+			segment: o,
+			structure: s,
+			ai_draft: !0
+		}), 0, 0, 1, c, p, p).run(), t && await e.env.DB.prepare("UPDATE ai_threads SET product_id=?, updated_at=? WHERE id=?").bind(d, p, t).run(), await V(e.env.DB, {
+			userId: c,
+			userName: l,
+			userRole: "product_manager",
+			action: "AI_DRAFT_CREATED",
+			entityType: "product",
+			entityId: d,
+			details: {
+				name: r,
+				cloned_from: n,
+				thread_id: t
+			},
+			source: "ai_generated"
+		});
+		let m = await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(d).first();
+		return e.json({
+			success: !0,
+			product_id: d,
+			product: m
+		});
+	} catch (t) {
+		return e.json({
+			success: !1,
+			error: t?.message || "Failed to create draft",
+			_error: t?.message
+		}, 200);
+	}
+}), U.post("/products/:id/stage-update", async (e) => {
+	try {
+		let t = e.req.param("id"), { stage: n, fields: r = {}, rules: i = [], workflow_nodes: a = [], compliance: o = {}, simulation: s = {}, thread_id: c, user_id: l = "u001", user_name: u = "Fatima Al-Rashdi" } = await e.req.json(), d = B(), f = await e.env.DB.prepare("SELECT id, status, configuration FROM products WHERE id = ?").bind(t).first();
+		if (!f) return e.json({
+			success: !1,
+			error: "Product not found"
+		}, 404);
+		if (n === 2) {
+			let n = [], i = [];
+			for (let e of [
+				"base_rate",
+				"max_ltv",
+				"max_dbr",
+				"green_dbr",
+				"min_term",
+				"max_term",
+				"min_amount",
+				"max_amount",
+				"gsas_min_score",
+				"gsas_premium_score",
+				"green_discount_premium",
+				"green_discount_standard",
+				"description"
+			]) r[e] != null && (n.push(`${e}=?`), i.push(r[e]));
+			n.length > 0 && await e.env.DB.prepare(`UPDATE products SET ${n.join(",")}, pge_stage=2, updated_at=? WHERE id=?`).bind(...i, d, t).run();
+		} else if (n === 3) {
+			if (i.length > 0) {
+				await e.env.DB.prepare("DELETE FROM rules WHERE product_id=? AND source='ai_generated'").bind(t).run();
+				for (let n of i) {
+					let r = z("r");
+					await e.env.DB.prepare("\n          INSERT INTO rules (id, product_id, name, category, metric, operator,\n            threshold_value, threshold_condition, action_on_breach, severity,\n            regulatory_reference, source, ai_confidence, description, is_active, created_by, created_at)\n          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n        ").bind(r, t, n.name, n.category || "eligibility", n.metric, n.operator, n.threshold_value ?? null, n.threshold_condition ?? null, n.action_on_breach || "reject", n.severity || "hard", n.regulatory_reference ?? null, "ai_generated", n.ai_confidence ?? null, n.description ?? null, 1, l, d).run();
+				}
+				await e.env.DB.prepare("UPDATE products SET pge_stage=3, updated_at=? WHERE id=?").bind(d, t).run();
+			}
+		} else if (n === 4) {
+			if (a.length > 0) {
+				let n = 80, r = [], i = [], o = null;
+				for (let e = 0; e < a.length; e++) {
+					let t = a[e], s = t.type === "start" ? "start" : t.type === "end" ? "end" : "task";
+					r.push({
+						id: t.id || `n${e + 1}`,
+						type: s,
+						label: t.label,
+						x: n,
+						y: 260,
+						role: t.role || null,
+						sla_hours: t.sla_hours || null,
+						auto: t.auto || !1,
+						description: t.description || "",
+						api_integration: t.api_integration || null
+					}), o && i.push({
+						id: `e${e}`,
+						source: o,
+						target: t.id || `n${e + 1}`,
+						label: ""
+					}), o = t.id || `n${e + 1}`, n += 220;
+				}
+				await e.env.DB.prepare("UPDATE products SET workflow_nodes=?, workflow_edges=?, pge_stage=4, updated_at=? WHERE id=?").bind(JSON.stringify(r), JSON.stringify(i), d, t).run();
+			}
+		} else if (n === 5) {
+			let n = (() => {
+				try {
+					return JSON.parse(f.configuration || "{}");
+				} catch {
+					return {};
+				}
+			})();
+			if (n.compliance = o, await e.env.DB.prepare("UPDATE products SET configuration=?, pge_stage=5, updated_at=? WHERE id=?").bind(JSON.stringify(n), d, t).run(), o.tags && Array.isArray(o.tags)) for (let n of o.tags) {
+				let r = await e.env.DB.prepare("SELECT id FROM compliance_tags WHERE code=? OR tag_code=? LIMIT 1").bind(n, n).first().catch(() => null);
+				r?.id && await e.env.DB.prepare("INSERT OR IGNORE INTO product_compliance_tags (product_id, tag_id, mapped_by, mapped_at) VALUES (?,?,?,?)").bind(t, r.id, l, d).run().catch(() => {});
+			}
+		} else if (n === 6) {
+			let n = (() => {
+				try {
+					return JSON.parse(f.configuration || "{}");
+				} catch {
+					return {};
+				}
+			})();
+			n.simulation = s;
+			let i = [], a = [];
+			r.name && (i.push("name=?"), a.push(r.name)), r.description && (i.push("description=?"), a.push(r.description)), r.max_amount && (i.push("max_amount=?"), a.push(r.max_amount)), r.min_amount && (i.push("min_amount=?"), a.push(r.min_amount));
+			let o = i.length > 0 ? i.join(",") + "," : "";
+			await e.env.DB.prepare(`UPDATE products SET ${o}configuration=?, pge_stage=6, updated_at=? WHERE id=?`).bind(...a, JSON.stringify(n), d, t).run();
+		}
+		if (c) {
+			let r = await e.env.DB.prepare("SELECT result FROM ai_threads WHERE id=?").bind(c).first(), i = (() => {
+				try {
+					return JSON.parse(r?.result || "{}");
+				} catch {
+					return {};
+				}
+			})();
+			i.draft_product_id = t, i[`stage_${n}_completed`] = !0, await e.env.DB.prepare("UPDATE ai_threads SET result=?, updated_at=? WHERE id=?").bind(JSON.stringify(i), d, c).run();
+		}
+		let p = await e.env.DB.prepare("SELECT * FROM products WHERE id=?").bind(t).first();
+		return e.json({
+			success: !0,
+			product_id: t,
+			stage: n,
+			product: p
+		});
+	} catch (t) {
+		return e.json({
+			success: !1,
+			error: t?.message || "Stage update failed",
+			_error: t?.message
+		}, 200);
+	}
 }), U.post("/products/confirm", async (e) => {
 	try {
-		let t = await e.req.json(), { thread_id: n, product_draft: r, rules_draft: i, schema_draft: a, user_id: o = "u001", user_name: s = "Fatima Al-Rashdi" } = t, c = Array.isArray(t.workflow_nodes) ? t.workflow_nodes : [];
+		let t = await e.req.json(), { thread_id: n, product_draft: r, rules_draft: i, schema_draft: a, user_id: o = "u001", user_name: s = "Fatima Al-Rashdi" } = t, c = Array.isArray(t.workflow_nodes) ? t.workflow_nodes : [], l = t.draft_product_id;
+		if (l) {
+			let t = await e.env.DB.prepare("SELECT * FROM products WHERE id=?").bind(l).first();
+			if (!t) return e.json({
+				success: !1,
+				error: "Draft product not found"
+			}, 404);
+			let r = B(), i = (t.esg_required_docs || "") !== "[]" && (t.esg_required_docs || "") !== "", a = `${t.name} — From ${t.base_rate}% p.a.`, c = i ? [
+				`Up to ${t.green_discount_premium}% rate discount`,
+				"GSAS-certified properties only",
+				"Supports Oman Vision 2040"
+			] : [
+				`From ${t.base_rate}% per annum`,
+				`Terms up to ${t.max_term} years`,
+				`Up to OMR ${Math.round((t.max_amount || 5e5) / 1e3)}K financing`
+			], u = i ? "ESG Premium" : "Home Finance", d = e.env.OPENAI_API_KEY;
+			if (d) try {
+				let e = `Generate marketing content for a bank loan product. Return JSON only: {"hero_title":"short tagline max 6 words","hero_subtitle":"one sentence benefit","card_badge":"2-3 word badge","highlights":["benefit 1","benefit 2","benefit 3"]}
+Product: ${t.name}. Base rate: ${t.base_rate}%. ${i ? `Green discount: up to ${t.green_discount_premium}% for GSAS ≥${t.gsas_premium_score}.` : ""}`, n = await fetch("https://api.openai.com/v1/chat/completions", {
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${d}`,
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({
+						model: "gpt-4o-mini",
+						messages: [{
+							role: "user",
+							content: e
+						}],
+						temperature: .6,
+						max_tokens: 250
+					})
+				}), r = await n.json();
+				if (n.ok) {
+					let e = (r.choices[0].message.content || "").match(/\{[\s\S]*\}/);
+					if (e) {
+						let t = JSON.parse(e[0]);
+						t.hero_title && (a = t.hero_title), t.highlights?.length && (c = t.highlights);
+					}
+				}
+			} catch {}
+			let { results: f } = await e.env.DB.prepare("SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1").bind(l).all(), p = f?.length > 0 ? 6 : t.pge_stage || 1;
+			return await e.env.DB.prepare("\n      UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n        portal_hero_title=?, portal_highlights=?, portal_card_badge=?,\n        pge_stage=?, is_demo_product=1, published_at=?, updated_at=? WHERE id=?\n    ").bind(+!!i, a, JSON.stringify(c), u, p, r, r, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({ product_id: l }), r, n).run(), await V(e.env.DB, {
+				userId: o,
+				userName: s,
+				userRole: "product_manager",
+				action: "AI_DRAFT_PUBLISHED",
+				entityType: "product",
+				entityId: l,
+				details: {
+					name: t.name,
+					thread_id: n,
+					pge_stage: p
+				},
+				source: "ai_generated"
+			}), e.json({
+				success: !0,
+				product_id: l,
+				product_name: t.name,
+				portal_hero_title: a,
+				portal_visible: !0,
+				rule_ids: []
+			});
+		}
 		if (n) {
 			let t = await e.env.DB.prepare("SELECT result, messages FROM ai_threads WHERE id = ?").bind(n).first();
 			if (t?.result) try {
@@ -1547,10 +1759,10 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			success: !1,
 			error: "No product draft found. Please complete the AI conversation first."
 		}, 400);
-		let l = z("p"), u = B(), d = {};
-		a && (d.gsas_schema = a);
-		let f = r.clone_from_id ? await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(r.clone_from_id).first() : null, p = r.name || "Green Home Loan – ESG", m = `GHL-${Date.now().toString(36).toUpperCase()}`;
-		await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,\n    green_dbr, min_term, max_term, min_amount, max_amount,\n    gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n    ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors,\n    configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(l, p, m, r.description || f?.description || "", r.category || "home_loan", "draft", r.base_rate || f?.base_rate || 5.5, r.max_ltv || f?.max_ltv || 90, r.max_dbr || f?.max_dbr || 60, r.green_dbr || 55, r.min_term || f?.min_term || 5, r.max_term || f?.max_term || 25, r.min_amount || f?.min_amount || 1e4, r.max_amount || f?.max_amount || 5e5, r.gsas_min_score || 70, r.gsas_premium_score || 85, r.green_discount_premium || .75, r.green_discount_standard || .5, 90, 1, 1, JSON.stringify(r.required_docs || (f ? JSON.parse(f.required_docs || "[]") : [
+		let u = z("p"), d = B(), f = {};
+		a && (f.gsas_schema = a);
+		let p = r.clone_from_id ? await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(r.clone_from_id).first() : null, m = r.name || "Green Home Loan – ESG", h = `GHL-${Date.now().toString(36).toUpperCase()}`;
+		await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,\n    green_dbr, min_term, max_term, min_amount, max_amount,\n    gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n    ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors,\n    configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(u, m, h, r.description || p?.description || "", r.category || "home_loan", "draft", r.base_rate || p?.base_rate || 5.5, r.max_ltv || p?.max_ltv || 90, r.max_dbr || p?.max_dbr || 60, r.green_dbr || 55, r.min_term || p?.min_term || 5, r.max_term || p?.max_term || 25, r.min_amount || p?.min_amount || 1e4, r.max_amount || p?.max_amount || 5e5, r.gsas_min_score || 70, r.gsas_premium_score || 85, r.green_discount_premium || .75, r.green_discount_standard || .5, 90, 1, 1, JSON.stringify(r.required_docs || (p ? JSON.parse(p.required_docs || "[]") : [
 			"salary_cert",
 			"civil_id",
 			"property_deed",
@@ -1573,11 +1785,11 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			"SunTech Oman",
 			"Green Build Oman",
 			"EcoMaterials Oman"
-		]), JSON.stringify(d), 0, 0, 1, o, u, u).run();
-		let h = [];
+		]), JSON.stringify(f), 0, 0, 1, o, d, d).run();
+		let g = [];
 		if (i && Array.isArray(i)) for (let t of i) {
 			let n = z("r");
-			await e.env.DB.prepare("\n        INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value,\n        threshold_condition, action_on_breach, severity, regulatory_reference, source,\n        ai_confidence, description, is_active, created_by, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n      ").bind(n, l, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach || "reject", t.severity || "hard", t.regulatory_reference || null, "ai_generated", t.ai_confidence || null, t.description || null, 1, o, u).run(), h.push(n);
+			await e.env.DB.prepare("\n        INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value,\n        threshold_condition, action_on_breach, severity, regulatory_reference, source,\n        ai_confidence, description, is_active, created_by, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n      ").bind(n, u, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach || "reject", t.severity || "hard", t.regulatory_reference || null, "ai_generated", t.ai_confidence || null, t.description || null, 1, o, d).run(), g.push(n);
 		}
 		try {
 			let t = (r.esg_required_docs || []).length > 0, i = [];
@@ -1589,23 +1801,23 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 			}
 			let a = i.map((e) => typeof e == "string" ? e : e.content || e.text || "").join(" ").toLowerCase(), s = [];
 			s.push("CBR-HL-001"), s.push("IFRS9-ECL"), s.push("BASEL3-RW"), t && (s.push("ESG-GREEN"), s.push("CLIMATE-RISK"), s.push("OMAN-V2040")), (a.includes("climate") || a.includes("كلايميت")) && s.push("CLIMATE-RISK"), (a.includes("esg") || a.includes("esg")) && s.push("ESG-GREEN"), (a.includes("green") || a.includes("أخضر")) && s.push("ESG-GREEN"), a.includes("#climate_risk") && s.push("CLIMATE-RISK"), (a.includes("#esg_eligibility") || a.includes("#green")) && s.push("ESG-GREEN"), (a.includes("#oman_vision") || a.includes("vision 2040")) && s.push("OMAN-V2040"), (a.includes("aml") || a.includes("مكافحة")) && s.push("AML-KYC"), (a.includes("ifrs") || a.includes("ifrs9")) && s.push("IFRS9-ECL"), (a.includes("basel") || a.includes("75%")) && s.push("BASEL3-RW");
-			let c = [...new Set(s)], d = [];
+			let c = [...new Set(s)], l = [];
 			for (let t of c) {
 				let n = await e.env.DB.prepare("SELECT id FROM compliance_tags WHERE code = ? LIMIT 1").bind(t).first().catch(() => null);
 				if (!n) {
 					let r = t.replace(/[-_]/g, " ").toLowerCase(), { results: i } = await e.env.DB.prepare("SELECT id FROM compliance_tags WHERE LOWER(name) LIKE ? OR LOWER(tag_code) LIKE ? LIMIT 1").bind(`%${r}%`, `%${t.toLowerCase()}%`).all().catch(() => ({ results: [] }));
 					i && i.length > 0 && (n = i[0]);
 				}
-				n?.id && d.push(n.id);
+				n?.id && l.push(n.id);
 			}
-			if (d.length === 0) {
+			if (l.length === 0) {
 				let { results: t } = await e.env.DB.prepare("\n        SELECT id FROM compliance_tags\n        WHERE severity = 'mandatory' AND is_active = 1\n        AND (applies_to IS NULL OR applies_to = '[]' OR applies_to LIKE '%home_loan%')\n        LIMIT 20\n      ").all().catch(() => ({ results: [] }));
-				if (t && t.forEach((e) => d.push(e.id)), d.length === 0) {
+				if (t && t.forEach((e) => l.push(e.id)), l.length === 0) {
 					let { results: t } = await e.env.DB.prepare("SELECT id FROM compliance_tags WHERE is_active = 1 LIMIT 30").all().catch(() => ({ results: [] }));
-					t && t.forEach((e) => d.push(e.id));
+					t && t.forEach((e) => l.push(e.id));
 				}
 			}
-			for (let t of [...new Set(d)]) await e.env.DB.prepare("\n        INSERT OR IGNORE INTO product_compliance_tags (product_id, tag_id, mapped_by, mapped_at)\n        VALUES (?, ?, ?, ?)\n      ").bind(l, t, o, u).run().catch(() => {});
+			for (let t of [...new Set(l)]) await e.env.DB.prepare("\n        INSERT OR IGNORE INTO product_compliance_tags (product_id, tag_id, mapped_by, mapped_at)\n        VALUES (?, ?, ?, ?)\n      ").bind(u, t, o, d).run().catch(() => {});
 		} catch {}
 		if (c.length > 2) {
 			let t = [], n = [], r = 80, i = null;
@@ -1630,7 +1842,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 					label: a.edge_label || ""
 				}), i = a.id || `n${e + 1}`, r += 220;
 			}
-			await e.env.DB.prepare("UPDATE products SET workflow_nodes = ?, workflow_edges = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(t), JSON.stringify(n), u, l).run();
+			await e.env.DB.prepare("UPDATE products SET workflow_nodes = ?, workflow_edges = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(t), JSON.stringify(n), d, u).run();
 		} else await e.env.DB.prepare("UPDATE products SET workflow_nodes = ?, workflow_edges = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify([
 			{
 				id: "wn1",
@@ -1831,15 +2043,15 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
 				to: "wn11",
 				label: ""
 			}
-		]), u, l).run();
-		let g = e.env.OPENAI_API_KEY, _ = p, v = [], y = "", b = (r.esg_required_docs || []).length > 0;
-		if (g) try {
+		]), d, u).run();
+		let _ = e.env.OPENAI_API_KEY, v = m, y = [], b = "", x = (r.esg_required_docs || []).length > 0;
+		if (_) try {
 			let e = `Generate marketing content for a bank loan product. Return JSON only, no markdown:
 {"hero_title":"short compelling tagline (max 6 words)","hero_subtitle":"one sentence benefit statement","card_badge":"2-3 word category badge","highlights":["benefit 1","benefit 2","benefit 3","benefit 4"]}
-Product: ${p}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 5.5}%.${b ? ` Green discount: up to ${r.green_discount_premium || .75}% for GSAS score ≥${r.gsas_premium_score || 85}. ESG/green product.` : ""}`, t = await fetch("https://api.openai.com/v1/chat/completions", {
+Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 5.5}%.${x ? ` Green discount: up to ${r.green_discount_premium || .75}% for GSAS score ≥${r.gsas_premium_score || 85}. ESG/green product.` : ""}`, t = await fetch("https://api.openai.com/v1/chat/completions", {
 				method: "POST",
 				headers: {
-					Authorization: `Bearer ${g}`,
+					Authorization: `Bearer ${_}`,
 					"Content-Type": "application/json"
 				},
 				body: JSON.stringify({
@@ -1856,34 +2068,34 @@ Product: ${p}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 				let e = n.choices[0].message.content.match(/\{[\s\S]*\}/);
 				if (e) {
 					let t = JSON.parse(e[0]);
-					_ = t.hero_title || _, v = t.highlights || [], y = t.card_badge || "";
+					v = t.hero_title || v, y = t.highlights || [], b = t.card_badge || "";
 				}
 			}
 		} catch {}
-		v.length || (b ? (v = [
+		y.length || (x ? (y = [
 			`Up to ${r.green_discount_premium || .75}% rate discount`,
 			"GSAS-certified properties only",
 			"Supports Oman Vision 2040",
 			"Maker-checker ESG approval"
-		], y = "ESG Premium") : v = [
+		], b = "ESG Premium") : y = [
 			`From ${r.base_rate || 5.5}% per annum`,
 			`Terms up to ${r.max_term || 25} years`,
 			`Up to OMR ${Math.round((r.max_amount || 5e5) / 1e3)}K financing`
 		]);
-		let x = h.length > 0 ? 6 : 1;
-		return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?,\n     pge_stage=?, is_demo_product=1, updated_at=? WHERE id=?").bind(+!!b, _, JSON.stringify(v), y, u, x, u, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({
-			product_id: l,
-			rule_ids: h
-		}), u, n).run(), await V(e.env.DB, {
+		let S = g.length > 0 ? 6 : 1;
+		return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?,\n     pge_stage=?, is_demo_product=1, updated_at=? WHERE id=?").bind(+!!x, v, JSON.stringify(y), b, d, S, d, u).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(u, JSON.stringify({
+			product_id: u,
+			rule_ids: g
+		}), d, n).run(), await V(e.env.DB, {
 			userId: o,
 			userName: s,
 			userRole: "product_manager",
 			action: "PRODUCT_CREATED_BY_AI",
 			entityType: "product",
-			entityId: l,
+			entityId: u,
 			details: {
-				name: p,
-				rules_created: h.length,
+				name: m,
+				rules_created: g.length,
 				cloned_from: r.clone_from_id || null,
 				thread_id: n,
 				portal_visible: !0
@@ -1891,10 +2103,10 @@ Product: ${p}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 			source: "ai_generated"
 		}), e.json({
 			success: !0,
-			product_id: l,
-			product_name: p,
-			rule_ids: h,
-			portal_hero_title: _,
+			product_id: u,
+			product_name: m,
+			rule_ids: g,
+			portal_hero_title: v,
 			portal_visible: !0
 		});
 	} catch (t) {
@@ -2410,7 +2622,15 @@ function Ge(e, t, n) {
 			message: `✅ <strong>Stage 1 complete.</strong> Product model defined — "${t}", conventional, cloned from Standard Home Loan.<br><br><strong>Stage 2 — Core Configuration</strong><br><br><strong>Pricing structure recommendation:</strong><br><br>Base rate: <strong>5.25%</strong> per annum (10 bps below Standard Home Loan at 5.35%) — a modest incentive for green adoption without significant NIM compression.<br><br>CBO Circular 2026-12 §3.1 permits preferential pricing for green-certified products. Our current cost of funds is ~3.8%, giving a spread of ~1.45% — acceptable for this asset class.<br><br><strong>Shall I set the base rate at 5.25%, or would you like to adjust it?</strong>`,
 			current_stage: 2,
 			show_roadmap: !1,
-			action: "none",
+			action: "create_draft",
+			draft_hint: {
+				name: t,
+				clone_from_id: "p001",
+				category: "home_loan",
+				segment: C ? "hnw" : "retail",
+				structure: "conventional",
+				description: "Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on sustainability score. Supports Oman Vision 2040 and CBO green finance objectives."
+			},
 			ui_events: [
 				{
 					type: "set_tab",
@@ -2563,7 +2783,24 @@ function Ge(e, t, n) {
 		message: "✅ <strong>Stage 2 complete.</strong> Full pricing and configuration set:<br>Rate 5.25% · Green discount 0.75%/0.5% · LTV 90/80% · DBR 55% · OMR 25K–500K · Term 5–25yr<br><br><strong>Stage 3 — Eligibility Rules</strong><br><br>I'll now generate <strong>17 eligibility rules</strong> covering 5 categories: credit risk, collateral, ESG/green, income & employment, and documentation. All rules are cited against specific CBO circulars and OS GSO standards.<br><br>One key decision before I generate: <strong>GSAS minimum score</strong>:<br>&bull; <strong>70 (Silver minimum)</strong> — broader market eligibility, higher volume, lower average green quality<br>&bull; <strong>75 (stricter Silver)</strong> — better ESG positioning, may reduce addressable market by ~20%<br><br><strong>Which GSAS minimum should I use: 70 or 75?</strong>",
 		current_stage: 3,
 		show_roadmap: !1,
-		action: "none",
+		action: "stage_update",
+		stage_update_hint: {
+			stage: 2,
+			fields: {
+				base_rate: 5.25,
+				max_ltv: 90,
+				max_dbr: 55,
+				green_dbr: 55,
+				min_term: 5,
+				max_term: 25,
+				min_amount: 25e3,
+				max_amount: 5e5,
+				gsas_min_score: 70,
+				gsas_premium_score: 85,
+				green_discount_premium: .75,
+				green_discount_standard: .5
+			}
+		},
 		ui_events: [],
 		product_draft: null,
 		rules_draft: null,
@@ -2797,7 +3034,11 @@ function Ge(e, t, n) {
 			message: `✅ <strong>Stage 3 complete.</strong> <strong>${t.length} eligibility rules</strong> generated and added to the Eligibility tab — check it now!<br><br><strong>Credit rules (5):</strong> DBR ≤55% (>100K), DBR ≤60% (≤100K), Credit Score ≥620, No defaults 24mo, Max 4 facilities<br><strong>Collateral rules (4):</strong> LTV ≤90% first home, ≤80% subsequent/expat, Approved valuator, Freehold/leasehold title<br><strong>ESG rules (5):</strong> GSAS ≥${e}, EPC ≥C, GSAS cert valid ≥90 days, EIA clearance, Full document set<br><strong>Income/employment (3):</strong> Net income ≥OMR 800, Tenure ≥6mo, Expat residency ≥12mo<br><br><strong>Stage 4 — Approval Workflow</strong><br><br>I'll configure a <strong>10-step workflow</strong> with 4 external API integrations: eKYC/NCI, Oman Credit Bureau, GSAS registry (GORD), property valuation APIs, and Muscat Municipality title check.<br><br>First 5 steps are fully automated (0 human time, ~15 hours total). Last 5 require human review (credit analyst, green finance officer, risk officer, PM).<br><br><strong>Should I configure automated processing for the first 5 steps, or do you want more human touchpoints in the automated phase?</strong>`,
 			current_stage: 4,
 			show_roadmap: !1,
-			action: "none",
+			action: "stage_update",
+			stage_update_hint: {
+				stage: 3,
+				rules: t
+			},
 			ui_events: [{
 				type: "set_tab",
 				tab: "eligibility"
@@ -2810,114 +3051,121 @@ function Ge(e, t, n) {
 			schema_draft: null
 		};
 	}
-	if (v && !y) return {
-		message: "✅ <strong>Stage 4 complete.</strong> 10-step approval workflow configured and visible in the Workflow tab.<br><br><strong>Automated steps (1–6):</strong> eKYC/AML → Credit Bureau → OCR/Validation → GSAS Registry (GORD) → Property Valuation → Title Check<br><strong>Human review steps (7–10):</strong> Credit Underwriting (24h) → Green Finance ESG Review (24h) → Risk & Compliance (48h) → PM Final Approval (24h)<br><br>⏱️ Total SLA: <strong>~5 working days</strong> (automated: <19h, human: ~4 days)<br>🔗 External integrations: NCI eKYC · Oman Credit Bureau · GORD GSAS API · Al Mashora/JLL · Muscat Municipality<br><br><strong>Ready for Stage 5 — Compliance Classification?</strong> I'll apply Basel III capital rules, IFRS 9 provisioning, and CBO green finance tagging. Shall I proceed?",
-		current_stage: 5,
-		show_roadmap: !1,
-		action: "none",
-		ui_events: [{
-			type: "set_tab",
-			tab: "workflow"
-		}, {
-			type: "set_workflow",
-			nodes: [
-				{
-					id: "n1",
-					type: "start",
-					label: "Application Submitted",
-					role: null,
-					description: "Customer submits via Sohar Mobile App, Internet Banking, or branch. Application ID generated. Documents uploaded to secure vault."
-				},
-				{
-					id: "n2",
-					type: "task",
-					label: "eKYC & AML Screening",
-					role: "system",
-					sla_hours: 1,
-					auto: !0,
-					description: "Calls National Centre for Information (NCI) eKYC API — biometric Civil ID verification. Simultaneous AML/CFT screening via WorldCheck/Refinitiv. Result: identity_verified. Auto-reject if AML hit."
-				},
-				{
-					id: "n3",
-					type: "task",
-					label: "Oman Credit Bureau Check",
-					role: "system",
-					sla_hours: 4,
-					auto: !0,
-					description: "Calls OCB API. Retrieves: credit score, active facilities count, payment history 24 months, defaults, restructured loans. Auto-reject: score <620 or any default in 24mo."
-				},
-				{
-					id: "n4",
-					type: "task",
-					label: "Document OCR & AI Validation",
-					role: "system",
-					sla_hours: 2,
-					auto: !0,
-					description: "AI OCR extracts structured data from: salary certificate, Civil ID, GSAS certificate, EPC report, EIA approval. Validates field formats vs. product schema. Confidence score per document."
-				},
-				{
-					id: "n5",
-					type: "task",
-					label: "GSAS Registry Verification (GORD API)",
-					role: "system",
-					sla_hours: 4,
-					auto: !0,
-					description: "Calls GORD GSAS API. Validates: certificate number authenticity, issuer = GORD, score matches submitted cert, rating band (Silver/Gold/Platinum), expiry ≥ 90 days, property address matches application."
-				},
-				{
-					id: "n6",
-					type: "task",
-					label: "Property Valuation & Title Verification",
-					role: "system",
-					sla_hours: 8,
-					auto: !0,
-					description: "API integration: Al Mashora/JLL Oman for desktop or drive-by valuation. Muscat Municipality / MRMEWR API for title deed authenticity, ownership zone (ITC/Omani zone), freehold confirmation. Calculates LTV against confirmed valuation."
-				},
-				{
-					id: "n7",
-					type: "approval",
-					label: "Credit Underwriting",
-					role: "credit_analyst",
-					sla_hours: 24,
-					description: "Credit Analyst reviews: income vs salary cert, DBR calculation with all facilities, stress test at base rate +2% (must still pass DBR), LTV confirmation, employment stability. Uses Sohar internal credit scoring model (FICO-based adaptation)."
-				},
-				{
-					id: "n8",
-					type: "approval",
-					label: "Green Finance ESG Review",
-					role: "green_finance_officer",
-					sla_hours: 24,
-					description: "Dedicated Green Finance Officer (new role under CBO Circular 2026-12): validates GSAS score vs product threshold, EPC rating band, EIA coverage scope, determines applicable discount tier (0.75% if GSAS ≥85, 0.5% if 70–84), confirms approved materials list for staged disbursement."
-				},
-				{
-					id: "n9",
-					type: "approval",
-					label: "Risk & Compliance Sign-off",
-					role: "risk_officer",
-					sla_hours: 48,
-					description: "Risk Officer: concentration risk check (green portfolio exposure limit), IFRS9 Stage 1 classification, regulatory capital calculation (risk weight 75% residential mortgage), secondary AML/CFT review, CBO reporting flags."
-				},
-				{
-					id: "n10",
-					type: "approval",
-					label: "PM Final Approval & Offer Letter",
-					role: "product_manager",
-					sla_hours: 24,
-					description: "Product Manager: confirms all product terms match approved configuration, green discount applied correctly per GSAS score, offer letter generated from template, CBO disclosure checklist completed, signed digitally via DocuSign."
-				},
-				{
-					id: "n11",
-					type: "end",
-					label: "Decision & Letter of Offer Issued",
-					role: null,
-					description: "Approved: Letter of Offer sent via SMS + email + in-app. SLA: customer 7 working days. Rejected: reason code + remediation guidance. Customer has 30 days to accept offer."
-				}
-			]
-		}],
-		product_draft: null,
-		rules_draft: null,
-		schema_draft: null
-	};
+	if (v && !y) {
+		let e = [
+			{
+				id: "n1",
+				type: "start",
+				label: "Application Submitted",
+				role: null,
+				description: "Customer submits via Sohar Mobile App, Internet Banking, or branch. Application ID generated. Documents uploaded to secure vault."
+			},
+			{
+				id: "n2",
+				type: "task",
+				label: "eKYC & AML Screening",
+				role: "system",
+				sla_hours: 1,
+				auto: !0,
+				description: "Calls National Centre for Information (NCI) eKYC API — biometric Civil ID verification. Simultaneous AML/CFT screening via WorldCheck/Refinitiv. Result: identity_verified. Auto-reject if AML hit."
+			},
+			{
+				id: "n3",
+				type: "task",
+				label: "Oman Credit Bureau Check",
+				role: "system",
+				sla_hours: 4,
+				auto: !0,
+				description: "Calls OCB API. Retrieves: credit score, active facilities count, payment history 24 months, defaults, restructured loans. Auto-reject: score <620 or any default in 24mo."
+			},
+			{
+				id: "n4",
+				type: "task",
+				label: "Document OCR & AI Validation",
+				role: "system",
+				sla_hours: 2,
+				auto: !0,
+				description: "AI OCR extracts structured data from: salary certificate, Civil ID, GSAS certificate, EPC report, EIA approval. Validates field formats vs. product schema. Confidence score per document."
+			},
+			{
+				id: "n5",
+				type: "task",
+				label: "GSAS Registry Verification (GORD API)",
+				role: "system",
+				sla_hours: 4,
+				auto: !0,
+				description: "Calls GORD GSAS API. Validates: certificate number authenticity, issuer = GORD, score matches submitted cert, rating band (Silver/Gold/Platinum), expiry ≥ 90 days, property address matches application."
+			},
+			{
+				id: "n6",
+				type: "task",
+				label: "Property Valuation & Title Verification",
+				role: "system",
+				sla_hours: 8,
+				auto: !0,
+				description: "API integration: Al Mashora/JLL Oman for desktop or drive-by valuation. Muscat Municipality / MRMEWR API for title deed authenticity, ownership zone (ITC/Omani zone), freehold confirmation. Calculates LTV against confirmed valuation."
+			},
+			{
+				id: "n7",
+				type: "approval",
+				label: "Credit Underwriting",
+				role: "credit_analyst",
+				sla_hours: 24,
+				description: "Credit Analyst reviews: income vs salary cert, DBR calculation with all facilities, stress test at base rate +2% (must still pass DBR), LTV confirmation, employment stability. Uses Sohar internal credit scoring model (FICO-based adaptation)."
+			},
+			{
+				id: "n8",
+				type: "approval",
+				label: "Green Finance ESG Review",
+				role: "green_finance_officer",
+				sla_hours: 24,
+				description: "Dedicated Green Finance Officer (new role under CBO Circular 2026-12): validates GSAS score vs product threshold, EPC rating band, EIA coverage scope, determines applicable discount tier (0.75% if GSAS ≥85, 0.5% if 70–84), confirms approved materials list for staged disbursement."
+			},
+			{
+				id: "n9",
+				type: "approval",
+				label: "Risk & Compliance Sign-off",
+				role: "risk_officer",
+				sla_hours: 48,
+				description: "Risk Officer: concentration risk check (green portfolio exposure limit), IFRS9 Stage 1 classification, regulatory capital calculation (risk weight 75% residential mortgage), secondary AML/CFT review, CBO reporting flags."
+			},
+			{
+				id: "n10",
+				type: "approval",
+				label: "PM Final Approval & Offer Letter",
+				role: "product_manager",
+				sla_hours: 24,
+				description: "Product Manager: confirms all product terms match approved configuration, green discount applied correctly per GSAS score, offer letter generated from template, CBO disclosure checklist completed, signed digitally via DocuSign."
+			},
+			{
+				id: "n11",
+				type: "end",
+				label: "Decision & Letter of Offer Issued",
+				role: null,
+				description: "Approved: Letter of Offer sent via SMS + email + in-app. SLA: customer 7 working days. Rejected: reason code + remediation guidance. Customer has 30 days to accept offer."
+			}
+		];
+		return {
+			message: "✅ <strong>Stage 4 complete.</strong> 10-step approval workflow configured and visible in the Workflow tab.<br><br><strong>Automated steps (1–6):</strong> eKYC/AML → Credit Bureau → OCR/Validation → GSAS Registry (GORD) → Property Valuation → Title Check<br><strong>Human review steps (7–10):</strong> Credit Underwriting (24h) → Green Finance ESG Review (24h) → Risk & Compliance (48h) → PM Final Approval (24h)<br><br>⏱️ Total SLA: <strong>~5 working days</strong> (automated: <19h, human: ~4 days)<br>🔗 External integrations: NCI eKYC · Oman Credit Bureau · GORD GSAS API · Al Mashora/JLL · Muscat Municipality<br><br><strong>Ready for Stage 5 — Compliance Classification?</strong> I'll apply Basel III capital rules, IFRS 9 provisioning, and CBO green finance tagging. Shall I proceed?",
+			current_stage: 5,
+			show_roadmap: !1,
+			action: "stage_update",
+			stage_update_hint: {
+				stage: 4,
+				workflow_nodes: e
+			},
+			ui_events: [{
+				type: "set_tab",
+				tab: "workflow"
+			}, {
+				type: "set_workflow",
+				nodes: e
+			}],
+			product_draft: null,
+			rules_draft: null,
+			schema_draft: null
+		};
+	}
 	if (y && !b) return {
 		message: "<strong>Stage 5 — Compliance Classification</strong><br><br>For regulatory reporting, I recommend classifying this product as follows:<br>&bull; <strong>Basel III risk weight</strong>: 75% (residential retail mortgage, LTV ≤90% per CBO BM/REG/2019/74 Schedule 3)<br>&bull; <strong>IFRS 9 provisioning</strong>: 1.5% Stage 1 ECL (higher than standard 1.0% due to green portfolio concentration, per IFRS 9 §5.5)<br>&bull; <strong>CBO classification</strong>: Green Finance (reportable under Circular 2026-12 §7 monthly ESG portfolio return)<br>&bull; <strong>AML risk tier</strong>: LOW (eKYC + OCB auto-verified; green property reduces beneficial ownership complexity)<br>&bull; <strong>Regulatory tags</strong>: #CLIMATE_RISK · #ESG_ELIGIBILITY · #GREEN_FINANCING · #OMAN_VISION_2040<br><br><strong>Shall I apply these compliance parameters, or do you want to adjust the risk weight or provisioning rate?</strong>",
 		current_stage: 5,
@@ -3157,12 +3405,51 @@ function Ge(e, t, n) {
 			regulatory_reference: "OS GSO 3000:2025, §4.2 · OEESC §5.1"
 		}, y = p ? 28e4 : m ? 15e4 : 9e4, b = p ? 38e4 : m ? 2e5 : 12e4, x = p ? 8 : m ? 12 : 18, S = Math.round(x / 100 * 795), C = Math.round(S * y / 1e6 * 10) / 10;
 		l - u;
-		let w = Math.round((l - 3.5) * 100) / 100, T = p ? 9 : m ? 11 : 14, E = (l - u).toFixed(2), D = (l - d).toFixed(2), O = p ? "HNW (OMR 5K+ income)" : m ? "Affluent (OMR 2K–5K)" : "Mass market";
+		let w = Math.round((l - 3.5) * 100) / 100, T = .4, E = p ? 9 : m ? 11 : 14, D = (l - u).toFixed(2), O = (l - d).toFixed(2), k = p ? "HNW (OMR 5K+ income)" : m ? "Affluent (OMR 2K–5K)" : "Mass market";
 		return {
-			message: `✅ <strong>Stage 5 complete.</strong> Compliance classification applied — Basel III 75% risk weight, IFRS9 1.5% Stage 1 ECL, CBO Green Finance designation.<br><br><strong>Stage 6 — Portfolio Simulation</strong><br><br>📊 <strong>12-month portfolio projections</strong> — <em>${O} segment · avg loan OMR ${y.toLocaleString()}</em><br>&bull; <strong>Pipeline:</strong> ~795 green-eligible applicants from current 13,251 YTD pipeline (est. 6% hold GSAS-certified properties)<br>&bull; <strong>Target:</strong> <strong>${S} accounts · OMR ${C}M</strong> in Year 1 at ${x}% pipeline conversion (${p ? "conservative — HNW segment has longer decision cycle" : "moderate — verified against regional green mortgage benchmarks"})<br>&bull; <strong>NIM:</strong> ~${w.toFixed(2)}% on green book (3.5% estimated cost of funds) — partially offset by 0.4% lower provisioning (green ECL) + CBO capital relief ~8 bps<br>&bull; <strong>Effective rates:</strong> ${l}% base → ${E}% (GSAS ≥85 Gold) · ${D}% (GSAS 70–84 Silver)<br>&bull; <strong>Stress test:</strong> +200 bps rate shock — 98% of modelled HNW portfolio passes DBR ≤55% (avg. DBR ${p ? "38" : "44"}% at origination provides buffer)<br>&bull; <strong>Break-even:</strong> month ${T} post-launch (setup: OMR 85K — GORD API integration + Green Finance Officer role)<br>&bull; <strong>ESG reporting:</strong> monthly CBO Green Finance Return (Circular 2026-12 §7) + annual TCFD disclosure<br><br>📋 <strong>Full product configuration summary:</strong><br>• <strong>${n}</strong> · ${g} · Cloned from Standard Home Loan · Segment: ${O}<br>• Rate: <strong>${l}%</strong> · Discount tiers: −${u}% (GSAS ≥85) → <strong>${E}%</strong> · −${d}% (GSAS 70–84) → <strong>${D}%</strong><br>• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>• Terms: <strong>${f}–25 years</strong> · Amount: <strong>OMR ${s.toLocaleString()}–${i.toLocaleString()}</strong> · Avg property value: OMR ${b.toLocaleString()}<br>• Eligibility: <strong>17 rules</strong> across credit, collateral, ESG, income<br>• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>🚀 Everything is configured. Click <strong>Confirm &amp; Publish</strong> to save the full product and make it live on the customer portal.`,
+			message: `✅ <strong>Stage 5 complete.</strong> Compliance classification applied — Basel III 75% risk weight, IFRS9 1.5% Stage 1 ECL, CBO Green Finance designation.<br><br><strong>Stage 6 — Portfolio Simulation</strong><br><br>📊 <strong>12-month portfolio projections</strong> — <em>${k} segment · avg loan OMR ${y.toLocaleString()}</em><br>&bull; <strong>Pipeline:</strong> ~795 green-eligible applicants from current 13,251 YTD pipeline (est. 6% hold GSAS-certified properties)<br>&bull; <strong>Target:</strong> <strong>${S} accounts · OMR ${C}M</strong> in Year 1 at ${x}% pipeline conversion (${p ? "conservative — HNW segment has longer decision cycle" : "moderate — verified against regional green mortgage benchmarks"})<br>&bull; <strong>NIM:</strong> ~${w.toFixed(2)}% on green book (3.5% estimated cost of funds) — partially offset by ${T}% lower provisioning (green ECL) + CBO capital relief ~8 bps<br>&bull; <strong>Effective rates:</strong> ${l}% base → ${D}% (GSAS ≥85 Gold) · ${O}% (GSAS 70–84 Silver)<br>&bull; <strong>Stress test:</strong> +200 bps rate shock — 98% of modelled HNW portfolio passes DBR ≤55% (avg. DBR ${p ? "38" : "44"}% at origination provides buffer)<br>&bull; <strong>Break-even:</strong> month ${E} post-launch (setup: OMR 85K — GORD API integration + Green Finance Officer role)<br>&bull; <strong>ESG reporting:</strong> monthly CBO Green Finance Return (Circular 2026-12 §7) + annual TCFD disclosure<br><br>📋 <strong>Full product configuration summary:</strong><br>• <strong>${n}</strong> · ${g} · Cloned from Standard Home Loan · Segment: ${k}<br>• Rate: <strong>${l}%</strong> · Discount tiers: −${u}% (GSAS ≥85) → <strong>${D}%</strong> · −${d}% (GSAS 70–84) → <strong>${O}%</strong><br>• LTV: <strong>90%</strong> (first home) · <strong>80%</strong> (subsequent/expat) · DBR: <strong>55%</strong> (CBO green allowance)<br>• Terms: <strong>${f}–25 years</strong> · Amount: <strong>OMR ${s.toLocaleString()}–${i.toLocaleString()}</strong> · Avg property value: OMR ${b.toLocaleString()}<br>• Eligibility: <strong>17 rules</strong> across credit, collateral, ESG, income<br>• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>🚀 Everything is configured. Click <strong>Confirm &amp; Publish</strong> to save the full product and make it live on the customer portal.`,
 			current_stage: 6,
 			show_roadmap: !1,
 			action: "ready_to_confirm",
+			stage_update_hint: {
+				stage: 6,
+				fields: {
+					name: n,
+					max_amount: i,
+					min_amount: s
+				},
+				simulation: {
+					segment: k,
+					avg_loan_amount: y,
+					avg_property_value: b,
+					pipeline_green_eligible: 795,
+					yr1_accounts: S,
+					yr1_portfolio_omr_m: C,
+					conversion_pct: x,
+					base_rate: l,
+					rate_gold: parseFloat(D),
+					rate_silver: parseFloat(O),
+					nim_pct: parseFloat(w.toFixed(2)),
+					provision_saving_pct: T,
+					break_even_month: E,
+					setup_cost_omr_k: 85,
+					stress_test: "+200bps — 98% pass DBR ≤55%",
+					compliance: "Basel III 75% · IFRS9 1.5% ECL · CBO Green Finance",
+					generated_at: (/* @__PURE__ */ new Date()).toISOString()
+				},
+				compliance: {
+					tags: [
+						"CLIMATE-RISK",
+						"ESG-GREEN",
+						"OMAN-V2040",
+						"IFRS9-ECL",
+						"BASEL3-RW"
+					],
+					basel3_risk_weight: 75,
+					ifrs9_ecl_pct: 1.5,
+					aml_risk_tier: "LOW"
+				}
+			},
 			ui_events: [
 				{
 					type: "set_tab",
@@ -6589,7 +6876,7 @@ $.use("/api/*", Pe()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await R.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "a8a509e";
+var xt = "b821541";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

@@ -338,6 +338,232 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences:
   }
 })
 
+// ── Create draft product in DB at Stage 1 confirm ──────────────────────────
+// Called immediately when the user confirms Stage 1 (name / segment / clone source).
+// Creates a DB product with status='draft', returns product_id to the frontend.
+// The frontend stores this as aiDraftProductId and uses it for all subsequent
+// stage-update calls and the final Confirm & Publish (status-only PATCH).
+app.post('/products/create-draft', async (c) => {
+  try {
+  const body = await c.req.json() as any
+  const { thread_id, clone_from_id = 'p001', name, description = '', category = 'home_loan',
+          segment = 'retail', structure = 'conventional', user_id = 'u001', user_name = 'Fatima Al-Rashdi' } = body
+
+  const cloneSource = await c.env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(clone_from_id).first() as any
+
+  const id = generateId('p')
+  const code = `DRAFT-${Date.now().toString(36).toUpperCase()}`
+  const ts = now()
+
+  // Clone all numeric fields from source; name/description come from Stage 1 confirmation.
+  // status='draft', portal_visible=0, pge_stage=1.
+  await c.env.DB.prepare(`
+    INSERT INTO products (id, name, code, description, category, status,
+      base_rate, max_ltv, max_dbr, green_dbr, min_term, max_term, min_amount, max_amount,
+      gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,
+      ai_confidence_threshold, allow_byop, allow_partner_inventory,
+      required_docs, esg_required_docs, approved_materials, approved_vendors,
+      configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `).bind(
+    id, name, code, description, category, 'draft',
+    cloneSource?.base_rate  ?? 5.5,
+    cloneSource?.max_ltv    ?? 90,
+    cloneSource?.max_dbr    ?? 60,
+    cloneSource?.green_dbr  ?? 55,
+    cloneSource?.min_term   ?? 5,
+    cloneSource?.max_term   ?? 25,
+    cloneSource?.min_amount ?? 10000,
+    cloneSource?.max_amount ?? 500000,
+    cloneSource?.gsas_min_score     ?? 70,
+    cloneSource?.gsas_premium_score ?? 85,
+    cloneSource?.green_discount_premium  ?? 0.75,
+    cloneSource?.green_discount_standard ?? 0.5,
+    90, 1, 1,
+    cloneSource?.required_docs     ?? JSON.stringify(['salary_cert','civil_id','property_deed','valuation_report']),
+    cloneSource?.esg_required_docs ?? JSON.stringify([]),
+    cloneSource?.approved_materials ?? JSON.stringify([]),
+    cloneSource?.approved_vendors   ?? JSON.stringify([]),
+    JSON.stringify({ segment, structure, ai_draft: true }),
+    0, 0,
+    1,   // pge_stage=1
+    user_id, ts, ts
+  ).run()
+
+  // Link thread to draft product
+  if (thread_id) {
+    await c.env.DB.prepare(
+      "UPDATE ai_threads SET product_id=?, updated_at=? WHERE id=?"
+    ).bind(id, ts, thread_id).run()
+  }
+
+  await logAudit(c.env.DB, {
+    userId: user_id, userName: user_name, userRole: 'product_manager',
+    action: 'AI_DRAFT_CREATED', entityType: 'product', entityId: id,
+    details: { name, cloned_from: clone_from_id, thread_id },
+    source: 'ai_generated',
+  })
+
+  // Fetch the just-created product to return to frontend for draft card
+  const created = await c.env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(id).first() as any
+
+  return c.json({ success: true, product_id: id, product: created })
+  } catch (err: any) {
+    return c.json({ success: false, error: err?.message || 'Failed to create draft', _error: err?.message }, 200)
+  }
+})
+
+// ── Stage update — persist confirmed stage data to DB ──────────────────────
+// Called after each AI Studio stage is confirmed by the user.
+// stage 2 → updates product fields (rate, LTV, DBR, terms, amounts, green tiers)
+// stage 3 → bulk-upserts eligibility rules
+// stage 4 → saves workflow nodes/edges
+// stage 5 → saves compliance tags + config JSON
+// stage 6 → saves simulation results into product configuration
+app.post('/products/:id/stage-update', async (c) => {
+  try {
+  const productId = c.req.param('id')
+  const body = await c.req.json() as any
+  const { stage, fields = {}, rules = [], workflow_nodes = [], compliance = {}, simulation = {},
+          thread_id, user_id = 'u001', user_name = 'Fatima Al-Rashdi' } = body
+
+  const ts = now()
+
+  // Verify product exists and is in draft state
+  const existing = await c.env.DB.prepare('SELECT id, status, configuration FROM products WHERE id = ?').bind(productId).first() as any
+  if (!existing) return c.json({ success: false, error: 'Product not found' }, 404)
+
+  if (stage === 2) {
+    // ── Stage 2: Core configuration fields ─────────────────────────────────
+    const updates: string[] = []
+    const vals: any[] = []
+    const ALLOWED = ['base_rate','max_ltv','max_dbr','green_dbr','min_term','max_term',
+                     'min_amount','max_amount','gsas_min_score','gsas_premium_score',
+                     'green_discount_premium','green_discount_standard','description']
+    for (const f of ALLOWED) {
+      if (fields[f] != null) { updates.push(`${f}=?`); vals.push(fields[f]) }
+    }
+    if (updates.length > 0) {
+      // Simple, always-works update — add pge_stage and updated_at
+      await c.env.DB.prepare(
+        `UPDATE products SET ${updates.join(',')}, pge_stage=2, updated_at=? WHERE id=?`
+      ).bind(...vals, ts, productId).run()
+    }
+
+  } else if (stage === 3) {
+    // ── Stage 3: Eligibility rules — delete old AI rules then bulk-insert ──
+    if (rules.length > 0) {
+      // Remove previous AI-generated rules for this product (preserve manually added ones)
+      await c.env.DB.prepare(
+        "DELETE FROM rules WHERE product_id=? AND source='ai_generated'"
+      ).bind(productId).run()
+
+      for (const rule of rules) {
+        const ruleId = generateId('r')
+        await c.env.DB.prepare(`
+          INSERT INTO rules (id, product_id, name, category, metric, operator,
+            threshold_value, threshold_condition, action_on_breach, severity,
+            regulatory_reference, source, ai_confidence, description, is_active, created_by, created_at)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        `).bind(
+          ruleId, productId, rule.name, rule.category || 'eligibility', rule.metric, rule.operator,
+          rule.threshold_value ?? null, rule.threshold_condition ?? null,
+          rule.action_on_breach || 'reject', rule.severity || 'hard',
+          rule.regulatory_reference ?? null, 'ai_generated',
+          rule.ai_confidence ?? null, rule.description ?? null, 1, user_id, ts
+        ).run()
+      }
+      await c.env.DB.prepare(
+        'UPDATE products SET pge_stage=3, updated_at=? WHERE id=?'
+      ).bind(ts, productId).run()
+    }
+
+  } else if (stage === 4) {
+    // ── Stage 4: Workflow nodes/edges ───────────────────────────────────────
+    if (workflow_nodes.length > 0) {
+      const xStep = 220, baseY = 260
+      let xCur = 80
+      const canvasNodes: any[] = []
+      const canvasEdges: any[] = []
+      let prevId: string | null = null
+      for (let i = 0; i < workflow_nodes.length; i++) {
+        const fn = workflow_nodes[i]
+        const nodeType = fn.type === 'start' ? 'start' : fn.type === 'end' ? 'end' : 'task'
+        canvasNodes.push({
+          id: fn.id || `n${i+1}`, type: nodeType, label: fn.label,
+          x: xCur, y: baseY, role: fn.role || null,
+          sla_hours: fn.sla_hours || null, auto: fn.auto || false,
+          description: fn.description || '',
+          api_integration: fn.api_integration || null,
+        })
+        if (prevId) canvasEdges.push({ id: `e${i}`, source: prevId, target: fn.id || `n${i+1}`, label: '' })
+        prevId = fn.id || `n${i+1}`
+        xCur += xStep
+      }
+      await c.env.DB.prepare(
+        'UPDATE products SET workflow_nodes=?, workflow_edges=?, pge_stage=4, updated_at=? WHERE id=?'
+      ).bind(JSON.stringify(canvasNodes), JSON.stringify(canvasEdges), ts, productId).run()
+    }
+
+  } else if (stage === 5) {
+    // ── Stage 5: Compliance tags + config update ────────────────────────────
+    const config = (() => { try { return JSON.parse(existing.configuration || '{}') } catch { return {} } })()
+    config.compliance = compliance
+    await c.env.DB.prepare(
+      'UPDATE products SET configuration=?, pge_stage=5, updated_at=? WHERE id=?'
+    ).bind(JSON.stringify(config), ts, productId).run()
+
+    // Map compliance tags if any specified
+    if (compliance.tags && Array.isArray(compliance.tags)) {
+      for (const code of compliance.tags) {
+        const tag: any = await c.env.DB.prepare(
+          "SELECT id FROM compliance_tags WHERE code=? OR tag_code=? LIMIT 1"
+        ).bind(code, code).first().catch(() => null)
+        if (tag?.id) {
+          await c.env.DB.prepare(
+            "INSERT OR IGNORE INTO product_compliance_tags (product_id, tag_id, mapped_by, mapped_at) VALUES (?,?,?,?)"
+          ).bind(productId, tag.id, user_id, ts).run().catch(() => {})
+        }
+      }
+    }
+
+  } else if (stage === 6) {
+    // ── Stage 6: Simulation results — store in product configuration ────────
+    // These are what PGE Simulation tab will display — must match AI Studio output exactly.
+    const config = (() => { try { return JSON.parse(existing.configuration || '{}') } catch { return {} } })()
+    config.simulation = simulation
+    // Also update any product fields that were finalised during simulation summary
+    const simUpdates: any[] = []
+    const simVals: any[] = []
+    if (fields.name)        { simUpdates.push('name=?');        simVals.push(fields.name) }
+    if (fields.description) { simUpdates.push('description=?'); simVals.push(fields.description) }
+    if (fields.max_amount)  { simUpdates.push('max_amount=?');  simVals.push(fields.max_amount) }
+    if (fields.min_amount)  { simUpdates.push('min_amount=?');  simVals.push(fields.min_amount) }
+    const setClause = simUpdates.length > 0 ? simUpdates.join(',') + ',' : ''
+    await c.env.DB.prepare(
+      `UPDATE products SET ${setClause}configuration=?, pge_stage=6, updated_at=? WHERE id=?`
+    ).bind(...simVals, JSON.stringify(config), ts, productId).run()
+  }
+
+  // Update thread result with draft_product_id if provided
+  if (thread_id) {
+    const thr = await c.env.DB.prepare('SELECT result FROM ai_threads WHERE id=?').bind(thread_id).first() as any
+    const savedResult = (() => { try { return JSON.parse(thr?.result || '{}') } catch { return {} } })()
+    savedResult.draft_product_id = productId
+    savedResult[`stage_${stage}_completed`] = true
+    await c.env.DB.prepare('UPDATE ai_threads SET result=?, updated_at=? WHERE id=?')
+      .bind(JSON.stringify(savedResult), ts, thread_id).run()
+  }
+
+  // Fetch updated product for frontend draft card sync
+  const updated = await c.env.DB.prepare('SELECT * FROM products WHERE id=?').bind(productId).first() as any
+
+  return c.json({ success: true, product_id: productId, stage, product: updated })
+  } catch (err: any) {
+    return c.json({ success: false, error: err?.message || 'Stage update failed', _error: err?.message }, 200)
+  }
+})
+
   // ── Confirm product draft — saves to DB ──────────────────────────────────
 app.post('/products/confirm', async (c) => {
   try {
@@ -345,6 +571,80 @@ app.post('/products/confirm', async (c) => {
   let { thread_id, product_draft, rules_draft, schema_draft, user_id = 'u001', user_name = 'Fatima Al-Rashdi' } = body
   // workflow_nodes may be sent from the frontend (aiDraftWorkflow accumulated during Stage 4)
   let frontendWorkflowNodes: any[] = Array.isArray(body.workflow_nodes) ? body.workflow_nodes : []
+
+  // ── NEW PATTERN: If a draft product already exists in DB (created at Stage 1),
+  // we only need to PATCH status to 'active' + apply marketing content + mark published.
+  // All field/rules/workflow data was already persisted via stage-update calls.
+  // The frontend sends draft_product_id to use this path.
+  const draftProductId = body.draft_product_id
+  if (draftProductId) {
+    const draft = await c.env.DB.prepare('SELECT * FROM products WHERE id=?').bind(draftProductId).first() as any
+    if (!draft) return c.json({ success: false, error: 'Draft product not found' }, 404)
+
+    const ts = now()
+
+    // Generate portal marketing content
+    const isGreen = (draft.esg_required_docs || '') !== '[]' && (draft.esg_required_docs || '') !== ''
+    let portalHeroTitle = `${draft.name} — From ${draft.base_rate}% p.a.`
+    let portalHighlights: string[] = isGreen
+      ? [`Up to ${draft.green_discount_premium}% rate discount`, 'GSAS-certified properties only', 'Supports Oman Vision 2040']
+      : [`From ${draft.base_rate}% per annum`, `Terms up to ${draft.max_term} years`, `Up to OMR ${Math.round((draft.max_amount||500000)/1000)}K financing`]
+    const portalBadge = isGreen ? 'ESG Premium' : 'Home Finance'
+
+    // Try AI marketing content generation
+    const apiKey = c.env.OPENAI_API_KEY
+    if (apiKey) {
+      try {
+        const prompt = `Generate marketing content for a bank loan product. Return JSON only: {"hero_title":"short tagline max 6 words","hero_subtitle":"one sentence benefit","card_badge":"2-3 word badge","highlights":["benefit 1","benefit 2","benefit 3"]}
+Product: ${draft.name}. Base rate: ${draft.base_rate}%. ${isGreen ? `Green discount: up to ${draft.green_discount_premium}% for GSAS ≥${draft.gsas_premium_score}.` : ''}`
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: 0.6, max_tokens: 250 }),
+        })
+        const mktData = await resp.json() as any
+        if (resp.ok) {
+          const match = (mktData.choices[0].message.content || '').match(/\{[\s\S]*\}/)
+          if (match) {
+            const p = JSON.parse(match[0])
+            if (p.hero_title) portalHeroTitle = p.hero_title
+            if (p.highlights?.length) portalHighlights = p.highlights
+          }
+        }
+      } catch {}
+    }
+
+    // Determine final pge_stage: if rules exist, unlock all stages
+    const { results: ruleRows } = await c.env.DB.prepare(
+      'SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1'
+    ).bind(draftProductId).all() as any
+    const finalPgeStage = ruleRows?.length > 0 ? 6 : draft.pge_stage || 1
+
+    await c.env.DB.prepare(`
+      UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,
+        portal_hero_title=?, portal_highlights=?, portal_card_badge=?,
+        pge_stage=?, is_demo_product=1, published_at=?, updated_at=? WHERE id=?
+    `).bind(isGreen ? 1 : 0, portalHeroTitle, JSON.stringify(portalHighlights), portalBadge,
+        finalPgeStage, ts, ts, draftProductId).run()
+
+    // Mark thread as completed
+    if (thread_id) {
+      await c.env.DB.prepare(
+        "UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?"
+      ).bind(draftProductId, JSON.stringify({ product_id: draftProductId }), ts, thread_id).run()
+    }
+
+    await logAudit(c.env.DB, {
+      userId: user_id, userName: user_name, userRole: 'product_manager',
+      action: 'AI_DRAFT_PUBLISHED', entityType: 'product', entityId: draftProductId,
+      details: { name: draft.name, thread_id, pge_stage: finalPgeStage },
+      source: 'ai_generated',
+    })
+
+    return c.json({ success: true, product_id: draftProductId, product_name: draft.name,
+      portal_hero_title: portalHeroTitle, portal_visible: true, rule_ids: [] })
+  }
+  // ── END NEW PATTERN — legacy flow below for sessions without draft_product_id ──
 
   // Always load thread result to fill in any missing drafts.
   // product_draft may be passed in body (from aiProductDraft client state),
@@ -1378,7 +1678,19 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         `Base rate: <strong>5.25%</strong> per annum (10 bps below Standard Home Loan at 5.35%) — a modest incentive for green adoption without significant NIM compression.<br><br>` +
         `CBO Circular 2026-12 §3.1 permits preferential pricing for green-certified products. Our current cost of funds is ~3.8%, giving a spread of ~1.45% — acceptable for this asset class.<br><br>` +
         `<strong>Shall I set the base rate at 5.25%, or would you like to adjust it?</strong>`,
-      current_stage: 2, show_roadmap: false, action: 'none',
+      current_stage: 2, show_roadmap: false,
+      // 'create_draft' tells frontend to call POST /api/v1/ai/products/create-draft
+      // and store the returned product_id as aiDraftProductId.
+      action: 'create_draft',
+      // draft_hint carries Stage 1 metadata so frontend can pass it to create-draft
+      draft_hint: {
+        name: nameConfirmed,
+        clone_from_id: 'p001',
+        category: 'home_loan',
+        segment: ctxGreen ? 'hnw' : 'retail',
+        structure: 'conventional',
+        description: 'Preferential home financing for GSAS-certified green properties. Earn up to 0.75% rate discount based on sustainability score. Supports Oman Vision 2040 and CBO green finance objectives.',
+      },
       ui_events: [
         { type: 'set_tab', tab: 'general' },
         { type: 'set_field', field: 'name', value: nameConfirmed },
@@ -1503,7 +1815,20 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         `&bull; <strong>70 (Silver minimum)</strong> — broader market eligibility, higher volume, lower average green quality<br>` +
         `&bull; <strong>75 (stricter Silver)</strong> — better ESG positioning, may reduce addressable market by ~20%<br><br>` +
         `<strong>Which GSAS minimum should I use: 70 or 75?</strong>`,
-      current_stage: 3, show_roadmap: false, action: 'none', ui_events: [], product_draft: null, rules_draft: null, schema_draft: null,
+      current_stage: 3, show_roadmap: false,
+      // 'stage_update' tells frontend to call PATCH /api/v1/ai/products/:id/stage-update
+      // with stage=2 and all confirmed Stage 2 fields.
+      action: 'stage_update',
+      stage_update_hint: {
+        stage: 2,
+        fields: {
+          base_rate: 5.25, max_ltv: 90, max_dbr: 55, green_dbr: 55,
+          min_term: 5, max_term: 25, min_amount: 25000, max_amount: 500000,
+          gsas_min_score: 70, gsas_premium_score: 85,
+          green_discount_premium: 0.75, green_discount_standard: 0.5,
+        },
+      },
+      ui_events: [], product_draft: null, rules_draft: null, schema_draft: null,
     }
   }
 
@@ -1543,7 +1868,10 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         `I'll configure a <strong>10-step workflow</strong> with 4 external API integrations: eKYC/NCI, Oman Credit Bureau, GSAS registry (GORD), property valuation APIs, and Muscat Municipality title check.<br><br>` +
         `First 5 steps are fully automated (0 human time, ~15 hours total). Last 5 require human review (credit analyst, green finance officer, risk officer, PM).<br><br>` +
         `<strong>Should I configure automated processing for the first 5 steps, or do you want more human touchpoints in the automated phase?</strong>`,
-      current_stage: 4, show_roadmap: false, action: 'none',
+      current_stage: 4, show_roadmap: false,
+      // 'stage_update' with stage=3 → frontend saves rules to DB immediately
+      action: 'stage_update',
+      stage_update_hint: { stage: 3, rules },
       ui_events: [
         { type: 'set_tab', tab: 'eligibility' },
         ...rules.map(r => ({ type: 'add_rule', rule: r })),
@@ -1574,7 +1902,10 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         `⏱️ Total SLA: <strong>~5 working days</strong> (automated: <19h, human: ~4 days)<br>` +
         `🔗 External integrations: NCI eKYC · Oman Credit Bureau · GORD GSAS API · Al Mashora/JLL · Muscat Municipality<br><br>` +
         `<strong>Ready for Stage 5 — Compliance Classification?</strong> I'll apply Basel III capital rules, IFRS 9 provisioning, and CBO green finance tagging. Shall I proceed?`,
-      current_stage: 5, show_roadmap: false, action: 'none',
+      current_stage: 5, show_roadmap: false,
+      // stage_update with stage=4 saves workflow to DB immediately
+      action: 'stage_update',
+      stage_update_hint: { stage: 4, workflow_nodes: wfNodes },
       ui_events: [
         { type: 'set_tab', tab: 'workflow' },
         { type: 'set_workflow', nodes: wfNodes },
@@ -1916,12 +2247,47 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         `• Workflow: <strong>10-step</strong> (5 auto + 5 human) · SLA: 5 working days<br>` +
         `• Compliance: Basel III 75% · IFRS9 1.5% · CBO Green Finance · #CLIMATE_RISK · #ESG_ELIGIBILITY · #OMAN_VISION_2040<br><br>` +
         `🚀 Everything is configured. Click <strong>Confirm &amp; Publish</strong> to save the full product and make it live on the customer portal.`,
-      current_stage: 6, show_roadmap: false, action: 'ready_to_confirm',
+      current_stage: 6, show_roadmap: false,
+      // 'ready_to_confirm' + 'stage_update' signals: (1) save simulation to DB, and (2) show Confirm & Publish button.
+      // Frontend handles both: calls stage-update with stage=6 (simulation data), then shows publish bar.
+      action: 'ready_to_confirm',
+      // stage_update_hint carries simulation results so PGE Simulation tab matches AI Studio display.
+      stage_update_hint: {
+        stage: 6,
+        fields: {
+          name: derivedName,
+          max_amount: maxAmountFromCtx,
+          min_amount: minAmountFromCtx,
+        },
+        simulation: {
+          // Exactly what was printed in the message — PGE Simulation tab reads this object.
+          segment: segmentLabel,
+          avg_loan_amount: avgLoanAmt,
+          avg_property_value: avgPropVal,
+          pipeline_green_eligible: greenPipeline,
+          yr1_accounts: yr1Accounts,
+          yr1_portfolio_omr_m: yr1Portfolio,
+          conversion_pct: conversionPct,
+          base_rate: baseRateFromCtx,
+          rate_gold: parseFloat(rateGold),
+          rate_silver: parseFloat(rateSilver),
+          nim_pct: parseFloat(nim.toFixed(2)),
+          provision_saving_pct: provisionSaving,
+          break_even_month: breakEvenMonth,
+          setup_cost_omr_k: setupCost,
+          stress_test: '+200bps — 98% pass DBR ≤55%',
+          compliance: 'Basel III 75% · IFRS9 1.5% ECL · CBO Green Finance',
+          generated_at: new Date().toISOString(),
+        },
+        compliance: {
+          tags: ['CLIMATE-RISK', 'ESG-GREEN', 'OMAN-V2040', 'IFRS9-ECL', 'BASEL3-RW'],
+          basel3_risk_weight: 75,
+          ifrs9_ecl_pct: 1.5,
+          aml_risk_tier: 'LOW',
+        },
+      },
       ui_events: [
         { type: 'set_tab', tab: 'ai_config' },
-        // set_field events to seed draft card at Stage 6 — the frontend set_field handler
-        // guards protected fields (name/rate/etc.) that were already confirmed in Stages 1–5,
-        // so these only fill in any gaps that per-turn extraction missed.
         { type: 'set_field', field: 'name', value: derivedName },
         { type: 'set_field', field: 'base_rate', value: baseRateFromCtx },
         { type: 'set_field', field: 'max_ltv', value: 90 },
@@ -1934,9 +2300,6 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
         { type: 'set_field', field: 'green_discount_premium', value: discountPremiumFromCtx },
         { type: 'set_field', field: 'green_discount_standard', value: discountStandardFromCtx },
       ],
-      // rules_draft intentionally null here — Stage 3 already saved the full 17-rule set
-      // to the thread result. Returning rules_draft here would overwrite with this 12-rule
-      // subset. Confirm endpoint loads rules from thread result (Stage 3 saved version).
       product_draft: productDraft, rules_draft: null, schema_draft: schemaDraft,
     }
   }

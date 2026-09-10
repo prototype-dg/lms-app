@@ -578,7 +578,7 @@ function filterProducts(q) {
 /* ======================== AI PRODUCT STUDIO (standalone) ======================== */
 function openAiStudio() {
   // Reset state
-  aiThreadId = null; aiProductDraft = null;
+  aiThreadId = null; aiProductDraft = null; aiDraftProductId = null;
   aiCurrentStage = 0; aiProductIdContext = null;
   openPanel('AI Product Studio', { narrow: true });
   document.getElementById('panelBody').innerHTML = `
@@ -1321,6 +1321,9 @@ let aiThreadId = null;
 let aiProductDraft = null;
 let aiCurrentStage = 0;       // tracks which stage we're on (0 = not started)
 let aiProductIdContext = null; // productId this session is operating on
+// NEW: aiDraftProductId — DB product id created at Stage 1 confirm (create-draft).
+// Set once; all subsequent stage-update calls and the final Confirm & Publish use it.
+let aiDraftProductId = null;
 
 /* ── Stage names ─────────────────────────────────────────────────────────── */
 const AI_STAGE_LABELS = ['Product Model','Core Config','Rules','Workflow','Compliance','Simulation'];
@@ -1328,7 +1331,7 @@ const AI_STAGE_ICONS  = ['fa-layer-group','fa-sliders','fa-list-check','fa-sitem
 
 /* ── resetAiChat ─────────────────────────────────────────────────────────── */
 function resetAiChat(productId) {
-  aiThreadId = null; aiProductDraft = null;
+  aiThreadId = null; aiProductDraft = null; aiDraftProductId = null;
   aiCurrentStage = 0; aiProductIdContext = productId || null;
   resetDraftState(); // clears aiDraftConfig/Rules/Workflow + pending buffers + removes card
   const log = document.getElementById('ai-chat-log');
@@ -1705,6 +1708,86 @@ async function sendAiChat(productId) {
       setTimeout(() => dispatchUiEvents(eventsToDispatch, dispatchTarget || null), 350);
     }
 
+    // ── NEW PATTERN: create-draft (Stage 1 confirm) ──────────────────────
+    // When action='create_draft', call the create-draft API immediately.
+    // This creates the product in the DB at Stage 1 confirm (not at Confirm & Publish).
+    // The returned product_id is stored as aiDraftProductId and used for all
+    // subsequent stage-update calls.
+    if (d.action === 'create_draft' && d.draft_hint && !aiDraftProductId) {
+      try {
+        const u = currentUser();
+        const draftBody = {
+          thread_id: aiThreadId,
+          user_id: u.id,
+          user_name: u.name,
+          ...d.draft_hint,
+          // Also overlay any user-confirmed values from aiDraftConfig
+          name: aiDraftConfig.name || d.draft_hint.name,
+          description: aiDraftConfig.description || d.draft_hint.description,
+        };
+        const dr = await fetch('/api/v1/ai/products/create-draft', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(draftBody)
+        });
+        const dd = await dr.json();
+        if (dd.success && dd.product_id) {
+          aiDraftProductId = dd.product_id;
+          // Show a small confirmation in chat — product is now in DB
+          appendChatBubble('assistant',
+            '<div style="margin-top:6px;padding:7px 10px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:6px;font-size:.77rem">' +
+            '<i class="fas fa-database" style="color:#4ade80;margin-right:5px"></i>' +
+            '<strong style="color:#4ade80">Draft product created in database</strong> — ID: ' + aiDraftProductId +
+            '<br><span style="opacity:.55;font-size:.7rem">Each stage you confirm will update it immediately. Confirm &amp; Publish only changes status to Active.</span>' +
+            '</div>'
+          );
+          // Render draft card from the DB product data
+          if (dd.product) _renderDbDraftCard(dd.product);
+        }
+      } catch (e2) {
+        console.warn('create-draft API error:', e2);
+      }
+    }
+
+    // ── NEW PATTERN: stage-update (each stage confirm) ────────────────────
+    // When action='stage_update', call the stage-update API with stage data.
+    // Works for stages 2–6. The DB product is updated immediately on each confirm.
+    if ((d.action === 'stage_update' || d.action === 'ready_to_confirm') && d.stage_update_hint && aiDraftProductId) {
+      try {
+        const u = currentUser();
+        const hint = d.stage_update_hint;
+        const suBody = {
+          thread_id: aiThreadId,
+          user_id: u.id,
+          user_name: u.name,
+          stage: hint.stage,
+          // For Stage 2: overlay aiDraftConfig values (user may have changed them)
+          fields: hint.stage === 2 ? Object.assign({}, hint.fields, (() => {
+            const overrides = {};
+            const f2 = ['base_rate','max_ltv','max_dbr','green_dbr','min_term','max_term',
+                         'min_amount','max_amount','gsas_min_score','gsas_premium_score',
+                         'green_discount_premium','green_discount_standard'];
+            for (const f of f2) { if (aiDraftConfig[f] != null) overrides[f] = aiDraftConfig[f]; }
+            return overrides;
+          })()) : (hint.fields || {}),
+          rules: hint.rules || (hint.stage === 3 ? aiDraftRules : []),
+          workflow_nodes: hint.workflow_nodes || (hint.stage === 4 ? aiDraftWorkflow : []),
+          compliance: hint.compliance || {},
+          simulation: hint.simulation || {},
+        };
+        const sr = await fetch('/api/v1/ai/products/' + aiDraftProductId + '/stage-update', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(suBody)
+        });
+        const sd = await sr.json();
+        if (sd.success && sd.product) {
+          // Update draft card to reflect actual DB state
+          _renderDbDraftCard(sd.product);
+        }
+      } catch (e3) {
+        console.warn('stage-update API error:', e3);
+      }
+    }
+
     // ── Show confirm bar ──────────────────────────────────────────────────
     if (d.action === 'ready_to_confirm' || d.action === 'show_draft' ||
         (aiProductDraft && d.action !== 'none')) {
@@ -1719,18 +1802,104 @@ async function sendAiChat(productId) {
   if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>'; }
 }
 
+/* ── _renderDbDraftCard — render draft card from DB product object ──────────
+ * Called after create-draft (Stage 1) and after each stage-update (Stages 2–6).
+ * Shows real DB state, not just client-side pending buffer.
+ * Replaces or creates the draft card in the chat log.
+ * ─────────────────────────────────────────────────────────────────────────*/
+function _renderDbDraftCard(product) {
+  if (!product) return;
+  const log = document.getElementById('ai-chat-log');
+  if (!log) return;
+
+  // Remove existing DB draft card if present
+  const existing = document.getElementById('ai-db-draft-card');
+  if (existing) existing.remove();
+
+  const stage = product.pge_stage || 1;
+  const stageLabels = ['', 'Stage 1 — Model', 'Stage 2 — Pricing', 'Stage 3 — Rules', 'Stage 4 — Workflow', 'Stage 5 — Compliance', 'Stage 6 — Simulation'];
+  const stageColors = ['', '#6b7280', '#35C6C4', '#4ade80', '#f4b35b', '#a855f7', '#60a5fa'];
+
+  const card = document.createElement('div');
+  card.id = 'ai-db-draft-card';
+  card.style.cssText = 'margin:8px 0 4px 0;padding:10px 13px;background:rgba(0,59,92,.35);border:1px solid rgba(53,198,196,.35);border-radius:9px;font-size:.78rem;animation:fadeIn .4s ease';
+  card.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
+      '<span style="font-weight:700;color:var(--sea-glass);font-size:.82rem">' +
+        '<i class="fas fa-database" style="font-size:.72rem;margin-right:5px"></i>' +
+        (product.name || 'Draft Product') +
+      '</span>' +
+      '<span style="font-size:.67rem;background:' + (stageColors[stage]||'#6b7280') + '22;color:' + (stageColors[stage]||'#6b7280') + ';border:1px solid ' + (stageColors[stage]||'#6b7280') + '55;padding:.1rem .4rem;border-radius:10px;font-weight:600">' +
+        'DRAFT · ' + (stageLabels[stage] || 'Stage ' + stage) +
+      '</span>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px 8px;color:rgba(255,255,255,.7)">' +
+      '<div><span style="opacity:.45;font-size:.67rem">Rate</span><br><strong>' + (product.base_rate || '—') + '%</strong></div>' +
+      '<div><span style="opacity:.45;font-size:.67rem">Max LTV</span><br><strong>' + (product.max_ltv || '—') + '%</strong></div>' +
+      '<div><span style="opacity:.45;font-size:.67rem">Max DBR</span><br><strong>' + (product.max_dbr || '—') + '%</strong></div>' +
+      '<div><span style="opacity:.45;font-size:.67rem">Term</span><br><strong>' + (product.min_term || '—') + '–' + (product.max_term || '—') + ' yr</strong></div>' +
+      '<div><span style="opacity:.45;font-size:.67rem">Min Amount</span><br><strong>OMR ' + Number(product.min_amount || 0).toLocaleString() + '</strong></div>' +
+      '<div><span style="opacity:.45;font-size:.67rem">Max Amount</span><br><strong>OMR ' + Number(product.max_amount || 0).toLocaleString() + '</strong></div>' +
+    '</div>' +
+    '<div style="margin-top:6px;font-size:.67rem;color:rgba(255,255,255,.32)">' +
+      '<i class="fas fa-circle-dot" style="color:#4ade80;font-size:.55rem;margin-right:3px"></i>' +
+      'Live in DB · id: ' + product.id +
+      (stage >= 3 ? ' · Rules: ✓' : '') +
+      (stage >= 4 ? ' · Workflow: ✓' : '') +
+      (stage >= 5 ? ' · Compliance: ✓' : '') +
+      (stage >= 6 ? ' · Simulation: ✓' : '') +
+    '</div>';
+  log.appendChild(card);
+  log.scrollTop = log.scrollHeight;
+}
+
 async function confirmAiProduct(productId) {
-  if (!aiThreadId && !aiProductDraft && Object.keys(aiDraftConfig).length === 0) {
+  if (!aiThreadId && !aiProductDraft && !aiDraftProductId && Object.keys(aiDraftConfig).length === 0) {
     toast('No product draft to confirm','error'); return;
   }
   const btn = document.querySelector('#ai-confirm-bar .btn-success');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving…'; }
   try {
-    // Send both thread_id AND any locally-held draft as a safety fallback.
-    // The backend prefers the thread's saved result, but will use the body draft
-    // if the thread result is missing (e.g. if a prior turn wiped it).
     const body = { thread_id: aiThreadId, user_id: currentUserId() };
     if (productId) body.product_id = productId;
+
+    // ── NEW PATTERN: draft product already in DB → status-only PATCH ─────
+    // aiDraftProductId was set at Stage 1 confirm by create-draft API call.
+    // All fields/rules/workflow/compliance/simulation were persisted via stage-update.
+    // Confirm & Publish only changes status from 'draft' to 'active'.
+    if (aiDraftProductId) {
+      body.draft_product_id = aiDraftProductId;
+      // Also send aiDraftConfig as a last-chance field overlay in case any
+      // stage-update was missed (network error, etc.)
+      if (Object.keys(aiDraftConfig).length > 0) body.final_config = aiDraftConfig;
+      const r = await fetch('/api/v1/ai/products/confirm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const d = await r.json();
+      if (d.success || d.product_id) {
+        const newId = d.product_id || aiDraftProductId;
+        toast('✅ Product published! Now live.', 'success');
+        appendChatBubble('assistant',
+          '<strong style="color:#4ade80">✅ Product published!</strong><br><br>' +
+          '<strong>' + (d.product_name || 'Green Home Loan') + '</strong> is now live.<br>' +
+          '<div style="display:flex;gap:.5rem;margin-top:.65rem;flex-wrap:wrap">' +
+          (newId ? '<a href="/portals/product-config.html?id=' + newId + '" style="display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .85rem;background:rgba(53,198,196,.18);color:var(--sea-glass);border:1px solid rgba(53,198,196,.4);border-radius:6px;font-size:.78rem;font-weight:600;text-decoration:none" target="_blank"><i class="fas fa-wand-magic-sparkles"></i> Open in PGE</a>' : '') +
+          '</div>' +
+          '<br><small style="opacity:.4">Customer portal updated. Go to Products tab to see the new card.</small>'
+        );
+        const bar = document.getElementById('ai-confirm-bar');
+        if (bar) bar.style.display = 'none';
+        aiThreadId = null; aiProductDraft = null; aiDraftProductId = null;
+        await loadProducts();
+        await renderProducts();
+      } else { toast(d.error || 'Confirm failed', 'error'); }
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-rocket"></i> Confirm &amp; Publish'; }
+      return;
+    }
+
+    // ── LEGACY PATTERN: no draft in DB → full create at confirm time ──────
+    // (Fallback for sessions where create-draft was not called, e.g. old sessions)
     // Priority 1: aiProductDraft — set from d.product_draft in the Stage 6 response
     if (aiProductDraft) body.product_draft = aiProductDraft;
     // Priority 2: synthesize from aiDraftConfig if aiProductDraft is null.
@@ -1790,7 +1959,7 @@ async function confirmAiProduct(productId) {
       );
       const bar = document.getElementById('ai-confirm-bar');
       if (bar) bar.style.display = 'none';
-      aiThreadId = null; aiProductDraft = null;
+      aiThreadId = null; aiProductDraft = null; aiDraftProductId = null;
       // Refresh product list in background; don't close panel — user sees the PGE link
       await loadProducts();
       await renderProducts();
