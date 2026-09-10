@@ -2513,7 +2513,7 @@ function Ge(e, t, n) {
 		schema_draft: null
 	};
 	if (m && !h) return {
-		message: "DBR at 55% confirmed — using CBO green finance allowance (Circular 2026-12 §3.2).<br><br><strong>Term and amount ranges:</strong><br><br>&bull; <strong>Term</strong>: min 3 years, max <strong>25 years</strong> (CBO ceiling for residential mortgages). For green, no reason to shorten — longer terms support larger green property purchases.<br>&bull; <strong>Minimum loan</strong>: <strong>OMR 25,000</strong> — below this, the GSAS certification cost (~OMR 3,000–8,000) makes the product uneconomical for the customer<br>&bull; <strong>Maximum loan</strong>: <strong>OMR 500,000</strong> — our standard residential cap; above this goes to Commercial Real Estate<br><br><strong>Are these ranges acceptable — 3–25 years, OMR 25K–500K — or do you want to adjust?</strong>",
+		message: "DBR at 55% confirmed — using CBO green finance allowance (Circular 2026-12 §3.2).<br><br><strong>Term and amount ranges:</strong><br><br>&bull; <strong>Term</strong>: min <strong>5 years</strong>, max <strong>25 years</strong> (CBO ceiling for residential mortgages; CBO minimum for mortgages is 5 years). For green, no reason to shorten — longer terms support larger green property purchases.<br>&bull; <strong>Minimum loan</strong>: <strong>OMR 25,000</strong> — below this, the GSAS certification cost (~OMR 3,000–8,000) makes the product uneconomical for the customer<br>&bull; <strong>Maximum loan</strong>: <strong>OMR 500,000</strong> — our standard residential cap; above this goes to Commercial Real Estate<br><br><strong>Are these ranges acceptable — 5–25 years, OMR 25K–500K — or do you want to adjust?</strong>",
 		current_stage: 2,
 		show_roadmap: !1,
 		action: "none",
@@ -2530,7 +2530,7 @@ function Ge(e, t, n) {
 		schema_draft: null
 	};
 	if (h && !g) return {
-		message: "Term and amounts set: 3–25 years, OMR 25,000–500,000. Confirmed.<br><br><strong>Fee structure:</strong><br><br>Under CBO Consumer Protection Circular 2018/2, all fees must be disclosed upfront. Recommended:<br><br>&bull; <strong>Arrangement fee</strong>: 1% of loan amount, capped at OMR 500 — standard market rate, waived for GSAS Platinum (≥90 score) as an additional green incentive<br>&bull; <strong>Early settlement penalty</strong>: 1% of outstanding balance (CBO maximum allowed) — or waived after year 5 to encourage refinancing into newer green products<br>&bull; <strong>Valuation fee</strong>: actual cost (OMR 200–800 depending on property) — pass-through to customer<br>&bull; <strong>GSAS re-validation fee</strong>: OMR 150 (charged at certificate renewal, every 3 years) — new ESG-specific fee<br><br><strong>Should I apply this fee structure, or modify any of these?</strong>",
+		message: "Term and amounts set: 5–25 years, OMR 25,000–500,000. Confirmed.<br><br><strong>Fee structure:</strong><br><br>Under CBO Consumer Protection Circular 2018/2, all fees must be disclosed upfront. Recommended:<br><br>&bull; <strong>Arrangement fee</strong>: 1% of loan amount, capped at OMR 500 — standard market rate, waived for GSAS Platinum (≥90 score) as an additional green incentive<br>&bull; <strong>Early settlement penalty</strong>: 1% of outstanding balance (CBO maximum allowed) — or waived after year 5 to encourage refinancing into newer green products<br>&bull; <strong>Valuation fee</strong>: actual cost (OMR 200–800 depending on property) — pass-through to customer<br>&bull; <strong>GSAS re-validation fee</strong>: OMR 150 (charged at certificate renewal, every 3 years) — new ESG-specific fee<br><br><strong>Should I apply this fee structure, or modify any of these?</strong>",
 		current_stage: 2,
 		show_roadmap: !1,
 		action: "none",
@@ -2560,7 +2560,7 @@ function Ge(e, t, n) {
 		schema_draft: null
 	};
 	if (g && !_) return {
-		message: "✅ <strong>Stage 2 complete.</strong> Full pricing and configuration set:<br>Rate 5.25% · Green discount 0.75%/0.5% · LTV 90/80% · DBR 55% · OMR 25K–500K · Term 25yr max<br><br><strong>Stage 3 — Eligibility Rules</strong><br><br>I'll now generate <strong>17 eligibility rules</strong> covering 5 categories: credit risk, collateral, ESG/green, income & employment, and documentation. All rules are cited against specific CBO circulars and OS GSO standards.<br><br>One key decision before I generate: <strong>GSAS minimum score</strong>:<br>&bull; <strong>70 (Silver minimum)</strong> — broader market eligibility, higher volume, lower average green quality<br>&bull; <strong>75 (stricter Silver)</strong> — better ESG positioning, may reduce addressable market by ~20%<br><br><strong>Which GSAS minimum should I use: 70 or 75?</strong>",
+		message: "✅ <strong>Stage 2 complete.</strong> Full pricing and configuration set:<br>Rate 5.25% · Green discount 0.75%/0.5% · LTV 90/80% · DBR 55% · OMR 25K–500K · Term 5–25yr<br><br><strong>Stage 3 — Eligibility Rules</strong><br><br>I'll now generate <strong>17 eligibility rules</strong> covering 5 categories: credit risk, collateral, ESG/green, income & employment, and documentation. All rules are cited against specific CBO circulars and OS GSO standards.<br><br>One key decision before I generate: <strong>GSAS minimum score</strong>:<br>&bull; <strong>70 (Silver minimum)</strong> — broader market eligibility, higher volume, lower average green quality<br>&bull; <strong>75 (stricter Silver)</strong> — better ESG positioning, may reduce addressable market by ~20%<br><br><strong>Which GSAS minimum should I use: 70 or 75?</strong>",
 		current_stage: 3,
 		show_roadmap: !1,
 		action: "none",
@@ -2988,20 +2988,20 @@ function Ge(e, t, n) {
 		let i = (() => {
 			let e = a.filter((e) => e.role === "user").map((e) => (e.content || "").toLowerCase());
 			for (let t = e.length - 1; t >= 0; t--) {
-				let n = e[t], r = n.match(/(?:lower|change|set|reduce|make).*?(\d[\d,]+)\s*omr/) || n.match(/omr\s*(\d[\d,]+)\s*(?:max|maximum|limit)/) || n.match(/(?:maximum|max)\s*(?:loan|amount)?\s*(?:to|is|of)?\s*(?:omr)?\s*(\d[\d,]+)/i);
+				let n = e[t], r = n.match(/(?:lower|change|set|reduce|make|cap|limit)\b.*?(\d[\d,]+)\s*omr/) || n.match(/omr\s*(\d[\d,]+)\s*(?:max|maximum|limit|cap)/) || n.match(/(?:maximum|max)\s*(?:loan|amount)?\s*(?:to|is|of)?\s*(?:omr)?\s*([\d,]{5,})/i) || n.match(/(?:lower|change|set|reduce|make|cap|to|max)\s+(\d+(?:\.\d+)?)\s*k\b/) || n.match(/(?:no more than|not more than|at most|up to)\s+(?:omr\s*)?([\d,]{5,})/i) || (n.includes("amount") || n.includes("omr") || n.includes("max") || n.includes("limit") ? n.match(/\b([\d,]{6,})\b/) : null);
 				if (r) {
-					let e = parseInt(r[1].replace(/,/g, ""));
-					if (e >= 5e4 && e <= 5e6) return e;
+					let e = r[1].replace(/,/g, ""), t = e.includes(".") ? Math.round(parseFloat(e) * 1e3) : parseInt(e);
+					if (t >= 5e4 && t <= 5e6) return t;
 				}
 			}
 			for (let e = o.length - 1; e >= 0; e--) {
-				let t = o[e], n = t.match(/(?:omr\s*[\d,]+\s*[\u2013\u2014\-]{1,2}\s*omr\s*)([\d,]+)/i) || t.match(/(?:amount(?:\s+range)?[:\s]+omr\s*[\d,]+\s*[\u2013\-]\s*)([\d,]+)/i) || t.match(/(?:up to|maximum|max)\s*omr\s*([\d,]+)/i);
+				let t = o[e], n = t.match(/(?:updated?\s+to|changed?\s+to|set\s+(?:at|to)|confirmed[:\s]+).*?omr\s*([\d,]+)/i) || t.match(/(?:new\s+max(?:imum)?|revised\s+max(?:imum)?)\s*(?:is|:)?\s*omr\s*([\d,]+)/i);
 				if (n) {
 					let e = parseInt(n[1].replace(/,/g, ""));
 					if (e >= 5e4 && e <= 5e6) return e;
 				}
 			}
-			return t.includes("500,000") || t.match(/\b500k\b/) ? 5e5 : t.includes("1,000,000") || t.match(/\b1m\b/) ? 1e6 : 5e5;
+			return 5e5;
 		})(), s = (() => {
 			for (let e = o.length - 1; e >= 0; e--) {
 				let t = o[e], n = t.match(/omr\s*([\d,]+)\s*(?:to|-)\s*omr\s*[\d,]+/i) || t.match(/(?:minimum|min)\s+(?:loan\s+)?(?:amount\s+)?(?:of\s+)?omr\s*([\d,]+)/i);
@@ -3043,14 +3043,21 @@ function Ge(e, t, n) {
 			}
 			return .5;
 		})(), f = (() => {
+			for (let t = e.length - 1; t >= 0; t--) {
+				let n = e[t].toLowerCase(), r = n.match(/(?:min(?:imum)?\s+(?:term|of)?|from)\s*(\d{1,2})\s*(?:years?|yr)/i) || n.match(/(\d{1,2})\s*(?:years?|yr)\s*(?:min(?:imum)?|minimum)/i) || n.match(/(?:term\s+(?:from|range)\s*(?:of)?\s*)(\d{1,2})\s*(?:to|–|-)/i);
+				if (r) {
+					let e = parseInt(r[1]);
+					if (e >= 1 && e <= 15) return e;
+				}
+			}
 			for (let e = o.length - 1; e >= 0; e--) {
-				let t = o[e], n = t.match(/(?:term\s+range[^0-9]*|from\s+)(\d{1,2})\s*(?:to|–|-)\s*\d{1,2}\s*years?/i) || t.match(/(?:minimum\s+(?:term|of)\s*)(\d{1,2})\s*years?/i);
+				let t = o[e], n = t.match(/(?:term\s+(?:range|set)[^0-9]*|from\s+)(\d{1,2})\s*(?:to|–|-)\s*\d{1,2}\s*years?/i) || t.match(/(?:minimum\s+(?:term|of)\s*)(\d{1,2})\s*years?/i) || t.match(/\bmin\s+(\d{1,2})\s*years?/i);
 				if (n) {
 					let e = parseInt(n[1]);
 					if (e >= 1 && e <= 15) return e;
 				}
 			}
-			return 3;
+			return 5;
 		})(), p = t.includes("hnw") || t.includes("high net worth") || t.match(/omr\s*5[k,\s]|5,000\+|income.*5000/i) != null, m = !p && (t.includes("affluent") || t.match(/omr\s*2[k,\s]|2,000/i) != null), h = e.join(" "), g = h.includes("islamic") || h.includes("murabaha") || h.includes("musharaka") ? "Islamic (Diminishing Musharaka)" : "Conventional", _ = {
 			name: n,
 			description: `${g} home financing for GSAS-certified green properties in Oman. Earn up to ${u}% rate discount based on sustainability score (GSAS ≥85: Gold tier, ${d}% for GSAS 70–84: Silver). Targets ${p ? "HNW" : m ? "affluent" : "retail"} customers. Supports Oman Vision 2040, CBO green finance objectives, and OS GSO 3000:2025.`,
@@ -6582,7 +6589,7 @@ $.use("/api/*", Pe()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await R.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "9817fa2";
+var xt = "1311198";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

@@ -1457,10 +1457,10 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
     return {
       message: `DBR at 55% confirmed — using CBO green finance allowance (Circular 2026-12 §3.2).<br><br>` +
         `<strong>Term and amount ranges:</strong><br><br>` +
-        `&bull; <strong>Term</strong>: min 3 years, max <strong>25 years</strong> (CBO ceiling for residential mortgages). For green, no reason to shorten — longer terms support larger green property purchases.<br>` +
+        `&bull; <strong>Term</strong>: min <strong>5 years</strong>, max <strong>25 years</strong> (CBO ceiling for residential mortgages; CBO minimum for mortgages is 5 years). For green, no reason to shorten — longer terms support larger green property purchases.<br>` +
         `&bull; <strong>Minimum loan</strong>: <strong>OMR 25,000</strong> — below this, the GSAS certification cost (~OMR 3,000–8,000) makes the product uneconomical for the customer<br>` +
         `&bull; <strong>Maximum loan</strong>: <strong>OMR 500,000</strong> — our standard residential cap; above this goes to Commercial Real Estate<br><br>` +
-        `<strong>Are these ranges acceptable — 3–25 years, OMR 25K–500K — or do you want to adjust?</strong>`,
+        `<strong>Are these ranges acceptable — 5–25 years, OMR 25K–500K — or do you want to adjust?</strong>`,
       current_stage: 2, show_roadmap: false, action: 'none',
       ui_events: [
         { type: 'set_field', field: 'max_dbr', value: 55 },
@@ -1473,7 +1473,7 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
   // ── STAGE 2f: Fees ────────────────────────────────────────────────────────
   if (hasAskedStage2e && !hasAskedStage2f) {
     return {
-      message: `Term and amounts set: 3–25 years, OMR 25,000–500,000. Confirmed.<br><br>` +
+      message: `Term and amounts set: 5–25 years, OMR 25,000–500,000. Confirmed.<br><br>` +
         `<strong>Fee structure:</strong><br><br>` +
         `Under CBO Consumer Protection Circular 2018/2, all fees must be disclosed upfront. Recommended:<br><br>` +
         `&bull; <strong>Arrangement fee</strong>: 1% of loan amount, capped at OMR 500 — standard market rate, waived for GSAS Platinum (≥90 score) as an additional green incentive<br>` +
@@ -1496,7 +1496,7 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
   if (hasAskedStage2f && !hasAskedStage3) {
     return {
       message: `✅ <strong>Stage 2 complete.</strong> Full pricing and configuration set:<br>` +
-        `Rate 5.25% · Green discount 0.75%/0.5% · LTV 90/80% · DBR 55% · OMR 25K–500K · Term 25yr max<br><br>` +
+        `Rate 5.25% · Green discount 0.75%/0.5% · LTV 90/80% · DBR 55% · OMR 25K–500K · Term 5–25yr<br><br>` +
         `<strong>Stage 3 — Eligibility Rules</strong><br><br>` +
         `I'll now generate <strong>17 eligibility rules</strong> covering 5 categories: credit risk, collateral, ESG/green, income & employment, and documentation. All rules are cited against specific CBO circulars and OS GSO standards.<br><br>` +
         `One key decision before I generate: <strong>GSAS minimum score</strong>:<br>` +
@@ -1696,27 +1696,49 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
     // then fall back to the last confirmed value in assistant messages.
     // Priority: user override (e.g. "lower to 500,000") > assistant confirmed value > default.
     const maxAmountFromCtx = (() => {
-      // Check user messages for explicit amount adjustments (latest wins)
+      // Check user messages for explicit amount adjustments — LATEST wins.
+      // Broad patterns to catch natural language requests like:
+      //   "reduce max to 300,000" / "make it 300k" / "set maximum 300K OMR" /
+      //   "cap at 250,000" / "no more than 400k" / "change to 300000"
       const userAmountMsgs = history.filter((m: any) => m.role === 'user')
         .map((m: any) => (m.content || '').toLowerCase())
       for (let i = userAmountMsgs.length - 1; i >= 0; i--) {
         const um = userAmountMsgs[i]
-        const m = um.match(/(?:lower|change|set|reduce|make).*?(\d[\d,]+)\s*omr/)
-          || um.match(/omr\s*(\d[\d,]+)\s*(?:max|maximum|limit)/)
-          || um.match(/(?:maximum|max)\s*(?:loan|amount)?\s*(?:to|is|of)?\s*(?:omr)?\s*(\d[\d,]+)/i)
-        if (m) { const v = parseInt(m[1].replace(/,/g,'')); if (v >= 50000 && v <= 5000000) return v }
+        const m =
+          // "reduce/lower/change/set/make ... 300,000 omr" (number before omr)
+          um.match(/(?:lower|change|set|reduce|make|cap|limit)\b.*?(\d[\d,]+)\s*omr/)
+          // "omr 300,000 max/maximum/limit"
+          || um.match(/omr\s*(\d[\d,]+)\s*(?:max|maximum|limit|cap)/)
+          // "maximum/max [loan/amount] [to/is/of] [omr] 300,000"
+          || um.match(/(?:maximum|max)\s*(?:loan|amount)?\s*(?:to|is|of)?\s*(?:omr)?\s*([\d,]{5,})/i)
+          // "300k / 300K" standalone — k-suffix amounts in user messages
+          || um.match(/(?:lower|change|set|reduce|make|cap|to|max)\s+(\d+(?:\.\d+)?)\s*k\b/)
+          // "no more than 300,000" / "not more than 300000"
+          || um.match(/(?:no more than|not more than|at most|up to)\s+(?:omr\s*)?([\d,]{5,})/i)
+          // plain "300,000" or "300000" in a message that is clearly about amounts
+          || (um.includes('amount') || um.includes('omr') || um.includes('max') || um.includes('limit')
+              ? um.match(/\b([\d,]{6,})\b/) : null)
+        if (m) {
+          const raw = m[1].replace(/,/g,'')
+          // Handle k-suffix: "300k" → 300000
+          const v = raw.includes('.') ? Math.round(parseFloat(raw) * 1000) : parseInt(raw)
+          if (v >= 50000 && v <= 5000000) return v
+        }
       }
-      // Check assistant confirmation messages for the last confirmed amount
+      // Check assistant confirmation messages for the last EXPLICITLY CONFIRMED amount.
+      // Scan newest-first so the most recent assistant confirmation wins.
+      // Deliberately skip the scripted Stage 2e "OMR 25,000–500,000" fallback line
+      // by only matching confirmation-style phrases, not recommendation phrases.
       for (let i = assistantMsgs.length - 1; i >= 0; i--) {
         const am = assistantMsgs[i]
-        const m = am.match(/(?:omr\s*[\d,]+\s*[\u2013\u2014\-]{1,2}\s*omr\s*)([\d,]+)/i)
-          || am.match(/(?:amount(?:\s+range)?[:\s]+omr\s*[\d,]+\s*[\u2013\-]\s*)([\d,]+)/i)
-          || am.match(/(?:up to|maximum|max)\s*omr\s*([\d,]+)/i)
+        // Only match messages that look like a user-confirmed value being echoed back:
+        // "amount updated to OMR 300,000" / "set at OMR 300,000" / "confirmed: OMR 300,000"
+        const m = am.match(/(?:updated?\s+to|changed?\s+to|set\s+(?:at|to)|confirmed[:\s]+).*?omr\s*([\d,]+)/i)
+          || am.match(/(?:new\s+max(?:imum)?|revised\s+max(?:imum)?)\s*(?:is|:)?\s*omr\s*([\d,]+)/i)
         if (m) { const v = parseInt(m[1].replace(/,/g,'')); if (v >= 50000 && v <= 5000000) return v }
       }
-      // Final fallback: scan full context for any 500k or 1M mention
-      if (fullConvText.includes('500,000') || fullConvText.match(/\b500k\b/)) return 500000
-      if (fullConvText.includes('1,000,000') || fullConvText.match(/\b1m\b/)) return 1000000
+      // Final fallback: only use 500,000 — do NOT scan full context since the scripted
+      // Stage 2e message always mentions "500,000" which would hide any user correction.
       return 500000
     })()
 
@@ -1773,15 +1795,25 @@ function getFallbackChatResponse(message: string, msgCount: number, allMessages?
       return 0.5
     })()
 
-    // Extract min_term from conversation (user may have set 5yr minimum, not 3)
+    // Extract min_term from conversation (user may have adjusted from the 5yr default)
     const minTermFromCtx = (() => {
-      for (let i = assistantMsgs.length - 1; i >= 0; i--) {
-        const am = assistantMsgs[i]
-        const m = am.match(/(?:term\s+range[^0-9]*|from\s+)(\d{1,2})\s*(?:to|–|-)\s*\d{1,2}\s*years?/i)
-          || am.match(/(?:minimum\s+(?:term|of)\s*)(\d{1,2})\s*years?/i)
+      // Check user messages first — explicit user request always wins
+      for (let i = userMsgs.length - 1; i >= 0; i--) {
+        const um = userMsgs[i].toLowerCase()
+        const m = um.match(/(?:min(?:imum)?\s+(?:term|of)?|from)\s*(\d{1,2})\s*(?:years?|yr)/i)
+          || um.match(/(\d{1,2})\s*(?:years?|yr)\s*(?:min(?:imum)?|minimum)/i)
+          || um.match(/(?:term\s+(?:from|range)\s*(?:of)?\s*)(\d{1,2})\s*(?:to|–|-)/i)
         if (m) { const v = parseInt(m[1]); if (v >= 1 && v <= 15) return v }
       }
-      return 3
+      // Then check assistant confirmations
+      for (let i = assistantMsgs.length - 1; i >= 0; i--) {
+        const am = assistantMsgs[i]
+        const m = am.match(/(?:term\s+(?:range|set)[^0-9]*|from\s+)(\d{1,2})\s*(?:to|–|-)\s*\d{1,2}\s*years?/i)
+          || am.match(/(?:minimum\s+(?:term|of)\s*)(\d{1,2})\s*years?/i)
+          || am.match(/\bmin\s+(\d{1,2})\s*years?/i)
+        if (m) { const v = parseInt(m[1]); if (v >= 1 && v <= 15) return v }
+      }
+      return 5  // CBO minimum for residential mortgages
     })()
 
     // Customer segment detection — drives simulation math

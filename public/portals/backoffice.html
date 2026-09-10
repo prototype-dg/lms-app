@@ -1458,12 +1458,13 @@ async function dispatchUiEvents(events, productId) {
       if (targetId) { switchProductTab(ev.tab, targetId); await new Promise(r => setTimeout(r, 220)); }
       continue;
     }
-    /* set_field — buffer into _pendingConfig; committed on user confirmation */
+    /* set_field — buffer into _pendingConfig; committed on user confirmation.
+     * Always write — this allows the AI to override a previously confirmed value
+     * when the user explicitly requests a change (e.g. "reduce max to 300K").
+     * The old guard `if (aiDraftConfig[ev.field] == null)` was a one-way lock that
+     * silently dropped every correction attempt after Stage 2 confirmed. */
     if (ev.type === 'set_field' && ev.field != null && ev.value != null) {
-      // Only store in pending if not already confirmed in draft
-      if (aiDraftConfig[ev.field] == null) {
-        _pendingConfig[ev.field] = ev.value;
-      }
+      _pendingConfig[ev.field] = ev.value;
       // Flash the DOM field if product panel is open (visual feedback only, no commit)
       const domId = FIELD_MAP[ev.field];
       if (domId && targetId) { const el = document.getElementById(domId); if (el) flashField(el); }
@@ -1739,19 +1740,28 @@ async function confirmAiProduct(productId) {
       body.product_draft = Object.assign({
         category: 'home_loan',
         clone_from_id: 'p001',
-        max_ltv: 90, max_dbr: 55, min_term: 3, max_term: 25,
+        max_ltv: 90, max_dbr: 55, min_term: 5, max_term: 25,
         min_amount: 25000, max_amount: 500000,
         green_discount_premium: 0.75, green_discount_standard: 0.5,
         gsas_min_score: 70, gsas_premium_score: 85,
         esg_required_docs: ['gsas_cert','epc_report','eia_approval'],
       }, aiDraftConfig);
     }
-    // ALWAYS overlay aiDraftConfig.name — it's the user-confirmed name extracted from
-    // the Stage 1 completion message (e.g. "Stage 1 complete — EcoElite Home Finance").
-    // aiProductDraft.name may be the GPT-generated default; aiDraftConfig.name is always
-    // the exact name the user approved during the conversation.
-    if (body.product_draft && aiDraftConfig.name) {
-      body.product_draft.name = aiDraftConfig.name;
+    // ALWAYS overlay aiDraftConfig onto product_draft for user-correctable fields.
+    // aiDraftConfig is the live confirmed state on the client — it reflects any
+    // corrections the user requested after Stage 6 (e.g. "reduce max to 300K").
+    // aiProductDraft was frozen at the moment Stage 6 fired and never updated.
+    // We overlay all numeric/string fields that can be corrected mid-session.
+    if (body.product_draft && Object.keys(aiDraftConfig).length > 0) {
+      const overridableFields = [
+        'name', 'description', 'base_rate', 'max_ltv', 'max_dbr', 'green_dbr',
+        'min_term', 'max_term', 'min_amount', 'max_amount',
+        'gsas_min_score', 'gsas_premium_score',
+        'green_discount_premium', 'green_discount_standard',
+      ];
+      for (const f of overridableFields) {
+        if (aiDraftConfig[f] != null) body.product_draft[f] = aiDraftConfig[f];
+      }
     }
     // Also send the workflow nodes accumulated during Stage 4 so the backend can persist them.
     if (aiDraftWorkflow && aiDraftWorkflow.length > 2) {

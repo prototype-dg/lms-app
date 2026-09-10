@@ -49,7 +49,10 @@ function _isUserConfirm(msg) {
 function _flushPending() {
   let changed = false;
   for (const [k, v] of Object.entries(_pendingConfig)) {
-    if (aiDraftConfig[k] == null) { aiDraftConfig[k] = v; changed = true; }
+    // Always overwrite — allows user-requested corrections to previously confirmed fields.
+    // The old `if (aiDraftConfig[k] == null)` guard silently discarded every correction.
+    if (aiDraftConfig[k] !== v) changed = true;
+    aiDraftConfig[k] = v;
     delete _pendingConfig[k];
   }
   if (_pendingRules.length) {
