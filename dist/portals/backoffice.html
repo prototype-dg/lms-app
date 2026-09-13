@@ -1546,6 +1546,10 @@ async function sendAiChat(productId) {
   const msg = input ? input.value.trim() : '';
   if (!msg) return;
 
+  // Per-call flag: tracks whether a simulation card was already rendered in
+  // this turn (so the outer fallback block doesn't double-render it).
+  let _simCardRendered = false;
+
   // If user is confirming AI proposals, commit pending → draft before sending
   if (_isUserConfirm(msg)) _flushPending();
 
@@ -1827,35 +1831,105 @@ async function sendAiChat(productId) {
           // Update draft card to reflect actual DB state
           _renderDbDraftCard(sd.product);
 
-          // ── FIX: Populate client-side arrays from confirmed hint data ──────
+          // ── Populate client-side arrays from confirmed hint data ───────────
           // aiDraftRules / aiDraftWorkflow drive updateAiDraftCard() (the
           // expanded floating card above the input).  They are normally filled
           // by add_rule / set_workflow ui_events, but GPT may skip those when
           // it goes directly to stage_update_hint.  Sync them here so the card
           // always shows the real confirmed data after each stage completion.
-          if (hint.stage === 3 && hint.rules && hint.rules.length) {
-            // Merge-in: keep any client rules GPT didn't include (shouldn't
-            // happen, but defensive) and replace any with the same name.
-            const ruleMap = new Map(aiDraftRules.map(r => [r.name, r]));
-            hint.rules.forEach(r => ruleMap.set(r.name, r));
-            aiDraftRules = [...ruleMap.values()];
-            setTimeout(() => updateAiDraftCard(), 200);
-          }
-          if (hint.stage === 4 && hint.workflow_nodes && hint.workflow_nodes.length) {
-            // Full replace — workflow_nodes from the DB is authoritative at Stage 4.
-            aiDraftWorkflow = hint.workflow_nodes.slice();
-            setTimeout(() => updateAiDraftCard(), 200);
-          }
-          // Stage 5: mark compliance flag so the Basel III badge appears.
-          if (hint.stage === 5 && hint.compliance) {
-            aiDraftConfig._compliance = true;
-            setTimeout(() => updateAiDraftCard(), 200);
-          }
-          // Stage 2: sync numeric fields into aiDraftConfig so the card shows
-          // them immediately even before the user re-confirms via ui_events.
+
+          // Stage 2: sync numeric fields into aiDraftConfig immediately.
           if (hint.stage === 2 && hint.fields) {
             Object.assign(aiDraftConfig, hint.fields);
             setTimeout(() => updateAiDraftCard(), 200);
+          }
+
+          // ── BUG 1 FIX: Stage 3 rules — show summary card in chat ─────────
+          // GPT emits rules in stage_update_hint.rules, NOT in d.rules_draft.
+          // The chat bubble only reads d.rules_draft (different field → never shown).
+          // Fix: inject a rich rules summary bubble directly into the chat after
+          // the stage-update API confirms the rules were saved.
+          if (hint.stage === 3 && hint.rules && hint.rules.length) {
+            const ruleMap = new Map(aiDraftRules.map(r => [r.name, r]));
+            hint.rules.forEach(r => ruleMap.set(r.name, r));
+            aiDraftRules = [...ruleMap.values()];
+            // Render a rules summary card in the chat
+            const catColors = { creditworthiness:'#60a5fa', collateral:'#fbbf24', esg:'#4ade80', eligibility:'#c084fc', employment:'#f87171' };
+            const sevColors = { hard:'#f87171', soft:'#fbbf24', advisory:'#60a5fa' };
+            const rulesHtml = hint.rules.map(r => {
+              const cc = catColors[r.category] || '#94a3b8';
+              const sc = sevColors[r.severity] || '#94a3b8';
+              return '<div style="display:flex;align-items:flex-start;gap:7px;padding:.28rem 0;border-bottom:1px solid rgba(255,255,255,.04)">' +
+                '<span style="width:7px;height:7px;border-radius:50%;background:' + sc + ';flex-shrink:0;margin-top:4px"></span>' +
+                '<div style="flex:1;min-width:0">' +
+                  '<span style="font-size:.76rem;font-weight:600;color:rgba(255,255,255,.88)">' + (r.name || r.metric || 'Rule') + '</span>' +
+                  (r.metric ? '<span style="font-size:.68rem;color:rgba(255,255,255,.38);margin-left:5px">' + r.metric + ' ' + (r.operator||'') + ' ' + (r.threshold_value??'') + '</span>' : '') +
+                '</div>' +
+                '<span style="font-size:.63rem;padding:.08rem .32rem;border-radius:8px;background:' + cc + '1a;color:' + cc + ';white-space:nowrap;flex-shrink:0">' + (r.category||'') + '</span>' +
+              '</div>';
+            }).join('');
+            appendChatBubble('assistant',
+              '<div style="margin-top:6px;padding:9px 11px;background:rgba(0,127,134,.13);border:1px solid rgba(53,198,196,.3);border-radius:8px;font-size:.78rem">' +
+              '<div style="font-weight:700;color:var(--sea-glass);margin-bottom:6px"><i class="fas fa-list-check" style="margin-right:5px"></i>Eligibility Rules saved — ' + hint.rules.length + ' rules</div>' +
+              rulesHtml +
+              '</div>'
+            );
+            setTimeout(() => updateAiDraftCard(), 200);
+          }
+
+          if (hint.stage === 4 && hint.workflow_nodes && hint.workflow_nodes.length) {
+            aiDraftWorkflow = hint.workflow_nodes.slice();
+            setTimeout(() => updateAiDraftCard(), 200);
+          }
+
+          // ── BUG 2 FIX: Stage 5 compliance — show summary card in chat ────
+          // GPT emits compliance in stage_update_hint.compliance but no chat
+          // bubble is ever rendered for it.  Inject a concise compliance card.
+          if (hint.stage === 5 && hint.compliance) {
+            aiDraftConfig._compliance = true;
+            const cpl = hint.compliance;
+            const tags = Array.isArray(cpl.tags) ? cpl.tags : [];
+            const tagHtml = tags.map(t =>
+              '<span style="display:inline-block;font-size:.63rem;padding:.08rem .35rem;border-radius:10px;background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);margin:.15rem .15rem 0 0">' + t + '</span>'
+            ).join('');
+            appendChatBubble('assistant',
+              '<div style="margin-top:6px;padding:9px 11px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.28);border-radius:8px;font-size:.78rem">' +
+              '<div style="font-weight:700;color:#c084fc;margin-bottom:6px"><i class="fas fa-shield-halved" style="margin-right:5px"></i>Compliance parameters saved</div>' +
+              '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;color:rgba(255,255,255,.75);margin-bottom:6px">' +
+                '<div><span style="opacity:.45;font-size:.67rem">Basel III RW</span><br><strong>' + (cpl.basel3_risk_weight || 75) + '%</strong></div>' +
+                '<div><span style="opacity:.45;font-size:.67rem">IFRS9 ECL</span><br><strong>' + (cpl.ifrs9_ecl_pct || 1.5) + '%</strong></div>' +
+                '<div><span style="opacity:.45;font-size:.67rem">AML Tier</span><br><strong>' + (cpl.aml_risk_tier || 'LOW') + '</strong></div>' +
+                '<div><span style="opacity:.45;font-size:.67rem">CBO Tag</span><br><strong>Green Finance</strong></div>' +
+              '</div>' +
+              (tagHtml ? '<div style="margin-top:4px">' + tagHtml + '</div>' : '') +
+              '</div>'
+            );
+            setTimeout(() => updateAiDraftCard(), 200);
+          }
+
+          // ── BUG 3 FIX: Stage 6 simulation — show results card in chat ────
+          // GPT emits simulation data in stage_update_hint.simulation but the
+          // chat only shows the message text ("🚀 All 6 stages complete…").
+          // Inject a portfolio simulation card with all key projections.
+          // Set _simCardRendered so the outer fallback block doesn't double-render.
+          if (hint.stage === 6 && hint.simulation) {
+            _simCardRendered = true;
+            const sim = hint.simulation;
+            const fmtOMR = v => v != null ? 'OMR ' + Number(v).toLocaleString(undefined, {maximumFractionDigits:2}) : '—';
+            appendChatBubble('assistant',
+              '<div style="margin-top:6px;padding:10px 12px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.3);border-radius:8px;font-size:.78rem">' +
+              '<div style="font-weight:700;color:#60a5fa;margin-bottom:7px"><i class="fas fa-chart-line" style="margin-right:5px"></i>Portfolio Simulation Results</div>' +
+              '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px 10px;color:rgba(255,255,255,.78);margin-bottom:7px">' +
+                '<div><span style="opacity:.42;font-size:.65rem">Segment</span><br><strong style="font-size:.75rem">' + (sim.segment || 'HNW') + '</strong></div>' +
+                '<div><span style="opacity:.42;font-size:.65rem">Yr 1 Accounts</span><br><strong style="font-size:.75rem">' + (sim.yr1_accounts != null ? sim.yr1_accounts : '—') + '</strong></div>' +
+                '<div><span style="opacity:.42;font-size:.65rem">Avg Loan</span><br><strong style="font-size:.75rem">' + fmtOMR(sim.avg_loan_amount) + '</strong></div>' +
+                '<div><span style="opacity:.42;font-size:.65rem">Yr 1 Portfolio</span><br><strong style="font-size:.75rem">' + (sim.yr1_portfolio_omr_m != null ? 'OMR ' + sim.yr1_portfolio_omr_m + 'M' : '—') + '</strong></div>' +
+                '<div><span style="opacity:.42;font-size:.65rem">NIM</span><br><strong style="font-size:.75rem">' + (sim.nim_pct != null ? sim.nim_pct + '%' : '—') + '</strong></div>' +
+                '<div><span style="opacity:.42;font-size:.65rem">Break-even</span><br><strong style="font-size:.75rem">' + (sim.break_even_month != null ? 'Month ' + sim.break_even_month : '—') + '</strong></div>' +
+              '</div>' +
+              (sim.stress_test ? '<div style="font-size:.7rem;color:rgba(255,255,255,.45);border-top:1px solid rgba(255,255,255,.07);padding-top:5px"><i class="fas fa-triangle-exclamation" style="color:#fbbf24;margin-right:4px"></i>Stress: ' + sim.stress_test + '</div>' : '') +
+              '</div>'
+            );
           }
         }
       } catch (e3) {
@@ -1863,11 +1937,56 @@ async function sendAiChat(productId) {
       }
     }
 
+    // ── BUG 3 FALLBACK: render simulation card if stage_update_hint has it   ─
+    // but the stage-update API either wasn't called (no aiDraftProductId at
+    // Stage 6) or sd.product was null.  Render directly from the hint so the
+    // user always sees simulation results regardless of DB state.
+    if (d.stage_update_hint && d.stage_update_hint.stage === 6 && d.stage_update_hint.simulation) {
+      // Only render if the card hasn't already been appended inside sd.success block above
+      if (!_simCardRendered) {
+        const sim = d.stage_update_hint.simulation;
+        const fmtOMR = v => v != null ? 'OMR ' + Number(v).toLocaleString(undefined, {maximumFractionDigits:2}) : '—';
+        const simDiv = document.createElement('div');
+        simDiv.className = 'sim-results-card';
+        simDiv.style.cssText = 'margin:4px 0;padding:10px 12px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.3);border-radius:8px;font-size:.78rem;animation:fadeIn .4s ease';
+        simDiv.innerHTML =
+          '<div style="font-weight:700;color:#60a5fa;margin-bottom:7px"><i class="fas fa-chart-line" style="margin-right:5px"></i>Portfolio Simulation Results</div>' +
+          '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px 10px;color:rgba(255,255,255,.78);margin-bottom:7px">' +
+            '<div><span style="opacity:.42;font-size:.65rem">Segment</span><br><strong style="font-size:.75rem">' + (sim.segment || 'HNW') + '</strong></div>' +
+            '<div><span style="opacity:.42;font-size:.65rem">Yr 1 Accounts</span><br><strong style="font-size:.75rem">' + (sim.yr1_accounts != null ? sim.yr1_accounts : '—') + '</strong></div>' +
+            '<div><span style="opacity:.42;font-size:.65rem">Avg Loan</span><br><strong style="font-size:.75rem">' + fmtOMR(sim.avg_loan_amount) + '</strong></div>' +
+            '<div><span style="opacity:.42;font-size:.65rem">Yr 1 Portfolio</span><br><strong style="font-size:.75rem">' + (sim.yr1_portfolio_omr_m != null ? 'OMR ' + sim.yr1_portfolio_omr_m + 'M' : '—') + '</strong></div>' +
+            '<div><span style="opacity:.42;font-size:.65rem">NIM</span><br><strong style="font-size:.75rem">' + (sim.nim_pct != null ? sim.nim_pct + '%' : '—') + '</strong></div>' +
+            '<div><span style="opacity:.42;font-size:.65rem">Break-even</span><br><strong style="font-size:.75rem">' + (sim.break_even_month != null ? 'Month ' + sim.break_even_month : '—') + '</strong></div>' +
+          '</div>' +
+          (sim.stress_test ? '<div style="font-size:.7rem;color:rgba(255,255,255,.45);border-top:1px solid rgba(255,255,255,.07);padding-top:5px"><i class="fas fa-triangle-exclamant" style="color:#fbbf24;margin-right:4px"></i>Stress: ' + sim.stress_test + '</div>' : '');
+        const log = document.getElementById('ai-chat-log');
+        if (log) { log.appendChild(simDiv); log.scrollTop = log.scrollHeight; }
+      }
+    }
+
     // ── Show confirm bar ──────────────────────────────────────────────────
+    // ── BUG 4 FIX: also show the bar when GPT says the Stage 6 completion  ─
+    // phrase ("Confirm & Publish") but forgets to set action:"ready_to_confirm".
+    // GPT reliably includes this phrase in its Stage 6 message text even when
+    // it returns action:"none", so use it as a reliable text-based fallback.
+    const stage6PhraseDetected =
+      msgText.includes('confirm & publish') ||
+      msgText.includes('confirm and publish') ||
+      msgText.includes('all 6 stages complete') ||
+      (msgText.includes('stage 6') && msgText.includes('complete'));
+
     if (d.action === 'ready_to_confirm' || d.action === 'show_draft' ||
-        (aiProductDraft && d.action !== 'none')) {
+        (aiProductDraft && d.action !== 'none') ||
+        stage6PhraseDetected) {
       const bar = document.getElementById('ai-confirm-bar');
       if (bar) bar.style.display = 'flex';
+      // Ensure the correct confirm bar is shown (there are two in the HTML —
+      // the standalone AI Studio one in #ai-chat-log area, and the product panel one).
+      // Target both by id and by selector so whichever panel is active shows it.
+      document.querySelectorAll('#ai-confirm-bar').forEach(el => {
+        (el as HTMLElement).style.display = 'flex';
+      });
     }
 
   } catch(e) {
