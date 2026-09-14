@@ -1488,7 +1488,54 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 			timestamp: W(),
 			metadata: { action: h.action }
 		};
-		c.push(g);
+		if (c.push(g), !h.stage_update_hint) {
+			let e = h.current_stage || 1, t = (h.action || "none").toLowerCase(), n = (h.message || "").toLowerCase().replace(/<[^>]+>/g, ""), r = h.ui_events || [], i = t === "stage_update" || t === "ready_to_confirm", a = r.some((e) => e.type === "add_rule"), o = r.some((e) => e.type === "set_workflow"), s = r.some((e) => e.type === "set_field"), c = e === 2 && (i && s || n.includes("stage 2 complete") || n.includes("stage 3") || n.includes("arrangement fee") && s), l = e === 3 && (i && a || a && r.filter((e) => e.type === "add_rule").length >= 3 || n.includes("stage 3 complete") || n.includes("stage 4") && a), u = e === 4 && (i && o || o || n.includes("stage 4 complete") || n.includes("stage 5") && o), d = e === 5 && (i || n.includes("stage 5 complete") || n.includes("compliance parameters applied") || n.includes("basel iii") && n.includes("ifrs9") && n.includes("aml")), f = e === 6 && (t === "ready_to_confirm" || i || n.includes("confirm") || n.includes("ready to publish"));
+			if (c) {
+				let e = {};
+				for (let t of r) t.type === "set_field" && t.field && t.value != null && (e[t.field] = t.value);
+				h.stage_update_hint = {
+					stage: 2,
+					fields: e
+				}, i || (h.action = "stage_update");
+			} else if (l) {
+				let e = r.filter((e) => e.type === "add_rule" && e.rule).map((e) => e.rule);
+				h.stage_update_hint = {
+					stage: 3,
+					rules: e
+				}, i || (h.action = "stage_update");
+			} else if (u) {
+				let e = r.find((e) => e.type === "set_workflow"), t = e && Array.isArray(e.nodes) ? e.nodes : [];
+				h.stage_update_hint = {
+					stage: 4,
+					workflow_nodes: t
+				}, i || (h.action = "stage_update");
+			} else if (d) {
+				let e = {
+					tags: [
+						"CLIMATE-RISK",
+						"ESG-GREEN",
+						"OMAN-V2040",
+						"IFRS9-ECL",
+						"BASEL3-RW"
+					],
+					basel3_risk_weight: 75,
+					ifrs9_ecl_pct: 1.5,
+					aml_risk_tier: "LOW"
+				};
+				for (let t of r) t.type === "set_field" && (t.field === "basel3_risk_weight" && t.value != null && (e.basel3_risk_weight = Number(t.value)), t.field === "ifrs9_ecl_pct" && t.value != null && (e.ifrs9_ecl_pct = Number(t.value)), t.field === "aml_risk_tier" && t.value != null && (e.aml_risk_tier = String(t.value)));
+				h.stage_update_hint = {
+					stage: 5,
+					compliance: e
+				}, i || (h.action = "stage_update");
+			} else if (f) {
+				let e = h.product_draft?.simulation || {}, t = {};
+				h.product_draft?.name && (t.name = h.product_draft.name), h.product_draft?.max_amount && (t.max_amount = h.product_draft.max_amount), h.product_draft?.min_amount && (t.min_amount = h.product_draft.min_amount), h.stage_update_hint = {
+					stage: 6,
+					fields: t,
+					simulation: e
+				}, i || (h.action = "ready_to_confirm");
+			}
+		}
 		let _ = W(), v = {};
 		if (s?.result) try {
 			v = JSON.parse(s.result);
@@ -7227,7 +7274,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "0e6fada";
+var xt = "31269bb";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

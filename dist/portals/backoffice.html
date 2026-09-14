@@ -1754,6 +1754,47 @@ async function sendAiChat(productId) {
     // When action='stage_update', call the stage-update API with stage data.
     // Works for stages 2–6. The DB product is updated immediately on each confirm.
 
+    // ── RC-8 FIX: Client-side stage_update_hint synthesis (belt-and-suspenders) ─
+    // The server now synthesizes stage_update_hint when GPT omits it.  This block
+    // provides a second layer of defence: if stage_update_hint is STILL null after
+    // the server fix (e.g. cached response, network edge case), reconstruct it from
+    // the ui_events that were already dispatched to the form fields.
+    if (!d.stage_update_hint) {
+      const csStage = d.current_stage || 1;
+      const csAction = (d.action || 'none').toLowerCase();
+      const csIsUpdate = csAction === 'stage_update' || csAction === 'ready_to_confirm';
+      const csEvents = d.ui_events || [];
+      const csHasAddRule     = csEvents.some(e => e.type === 'add_rule');
+      const csHasSetWorkflow = csEvents.some(e => e.type === 'set_workflow');
+      const csHasSetField    = csEvents.some(e => e.type === 'set_field');
+      const csMsgLow = (d.reply || '').toLowerCase().replace(/<[^>]+>/g, '');
+
+      if (csStage === 2 && (csIsUpdate || csMsgLow.includes('stage 2 complete') || csMsgLow.includes('stage 3')) && csHasSetField) {
+        const f2 = {}; csEvents.forEach(e => { if (e.type==='set_field' && e.field) f2[e.field] = e.value; });
+        d.stage_update_hint = { stage: 2, fields: f2 };
+        if (!csIsUpdate) d.action = 'stage_update';
+      } else if (csStage === 3 && (csHasAddRule || csMsgLow.includes('stage 3 complete'))) {
+        const r3 = csEvents.filter(e => e.type==='add_rule' && e.rule).map(e => e.rule);
+        if (r3.length > 0 || csMsgLow.includes('stage 3 complete')) {
+          d.stage_update_hint = { stage: 3, rules: r3.length ? r3 : aiDraftRules };
+          if (!csIsUpdate) d.action = 'stage_update';
+        }
+      } else if (csStage === 4 && (csHasSetWorkflow || csMsgLow.includes('stage 4 complete'))) {
+        const wf4 = csEvents.find(e => e.type==='set_workflow');
+        const wfNodes = (wf4 && Array.isArray(wf4.nodes)) ? wf4.nodes : aiDraftWorkflow;
+        d.stage_update_hint = { stage: 4, workflow_nodes: wfNodes };
+        if (!csIsUpdate) d.action = 'stage_update';
+      } else if (csStage === 5 && (csIsUpdate || csMsgLow.includes('stage 5 complete') || csMsgLow.includes('compliance parameters applied'))) {
+        d.stage_update_hint = { stage: 5, compliance: { tags:['CLIMATE-RISK','ESG-GREEN','OMAN-V2040','IFRS9-ECL','BASEL3-RW'], basel3_risk_weight:75, ifrs9_ecl_pct:1.5, aml_risk_tier:'LOW' } };
+        if (!csIsUpdate) d.action = 'stage_update';
+      } else if (csStage === 6 && (csIsUpdate || csMsgLow.includes('confirm') || csMsgLow.includes('publish'))) {
+        const s6f = {}; if (aiDraftConfig.name) s6f.name = aiDraftConfig.name; if (aiDraftConfig.max_amount) s6f.max_amount = aiDraftConfig.max_amount;
+        d.stage_update_hint = { stage: 6, fields: s6f, simulation: {} };
+        if (d.action !== 'ready_to_confirm') d.action = 'ready_to_confirm';
+      }
+    }
+    // ── END RC-8 FIX ─────────────────────────────────────────────────────────
+
     // ── FIX: aiDraftProductId absent fallback ─────────────────────────────
     // If GPT emits stage_update_hint but never emitted create_draft (e.g. it
     // skipped Rule C, or the user started mid-session), auto-create the draft

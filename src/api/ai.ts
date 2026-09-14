@@ -297,6 +297,139 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
   const assistantMsg = { role: 'assistant', content: aiReply.message, timestamp: now(), metadata: { action: aiReply.action } }
   messages.push(assistantMsg)
 
+  // ── RC-8 FIX: Server-side stage_update_hint synthesis ──────────────────────
+  // ROOT CAUSE: GPT frequently returns stage_update_hint:null even after emitting
+  // all the correct ui_events (add_rule, set_workflow, set_field etc.) for a stage
+  // completion.  The frontend gate at backoffice.html line 1803 requires
+  // d.stage_update_hint to be non-null — when it's null, the stage-update API call
+  // is silently skipped, pge_stage never advances past 2, no rules/workflow/compliance
+  // are ever written to DB, and the product stays empty after the full 6-stage flow.
+  //
+  // Fix: detect stage completion on the backend from (current_stage, action, message,
+  // ui_events) and synthesize stage_update_hint when GPT omitted it.  This makes the
+  // flow resilient to GPT schema non-compliance without changing any prompt.
+  if (!aiReply.stage_update_hint) {
+    const stage  = aiReply.current_stage || 1
+    const action = (aiReply.action || 'none').toLowerCase()
+    const msgLow = (aiReply.message || '').toLowerCase().replace(/<[^>]+>/g, '')
+    const events: any[] = aiReply.ui_events || []
+
+    // ── Stage-completion detection helpers ──────────────────────────────────
+    // A stage is "complete this turn" when GPT emits a stage_update/ready_to_confirm
+    // action, OR the message text contains a known completion phrase, OR the ui_events
+    // carry the expected payload for that stage (add_rule / set_workflow / set_field).
+    const isStageUpdateAction = action === 'stage_update' || action === 'ready_to_confirm'
+    const hasAddRule       = events.some((e: any) => e.type === 'add_rule')
+    const hasSetWorkflow   = events.some((e: any) => e.type === 'set_workflow')
+    const hasSetField      = events.some((e: any) => e.type === 'set_field')
+
+    // Stage 2 completion: GPT emitted set_field events AND action is stage_update
+    // OR message contains the Stage-2-complete transition phrase.
+    const stage2Complete =
+      stage === 2 && (
+        (isStageUpdateAction && hasSetField) ||
+        msgLow.includes('stage 2 complete') ||
+        msgLow.includes('stage 3') ||   // transition phrase "✅ Stage 2 complete. Stage 3 — Eligibility Rules."
+        (msgLow.includes('arrangement fee') && hasSetField)
+      )
+
+    // Stage 3 completion: GPT emitted add_rule events (≥3) AND action is stage_update
+    // OR message contains "stage 3 complete" / "stage 4" (transition).
+    const stage3Complete =
+      stage === 3 && (
+        (isStageUpdateAction && hasAddRule) ||
+        (hasAddRule && events.filter((e: any) => e.type === 'add_rule').length >= 3) ||
+        msgLow.includes('stage 3 complete') ||
+        (msgLow.includes('stage 4') && hasAddRule)
+      )
+
+    // Stage 4 completion: GPT emitted set_workflow events AND action is stage_update
+    // OR message contains "stage 4 complete" / "stage 5" (transition).
+    const stage4Complete =
+      stage === 4 && (
+        (isStageUpdateAction && hasSetWorkflow) ||
+        hasSetWorkflow ||
+        msgLow.includes('stage 4 complete') ||
+        (msgLow.includes('stage 5') && hasSetWorkflow)
+      )
+
+    // Stage 5 completion: action is stage_update at stage 5 OR message contains
+    // "stage 5 complete" / compliance confirmation phrase.
+    const stage5Complete =
+      stage === 5 && (
+        isStageUpdateAction ||
+        msgLow.includes('stage 5 complete') ||
+        msgLow.includes('compliance parameters applied') ||
+        (msgLow.includes('basel iii') && msgLow.includes('ifrs9') && msgLow.includes('aml'))
+      )
+
+    // Stage 6 completion: action is ready_to_confirm OR message contains "confirm & publish".
+    const stage6Complete =
+      stage === 6 && (
+        action === 'ready_to_confirm' ||
+        isStageUpdateAction ||
+        msgLow.includes('confirm') ||
+        msgLow.includes('ready to publish')
+      )
+
+    if (stage2Complete) {
+      // Collect all set_field values into hint.fields
+      const hintFields: Record<string, any> = {}
+      for (const e of events) {
+        if (e.type === 'set_field' && e.field && e.value != null) {
+          hintFields[e.field] = e.value
+        }
+      }
+      aiReply.stage_update_hint = { stage: 2, fields: hintFields }
+      if (!isStageUpdateAction) aiReply.action = 'stage_update'
+
+    } else if (stage3Complete) {
+      // Collect all add_rule payloads into hint.rules
+      const hintRules = events
+        .filter((e: any) => e.type === 'add_rule' && e.rule)
+        .map((e: any) => e.rule)
+      aiReply.stage_update_hint = { stage: 3, rules: hintRules }
+      if (!isStageUpdateAction) aiReply.action = 'stage_update'
+
+    } else if (stage4Complete) {
+      // Collect set_workflow nodes into hint.workflow_nodes
+      const wfEvent = events.find((e: any) => e.type === 'set_workflow')
+      const hintNodes = (wfEvent && Array.isArray(wfEvent.nodes)) ? wfEvent.nodes : []
+      aiReply.stage_update_hint = { stage: 4, workflow_nodes: hintNodes }
+      if (!isStageUpdateAction) aiReply.action = 'stage_update'
+
+    } else if (stage5Complete) {
+      // Default Basel III compliance if GPT forgot to include it in ui_events
+      const complianceData = {
+        tags: ['CLIMATE-RISK','ESG-GREEN','OMAN-V2040','IFRS9-ECL','BASEL3-RW'],
+        basel3_risk_weight: 75,
+        ifrs9_ecl_pct: 1.5,
+        aml_risk_tier: 'LOW',
+      }
+      // Try to extract values from set_field events if GPT emitted any
+      for (const e of events) {
+        if (e.type === 'set_field') {
+          if (e.field === 'basel3_risk_weight' && e.value != null) complianceData.basel3_risk_weight = Number(e.value)
+          if (e.field === 'ifrs9_ecl_pct'      && e.value != null) complianceData.ifrs9_ecl_pct      = Number(e.value)
+          if (e.field === 'aml_risk_tier'       && e.value != null) complianceData.aml_risk_tier       = String(e.value)
+        }
+      }
+      aiReply.stage_update_hint = { stage: 5, compliance: complianceData }
+      if (!isStageUpdateAction) aiReply.action = 'stage_update'
+
+    } else if (stage6Complete) {
+      // Build a minimal stage 6 hint; product_draft fields fill the rest at confirm time
+      const simData = aiReply.product_draft?.simulation || {}
+      const s6Fields: Record<string, any> = {}
+      if (aiReply.product_draft?.name)       s6Fields.name       = aiReply.product_draft.name
+      if (aiReply.product_draft?.max_amount) s6Fields.max_amount = aiReply.product_draft.max_amount
+      if (aiReply.product_draft?.min_amount) s6Fields.min_amount = aiReply.product_draft.min_amount
+      aiReply.stage_update_hint = { stage: 6, fields: s6Fields, simulation: simData }
+      if (!isStageUpdateAction) aiReply.action = 'ready_to_confirm'
+    }
+  }
+  // ── END RC-8 FIX ───────────────────────────────────────────────────────────
+
   // Save/update thread — MERGE result so earlier drafts are never overwritten.
   // If this turn's AI reply doesn't include a draft (e.g. step 3+ follow-up turns),
   // we keep whatever was already saved in the thread's result field.
