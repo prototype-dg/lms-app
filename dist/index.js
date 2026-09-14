@@ -872,7 +872,7 @@ var Ce = class {
 		}
 		await o(), t.origin !== "*" && e.header("Vary", "Origin", { append: !0 });
 	};
-}, Ae = process.env.DB_PATH || "./data/app.db", je = r.dirname(Ae);
+}, Ae = process.env.DB_PATH || "/home/data/app.db", je = r.dirname(Ae);
 n.existsSync(je) || n.mkdirSync(je, { recursive: !0 });
 var H = new t(Ae);
 H.pragma("journal_mode = WAL"), H.pragma("foreign_keys = ON");
@@ -7023,7 +7023,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "52cc1a1";
+var xt = "90a5a2f";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
@@ -7047,8 +7047,7 @@ $.use("*", async (e, t) => {
 	return e.html(o, 200, {
 		"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
 		Pragma: "no-cache",
-		Expires: "0",
-		"Clear-Site-Data": "\"cache\""
+		Expires: "0"
 	});
 }), $.use("/*", e({ root: "./dist" }));
 //#endregion

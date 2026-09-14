@@ -8,6 +8,18 @@
   <link rel="stylesheet" href="/assets/style.css">
 </head>
 <style>/* Hide body until auth guard confirms session — prevents content flash before redirect */body{visibility:hidden}</style>
+<script>
+// Safety net: if authGuard throws or hangs (e.g. network error), reveal the body
+// after 5 seconds so the user doesn't see a permanent white screen.
+// authGuard will redirect to login on token failure — this timeout only fires
+// if the redirect itself somehow fails (very rare).
+(function(){
+  var _revealTimer = setTimeout(function(){
+    document.body.style.visibility = 'visible';
+  }, 5000);
+  window.__clearRevealTimer = function(){ clearTimeout(_revealTimer); };
+})();
+</script>
 <body>
 <div class="app-shell" id="app">
   <!-- SIDEBAR -->
@@ -176,6 +188,8 @@ window.onload = async () => {
   window._sessionUser = sessionUser;
 
   // Reveal page now that auth is confirmed (was hidden to prevent flash)
+  // Cancel the safety-net timer — auth succeeded, we reveal immediately.
+  if (typeof window.__clearRevealTimer === 'function') window.__clearRevealTimer();
   document.body.style.visibility = 'visible';
 
   // Hide role-switcher tabs that don't match this user's session role

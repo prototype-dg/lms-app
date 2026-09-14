@@ -8,7 +8,10 @@ import fs from 'fs'
 import path from 'path'
 
 // Ensure the data directory exists (Azure /home persists across restarts)
-const dbPath = process.env.DB_PATH || './data/app.db'
+// Default to /home/data/app.db so the database survives Azure App Service restarts.
+// The /home directory is mounted from Azure Storage — it persists across deployments.
+// On local dev, DB_PATH can be set to ./data/app.db or left unset (will use /home/data/).
+const dbPath = process.env.DB_PATH || '/home/data/app.db'
 const dbDir = path.dirname(dbPath)
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true })

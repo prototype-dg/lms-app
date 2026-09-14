@@ -166,12 +166,16 @@ app.use('*', async (c, next) => {
   }
 
   // Correct version → serve with no-store (never cache again)
+  // NOTE: Do NOT send Clear-Site-Data on the 200 — it's only needed on the
+  // 302 redirect to guarantee a cache miss. Sending it on the actual page
+  // response can clear localStorage in some browsers (Chrome treats "cache"
+  // as including memory cache tied to the page context), which wipes the
+  // auth token and causes a white screen on every page load.
   const html = fs.readFileSync(filePath, 'utf-8')
   return c.html(html, 200, {
     'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
     'Pragma': 'no-cache',
     'Expires': '0',
-    'Clear-Site-Data': '"cache"',
   })
 })
 
