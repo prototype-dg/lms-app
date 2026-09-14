@@ -210,7 +210,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
       const resp = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'gpt-4o', messages: openAiMessages, temperature: 0.3, max_tokens: 2000 }),
+        body: JSON.stringify({ model: 'gpt-4o', messages: openAiMessages, temperature: 0.3, max_tokens: 4000 }),
       })
       const data = await resp.json() as any
       if (resp.ok) {
@@ -506,7 +506,7 @@ app.post('/products/:id/stage-update', async (c) => {
     if (effectiveRules.length === 0) {
       // Fallback: copy global AI-generated rules (product_id IS NULL)
       const { results: globalRules } = await c.env.DB.prepare(
-        "SELECT * FROM rules WHERE product_id IS NULL AND source='ai_generated' AND is_active=1"
+        "SELECT * FROM rules WHERE product_id IS NULL AND is_active=1"
       ).bind().all() as any
       if (globalRules && globalRules.length > 0) {
         effectiveRules = globalRules
@@ -722,7 +722,8 @@ Product: ${draft.name}. Base rate: ${draft.base_rate}%. ${isGreen ? `Green disco
     await c.env.DB.prepare(`
       UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,
         portal_hero_title=?, portal_highlights=?, portal_card_badge=?,
-        pge_stage=?, is_demo_product=1, is_green_product=?, published_at=?, updated_at=? WHERE id=?
+        pge_stage=?, is_demo_product=1, is_green_product=?,
+        market_id=COALESCE(market_id,'mkt001'), published_at=?, updated_at=? WHERE id=?
     `).bind(isGreen ? 1 : 0, portalHeroTitle, JSON.stringify(portalHighlights), portalBadge,
         finalPgeStage, isGreen ? 1 : 0, ts, ts, draftProductId).run()
 

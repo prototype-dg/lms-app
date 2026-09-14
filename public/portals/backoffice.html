@@ -1799,7 +1799,10 @@ async function sendAiChat(productId) {
       }
     }
 
-    if ((d.action === 'stage_update' || d.action === 'ready_to_confirm') && d.stage_update_hint && aiDraftProductId) {
+    // RC-2 FIX: also fire stage-update when action='create_draft' and a stage_update_hint
+    // is present on the same GPT turn.  By this point (below the create_draft block)
+    // aiDraftProductId has already been set, so it is always non-null here when needed.
+    if ((d.action === 'stage_update' || d.action === 'ready_to_confirm' || d.action === 'create_draft') && d.stage_update_hint && aiDraftProductId) {
       try {
         const u = currentUser();
         const hint = d.stage_update_hint;
@@ -2044,7 +2047,9 @@ function _renderDbDraftCard(product) {
     fetch('/api/v1/rules?product_id=' + product.id)
       .then(r => r.json())
       .then(rd => {
-        const fetched = (rd.rules || []).filter(r => r.product_id === product.id);
+        // RC-3 FIX: also accept global rules (product_id === null) returned by the
+        // rules API — they are global eligibility rules that belong to every product.
+        const fetched = (rd.rules || []).filter(r => r.product_id === product.id || r.product_id === null);
         if (fetched.length > 0 && aiDraftRules.length === 0) {
           aiDraftRules = fetched;
           setTimeout(() => updateAiDraftCard(), 150);

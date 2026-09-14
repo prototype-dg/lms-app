@@ -40,6 +40,7 @@ const MIGRATION_FILES = [
   './migrations/0012_sales_campaigns.sql',
   './migrations/0013_is_green_product.sql',
   './migrations/0014_fix_ai_studio_products_pge_stage.sql',
+  './migrations/0015_repair_ai_products_no_source_filter.sql',
 ]
 
 function runMigrations() {
