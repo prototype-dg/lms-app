@@ -1663,13 +1663,11 @@ async function sendAiChat(productId) {
     let replyHtml = markdownToHtml(d.reply || d.message || 'Done.');
 
     if (d.product_draft) {
+      // Store the draft in memory for the confirm endpoint — but do NOT render
+      // a duplicate product-draft card in the chat bubble.  The DB draft card
+      // (_renderDbDraftCard) shown at the bottom of the AI Studio already
+      // contains all this information; showing it again in the chat is noise.
       aiProductDraft = d.product_draft;
-      replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:6px;font-size:.78rem">'
-        + '<strong><i class="fas fa-file-alt" style="margin-right:5px"></i>Product Draft</strong><br>'
-        + '<b>' + (d.product_draft.name || '') + '</b> &middot; '
-        + (d.product_draft.base_rate || '') + '% &middot; up to OMR '
-        + Number(d.product_draft.max_amount || 0).toLocaleString()
-        + '</div>';
     }
     if (d.rules_draft && d.rules_draft.length) {
       replyHtml += '<div style="margin-top:8px;padding:8px 10px;background:rgba(0,127,134,.12);border:1px solid rgba(0,127,134,.3);border-radius:6px;font-size:.78rem">'
@@ -2044,18 +2042,28 @@ function _renderDbDraftCard(product) {
   } else if (ruleCount === 0 && aiDraftRules.length === 0 && product.id) {
     // Fallback: fetch rules from the rules table — covers products where
     // configuration.rules was not yet populated (pre-fix sessions).
-    fetch('/api/v1/rules?product_id=' + product.id)
-      .then(r => r.json())
-      .then(rd => {
-        // RC-3 FIX: also accept global rules (product_id === null) returned by the
-        // rules API — they are global eligibility rules that belong to every product.
-        const fetched = (rd.rules || []).filter(r => r.product_id === product.id || r.product_id === null);
-        if (fetched.length > 0 && aiDraftRules.length === 0) {
-          aiDraftRules = fetched;
-          setTimeout(() => updateAiDraftCard(), 150);
-        }
-      })
-      .catch(() => {});
+    // IMPORTANT: only accept rules that have already been product-attached
+    // (product_id === product.id).  Do NOT pull global null-product_id rules
+    // here — those only exist before Stage 3 runs its INSERT and would show
+    // a premature "14 rules" badge in the draft card during Stage 1/2.
+    // The RC-3 fix (null acceptance) lives in the stage-update code path
+    // which fires after Stage 3 confirms and the backend has already copied
+    // the global rules into the product with the correct product_id.
+    const stageReached = product.pge_stage || 0;
+    if (stageReached >= 3) {
+      fetch('/api/v1/rules?product_id=' + product.id)
+        .then(r => r.json())
+        .then(rd => {
+          // At Stage 3+: product-specific rules exist in the rules table.
+          // Accept only rows already attached to this product_id.
+          const fetched = (rd.rules || []).filter(r => r.product_id === product.id);
+          if (fetched.length > 0 && aiDraftRules.length === 0) {
+            aiDraftRules = fetched;
+            setTimeout(() => updateAiDraftCard(), 150);
+          }
+        })
+        .catch(() => {});
+    }
   }
   if (wfCount > 0 && aiDraftWorkflow.length === 0) {
     aiDraftWorkflow = dbWorkflow.slice();
