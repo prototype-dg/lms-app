@@ -1851,9 +1851,10 @@ async function sendAiChat(productId) {
           // Fix: inject a rich rules summary bubble directly into the chat after
           // the stage-update API confirms the rules were saved.
           if (hint.stage === 3 && hint.rules && hint.rules.length) {
-            const ruleMap = new Map(aiDraftRules.map(r => [r.name, r]));
-            hint.rules.forEach(r => ruleMap.set(r.name, r));
-            aiDraftRules = [...ruleMap.values()];
+            // REPLACE aiDraftRules with the confirmed Stage 3 rules — do not merge.
+            // Merging would keep any pre-Stage-3 accumulated rules (from _pendingRules
+            // flush or an earlier _renderDbDraftCard call) producing duplicates.
+            aiDraftRules = hint.rules.slice();
             // Render a rules summary card in the chat
             const catColors = { creditworthiness:'#60a5fa', collateral:'#fbbf24', esg:'#4ade80', eligibility:'#c084fc', employment:'#f87171' };
             const sevColors = { hard:'#f87171', soft:'#fbbf24', advisory:'#60a5fa' };
@@ -2036,35 +2037,30 @@ function _renderDbDraftCard(product) {
   // AND the rules table (authoritative).  Try configuration.rules first; if empty,
   // fetch from the rules API (handles products created before the configuration
   // snapshot was added, e.g. pmu16ikvs2hlepg).
-  if (ruleCount > 0 && aiDraftRules.length === 0) {
+  const stageReached = product.pge_stage || 0;
+  if (ruleCount > 0 && stageReached >= 3) {
+    // DB has confirmed rules for this product (Stage 3 completed).
+    // Always sync aiDraftRules from the configuration snapshot — this is the
+    // authoritative source and overwrites any pre-Stage-3 leaked rules that
+    // may have accumulated in aiDraftRules via _pendingRules flush.
     aiDraftRules = dbRules.slice();
     setTimeout(() => updateAiDraftCard(), 250);
-  } else if (ruleCount === 0 && aiDraftRules.length === 0 && product.id) {
-    // Fallback: fetch rules from the rules table — covers products where
-    // configuration.rules was not yet populated (pre-fix sessions).
-    // IMPORTANT: only accept rules that have already been product-attached
-    // (product_id === product.id).  Do NOT pull global null-product_id rules
-    // here — those only exist before Stage 3 runs its INSERT and would show
-    // a premature "14 rules" badge in the draft card during Stage 1/2.
-    // The RC-3 fix (null acceptance) lives in the stage-update code path
-    // which fires after Stage 3 confirms and the backend has already copied
-    // the global rules into the product with the correct product_id.
-    const stageReached = product.pge_stage || 0;
-    if (stageReached >= 3) {
-      fetch('/api/v1/rules?product_id=' + product.id)
-        .then(r => r.json())
-        .then(rd => {
-          // At Stage 3+: product-specific rules exist in the rules table.
-          // Accept only rows already attached to this product_id.
-          const fetched = (rd.rules || []).filter(r => r.product_id === product.id);
-          if (fetched.length > 0 && aiDraftRules.length === 0) {
-            aiDraftRules = fetched;
-            setTimeout(() => updateAiDraftCard(), 150);
-          }
-        })
-        .catch(() => {});
-    }
+  } else if (ruleCount === 0 && aiDraftRules.length === 0 && product.id && stageReached >= 3) {
+    // configuration.rules snapshot is empty but Stage 3 has been reached —
+    // this covers products created before the configuration snapshot was added.
+    // Fetch product-specific rules from the rules table (no global null-id rules).
+    fetch('/api/v1/rules?product_id=' + product.id)
+      .then(r => r.json())
+      .then(rd => {
+        const fetched = (rd.rules || []).filter(r => r.product_id === product.id);
+        if (fetched.length > 0 && aiDraftRules.length === 0) {
+          aiDraftRules = fetched;
+          setTimeout(() => updateAiDraftCard(), 150);
+        }
+      })
+      .catch(() => {});
   }
+  // Stage 1/2: never touch aiDraftRules — rules must not appear before Stage 3.
   if (wfCount > 0 && aiDraftWorkflow.length === 0) {
     aiDraftWorkflow = dbWorkflow.slice();
     setTimeout(() => updateAiDraftCard(), 250);
