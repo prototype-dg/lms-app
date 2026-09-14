@@ -1985,7 +1985,7 @@ async function sendAiChat(productId) {
       // the standalone AI Studio one in #ai-chat-log area, and the product panel one).
       // Target both by id and by selector so whichever panel is active shows it.
       document.querySelectorAll('#ai-confirm-bar').forEach(el => {
-        (el as HTMLElement).style.display = 'flex';
+        el.style.display = 'flex';
       });
     }
 
