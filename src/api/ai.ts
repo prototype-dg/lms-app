@@ -579,11 +579,29 @@ app.post('/products/:id/stage-update', async (c) => {
       await c.env.DB.prepare(
         'UPDATE products SET workflow_nodes=?, workflow_edges=?, pge_stage=4, updated_at=? WHERE id=?'
       ).bind(JSON.stringify(canvasNodes), JSON.stringify(canvasEdges), ts, productId).run()
+    } else {
+      // RC-7 FIX (BUG-4): GPT often puts nodes in set_workflow ui_events but sends an empty
+      // workflow_nodes array in stage_update_hint (the two fields are decoupled in GPT output).
+      // Without this else-branch pge_stage was never advanced to 4, leaving the product stuck
+      // at pge_stage=3 — which cascades: Stage 5 reads the wrong config, confirm sets the wrong
+      // finalPgeStage, and PGE shows Stages 4-6 as locked.
+      // Fix: always advance pge_stage to 4 when Stage 4 is confirmed, even with no nodes.
+      await c.env.DB.prepare(
+        'UPDATE products SET pge_stage=4, updated_at=? WHERE id=?'
+      ).bind(ts, productId).run()
     }
 
   } else if (stage === 5) {
     // ── Stage 5: Compliance tags + config update ────────────────────────────
-    const config = (() => { try { return JSON.parse(existing.configuration || '{}') } catch { return {} } })()
+    // RC-7 FIX (BUG-8): `existing` was fetched at the top of this request using the
+    // configuration value at that moment.  If Stage 3 ran in a prior request (the
+    // normal path), `existing.configuration` is already up-to-date and this is fine.
+    // But if Stage 3 and Stage 5 arrive in rapid succession (or GPT compresses them),
+    // there's a risk Stage 5 reads a stale `configuration` that lacks `rules`.
+    // Re-fetch the latest configuration row fresh from DB before writing compliance
+    // so we merge into the actual current state and never silently drop cfg.rules.
+    const latestCfgRow = await c.env.DB.prepare('SELECT configuration FROM products WHERE id=?').bind(productId).first() as any
+    const config = (() => { try { return JSON.parse(latestCfgRow?.configuration || '{}') } catch { return {} } })()
     config.compliance = compliance
     await c.env.DB.prepare(
       'UPDATE products SET configuration=?, pge_stage=5, updated_at=? WHERE id=?'
@@ -709,15 +727,28 @@ Product: ${draft.name}. Base rate: ${draft.base_rate}%. ${isGreen ? `Green disco
       } catch {}
     }
 
-    // Determine final pge_stage: prefer the pge_stage already set by stage-update
-    // calls (which advance it to 3, 4, 5, 6 as each stage completes).  Only fall
-    // back to the rules-existence check if stage-updates somehow didn't run.
+    // RC-7 FIX (BUG-5): Determine final pge_stage.
+    //
+    // OLD LOGIC WAS WRONG in two ways:
+    //   1. It forced pge_stage=6 whenever product-specific rules existed — setting
+    //      Stages 4/5 to "complete" (green checkmarks) even if they never ran.
+    //   2. It queried product-specific rules only, so products whose Stage 3 fallback
+    //      used global rules (product_id=NULL) got ruleRows.length=0 → finalPgeStage=1.
+    //
+    // NEW LOGIC: trust what stage-update calls actually recorded in pge_stage.
+    //   - Use draft.pge_stage as the authoritative source (each stage-update sets it).
+    //   - Only apply a minimum floor: if pge_stage < 3 but product-specific rules now
+    //     exist (fallback ran), bump to 3 so PGE at least unlocks Rule Builder.
+    //   - Never artificially inflate beyond what stage-updates recorded.
     const { results: ruleRows } = await c.env.DB.prepare(
       'SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1'
     ).bind(draftProductId).all() as any
     const stageFromUpdates = draft.pge_stage || 1
-    // Use the higher of: what stage-updates recorded, or 6 if rules exist
-    const finalPgeStage = ruleRows?.length > 0 ? Math.max(stageFromUpdates, 6) : Math.max(stageFromUpdates, 1)
+    // If stage-updates brought us to ≥3 already, trust that.
+    // If we're still at 1 or 2 but product-specific rules exist, raise floor to 3.
+    const finalPgeStage = stageFromUpdates >= 3
+      ? stageFromUpdates
+      : (ruleRows?.length > 0 ? Math.max(stageFromUpdates, 3) : stageFromUpdates)
 
     await c.env.DB.prepare(`
       UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,

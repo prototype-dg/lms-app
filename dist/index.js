@@ -1653,17 +1653,17 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 					}), o = t.id || `n${e + 1}`, n += 220;
 				}
 				await e.env.DB.prepare("UPDATE products SET workflow_nodes=?, workflow_edges=?, pge_stage=4, updated_at=? WHERE id=?").bind(JSON.stringify(r), JSON.stringify(i), d, t).run();
-			}
+			} else await e.env.DB.prepare("UPDATE products SET pge_stage=4, updated_at=? WHERE id=?").bind(d, t).run();
 		} else if (n === 5) {
-			let n = (() => {
+			let n = await e.env.DB.prepare("SELECT configuration FROM products WHERE id=?").bind(t).first(), r = (() => {
 				try {
-					return JSON.parse(f.configuration || "{}");
+					return JSON.parse(n?.configuration || "{}");
 				} catch {
 					return {};
 				}
 			})();
-			n.compliance = o, await e.env.DB.prepare("UPDATE products SET configuration=?, pge_stage=5, updated_at=? WHERE id=?").bind(JSON.stringify(n), d, t).run();
-			let r = {
+			r.compliance = o, await e.env.DB.prepare("UPDATE products SET configuration=?, pge_stage=5, updated_at=? WHERE id=?").bind(JSON.stringify(r), d, t).run();
+			let i = {
 				"CLIMATE-RISK": ["GSAS_VERIFICATION", "EIA_CLEARANCE"],
 				"ESG-GREEN": [
 					"GSAS_VERIFICATION",
@@ -1677,7 +1677,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 			if (o.tags && Array.isArray(o.tags)) {
 				let n = /* @__PURE__ */ new Set();
 				for (let e of o.tags) {
-					let t = r[e];
+					let t = i[e];
 					t ? t.forEach((e) => n.add(e)) : n.add(e);
 				}
 				for (let r of n) {
@@ -1767,7 +1767,7 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${c ? `Green discount: up to ${t
 					}
 				}
 			} catch {}
-			let { results: m } = await e.env.DB.prepare("SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1").bind(l).all(), h = t.pge_stage || 1, g = m?.length > 0 ? Math.max(h, 6) : Math.max(h, 1);
+			let { results: m } = await e.env.DB.prepare("SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1").bind(l).all(), h = t.pge_stage || 1, g = h >= 3 ? h : m?.length > 0 ? Math.max(h, 3) : h;
 			return await e.env.DB.prepare("\n      UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n        portal_hero_title=?, portal_highlights=?, portal_card_badge=?,\n        pge_stage=?, is_demo_product=1, is_green_product=?,\n        market_id=COALESCE(market_id,'mkt001'), published_at=?, updated_at=? WHERE id=?\n    ").bind(+!!c, u, JSON.stringify(d), f, g, +!!c, r, r, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({ product_id: l }), r, n).run(), await G(e.env.DB, {
 				userId: o,
 				userName: s,
@@ -7227,7 +7227,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "42efa9a";
+var xt = "0e6fada";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

@@ -1850,15 +1850,29 @@ async function sendAiChat(productId) {
           // The chat bubble only reads d.rules_draft (different field → never shown).
           // Fix: inject a rich rules summary bubble directly into the chat after
           // the stage-update API confirms the rules were saved.
-          if (hint.stage === 3 && hint.rules && hint.rules.length) {
+          //
+          // RC-7 FIX (BUG-1/BUG-2): When GPT sends hint.rules=[] (truncated), the
+          // backend fallback copies global rules and writes configuration.rules snapshot.
+          // sd.product now contains that snapshot — use it to fill aiDraftRules when
+          // hint.rules is empty so the floating card always shows confirmed rules.
+          if (hint.stage === 3) {
+            // Prefer hint.rules (GPT-populated); fall back to sd.product configuration snapshot.
+            let effectiveRules = (hint.rules && hint.rules.length) ? hint.rules : (() => {
+              try {
+                const cfg = (typeof sd.product.configuration === 'string')
+                  ? JSON.parse(sd.product.configuration) : (sd.product.configuration || {});
+                return Array.isArray(cfg.rules) && cfg.rules.length ? cfg.rules : [];
+              } catch (_) { return []; }
+            })();
+            if (effectiveRules.length) {
             // REPLACE aiDraftRules with the confirmed Stage 3 rules — do not merge.
             // Merging would keep any pre-Stage-3 accumulated rules (from _pendingRules
             // flush or an earlier _renderDbDraftCard call) producing duplicates.
-            aiDraftRules = hint.rules.slice();
+            aiDraftRules = effectiveRules.slice();
             // Render a rules summary card in the chat
             const catColors = { creditworthiness:'#60a5fa', collateral:'#fbbf24', esg:'#4ade80', eligibility:'#c084fc', employment:'#f87171' };
             const sevColors = { hard:'#f87171', soft:'#fbbf24', advisory:'#60a5fa' };
-            const rulesHtml = hint.rules.map(r => {
+            const rulesHtml = effectiveRules.map(r => {
               const cc = catColors[r.category] || '#94a3b8';
               const sc = sevColors[r.severity] || '#94a3b8';
               return '<div style="display:flex;align-items:flex-start;gap:7px;padding:.28rem 0;border-bottom:1px solid rgba(255,255,255,.04)">' +
@@ -1872,12 +1886,13 @@ async function sendAiChat(productId) {
             }).join('');
             appendChatBubble('assistant',
               '<div style="margin-top:6px;padding:9px 11px;background:rgba(0,127,134,.13);border:1px solid rgba(53,198,196,.3);border-radius:8px;font-size:.78rem">' +
-              '<div style="font-weight:700;color:var(--sea-glass);margin-bottom:6px"><i class="fas fa-list-check" style="margin-right:5px"></i>Eligibility Rules saved — ' + hint.rules.length + ' rules</div>' +
+              '<div style="font-weight:700;color:var(--sea-glass);margin-bottom:6px"><i class="fas fa-list-check" style="margin-right:5px"></i>Eligibility Rules saved — ' + effectiveRules.length + ' rules</div>' +
               rulesHtml +
               '</div>'
             );
             setTimeout(() => updateAiDraftCard(), 200);
-          }
+            } // end if effectiveRules.length
+          } // end if hint.stage === 3
 
           if (hint.stage === 4 && hint.workflow_nodes && hint.workflow_nodes.length) {
             aiDraftWorkflow = hint.workflow_nodes.slice();
@@ -1889,6 +1904,7 @@ async function sendAiChat(productId) {
           // bubble is ever rendered for it.  Inject a concise compliance card.
           if (hint.stage === 5 && hint.compliance) {
             aiDraftConfig._compliance = true;
+            aiDraftConfig._complianceConfirmed = true;  // RC-7 FIX (BUG-6): gate badge on confirmed state
             aiDraftConfig._complianceData = hint.compliance; // stored for expanded card display
             const cpl = hint.compliance;
             const tags = Array.isArray(cpl.tags) ? cpl.tags : [];
@@ -2063,7 +2079,13 @@ function _renderDbDraftCard(product) {
     fetch('/api/v1/rules?product_id=' + product.id)
       .then(r => r.json())
       .then(rd => {
-        const fetched = (rd.rules || []).filter(r => r.product_id === product.id);
+        // RC-7 FIX (BUG-3): The API returns both product-specific AND global (product_id=NULL)
+        // rules.  The old filter `r.product_id === product.id` discarded global rules entirely,
+        // leaving the floating card empty for products whose Stage 3 fallback ran.
+        // Accept rules that belong to this product OR are global (product_id null/undefined).
+        const fetched = (rd.rules || []).filter(r =>
+          r.product_id === product.id || r.product_id === null || r.product_id === undefined
+        );
         if (fetched.length > 0 && aiDraftRules.length === 0) {
           aiDraftRules = fetched;
           setTimeout(() => updateAiDraftCard(), 150);
@@ -2081,6 +2103,7 @@ function _renderDbDraftCard(product) {
   // Compliance: always replace from DB when Stage 5 has confirmed data.
   if (dbCompliance && stageReached >= 5) {
     aiDraftConfig._compliance = true;
+    aiDraftConfig._complianceConfirmed = true;  // RC-7 FIX (BUG-6): gate badge on confirmed state
     aiDraftConfig._complianceData = dbCompliance;
     setTimeout(() => updateAiDraftCard(), 250);
   }

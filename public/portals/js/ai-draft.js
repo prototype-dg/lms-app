@@ -58,6 +58,25 @@ function _flushPending() {
     aiDraftConfig[k] = v;
     delete _pendingConfig[k];
   }
+  // RC-7 FIX (BUG-7): extractStage5Compliance (Path B) writes an object into
+  // _pendingConfig._compliance: { risk_weight, provisioning, aml, classification }.
+  // After the generic flush above, aiDraftConfig._compliance = that object (truthy).
+  // But the expanded card reads cfg._complianceData to render details — which was never
+  // set by Path B.  Convert the Path B object into _complianceData here so the expanded
+  // card shows real values instead of hardcoded defaults.
+  // Note: do NOT set _complianceConfirmed from Path B — that flag is reserved for the
+  // hint.stage===5 and DB-sync paths (only those mean the data is truly in the DB).
+  if (aiDraftConfig._compliance && typeof aiDraftConfig._compliance === 'object' && !aiDraftConfig._complianceData) {
+    const pathB = aiDraftConfig._compliance;
+    aiDraftConfig._complianceData = {
+      basel3_risk_weight: parseInt(pathB.risk_weight) || 75,
+      ifrs9_ecl_pct:      parseFloat(pathB.provisioning) || 1.5,
+      aml_risk_tier:      pathB.aml || 'LOW',
+      tags:               pathB.classification ? [pathB.classification] : [],
+    };
+    // Normalise to boolean so other code can use === true safely
+    aiDraftConfig._compliance = true;
+  }
   if (_pendingRules.length) {
     const existing = new Set(aiDraftRules.map(r => r.name));
     _pendingRules.forEach(r => { if (!existing.has(r.name)) { aiDraftRules.push(r); changed = true; } });
@@ -146,9 +165,16 @@ function updateAiDraftCard() {
   const amtPart   = amtStr   ? `<span style="color:rgba(255,255,255,.55);font-size:.71rem">${flashSpan('max_amount', amtStr)}</span>` : '';
   const rulePart  = rCount   ? `<span style="background:rgba(53,198,196,.15);color:var(--sea-glass);padding:.1rem .4rem;border-radius:10px;font-size:.68rem">${flashSpan('_rCount', rCount + ' rules')}</span>` : '';
   const wfPart    = wCount   ? `<span style="background:rgba(244,179,91,.12);color:#fbbf24;padding:.1rem .4rem;border-radius:10px;font-size:.68rem">${flashSpan('_wCount', wCount + '-step workflow')}</span>` : '';
-  const cmpPart   = cfg._compliance ? `<span style="background:rgba(22,132,91,.15);color:#4ade80;padding:.1rem .4rem;border-radius:10px;font-size:.68rem">Basel III</span>` : '';
+  // RC-7 FIX (BUG-6): Gate compliance badge on _complianceConfirmed — a flag set ONLY
+  // after a real Stage 5 stage_update_hint fires or the DB card syncs at stageReached>=5.
+  // Previously cfg._compliance (truthy) could be set by extractStage5Compliance Path B
+  // which fires whenever "Stage 5 complete" text appears in ANY GPT turn, including
+  // compressed turns where GPT emits Stage 5 confirmation text during the Stage 3 turn.
+  // Using _complianceConfirmed (set only in backoffice.html hint.stage===5 block and
+  // _renderDbDraftCard) ensures the badge never appears before Stage 5 is genuinely saved.
+  const cmpPart   = cfg._complianceConfirmed ? `<span style="background:rgba(22,132,91,.15);color:#4ade80;padding:.1rem .4rem;border-radius:10px;font-size:.68rem">Basel III</span>` : '';
 
-  const expandBtn = (rCount > 0 || wCount > 0 || cfg._compliance)
+  const expandBtn = (rCount > 0 || wCount > 0 || cfg._complianceConfirmed)
     ? `<button onclick="aiDraftCardExpanded=!aiDraftCardExpanded;updateAiDraftCard()" style="margin-left:auto;background:rgba(53,198,196,.12);border:1px solid rgba(53,198,196,.25);color:var(--sea-glass);border-radius:5px;padding:.1rem .45rem;font-size:.62rem;cursor:pointer;white-space:nowrap"><i class="fas fa-${exp?'compress-alt':'expand-alt'}" style="margin-right:.18rem"></i>${exp?'Collapse':'Expand'}</button>` : '';
 
   let html = `<div style="padding:.5rem .85rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;border-bottom:${exp?'1px solid rgba(255,255,255,.07)':'none'}">
@@ -209,8 +235,8 @@ function updateAiDraftCard() {
         (idx < wCount-1 ? `<div style="width:1px;height:8px;background:rgba(255,255,255,.1);margin:.03rem 0 .03rem 7px"></div>` : '')
       ).join('');
     }
-    // Compliance section — shown when Stage 5 data is available
-    if (cfg._compliance) {
+    // Compliance section — shown when Stage 5 data is available (confirmed only)
+    if (cfg._complianceConfirmed) {
       const cpl = cfg._complianceData || {};
       expandedHtml += `<div style="font-size:.68rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em;margin:.5rem 0 .3rem">Compliance</div>`;
       const cRow = (label, val, color) => val != null
@@ -227,7 +253,7 @@ function updateAiDraftCard() {
           `</div>`;
       }
     }
-    if (!rCount && !wCount && !cfg._compliance && Object.keys(cfg).filter(k=>!k.startsWith('_')).length < 3) {
+    if (!rCount && !wCount && !cfg._complianceConfirmed && Object.keys(cfg).filter(k=>!k.startsWith('_')).length < 3) {
       expandedHtml += `<div style="font-size:.72rem;color:rgba(255,255,255,.3);text-align:center;padding:.75rem 0">More details will appear as we progress.</div>`;
     }
     expandedHtml += `</div>`;
