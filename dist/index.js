@@ -890,7 +890,8 @@ var Me = [
 	"./migrations/0011_portal_auth.sql",
 	"./migrations/0012_sales_campaigns.sql",
 	"./migrations/0013_is_green_product.sql",
-	"./migrations/0014_fix_ai_studio_products_pge_stage.sql"
+	"./migrations/0014_fix_ai_studio_products_pge_stage.sql",
+	"./migrations/0015_repair_ai_products_no_source_filter.sql"
 ];
 function Ne() {
 	let e = r.resolve("./migrations");
@@ -1453,7 +1454,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 					model: "gpt-4o",
 					messages: e,
 					temperature: .3,
-					max_tokens: 2e3
+					max_tokens: 4e3
 				})
 			}), r = await t.json();
 			if (t.ok) {
@@ -1601,7 +1602,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 		} else if (n === 3) {
 			let n = i;
 			if (n.length === 0) {
-				let { results: t } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id IS NULL AND source='ai_generated' AND is_active=1").bind().all();
+				let { results: t } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id IS NULL AND is_active=1").bind().all();
 				t && t.length > 0 && (n = t);
 			}
 			if (n.length > 0) {
@@ -1767,7 +1768,7 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${c ? `Green discount: up to ${t
 				}
 			} catch {}
 			let { results: m } = await e.env.DB.prepare("SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1").bind(l).all(), h = t.pge_stage || 1, g = m?.length > 0 ? Math.max(h, 6) : Math.max(h, 1);
-			return await e.env.DB.prepare("\n      UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n        portal_hero_title=?, portal_highlights=?, portal_card_badge=?,\n        pge_stage=?, is_demo_product=1, is_green_product=?, published_at=?, updated_at=? WHERE id=?\n    ").bind(+!!c, u, JSON.stringify(d), f, g, +!!c, r, r, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({ product_id: l }), r, n).run(), await G(e.env.DB, {
+			return await e.env.DB.prepare("\n      UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n        portal_hero_title=?, portal_highlights=?, portal_card_badge=?,\n        pge_stage=?, is_demo_product=1, is_green_product=?,\n        market_id=COALESCE(market_id,'mkt001'), published_at=?, updated_at=? WHERE id=?\n    ").bind(+!!c, u, JSON.stringify(d), f, g, +!!c, r, r, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({ product_id: l }), r, n).run(), await G(e.env.DB, {
 				userId: o,
 				userName: s,
 				userRole: "product_manager",
@@ -7226,7 +7227,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "383092c";
+var xt = "199dc73";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
