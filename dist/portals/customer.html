@@ -701,38 +701,38 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
     <!-- DEFAULT HERO CONTENT -->
     <div class="hero-inner" id="hero-default">
       <div class="hero-left">
-        <div class="hero-kicker" id="hero-kicker-text">🏦 Sohar International · Digital Lending</div>
+        <div class="hero-kicker" id="hero-kicker-text" data-en="🏦 Sohar International · Digital Lending" data-ar="🏦 بنك صحار الدولي · الإقراض الرقمي">🏦 Sohar International · Digital Lending</div>
         <h1 class="hero-h1" id="hero-h1-text">
-          Smart Finance for <em>Every Goal</em>
+          <span data-en="Smart Finance for " data-ar="تمويل ذكي لـ ">Smart Finance for </span><em data-en="Every Goal" data-ar="كل هدف">Every Goal</em>
         </h1>
-        <p class="hero-p" id="hero-p-text">Explore our full range of financing products — from home loans to personal finance, auto loans to SME solutions. Select a product to get started.</p>
+        <p class="hero-p" id="hero-p-text" data-en="Explore our full range of financing products — from home loans to personal finance, auto loans to SME solutions. Select a product to get started." data-ar="استكشف منتجاتنا التمويلية الشاملة — من قروض المنازل إلى التمويل الشخصي وقروض السيارات وتمويل الشركات. اختر منتجاً للبدء.">Explore our full range of financing products — from home loans to personal finance, auto loans to SME solutions. Select a product to get started.</p>
         <div class="hero-btns">
-          <button class="btn-prime" onclick="showPage('properties')">Browse Properties</button>
-          <button class="btn-ghost" onclick="showPage('calculator')">Calculate Savings</button>
+          <button class="btn-prime" onclick="showPage('properties')" data-en="Browse Properties" data-ar="تصفح العقارات">Browse Properties</button>
+          <button class="btn-ghost" onclick="showPage('calculator')" data-en="Calculate Savings" data-ar="احسب مدخراتك">Calculate Savings</button>
         </div>
       </div>
       <div class="hero-card" id="hero-stats-card">
-        <div class="hc-label">AVAILABLE PRODUCTS</div>
+        <div class="hc-label" data-en="AVAILABLE PRODUCTS" data-ar="المنتجات المتاحة">AVAILABLE PRODUCTS</div>
         <div id="hero-product-count" style="font-size:2.4rem;font-weight:800;color:#fff;line-height:1">—</div>
-        <div class="hc-sub" id="hero-product-subtitle">Loading…</div>
+        <div class="hc-sub" id="hero-product-subtitle" data-en="Loading…" data-ar="جارٍ التحميل…">Loading…</div>
         <div class="hc-div"></div>
-        <div class="hc-row"><div class="hc-dot">✓</div><span>AI-assisted fast approval</span></div>
-        <div class="hc-row"><div class="hc-dot">✓</div><span>CBO-compliant products</span></div>
-        <div class="hc-row"><div class="hc-dot">✓</div><span>Competitive green rates</span></div>
+        <div class="hc-row"><div class="hc-dot">✓</div><span data-en="AI-assisted fast approval" data-ar="موافقة سريعة بالذكاء الاصطناعي">AI-assisted fast approval</span></div>
+        <div class="hc-row"><div class="hc-dot">✓</div><span data-en="CBO-compliant products" data-ar="منتجات متوافقة مع البنك المركزي">CBO-compliant products</span></div>
+        <div class="hc-row"><div class="hc-dot">✓</div><span data-en="Competitive green rates" data-ar="أسعار خضراء تنافسية">Competitive green rates</span></div>
       </div>
     </div>
 
     <!-- ECO HERO CONTENT — shown when is_demo_product=1 -->
     <div class="hero-inner" id="hero-eco" style="display:none">
       <div class="hero-left">
-        <div class="hero-kicker eco-kicker">🌿 Green Finance Initiative · Sohar International</div>
+        <div class="hero-kicker eco-kicker" data-en="🌿 Green Finance Initiative · Sohar International" data-ar="🌿 مبادرة التمويل الأخضر · بنك صحار الدولي">🌿 Green Finance Initiative · Sohar International</div>
         <h1 class="hero-h1">
-          Live Green. <em style="color:#86efac">Finance Smart.</em>
+          <span data-en="Live Green. " data-ar="اعش بيئياً. ">Live Green. </span><em style="color:#86efac" data-en="Finance Smart." data-ar="موّل بذكاء.">Finance Smart.</em>
         </h1>
-        <p class="hero-p">Our new Green Home Loan offers Oman's most competitive rate — exclusively for GSAS-certified eco homes. Save up to <strong style="color:#86efac">OMR 31,000</strong> over your loan lifetime.</p>
+        <p class="hero-p" data-en="Our new Green Home Loan offers Oman's most competitive rate — exclusively for GSAS-certified eco homes. Save up to OMR 31,000 over your loan lifetime." data-ar="يقدم قرض المنزل الأخضر الجديد أكثر الأسعار تنافسية في عُمان — حصرياً للمنازل البيئية المعتمدة GSAS. وفر حتى 31,000 ريال على مدى عمر قرضك.">Our new Green Home Loan offers Oman's most competitive rate — exclusively for GSAS-certified eco homes. Save up to <strong style="color:#86efac">OMR 31,000</strong> over your loan lifetime.</p>
         <div class="hero-btns">
-          <button class="btn-prime eco-btn" onclick="showPage('properties')">🏡 Explore Eco Properties</button>
-          <button class="btn-ghost" onclick="openWizard(null,null)">Apply for Green Loan</button>
+          <button class="btn-prime eco-btn" onclick="showPage('properties')" data-en="🏡 Explore Eco Properties" data-ar="🏡 استكشف العقارات البيئية">🏡 Explore Eco Properties</button>
+          <button class="btn-ghost" onclick="openWizard(null,null)" data-en="Apply for Green Loan" data-ar="تقدم للقرض الأخضر">Apply for Green Loan</button>
         </div>
         <div class="eco-badges" style="margin-top:24px">
           <span class="eco-badge">🌱 GSAS Certified</span>
@@ -742,14 +742,14 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
         </div>
       </div>
       <div class="hero-card eco-card" id="hero-eco-card">
-        <div class="hc-label" style="color:#86efac">GREEN HOME LOAN</div>
+          <div class="hc-label" style="color:#86efac" data-en="GREEN HOME LOAN" data-ar="قرض المنزل الأخضر">GREEN HOME LOAN</div>
         <div style="font-size:2.8rem;font-weight:800;color:#fff;line-height:1" id="eco-rate-display">4.75%</div>
-        <div class="hc-sub" style="color:#bbf7d0">From p.a. — lowest in Oman</div>
+        <div class="hc-sub" style="color:#bbf7d0" data-en="From p.a. — lowest in Oman" data-ar="من السنة — الأدنى في عُمان">From p.a. — lowest in Oman</div>
         <div class="hc-div" style="border-color:rgba(134,239,172,.2)"></div>
-        <div class="hc-row"><div class="hc-dot" style="background:#16a34a">✓</div><span>GSAS Gold &amp; Premium properties</span></div>
-        <div class="hc-row"><div class="hc-dot" style="background:#16a34a">✓</div><span>Up to OMR 500,000 · 30 year term</span></div>
-        <div class="hc-row"><div class="hc-dot" style="background:#16a34a">✓</div><span>Save up to OMR 31,000 lifetime</span></div>
-        <button class="btn-prime eco-btn" style="width:100%;margin-top:16px;justify-content:center" onclick="openWizard(null,null)">Apply Now →</button>
+        <div class="hc-row"><div class="hc-dot" style="background:#16a34a">✓</div><span data-en="GSAS Gold &amp; Premium properties" data-ar="عقارات GSAS ذهبي ومميز">GSAS Gold &amp; Premium properties</span></div>
+        <div class="hc-row"><div class="hc-dot" style="background:#16a34a">✓</div><span data-en="Up to OMR 500,000 · 30 year term" data-ar="حتى 500,000 ريال · 30 سنة">Up to OMR 500,000 · 30 year term</span></div>
+        <div class="hc-row"><div class="hc-dot" style="background:#16a34a">✓</div><span data-en="Save up to OMR 31,000 lifetime" data-ar="وفر حتى 31,000 ريال طوال مدة القرض">Save up to OMR 31,000 lifetime</span></div>
+        <button class="btn-prime eco-btn" style="width:100%;margin-top:16px;justify-content:center" onclick="openWizard(null,null)" data-en="Apply Now →" data-ar="تقدم الآن →">Apply Now →</button>
       </div>
     </div>
   </section>
@@ -760,23 +760,23 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
       <div class="quick-nav-grid">
         <div class="qn-card" onclick="showPage('products')">
           <div class="qn-icon">💼</div>
-          <div class="qn-title">Our Products</div>
-          <div class="qn-sub">Compare all financing options</div>
+          <div class="qn-title" data-en="Our Products" data-ar="منتجاتنا">Our Products</div>
+          <div class="qn-sub" data-en="Compare all financing options" data-ar="قارن كل خيارات التمويل">Compare all financing options</div>
         </div>
         <div class="qn-card" onclick="showPage('properties')">
           <div class="qn-icon">🏡</div>
-          <div class="qn-title">Browse Properties</div>
-          <div class="qn-sub">GSAS-certified partner developments</div>
+          <div class="qn-title" data-en="Browse Properties" data-ar="تصفح العقارات">Browse Properties</div>
+          <div class="qn-sub" data-en="GSAS-certified partner developments" data-ar="مشاريع شركاء معتمدة GSAS">GSAS-certified partner developments</div>
         </div>
         <div class="qn-card" onclick="showPage('calculator')">
           <div class="qn-icon">🧮</div>
-          <div class="qn-title">ESG Calculator</div>
-          <div class="qn-sub">See your lifetime green savings</div>
+          <div class="qn-title" data-en="ESG Calculator" data-ar="حاسبة ESG">ESG Calculator</div>
+          <div class="qn-sub" data-en="See your lifetime green savings" data-ar="انظر مدخراتك الخضراء مدى الحياة">See your lifetime green savings</div>
         </div>
         <div class="qn-card cta-card" onclick="openWizard(null,null)">
           <div class="qn-icon">🚀</div>
-          <div class="qn-title">Apply Now</div>
-          <div class="qn-sub" style="color:rgba(255,255,255,.65)">8-step process · AI-assisted</div>
+          <div class="qn-title" data-en="Apply Now" data-ar="تقدم الآن">Apply Now</div>
+          <div class="qn-sub" style="color:rgba(255,255,255,.65)" data-en="8-step process · AI-assisted" data-ar="8 خطوات · مدعوم بالذكاء الاصطناعي">8-step process · AI-assisted</div>
         </div>
       </div>
     </div>
@@ -787,10 +787,10 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
     <div class="sec-inner">
       <div class="sec-head">
         <div>
-          <div class="sec-eye">FINANCING PRODUCTS</div>
-          <h2 class="sec-title">Find Your Perfect Loan</h2>
+          <div class="sec-eye" data-en="FINANCING PRODUCTS" data-ar="منتجات التمويل">FINANCING PRODUCTS</div>
+          <h2 class="sec-title" data-en="Find Your Perfect Loan" data-ar="اعثر على قرضك المثالي">Find Your Perfect Loan</h2>
         </div>
-        <button class="btn btn-outline" onclick="showPage('products')" style="flex-shrink:0">View All →</button>
+        <button class="btn btn-outline" onclick="showPage('products')" style="flex-shrink:0" data-en="View All →" data-ar="عرض الكل →">View All →</button>
       </div>
       <div id="home-products-preview" style="margin-top:20px">
         <div style="text-align:center;padding:30px;color:var(--g500)"><span class="spin"></span> Loading…</div>
@@ -804,9 +804,9 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 <div class="page" id="page-products">
   <section class="sec" style="padding-top:80px;padding-bottom:60px">
     <div class="sec-inner">
-      <div class="sec-eye">ALL FINANCING PRODUCTS</div>
-      <h2 class="sec-title">Our Product Range</h2>
-      <p class="sec-sub" style="margin-bottom:32px">Choose the financing solution that fits your goals. All products are CBO-compliant with competitive rates.</p>
+      <div class="sec-eye" data-en="ALL FINANCING PRODUCTS" data-ar="جميع منتجات التمويل">ALL FINANCING PRODUCTS</div>
+      <h2 class="sec-title" data-en="Our Product Range" data-ar="نطاق منتجاتنا">Our Product Range</h2>
+      <p class="sec-sub" style="margin-bottom:32px" data-en="Choose the financing solution that fits your goals. All products are CBO-compliant with competitive rates." data-ar="اختر حل التمويل الذي يناسب أهدافك. جميع المنتجات متوافقة مع البنك المركزي بأسعار تنافسية.">Choose the financing solution that fits your goals. All products are CBO-compliant with competitive rates.</p>
 
       <!-- Demo product banner — shown only when eco product exists -->
       <div id="eco-banner" style="display:none" class="eco-hero-banner">
@@ -830,14 +830,14 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 <div class="page" id="page-properties">
   <section class="sec" style="padding-top:80px;padding-bottom:20px">
     <div class="sec-inner">
-      <div class="sec-eye">PARTNER DEVELOPMENTS</div>
-      <h2 class="sec-title">Green-Certified Properties</h2>
-      <p class="sec-sub">All developments pre-screened and GSAS-certified. Partner projects qualify for preferential green financing rates.</p>
+      <div class="sec-eye" data-en="PARTNER DEVELOPMENTS" data-ar="مشاريع الشركاء">PARTNER DEVELOPMENTS</div>
+      <h2 class="sec-title" data-en="Green-Certified Properties" data-ar="عقارات معتمدة بيئياً">Green-Certified Properties</h2>
+      <p class="sec-sub" data-en="All developments pre-screened and GSAS-certified. Partner projects qualify for preferential green financing rates." data-ar="جميع المشاريع مفحوصة مسبقاً ومعتمدة GSAS. مشاريع الشركاء مؤهلة لأسعار التمويل الأخضر التفضيلية.">All developments pre-screened and GSAS-certified. Partner projects qualify for preferential green financing rates.</p>
 
       <!-- Map / List toggle tabs -->
       <div class="prop-tabs" style="margin-top:24px">
-        <button class="prop-tab active" id="tab-map" onclick="switchPropView('map')">🗺️ Map View</button>
-        <button class="prop-tab" id="tab-list" onclick="switchPropView('list')">📋 List View</button>
+        <button class="prop-tab active" id="tab-map" onclick="switchPropView('map')" data-en="🗺️ Map View" data-ar="🗺️ عرض الخريطة">🗺️ Map View</button>
+        <button class="prop-tab" id="tab-list" onclick="switchPropView('list')" data-en="📋 List View" data-ar="📋 عرض القائمة">📋 List View</button>
       </div>
     </div>
   </section>
@@ -851,17 +851,17 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
         <div id="map-proj-btns" style="position:absolute;top:10px;right:10px;z-index:1000;display:flex;flex-direction:column;gap:6px;pointer-events:none"></div>
       </div>
       <div class="map-legend-strip">
-        <span class="map-leg-item"><span class="leg-dot" style="background:#2ECC71"></span><span id="leg-available">Available</span></span>
-        <span class="map-leg-item"><span class="leg-dot" style="background:#F39C12"></span><span id="leg-reserved">Reserved</span></span>
-        <span class="map-leg-item"><span class="leg-dot" style="background:#003B5C"></span><span id="leg-sold">Sold</span></span>
-        <span class="map-leg-item"><span class="leg-dot" style="background:#16a34a;border:2px solid #bbf7d0"></span>Demo Project</span>
+        <span class="map-leg-item"><span class="leg-dot" style="background:#2ECC71"></span><span id="leg-available" data-en="Available" data-ar="متاح">Available</span></span>
+        <span class="map-leg-item"><span class="leg-dot" style="background:#F39C12"></span><span id="leg-reserved" data-en="Reserved" data-ar="محجوز">Reserved</span></span>
+        <span class="map-leg-item"><span class="leg-dot" style="background:#003B5C"></span><span id="leg-sold" data-en="Sold" data-ar="مباع">Sold</span></span>
+        <span class="map-leg-item"><span class="leg-dot" style="background:#16a34a;border:2px solid #bbf7d0"></span><span data-en="Demo Project" data-ar="مشروع تجريبي">Demo Project</span></span>
       </div>
       <!-- Map filter chips -->
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <button class="map-filter-btn active-filter" data-filter="all" onclick="propMapFilter('all')">All</button>
-        <button class="map-filter-btn" data-filter="available" onclick="propMapFilter('available')">Available</button>
-        <button class="map-filter-btn" data-filter="reserved" onclick="propMapFilter('reserved')">Reserved</button>
-        <button class="map-filter-btn" data-filter="sold" onclick="propMapFilter('sold')">Sold</button>
+        <button class="map-filter-btn active-filter" data-filter="all" onclick="propMapFilter('all')" data-en="All" data-ar="الكل">All</button>
+        <button class="map-filter-btn" data-filter="available" onclick="propMapFilter('available')" data-en="Available" data-ar="متاح">Available</button>
+        <button class="map-filter-btn" data-filter="reserved" onclick="propMapFilter('reserved')" data-en="Reserved" data-ar="محجوز">Reserved</button>
+        <button class="map-filter-btn" data-filter="sold" onclick="propMapFilter('sold')" data-en="Sold" data-ar="مباع">Sold</button>
       </div>
     </div>
   </div>
@@ -897,7 +897,7 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
     <div class="afford-modal">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div>
-          <h3>📊 Affordability Check</h3>
+          <h3 data-en="📊 Affordability Check" data-ar="📊 فحص القدرة المالية">📊 Affordability Check</h3>
           <div class="sub" id="aff-unit-lbl" style="margin-bottom:0">Unit details</div>
         </div>
         <button class="icon-btn" onclick="closeAffordCalc()">✕</button>
@@ -905,37 +905,37 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 
       <!-- Sliders -->
       <div class="afford-slider-row">
-        <label>Down Payment</label>
+        <label data-en="Down Payment" data-ar="الدفعة الأولى">Down Payment</label>
         <input type="range" id="aff-dp" min="10" max="50" step="5" value="20" oninput="updateAffordCalc()"/>
         <div class="val"><div id="aff-dp-val">20%</div><div style="font-size:10px;color:var(--g500)" id="aff-dp-down">—</div></div>
       </div>
       <div class="afford-slider-row">
-        <label>Loan Tenure</label>
+        <label data-en="Loan Tenure" data-ar="مدة القرض">Loan Tenure</label>
         <input type="range" id="aff-ten" min="5" max="30" step="5" value="25" oninput="updateAffordCalc()"/>
         <div class="val" id="aff-ten-val">25 yrs</div>
       </div>
       <div class="afford-slider-row">
-        <label>Monthly Income</label>
+        <label data-en="Monthly Income" data-ar="الدخل الشهري">Monthly Income</label>
         <input type="range" id="aff-inc" min="500" max="10000" step="100" value="3200" oninput="updateAffordCalc()"/>
         <div class="val" id="aff-inc-val">OMR 3,200</div>
       </div>
 
       <!-- Result box -->
       <div class="afford-result-box">
-        <div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Estimated Monthly Payment</div>
+        <div data-en="Estimated Monthly Payment" data-ar="الدفعة الشهرية المقدرة" style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Estimated Monthly Payment</div>
         <div class="afford-main-val" id="aff-monthly">—</div>
         <div id="aff-verdict" style="font-size:12px;font-weight:600;padding:6px 10px;border-radius:var(--r8);margin-top:8px;display:inline-block">—</div>
         <div class="afford-grid">
-          <div class="afford-chip"><div class="lbl">Loan Amount</div><div class="v" id="aff-loan">—</div></div>
-          <div class="afford-chip"><div class="lbl">Rate p.a.</div><div class="v" id="aff-rate">—</div></div>
-          <div class="afford-chip"><div class="lbl">DBR Ratio</div><div class="v" id="aff-dbr">—</div></div>
-          <div class="afford-chip"><div class="lbl">GSAS Score</div><div class="v" id="aff-gsas">—</div></div>
+          <div class="afford-chip"><div class="lbl" data-en="Loan Amount" data-ar="مبلغ القرض">Loan Amount</div><div class="v" id="aff-loan">—</div></div>
+          <div class="afford-chip"><div class="lbl" data-en="Rate p.a." data-ar="معدل سنوي">Rate p.a.</div><div class="v" id="aff-rate">—</div></div>
+          <div class="afford-chip"><div class="lbl" data-en="DBR Ratio" data-ar="نسبة DBR">DBR Ratio</div><div class="v" id="aff-dbr">—</div></div>
+          <div class="afford-chip"><div class="lbl" data-en="GSAS Score" data-ar="نقاط GSAS">GSAS Score</div><div class="v" id="aff-gsas">—</div></div>
         </div>
       </div>
 
       <div style="display:flex;gap:10px;margin-top:16px">
-        <button class="btn btn-outline" onclick="closeAffordCalc()" style="flex:1">Close</button>
-        <button class="btn btn-teal" onclick="closeAffordCalc();openWizardFromUnit(_affordUnit?.uid,window._panelProjId)" style="flex:1">Apply for This Unit →</button>
+        <button class="btn btn-outline" data-en="Close" data-ar="إغلاق" onclick="closeAffordCalc()" style="flex:1">Close</button>
+        <button class="btn btn-teal" data-en="Apply for This Unit →" data-ar="تقدم لهذه الوحدة ←" onclick="closeAffordCalc();openWizardFromUnit(_affordUnit?.uid,window._panelProjId)" style="flex:1">Apply for This Unit →</button>
       </div>
     </div>
   </div>
@@ -946,21 +946,21 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 <div class="page" id="page-calculator">
   <section class="sec calc-wrap">
     <div class="sec-inner">
-      <div class="sec-eye">ESG SAVINGS CALCULATOR</div>
-      <h2 class="sec-title">See Your Green Savings</h2>
-      <p class="sec-sub">Toggle the ESG discount to see exactly how much you save with a GSAS-certified property.</p>
+      <div class="sec-eye" data-en="ESG SAVINGS CALCULATOR" data-ar="حاسبة مدخرات ESG">ESG SAVINGS CALCULATOR</div>
+      <h2 class="sec-title" data-en="See Your Green Savings" data-ar="انظر مدخراتك الخضراء">See Your Green Savings</h2>
+      <p class="sec-sub" data-en="Toggle the ESG discount to see exactly how much you save with a GSAS-certified property." data-ar="فعّل خصم ESG لترى بالضبط كم توفر مع عقار معتمد GSAS.">Toggle the ESG discount to see exactly how much you save with a GSAS-certified property.</p>
       <div class="calc-card">
         <div>
           <div class="c-group">
-            <div class="c-label"><span>Loan Amount (OMR)</span><span class="c-val" id="c-amt-d">200,000</span></div>
+            <div class="c-label"><span data-en="Loan Amount (OMR)" data-ar="مبلغ القرض (ريال عُماني)">Loan Amount (OMR)</span><span class="c-val" id="c-amt-d">200,000</span></div>
             <input type="range" class="c-slider" min="20000" max="500000" step="5000" value="200000" id="c-amt" oninput="calcUpdate()"/>
           </div>
           <div class="c-group">
-            <div class="c-label"><span>Tenure (Years)</span><span class="c-val" id="c-ten-d">25 years</span></div>
+            <div class="c-label"><span data-en="Tenure (Years)" data-ar="المدة (سنوات)">Tenure (Years)</span><span class="c-val" id="c-ten-d">25 years</span></div>
             <input type="range" class="c-slider" min="5" max="30" step="1" value="25" id="c-ten" oninput="calcUpdate()"/>
           </div>
           <div class="c-group">
-            <label class="c-label">GSAS Score</label>
+            <label class="c-label" data-en="GSAS Score" data-ar="نقاط GSAS">GSAS Score</label>
             <select class="c-input" id="c-gsas" onchange="calcUpdate()">
               <option value="90">90+ — GSAS Gold (4.75%)</option>
               <option value="85">85 — GSAS Premium (4.75%)</option>
@@ -970,7 +970,7 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
             </select>
           </div>
           <div class="c-group">
-            <label class="c-label">Product Category</label>
+            <label class="c-label" data-en="Product Category" data-ar="فئة المنتج">Product Category</label>
             <select class="c-input" id="c-cat" onchange="calcUpdate()">
               <option value="home_loan">Home Loan</option>
               <option value="personal_loan">Personal Loan</option>
@@ -981,25 +981,25 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
           <div class="esg-row" onclick="toggleESG()" id="esg-row">
             <div class="sw on" id="esg-sw"><div class="sw-knob"></div></div>
             <div>
-              <div style="font-size:13px;font-weight:700;color:var(--navy)">ESG Discount Applied</div>
-              <div style="font-size:11px;color:var(--g500)">−0.25% for GSAS ≥ 85</div>
+              <div style="font-size:13px;font-weight:700;color:var(--navy)" data-en="ESG Discount Applied" data-ar="تم تطبيق خصم ESG">ESG Discount Applied</div>
+              <div style="font-size:11px;color:var(--g500)" data-en="−0.25% for GSAS ≥ 85" data-ar="−0.25٪ لنقاط GSAS ≥ 85">−0.25% for GSAS ≥ 85</div>
             </div>
             <div style="margin-left:auto;font-size:16px">🌿</div>
           </div>
-          <button class="btn btn-teal" style="width:100%;justify-content:center;padding:13px;margin-top:8px" onclick="openWizard(null,null)">Apply with These Terms</button>
+          <button class="btn btn-teal" style="width:100%;justify-content:center;padding:13px;margin-top:8px" onclick="openWizard(null,null)" data-en="Apply with These Terms" data-ar="تقدم بهذه الشروط">Apply with These Terms</button>
         </div>
         <div class="calc-res">
-          <div class="cr-lbl">Monthly Payment</div>
+          <div class="cr-lbl" data-en="Monthly Payment" data-ar="الدفعة الشهرية">Monthly Payment</div>
           <div class="cr-main" id="cr-monthly">OMR 1,089</div>
           <div class="cr-rate" id="cr-rate-lbl">@ 4.75% p.a.</div>
-          <div class="cr-row"><span>Loan Amount</span><span class="cr-v" id="cr-amt">OMR 200,000</span></div>
-          <div class="cr-row"><span>Interest Rate</span><span class="cr-v" id="cr-rate">4.75%</span></div>
-          <div class="cr-row"><span>Total Interest</span><span class="cr-v" id="cr-int">OMR 126,740</span></div>
-          <div class="cr-row"><span>Total Repayment</span><span class="cr-v" id="cr-total">OMR 326,740</span></div>
+          <div class="cr-row"><span data-en="Loan Amount" data-ar="مبلغ القرض">Loan Amount</span><span class="cr-v" id="cr-amt">OMR 200,000</span></div>
+          <div class="cr-row"><span data-en="Interest Rate" data-ar="معدل الفائدة">Interest Rate</span><span class="cr-v" id="cr-rate">4.75%</span></div>
+          <div class="cr-row"><span data-en="Total Interest" data-ar="إجمالي الفائدة">Total Interest</span><span class="cr-v" id="cr-int">OMR 126,740</span></div>
+          <div class="cr-row"><span data-en="Total Repayment" data-ar="إجمالي السداد">Total Repayment</span><span class="cr-v" id="cr-total">OMR 326,740</span></div>
           <div class="saving-box">
-            <span>GREEN SAVING vs. Standard 5.50%</span>
+            <span data-en="GREEN SAVING vs. Standard 5.50%" data-ar="التوفير الأخضر مقارنة بالسعر القياسي 5.50٪">GREEN SAVING vs. Standard 5.50%</span>
             <span class="saving-num" id="cr-saving">OMR 31,560</span>
-            <span style="font-size:10px;opacity:.8">over loan lifetime</span>
+            <span style="font-size:10px;opacity:.8" data-en="over loan lifetime" data-ar="على مدى عمر القرض">over loan lifetime</span>
           </div>
         </div>
       </div>
@@ -1011,8 +1011,8 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 <div class="page" id="page-tracking">
   <section class="sec" style="padding-top:80px;padding-bottom:60px">
     <div class="sec-inner">
-      <div class="sec-eye">APPLICATION STATUS</div>
-      <h2 class="sec-title">Track Your Application</h2>
+      <div class="sec-eye" data-en="APPLICATION STATUS" data-ar="حالة الطلب">APPLICATION STATUS</div>
+      <h2 class="sec-title" data-en="Track Your Application" data-ar="تتبع طلبك">Track Your Application</h2>
 
       <div class="track-card">
         <!-- empty / loading state -->
@@ -1028,7 +1028,7 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
               <div class="track-sub" id="track-sub">—</div>
             </div>
             <div style="text-align:right">
-              <div style="font-size:10px;opacity:.6;margin-bottom:3px">Current Stage</div>
+              <div style="font-size:10px;opacity:.6;margin-bottom:3px" data-en="Current Stage" data-ar="المرحلة الحالية">Current Stage</div>
               <div style="font-size:13px;font-weight:700;color:var(--sea)" id="track-stage">—</div>
             </div>
           </div>
@@ -1036,7 +1036,7 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
             <div style="font-size:22px">💚</div>
             <div>
               <div class="ss-num" id="track-saving-num">—</div>
-              <div class="ss-lbl">Green rate saving vs standard</div>
+              <div class="ss-lbl" data-en="Green rate saving vs standard" data-ar="توفير السعر الأخضر مقارنة بالقياسي">Green rate saving vs standard</div>
             </div>
           </div>
         </div>
@@ -1047,13 +1047,13 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 
           <!-- Construction / Tranche section -->
           <div id="tranche-section" style="display:none;margin-top:28px">
-            <div style="font-size:13px;font-weight:700;color:var(--teal);letter-spacing:.5px;text-transform:uppercase;margin-bottom:14px">🏗️ Construction Stages &amp; Disbursements</div>
+            <div style="font-size:13px;font-weight:700;color:var(--teal);letter-spacing:.5px;text-transform:uppercase;margin-bottom:14px" data-en="🏗️ Construction Stages &amp; Disbursements" data-ar="🏗️ مراحل البناء والصرف">🏗️ Construction Stages &amp; Disbursements</div>
             <div id="tranche-cards"></div>
           </div>
 
           <div style="display:flex;gap:10px;margin-top:22px;justify-content:flex-end">
-            <button class="btn btn-outline" onclick="toast('Document checklist downloaded','ok')">📥 Download Checklist</button>
-            <button class="btn btn-teal" onclick="openWizard(null,null)">📤 Upload Documents</button>
+            <button class="btn btn-outline" onclick="toast(t('Document checklist downloaded'),'ok')" data-en="📥 Download Checklist" data-ar="📥 تحميل قائمة التحقق">📥 Download Checklist</button>
+            <button class="btn btn-teal" onclick="openWizard(null,null)" data-en="📤 Upload Documents" data-ar="📤 رفع المستندات">📤 Upload Documents</button>
           </div>
         </div>
       </div>
@@ -1084,14 +1084,14 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 
     <!-- Step progress dots -->
     <div class="wiz-steps" id="wiz-steps-bar">
-      <div class="ws active" data-step="0"><div class="ws-n">1</div><div class="ws-lbl">Eligibility</div></div>
-      <div class="ws" data-step="1"><div class="ws-n">2</div><div class="ws-lbl">Personal</div></div>
-      <div class="ws" data-step="2"><div class="ws-n">3</div><div class="ws-lbl">Property</div></div>
-      <div class="ws" data-step="3"><div class="ws-n">4</div><div class="ws-lbl">Financing</div></div>
-      <div class="ws" data-step="4"><div class="ws-n">5</div><div class="ws-lbl">Identity</div></div>
-      <div class="ws" data-step="5"><div class="ws-n">6</div><div class="ws-lbl">Income</div></div>
-      <div class="ws" data-step="6"><div class="ws-n">7</div><div class="ws-lbl">Documents</div></div>
-      <div class="ws" data-step="7"><div class="ws-n">8</div><div class="ws-lbl">Review</div></div>
+      <div class="ws active" data-step="0"><div class="ws-n">1</div><div class="ws-lbl" data-en="Eligibility" data-ar="الأهلية">Eligibility</div></div>
+      <div class="ws" data-step="1"><div class="ws-n">2</div><div class="ws-lbl" data-en="Personal" data-ar="الشخصية">Personal</div></div>
+      <div class="ws" data-step="2"><div class="ws-n">3</div><div class="ws-lbl" data-en="Property" data-ar="العقار">Property</div></div>
+      <div class="ws" data-step="3"><div class="ws-n">4</div><div class="ws-lbl" data-en="Financing" data-ar="التمويل">Financing</div></div>
+      <div class="ws" data-step="4"><div class="ws-n">5</div><div class="ws-lbl" data-en="Identity" data-ar="الهوية">Identity</div></div>
+      <div class="ws" data-step="5"><div class="ws-n">6</div><div class="ws-lbl" data-en="Income" data-ar="الدخل">Income</div></div>
+      <div class="ws" data-step="6"><div class="ws-n">7</div><div class="ws-lbl" data-en="Documents" data-ar="المستندات">Documents</div></div>
+      <div class="ws" data-step="7"><div class="ws-n">8</div><div class="ws-lbl" data-en="Review" data-ar="المراجعة">Review</div></div>
     </div>
 
     <!-- Wizard body — filled by renderWiz() -->
@@ -1099,9 +1099,9 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
 
     <!-- Wizard footer -->
     <div class="wiz-foot">
-      <button class="btn btn-outline" id="wiz-back" onclick="wizBack()" style="visibility:hidden">← Back</button>
+      <button class="btn btn-outline" id="wiz-back" onclick="wizBack()" style="visibility:hidden" data-en="← Back" data-ar="→ رجوع">← Back</button>
       <div style="flex:1"></div>
-      <button class="btn btn-teal" id="wiz-next" onclick="wizNext()">Continue →</button>
+      <button class="btn btn-teal" id="wiz-next" onclick="wizNext()" data-en="Continue →" data-ar="متابعة →">Continue →</button>
     </div>
   </div>
 </div>
@@ -1124,12 +1124,12 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
       <div class="liveness-brand">
         <div class="liveness-brand-dot"></div>
         <div class="liveness-header-text">
-          <div style="font-size:14px;font-weight:700;color:#e6edf3;line-height:1.2;letter-spacing:-.2px">Identity Verification</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.38);letter-spacing:.3px;text-transform:uppercase">Liveness Check · Secure</div>
+          <div style="font-size:14px;font-weight:700;color:#e6edf3;line-height:1.2;letter-spacing:-.2px" data-en="Identity Verification" data-ar="التحقق من الهوية">Identity Verification</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.38);letter-spacing:.3px;text-transform:uppercase" data-en="Liveness Check · Secure" data-ar="فحص الحيوية · آمن">Liveness Check · Secure</div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <div style="font-size:9px;color:rgba(53,198,196,.8);background:rgba(53,198,196,.1);border:1px solid rgba(53,198,196,.25);padding:3px 9px;border-radius:100px;font-weight:700;letter-spacing:.5px;text-transform:uppercase">LIVE</div>
+        <div style="font-size:9px;color:rgba(53,198,196,.8);background:rgba(53,198,196,.1);border:1px solid rgba(53,198,196,.25);padding:3px 9px;border-radius:100px;font-weight:700;letter-spacing:.5px;text-transform:uppercase" data-en="LIVE" data-ar="مباشر">LIVE</div>
         <button onclick="cancelLiveness()" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.6);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">&times;</button>
       </div>
     </div>
@@ -1235,6 +1235,422 @@ body.rtl .toast{border-left:none;border-right:4px solid var(--teal)}
    GLOBAL STATE
 ══════════════════════════════════════════════════════ */
 let isAr = false;
+
+/* ══════════════════════════════════════════════════════
+   ARABIC TRANSLATION DICTIONARY
+   Usage: t('key') returns Arabic string when isAr=true,
+          English string otherwise.
+══════════════════════════════════════════════════════ */
+const AR = {
+  /* ── NAV ── */
+  'Home':'الرئيسية','Products':'المنتجات','Properties':'العقارات',
+  'Calculator':'الحاسبة','My Application':'طلبي','Apply Now':'تقدم الآن',
+  'Sign Out':'تسجيل الخروج',
+
+  /* ── HERO (default) ── */
+  'Sohar International · Digital Lending':'بنك صحار الدولي · الإقراض الرقمي',
+  'Smart Finance for ':'تمويل ذكي لـ ','Every Goal':'كل هدف',
+  'Explore our full range of financing products — from home loans to personal finance, auto loans to SME solutions. Select a product to get started.':
+    'استكشف منتجاتنا التمويلية الشاملة — من قروض المنازل إلى التمويل الشخصي وقروض السيارات وتمويل الشركات. اختر منتجاً للبدء.',
+  'Browse Properties':'تصفح العقارات','Calculate Savings':'احسب مدخراتك',
+  'AVAILABLE PRODUCTS':'المنتجات المتاحة','Loading…':'جارٍ التحميل…',
+  'AI-assisted fast approval':'موافقة سريعة بالذكاء الاصطناعي',
+  'CBO-compliant products':'منتجات متوافقة مع البنك المركزي',
+  'Competitive green rates':'أسعار خضراء تنافسية',
+
+  /* ── HERO (eco) ── */
+  'Green Finance Initiative · Sohar International':'مبادرة التمويل الأخضر · بنك صحار الدولي',
+  'Live Green. ':'اعش بيئياً. ','Finance Smart.':'موّل بذكاء.',
+  'Explore Eco Properties':'استكشف العقارات الصديقة للبيئة',
+  'Apply for Green Loan':'تقدم للقرض الأخضر',
+  'GREEN HOME LOAN':'قرض المنزل الأخضر',
+  'From p.a. — lowest in Oman':'من السنة — الأدنى في عُمان',
+  'GSAS Gold & Premium properties':'عقارات GSAS ذهبي ومميز',
+  'Up to OMR 500,000 · 30 year term':'حتى 500,000 ريال · 30 سنة',
+  'Save up to OMR 31,000 lifetime':'وفر حتى 31,000 ريال طوال مدة القرض',
+  'GSAS Certified':'معتمد GSAS','Solar Ready':'جاهز للطاقة الشمسية',
+  'Water Efficient':'موفر للمياه','EV Charging':'شحن السيارات الكهربائية',
+
+  /* ── QUICK NAV ── */
+  'Our Products':'منتجاتنا','Compare all financing options':'قارن كل خيارات التمويل',
+  'GSAS-certified partner developments':'مشاريع شركاء معتمدة GSAS',
+  'ESG Calculator':'حاسبة ESG','See your lifetime green savings':'انظر مدخراتك الخضراء مدى الحياة',
+  '8-step process · AI-assisted':'8 خطوات · بمساعدة الذكاء الاصطناعي',
+
+  /* ── HOME PRODUCTS PREVIEW ── */
+  'FINANCING PRODUCTS':'منتجات التمويل','Find Your Perfect Loan':'اعثر على قرضك المثالي',
+  'View All →':'عرض الكل →',
+
+  /* ── PRODUCTS PAGE ── */
+  'ALL FINANCING PRODUCTS':'جميع منتجات التمويل','Our Product Range':'نطاق منتجاتنا',
+  'Choose the financing solution that fits your goals. All products are CBO-compliant with competitive rates.':
+    'اختر حل التمويل الذي يناسب أهدافك. جميع المنتجات متوافقة مع البنك المركزي بأسعار تنافسية.',
+  'New! Green Home Loan':'جديد! قرض المنزل الأخضر',
+  'Oman\'s most competitive eco-home financing — from 4.75% p.a. for GSAS-certified properties.':
+    'أكثر تمويل منافس للمنازل البيئية في عُمان — من 4.75٪ سنوياً للعقارات المعتمدة GSAS.',
+  'Explore →':'استكشف →',
+  'Apply':'تقدم','Apply for This Product':'تقدم لهذا المنتج',
+  'Base Rate':'معدل الأساس','per annum':'سنوياً','From':'من',
+
+  /* ── PRODUCT CATEGORY LABELS ── */
+  'Home Loans':'قروض المنازل','Personal Loans':'قروض شخصية',
+  'Auto Loans':'قروض السيارات','SME Finance':'تمويل الشركات',
+  'Home Loan':'قرض منزل','Personal Loan':'قرض شخصي',
+  'Auto Loan':'قرض سيارة','SME':'شركات',
+  'home_loan':'قروض المنازل','personal_loan':'قروض شخصية',
+  'auto_loan':'قروض السيارات','sme':'تمويل الشركات',
+
+  /* ── PROPERTIES PAGE ── */
+  'PARTNER DEVELOPMENTS':'مشاريع الشركاء',
+  'Green-Certified Properties':'عقارات معتمدة بيئياً',
+  'All developments pre-screened and GSAS-certified. Partner projects qualify for preferential green financing rates.':
+    'جميع المشاريع مفحوصة مسبقاً ومعتمدة GSAS. مشاريع الشركاء مؤهلة لأسعار التمويل الأخضر التفضيلية.',
+  '🗺️ Map View':'🗺️ عرض الخريطة','📋 List View':'📋 عرض القائمة',
+  'Available':'متاح','Reserved':'محجوز','Sold':'مباع','Demo Project':'مشروع تجريبي',
+  'All':'الكل',
+  'Loading properties…':'جارٍ تحميل العقارات…',
+
+  /* ── PROJECT PANEL ── */
+  'GSAS Score':'نقاط GSAS','Rate p.a.':'السعر سنوياً',
+  'Total Units':'إجمالي الوحدات','Available Units':'الوحدات المتاحة',
+  'EPC Rating':'تقييم EPC','Green Eligible':'مؤهل للتمويل الأخضر',
+  'Type':'النوع','Location':'الموقع','Project Status':'حالة المشروع',
+  'Starting From':'يبدأ من','Price Range':'نطاق السعر',
+  'Green Features':'الميزات الخضراء','Contractor':'المقاول',
+  'Main Contractor':'المقاول الرئيسي','Select a Unit':'اختر وحدة',
+  'Floor Plan':'مخطط الطابق','Beds':'غرف','Bath':'حمام','Area':'المساحة',
+  'GSAS-certified':'معتمد GSAS',
+  'Affordability Check':'فحص القدرة المالية',
+  'Check Affordability':'فحص القدرة المالية',
+  'Apply for This Unit':'تقدم لهذه الوحدة',
+  'Apply for This Unit →':'تقدم لهذه الوحدة →',
+  'Villa':'فيلا','Apartment':'شقة','Townhouse':'تاون هاوس',
+
+  /* ── AFFORDABILITY MODAL ── */
+  '📊 Affordability Check':'📊 فحص القدرة المالية',
+  'Down Payment':'الدفعة الأولى','Loan Tenure':'مدة القرض',
+  'Monthly Income':'الدخل الشهري','Estimated Monthly Payment':'الدفعة الشهرية المقدرة',
+  'Loan Amount':'مبلغ القرض','Rate p.a.':'السعر سنوياً',
+  'DBR Ratio':'نسبة DBR','Close':'إغلاق',
+  'Affordable ✅':'ميسور ✅','Tight ⚠️':'ضيق ⚠️','Exceeds Limit ❌':'يتجاوز الحد ❌',
+  'DBR':'DBR','yrs':'سنة',
+
+  /* ── CALCULATOR PAGE ── */
+  'ESG SAVINGS CALCULATOR':'حاسبة مدخرات ESG',
+  'See Your Green Savings':'انظر مدخراتك الخضراء',
+  'Toggle the ESG discount to see exactly how much you save with a GSAS-certified property.':
+    'فعّل خصم ESG لترى بالضبط كم توفر مع عقار معتمد GSAS.',
+  'Loan Amount (OMR)':'مبلغ القرض (ريال عُماني)','Tenure (Years)':'المدة (سنوات)',
+  'Product Category':'فئة المنتج',
+  'ESG Discount Applied':'تم تطبيق خصم ESG',
+  '−0.25% for GSAS ≥ 85':'−0.25٪ لنقاط GSAS ≥ 85',
+  'Apply with These Terms':'تقدم بهذه الشروط',
+  'Monthly Payment':'الدفعة الشهرية','Interest Rate':'معدل الفائدة',
+  'Total Interest':'إجمالي الفائدة','Total Repayment':'إجمالي السداد',
+  'GREEN SAVING vs. Standard 5.50%':'التوفير الأخضر مقارنة بالسعر القياسي 5.50٪',
+  'over loan lifetime':'على مدى عمر القرض',
+  'years':'سنة',
+
+  /* ── TRACKING PAGE ── */
+  'APPLICATION STATUS':'حالة الطلب','Track Your Application':'تتبع طلبك',
+  'Reference:':'المرجع:','In Review':'قيد المراجعة','Under Assessment':'قيد التقييم',
+  'ESG Review':'مراجعة ESG','Approved ✅':'معتمد ✅','Disbursed':'صُرِف',
+  'Completed':'مكتمل','Rejected':'مرفوض',
+  'Application Received':'تم استلام الطلب','Credit Assessment':'تقييم الائتمان',
+  'ESG Verification':'التحقق من ESG','Maker-Checker Approval':'موافقة المراجعة',
+  'Approved':'معتمد','Funds Disbursed':'صُرِفت الأموال',
+  'Initial Review':'المراجعة الأولية','Property Valuation':'تقييم العقار',
+  'Final Approval':'الموافقة النهائية','Disbursement':'الصرف',
+  'Pending':'معلّق',
+  '🏗️ Construction Stages & Disbursements':'🏗️ مراحل البناء والصرف',
+  'Foundation':'الأساسات','Structural Frame':'الإطار الهيكلي',
+  'Roofing & MEP':'السقف والتمديدات','Finishing':'التشطيبات',
+  '✅ Released':'✅ صُرِف','⏳ Active':'⏳ نشط','🔒 Locked':'🔒 مقفل',
+  '📥 Download Checklist':'📥 تحميل قائمة التحقق',
+  '📤 Upload Documents':'📤 رفع المستندات',
+  'Green rate saving vs standard':'توفير السعر الأخضر مقارنة بالقياسي',
+  'Disbursement Tranches':'أجزاء الصرف',
+  'What happens next?':'ماذا يحدث بعد ذلك؟',
+  'Application Submitted!':'تم تقديم الطلب!',
+  'Your home loan application has been received and is now under review.':'تم استلام طلب قرض منزلك وهو الآن قيد المراجعة.',
+  'Application Reference':'مرجع الطلب',
+  'Applied Rate':'السعر المطبق','Monthly Payment':'الدفعة الشهرية',
+  'Lifetime Saving 🌿':'التوفير مدى الحياة 🌿',
+  'Our compliance and risk teams have been notified and will review your application. You can track the status here at any time. We aim to complete the initial review within':'تم إخطار فرق الامتثال والمخاطر وستراجع طلبك. يمكنك تتبع الحالة هنا في أي وقت. نهدف لإكمال المراجعة الأولية خلال',
+  '2–3 business days':'2-3 أيام عمل',
+  'Loading status…':'جارٍ تحميل الحالة…',
+
+  /* ── WIZARD HEADER ── */
+  'Loan Application':'طلب القرض',
+  'Step':'خطوة','of':'من',
+  'Financing Application':'طلب التمويل',
+  'AI-assisted · 8 steps · Avg. 12 minutes':'مدعوم بالذكاء الاصطناعي · 8 خطوات · 12 دقيقة',
+
+  /* ── WIZARD STEP LABELS ── */
+  'Eligibility':'الأهلية','Personal':'الشخصية','Property':'العقار',
+  'Financing':'التمويل','Identity':'الهوية','Income':'الدخل',
+  'Documents':'المستندات','Review':'المراجعة',
+
+  /* ── WIZARD FOOTER BUTTONS ── */
+  '← Back':'→ رجوع','Continue →':'متابعة →',
+  'Submit Application':'تقديم الطلب','🚀 Submit Application':'🚀 تقديم الطلب',
+
+  /* ── STEP 0: ELIGIBILITY ── */
+  'Eligibility Check':'فحص الأهلية',
+  '🤖 Quick eligibility check — takes 30 seconds. Confirms your product and rate before you fill the full form.':
+    '🤖 فحص أهلية سريع — يستغرق 30 ثانية. يؤكد منتجك وسعرك قبل ملء النموذج الكامل.',
+  'Nationality':'الجنسية','Employment Type':'نوع التوظيف',
+  'Omani':'عُماني','Expatriate (GCC)':'وافد (دول الخليج)','Expatriate (Other)':'وافد (أخرى)',
+  'Government':'حكومي','Government / Semi-Gov':'حكومي / شبه حكومي',
+  'Private Sector':'قطاع خاص','Self-Employed':'عمل حر','Retired':'متقاعد',
+  'Monthly Salary (OMR)':'الراتب الشهري (ريال)','Desired Loan Amount (OMR)':'مبلغ القرض المطلوب (ريال)',
+  '✅ Eligible — you qualify! Your estimated rate:':'✅ مؤهل — أنت مؤهل! سعرك التقديري:',
+  '⚠️ Marginally eligible — a compliance officer will review.':'⚠️ مؤهل بشكل هامشي — سيراجع ضابط الامتثال.',
+  '❌ Currently not eligible. Consider increasing your salary or reducing the loan amount.':
+    '❌ غير مؤهل حالياً. فكر في زيادة راتبك أو تقليل مبلغ القرض.',
+  'Check Eligibility':'فحص الأهلية',
+
+  /* ── STEP 1: PERSONAL ── */
+  'Personal Details':'التفاصيل الشخصية',
+  'Please fill in your personal information as it appears on your Civil ID.':
+    'الرجاء ملء معلوماتك الشخصية كما تظهر على بطاقة الهوية المدنية.',
+  'Full Name (English)':'الاسم الكامل (إنجليزي)','Civil ID Number':'رقم الهوية المدنية',
+  'Date of Birth':'تاريخ الميلاد','Gender':'الجنس',
+  'Male':'ذكر','Female':'أنثى',
+  'Mobile Number':'رقم الهاتف','Email Address':'البريد الإلكتروني',
+  'City':'المدينة','Governorate':'المحافظة',
+  'Muscat':'مسقط','Dhofar':'ظفار','Sohar':'صحار','Salalah':'صلالة',
+
+  /* ── STEP 2: PROPERTY ── */
+  'Property Details':'تفاصيل العقار',
+  'Partner Property':'عقار الشريك','Custom Property':'عقار مخصص',
+  '🤝 Partner Project':'🤝 مشروع الشريك','🏠 BYO Custom Property':'🏠 عقار مخصص',
+  'Partner Property (Pre-approved ESG)':'عقار الشريك (ESG مُعتمد مسبقاً)',
+  'Your Own Property (BYO)':'عقارك الخاص (BYO)',
+  'Select a partner project:':'اختر مشروع شريك:',
+  'Select Project':'اختر المشروع',
+  '✅ ESG pre-screened · Preferred rates apply':'✅ ESG مفحوص مسبقاً · تنطبق الأسعار المفضلة',
+  'Project':'المشروع','Unit':'الوحدة',
+  'Property Type':'نوع العقار','Property Address / Location':'عنوان العقار / الموقع',
+  'Estimated Property Value (OMR)':'القيمة التقديرية للعقار (ريال)',
+  'GSAS Score (if certified)':'نقاط GSAS (إذا معتمد)',
+  'Not certified / Unknown':'غير معتمد / غير معروف',
+  'Contractor / Developer Name':'اسم المقاول / المطور',
+  '✅ GSAS Premium — Green Premium rate applies (−0.25% p.a.)':'✅ GSAS مميز — ينطبق سعر الخضر المميز (−0.25٪ سنوياً)',
+  '🌿 GSAS Standard — Green Standard rate applies':'🌿 GSAS قياسي — ينطبق السعر الأخضر القياسي',
+  '📋 Below GSAS threshold — Standard rate applies':'📋 أقل من حد GSAS — ينطبق السعر القياسي',
+  'No project selected. Please go back and select a project.':'لم يُختر مشروع. يرجى العودة واختيار مشروع.',
+
+  /* ── STEP 3: FINANCING ── */
+  'Financing Details':'تفاصيل التمويل',
+  'Select your financing parameters. Your green rate discount is automatically applied based on GSAS score.':
+    'اختر معاملات التمويل. يتم تطبيق خصم السعر الأخضر تلقائياً بناءً على نقاط GSAS.',
+  'Loan Amount (OMR)':'مبلغ القرض (ريال)','Down Payment (OMR)':'الدفعة الأولى (ريال)',
+  'Loan Tenure (Years)':'مدة القرض (سنوات)',
+  'Product':'المنتج','Rate p.a.':'السعر سنوياً',
+  'Max Tenure':'أقصى مدة','Max Amount':'أقصى مبلغ',
+  'Green Discount':'خصم أخضر','Min GSAS':'الحد الأدنى GSAS',
+  'Green Premium 🌿':'الخضر المميز 🌿','Green Standard 🌿':'الخضر القياسي 🌿',
+  'Standard':'قياسي',
+  'Monthly Payment':'الدفعة الشهرية',
+  'Your estimated monthly payment':'دفعتك الشهرية المقدرة',
+  'Based on':'بناءً على','interest rate':'معدل الفائدة',
+
+  /* ── STEP 4: IDENTITY ── */
+  'Identity Verification':'التحقق من الهوية',
+  'Upload your Civil ID for AI-powered verification. This typically takes under 60 seconds.':
+    'ارفع بطاقة هويتك المدنية للتحقق بالذكاء الاصطناعي. يستغرق هذا عادةً أقل من 60 ثانية.',
+  'Civil ID — Front':'الهوية المدنية — الوجه الأمامي',
+  'Civil ID — Back':'الهوية المدنية — الوجه الخلفي',
+  'Drop or click to upload':'اسحب أو انقر للرفع',
+  'PDF, JPG, PNG • Max 10MB':'PDF, JPG, PNG • حد أقصى 10MB',
+  'Scanning document…':'جارٍ فحص المستند…',
+  'Extracting data…':'جارٍ استخراج البيانات…',
+  'Verifying authenticity…':'جارٍ التحقق من الأصالة…',
+  'ID Verified ✅':'تم التحقق من الهوية ✅',
+  'Start Liveness Check':'بدء فحص الحيوية',
+  'Liveness Check Passed ✅':'اجتاز فحص الحيوية ✅',
+  'Face matched to ID ✅':'الوجه يطابق الهوية ✅',
+
+  /* ── STEP 5: INCOME ── */
+  'Income Verification':'التحقق من الدخل',
+  'Upload your salary certificate or bank statements. Our AI will extract and verify your income.':
+    'ارفع شهادة راتبك أو كشوف حسابك البنكي. سيستخرج الذكاء الاصطناعي ويتحقق من دخلك.',
+  'Salary Certificate':'شهادة الراتب','Bank Statements (3 months)':'كشوف حساب (3 أشهر)',
+  'Or enter manually:':'أو أدخل يدوياً:',
+  'Monthly Net Salary (OMR)':'صافي الراتب الشهري (ريال)',
+  'Other Monthly Income (OMR)':'دخل شهري آخر (ريال)',
+  'Existing Monthly Obligations (OMR)':'الالتزامات الشهرية الحالية (ريال)',
+  'Analysing income document…':'جارٍ تحليل مستند الدخل…',
+  'Reading document metadata…':'جارٍ قراءة بيانات المستند…',
+  'Extracting salary figures…':'جارٍ استخراج أرقام الراتب…',
+  'Cross-referencing with bank data…':'جارٍ المراجعة المتقاطعة مع بيانات البنك…',
+  'Income verified ✅':'تم التحقق من الدخل ✅',
+  'DBR':'نسبة الديون للدخل',
+  'DBR Ratio':'نسبة الديون للدخل',
+  'Based on your income, your estimated Debt-Burden Ratio is':'بناءً على دخلك، نسبة الديون للدخل المقدرة هي',
+  'within the':'ضمن','CBO limit':'حد البنك المركزي',
+  '✅ Within limit':'✅ ضمن الحد','⚠️ Close to limit':'⚠️ قريب من الحد','❌ Exceeds limit':'❌ يتجاوز الحد',
+
+  /* ── STEP 6: DOCUMENTS ── */
+  'Document Upload':'رفع المستندات',
+  'Upload personal documents.':'ارفع المستندات الشخصية.',
+  'Property ESG documents are pre-loaded from the partner project.':'مستندات ESG للعقار محملة مسبقاً من مشروع الشريك.',
+  'Upload all required documents below.':'ارفع جميع المستندات المطلوبة أدناه.',
+  'Property Documents (ESG)':'مستندات العقار (ESG)',
+  'Personal Documents':'المستندات الشخصية',
+  'GSAS Certificate':'شهادة GSAS',
+  'EPC Report':'تقرير EPC',
+  'EIA Environmental Approval':'موافقة EIA البيئية',
+  'Salary Certificate':'شهادة الراتب',
+  'Bank Statements':'كشوف الحساب البنكي',
+  'NOC':'رسالة عدم الاعتراض',
+  'Property Valuation':'تقييم العقار',
+  '✅ AI Verified':'✅ تم التحقق بالذكاء الاصطناعي',
+  '⚠️ Needs Manual Review':'⚠️ يحتاج مراجعة يدوية',
+  '📎 Click to Upload':'📎 انقر للرفع',
+  '✅ Verified':'✅ تم التحقق',
+  '⚠️ Flagged for Review':'⚠️ مُعلَّم للمراجعة',
+  'confidence':'دقة',
+  '⏳ Not yet uploaded by developer':'⏳ لم يرفعه المطور بعد',
+  'Not yet uploaded by developer':'لم يرفعه المطور بعد',
+  '⚠️ EPC Report flagged for manual review — compliance officer will verify. Does not block application.':
+    '⚠️ تقرير EPC مُعلَّم للمراجعة اليدوية — سيتحقق ضابط الامتثال. لا يوقف الطلب.',
+  'Rating:':'التقييم:','Score:':'النتيجة:','Ref:':'المرجع:',
+  'Project document':'مستند المشروع',
+
+  /* ── STEP 7: REVIEW ── */
+  'Review & Submit':'المراجعة والتقديم',
+  'Please review all details carefully before submitting your application.':
+    'يرجى مراجعة جميع التفاصيل بعناية قبل تقديم طلبك.',
+  'Applicant':'مقدم الطلب','Civil ID':'رقم الهوية المدنية',
+  'Property Source':'مصدر العقار','Contractor':'المقاول',
+  'Property Value':'قيمة العقار','Listed Price':'السعر المدرج',
+  'Campaign':'الحملة','Discounted Price':'السعر المخفض','Offer Expires':'تنتهي العرض',
+  'Down Payment':'الدفعة الأولى','Tenure':'المدة',
+  'DBR Ratio':'نسبة DBR','LTV Ratio':'نسبة LTV',
+  'Lifetime Saving':'التوفير مدى الحياة',
+  'Credit Bureau':'مكتب الائتمان',"MALA'A — Clear ✅":"مَلاء — واضح ✅",
+  'ID Verified':'تم التحقق من الهوية','Liveness Check':'فحص الحيوية',
+  'vs standard rate':'مقابل السعر القياسي',
+  'Years':'سنة','Year':'سنة','Year ':'سنة ',
+  'I confirm the information is accurate and consent to credit bureau checks and data processing per Sohar International\'s Privacy Policy and CBO regulations.':
+    'أؤكد صحة المعلومات وأوافق على الفحوصات الائتمانية ومعالجة البيانات وفق سياسة خصوصية بنك صحار الدولي وأنظمة البنك المركزي.',
+
+  /* ── LIVENESS OVERLAY ── */
+  'Identity Verification':'التحقق من الهوية',
+  'Liveness Check · Secure':'فحص الحيوية · آمن',
+  'LIVE':'مباشر',
+  'Position your face in the oval':'ضع وجهك داخل البيضاوي',
+  'Look straight ahead, good lighting':'انظر للأمام، إضاءة جيدة',
+  'Slowly turn your head left':'أدر رأسك ببطء لليسار',
+  'Now turn right':'أدر رأسك لليمين الآن',
+  'Smile naturally':'ابتسم بشكل طبيعي',
+  'Liveness confirmed!':'تم تأكيد الحيوية!',
+  'Analyzing…':'جارٍ التحليل…',
+  'Processing…':'جارٍ المعالجة…',
+  'Verifying face match…':'جارٍ التحقق من تطابق الوجه…',
+  'Begin Liveness Check':'بدء فحص الحيوية',
+  'Cancel':'إلغاء',
+
+  /* ── TOAST MESSAGES ── */
+  'Uploading':'جارٍ الرفع',
+  'uploaded':'تم الرفع',
+  'verified':'تم التحقق',
+  'Please accept the consent checkbox.':'يرجى قبول مربع الموافقة.',
+  'Submitting…':'جارٍ التقديم…',
+  'Document checklist downloaded':'تم تحميل قائمة المستندات',
+
+  /* ── STEP PROPERTY ── */
+  'Property & Contractor':'العقار والمقاول',
+  'Confirm your property details. Switch between a partner property or your own (BYO).':'أكّد تفاصيل عقارك. التبديل بين عقار شريك أو عقارك الخاص.',
+  'Partner Property':'عقار شريك','BYO (Custom Property)':'عقارك الخاص',
+  'Partnered Property':'عقار مشترك','contractor details pre-verified by Sohar International.':'تفاصيل المقاول معتمدة مسبقًا من بنك صحار الدولي.',
+  'Eco-Certified Project':'مشروع معتمد بيئيًا','eligible for Green Home Loan premium rate.':'مؤهل لسعر قرض المنزل الأخضر المميز.',
+  'Project':'المشروع','Select Unit':'اختر الوحدة',
+  'Loading units…':'جارٍ تحميل الوحدات…','Select a project above to see available units.':'اختر مشروعًا أعلاه لرؤية الوحدات المتاحة.',
+  'Green Features:':'الميزات الخضراء:','Green Features (select all that apply)':'الميزات الخضراء (اختر جميع ما ينطبق)',
+  'Pre-verified by Sohar International':'معتمد مسبقًا من بنك صحار الدولي',
+  'Custom (BYO) Property':'عقار مخصص (BYO)',
+  "you'll need to provide your own property and contractor details. Al Jazeera Constructions pre-filled as demo.":"ستحتاج إلى تقديم تفاصيل عقارك ومقاولك. تم ملء الجزيرة للإنشاءات مسبقًا كنموذج.",
+  'Property Address':'عنوان العقار','Property Type':'نوع العقار',
+  'Villa':'فيلا','Apartment':'شقة','Townhouse':'تاون هاوس','Land & Build':'أرض وبناء',
+  'GSAS Score (if available)':'نقاط GSAS (إن وُجدت)',
+  'Upload Property Valuation Report':'رفع تقرير تقييم العقار',
+  'Contractor Details':'تفاصيل المقاول','BYO contractor':'مقاول خاص',
+  'pre-filled with Al Jazeera Constructions (demo). Edit as needed for your actual contractor.':'تم ملء الجزيرة للإنشاءات مسبقًا (نموذج). عدّل حسب الحاجة لمقاولك الفعلي.',
+  'Company Name':'اسم الشركة','CR Number':'رقم السجل التجاري',
+  'MOH License':'رخصة وزارة الصحة','Contact Name':'اسم جهة الاتصال',
+  'Contact Phone':'هاتف جهة الاتصال','Upload CR / License (PDF/Image)':'رفع السجل/الرخصة (PDF/صورة)',
+
+  /* ── STEP FINANCING ── */
+  'Select Product & Calculate':'اختر المنتج واحسب',
+  'All rates, limits, and green discounts are loaded live from the product database.':'جميع المعدلات والحدود والخصومات الخضراء محملة مباشرةً من قاعدة بيانات المنتجات.',
+  'Home Loan Product':'منتج قرض عقاري',
+  'Estimated Monthly Payment':'الدفعة الشهرية المقدرة',
+  'Loan Amount':'مبلغ القرض','Property Value':'قيمة العقار',
+  'LTV Ratio':'نسبة LTV','vs. Std. Loan':'مقابل القرض المعياري',
+  'Green Premium 🌿':'مميز أخضر 🌿','Green Standard 🌿':'معياري أخضر 🌿','Standard':'معياري',
+
+  /* ── STEP IDENTITY ── */
+  'Identity Verification':'التحقق من الهوية',
+  'Upload both sides of your Civil ID, then complete the liveness check.':'ارفع وجهَي بطاقة هويتك المدنية، ثم أكمل فحص الحيوية.',
+  'Front Side':'الواجهة الأمامية','Back Side':'الواجهة الخلفية','Tap to upload':'انقر للرفع',
+  'Max 5 MB per file · Files are processed locally and not stored':'الحد الأقصى 5 ميغابايت لكل ملف · الملفات تُعالَج محليًا ولا تُخزَّن',
+  'Identity Verified':'تم التحقق من الهوية',
+  'Civil ID authenticated · OIEC database matched · Expiry valid':'بطاقة هوية موثقة · مطابقة قاعدة بيانات OIEC · الصلاحية سارية',
+  'Face Liveness Check':'فحص الحيوية بالوجه',
+  "We need to verify you're a real person. Guided facial recognition — data is not stored.":"نحتاج إلى التحقق من أنك شخص حقيقي. تعرف على الوجه بتوجيه — البيانات لا تُخزَّن.",
+  'Re-run Liveness Check':'إعادة فحص الحيوية','Start Liveness Check':'بدء فحص الحيوية',
+  'Please complete both Identity Verification and Liveness Check before continuing.':'يرجى إكمال التحقق من الهوية وفحص الحيوية قبل المتابعة.',
+  'Reading front of Civil ID…':'قراءة واجهة بطاقة الهوية…',
+  'Reading back of Civil ID…':'قراءة ظهر بطاقة الهوية…',
+  'Extracting MRZ data…':'استخراج بيانات MRZ…',
+  'Verifying against OIEC database…':'التحقق من قاعدة بيانات OIEC…',
+  'Checking expiry date…':'فحص تاريخ الانتهاء…',
+  'Finalising authentication…':'إنهاء المصادقة…','Verified ✅':'تم التحقق ✅',
+
+  /* ── STEP INCOME ── */
+  'Employment & Income':'التوظيف والدخل',
+  'Pre-filled from your profile. Upload a salary certificate to auto-populate via OCR.':'مُعبَّأ مسبقًا من ملفك الشخصي. ارفع شهادة الراتب للملء التلقائي عبر OCR.',
+  'Pre-filled from eligibility step':'مُعبَّأ مسبقًا من خطوة الأهلية',
+  'upload documents to refine via AI OCR.':'ارفع المستندات للتحسين عبر OCR الذكاء الاصطناعي.',
+  'Employer / Company':'صاحب العمل / الشركة',
+  'Employment Type':'نوع التوظيف','Government':'حكومي','Private Sector':'قطاع خاص','Self-Employed':'عمل حر',
+  'Start Date':'تاريخ البداية','Basic Salary (OMR)':'الراتب الأساسي (ريال)',
+  'Housing Allowance (OMR)':'بدل السكن (ريال)','Transport Allowance (OMR)':'بدل المواصلات (ريال)',
+  'Car Rental Allowance (OMR)':'بدل استئجار السيارة (ريال)','Total Income (OMR)':'إجمالي الدخل (ريال)',
+  'Existing Commitments (OMR)':'الالتزامات الحالية (ريال)',
+  'Upload Salary Certificate / HR Letter':'رفع شهادة الراتب / خطاب الموارد البشرية',
+  'Upload your salary certificate or HR letter. Our AI will extract income details and highlight any changed values.':'ارفع شهادة راتبك أو خطاب الموارد البشرية. سيستخرج الذكاء الاصطناعي تفاصيل الدخل ويسلط الضوء على القيم المتغيرة.',
+  'Click to upload salary certificate':'انقر لرفع شهادة الراتب',
+  'PDF, JPG or PNG · Max 10MB':'PDF، JPG أو PNG · الحد الأقصى 10 ميغابايت',
+  'OCR Complete':'اكتمل OCR','fields updated from document. Highlighted in green.':'حقول محدّثة من المستند. مميزة باللون الأخضر.',
+  'Projected DBR':'نسبة DBR المتوقعة','loan payment':'دفعة القرض','commitments':'الالتزامات',
+  'Within CBO limit':'ضمن حد المصرف المركزي','Exceeds 40% limit':'يتجاوز حد 40%',
+
+  /* ── STEP DOCUMENTS ── */
+  'Document Upload':'رفع المستندات',
+  'Upload personal documents.':'ارفع المستندات الشخصية.',
+  'Property ESG documents are pre-loaded from the partner project.':'مستندات ESG العقارية محملة مسبقًا من المشروع الشريك.',
+  'Upload all required documents below.':'ارفع جميع المستندات المطلوبة أدناه.',
+  "Partner project ESG documents below are fetched directly from the developer's submission":'مستندات ESG لمشروع الشريك أدناه مجلوبة مباشرةً من تقديم المطور',
+  'no re-upload needed.':'لا داعي لإعادة الرفع.',
+  'They have already been AI-validated and will be automatically associated with your application.':'تم التحقق منها بالذكاء الاصطناعي وستُربط تلقائيًا بطلبك.',
+  'Property ESG Documents (from project)':'مستندات ESG العقارية (من المشروع)',
+  'Loading project documents…':'جارٍ تحميل مستندات المشروع…',
+  'Property Documents':'مستندات العقار','Personal Documents':'المستندات الشخصية',
+  'Verified':'تم التحقق',
+
+  /* ── GENERAL LABELS ── */
+  'Unit':'الوحدة','bed':'غرفة نوم','m²':'م²',
+  'of':'من','—':'—',
+  'Loading application…':'جارٍ تحميل الطلب…',
+  'Submitted':'تم التقديم',
+};
+
+/* t(key) — returns Arabic or English string */
+function t(key){ return isAr ? (AR[key] !== undefined ? AR[key] : key) : key; }
 let esgOn = true;
 let wizStep = 0;
 let wizProductId = null;
@@ -1339,9 +1755,59 @@ function toggleLang(){
   document.documentElement.setAttribute('dir', isAr?'rtl':'ltr');
   document.documentElement.setAttribute('lang', isAr?'ar':'en');
   document.getElementById('lang-btn').textContent = isAr?'English':'عربي';
+  // Apply translations to all static elements with data-en/data-ar
   document.querySelectorAll('[data-en]').forEach(el=>{
     el.textContent = isAr?(el.getAttribute('data-ar')||el.textContent):el.getAttribute('data-en');
   });
+  // Re-render all dynamic content so JS-generated HTML uses t()
+  _applyDynamicTranslations();
+}
+
+function _applyDynamicTranslations(){
+  // Re-render products preview on home page if loaded
+  if(allProducts.length) renderHomeProductsPreview();
+  // Re-render products page if visible
+  const prodPage = document.getElementById('page-products');
+  if(prodPage && prodPage.classList.contains('active')) renderProductsPage();
+  // Re-render project list if visible
+  const listWrap = document.getElementById('projects-list-wrap');
+  if(listWrap && listWrap.children.length) renderProjectList(allProjects, listWrap);
+  // Re-render wizard step if open
+  const wizOverlay = document.getElementById('wiz-overlay');
+  if(wizOverlay && wizOverlay.classList.contains('open')) renderWiz();
+  // Re-render tracking if visible
+  const trackPage = document.getElementById('page-tracking');
+  if(trackPage && trackPage.classList.contains('active')) loadTracking();
+  // Update static calculator labels
+  _updateCalcLabels();
+  // Update wizard step bar labels
+  _updateWizStepBar();
+  // Update tracking page static labels
+  _updateTrackingLabels();
+}
+
+/* ══════════════════════════════════════════════════════
+   STATIC LABEL HELPERS (called by _applyDynamicTranslations)
+══════════════════════════════════════════════════════ */
+function _updateCalcLabels(){
+  // Calculator slider display labels
+  const tenEl = document.getElementById('c-ten-d');
+  if(tenEl){ const v=tenEl.textContent.replace(/\D/g,''); tenEl.textContent=v+' '+(isAr?'سنة':'years'); }
+  // Static text nodes inside calculator
+  const cLbls = document.querySelectorAll('#page-calculator .c-label > span:first-child');
+  cLbls.forEach(el=>{ if(el.textContent.trim()) el.textContent=t(el.textContent.trim())||el.textContent; });
+}
+function _updateWizStepBar(){
+  const labels=['Eligibility','Personal','Property','Financing','Identity','Income','Documents','Review'];
+  document.querySelectorAll('#wiz-steps-bar .ws-lbl').forEach((el,i)=>{
+    el.textContent = t(labels[i]||labels[0]);
+  });
+}
+function _updateTrackingLabels(){
+  const secEye = document.querySelector('#page-tracking .sec-eye');
+  const secTitle = document.querySelector('#page-tracking .sec-title');
+  if(secEye) secEye.textContent = t('APPLICATION STATUS');
+  if(secTitle) secTitle.textContent = t('Track Your Application');
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1376,7 +1842,7 @@ function calcUpdate(){
   const rate = getCalcRate();
   const el = id=>document.getElementById(id);
   if(el('c-amt-d')) el('c-amt-d').textContent = amt.toLocaleString('en');
-  if(el('c-ten-d')) el('c-ten-d').textContent = ten + ' years';
+  if(el('c-ten-d')) el('c-ten-d').textContent = ten + ' ' + t('years');
   if(el('cr-rate-lbl')) el('cr-rate-lbl').textContent = `@ ${rate.toFixed(2)}% p.a.`;
   if(el('cr-rate')) el('cr-rate').textContent = rate.toFixed(2)+'%';
   if(el('cr-amt')) el('cr-amt').textContent = fmtOMR(amt);
@@ -1471,8 +1937,8 @@ function prodMiniCard(p, CAT_ICON){
       <span style="font-size:10px;font-weight:700;color:${isDemo?'#16a34a':'var(--teal)'};text-transform:uppercase;letter-spacing:.5px">${(p.category||'').replace(/_/g,' ')}</span>
     </div>
     ${p.portal_card_badge?`<span class="esg-card-badge">✦ ${p.portal_card_badge}</span>`:''}
-    <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:5px">${p.portal_hero_title||p.name}</div>
-    <div style="font-size:11px;color:var(--g500);margin-bottom:12px;line-height:1.5">${p.description||''}</div>
+    <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:5px">${isAr?(p.portal_hero_title_ar||p.portal_hero_title||p.name):(p.portal_hero_title||p.name)}</div>
+    <div style="font-size:11px;color:var(--g500);margin-bottom:12px;line-height:1.5">${isAr?(p.description_ar||p.description||''):(p.description||'')}</div>
     ${hl.length?`<ul style="margin:0 0 12px;padding-left:14px;font-size:11px;color:var(--navy-d);line-height:1.8">${hl.slice(0,3).map(h=>`<li>${h}</li>`).join('')}</ul>`:''}
     <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid ${isDemo?'rgba(22,132,91,.15)':'var(--g200)'};padding-top:10px;margin-top:auto">
       <div style="font-size:12px"><strong style="font-size:1.2rem;color:${isDemo?'#16a34a':'var(--teal)'}">${p.base_rate||'—'}%</strong> <span style="color:var(--g500)">p.a.</span></div>
@@ -1837,10 +2303,10 @@ async function openProjectPanel(projectId){
 
       <!-- Key stats row -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
-        <div class="stat-chip"><div class="sc-val">${gsas||'—'}</div><div class="sc-lbl">GSAS Score</div></div>
-        <div class="stat-chip"><div class="sc-val">${rate}%</div><div class="sc-lbl">Rate p.a.</div></div>
-        <div class="stat-chip"><div class="sc-val">${units.length}</div><div class="sc-lbl">Total Units</div></div>
-        <div class="stat-chip"><div class="sc-val">${units.filter(u=>u.status==='available').length}</div><div class="sc-lbl">Available</div></div>
+        <div class="stat-chip"><div class="sc-val">${gsas||'—'}</div><div class="sc-lbl">${t('GSAS Score')}</div></div>
+        <div class="stat-chip"><div class="sc-val">${rate}%</div><div class="sc-lbl">${t('Rate p.a.')}</div></div>
+        <div class="stat-chip"><div class="sc-val">${units.length}</div><div class="sc-lbl">${t('Total Units')}</div></div>
+        <div class="stat-chip"><div class="sc-val">${units.filter(u=>u.status==='available').length}</div><div class="sc-lbl">${t('Available')}</div></div>
       </div>
 
       ${isDemo?`<div class="source-pill active-partner" style="margin-bottom:14px">🌿 Demo Eco Project · Green Finance Eligible</div>`:''}
@@ -2222,8 +2688,8 @@ function updateEligibility(){
     box.style.background = ok?'var(--ok-bg)':'var(--err-bg)';
     box.style.borderColor = ok?'rgba(22,132,91,.25)':'rgba(189,59,75,.25)';
     box.innerHTML = ok
-      ?`<div style="font-size:13px;font-weight:700;color:var(--ok)">✅ Eligible — up to OMR <span>${maxLoan.toLocaleString()}</span></div><div style="font-size:11px;color:var(--g500);margin-top:4px">DBR headroom: ${maxDbr.toLocaleString('en',{maximumFractionDigits:0})} OMR/mo · CBO max 40%</div>`
-      :`<div style="font-size:13px;font-weight:700;color:var(--err)">⚠️ May not meet minimum requirements</div><div style="font-size:11px;color:var(--g500);margin-top:4px">Minimum salary OMR 600 · Max age 60 at maturity</div>`;
+      ?`<div style="font-size:13px;font-weight:700;color:var(--ok)">✅ ${isAr?'مؤهل — حتى':'Eligible — up to'} OMR <span>${maxLoan.toLocaleString()}</span></div><div style="font-size:11px;color:var(--g500);margin-top:4px">${isAr?'هامش DBR':'DBR headroom'}: ${maxDbr.toLocaleString('en',{maximumFractionDigits:0})} OMR/${isAr?'شهر':'mo'} · ${isAr?'حد البنك المركزي 40٪':'CBO max 40%'}</div>`
+      :`<div style="font-size:13px;font-weight:700;color:var(--err)">⚠️ ${isAr?'قد لا تستوفي المتطلبات الدنيا':'May not meet minimum requirements'}</div><div style="font-size:11px;color:var(--g500);margin-top:4px">${isAr?'الحد الأدنى للراتب 600 ريال · الحد الأقصى للعمر 60 عند الاستحقاق':'Minimum salary OMR 600 · Max age 60 at maturity'}</div>`;
   }
 }
 
@@ -2325,11 +2791,11 @@ function stepProperty(){
           </select>
         </div>
         <div class="fg">
-          <label class="fl">Property Value (OMR)</label>
+          <label class="fl">${t('Property Value (OMR)')}</label>
           <input class="fc" id="prop-val" type="text" value="${Number(propVal).toLocaleString('en')}" oninput="updateGsasCheck()"/>
         </div>
         <div class="fg">
-          <label class="fl">GSAS Score</label>
+          <label class="fl">${t('GSAS Score')}</label>
           <input class="fc${gsasOk?' fc-ok':' fc-err'}" id="prop-gsas" value="${gsasScore}" readonly style="color:${gsasColor};font-weight:700"/>
         </div>
         <input type="hidden" id="prop-unit" value="${unitId}"/>
@@ -2912,14 +3378,14 @@ function stepFinancing(){
   })() : '';
 
   return `
-    <div class="step-title">Select Product &amp; Calculate</div>
-    <div class="step-sub">All rates, limits, and green discounts are loaded live from the product database.</div>
+    <div class="step-title">${t('Select Product & Calculate')}</div>
+    <div class="step-sub">${t('All rates, limits, and green discounts are loaded live from the product database.')}</div>
 
     ${campBanner}
     ${recBanner}
 
     <!-- Product dropdown -->
-    <label class="fl" style="margin-bottom:6px">Home Loan Product</label>
+    <label class="fl" style="margin-bottom:6px">${t('Home Loan Product')}</label>
     <select id="wa-product-sel" class="finp" style="width:100%;margin-bottom:16px;font-size:13px;padding:10px 12px;border-radius:var(--r8);border:1px solid var(--g300);background:#fff;cursor:pointer"
       onchange="selectWizProduct(this.value)">
       ${dropdownOpts}
@@ -2934,20 +3400,20 @@ function stepFinancing(){
     <!-- Live calculator -->
     <div class="calc-section">
       <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--g200)">
-        <div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Estimated Monthly Payment</div>
+        <div style="font-size:11px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${t('Estimated Monthly Payment')}</div>
         <div class="calc-main-out" id="wa-m">—</div>
         <div class="calc-sub-out" id="wa-rate-disp">${effRate.toFixed(2)}% p.a.</div>
       </div>
 
       <div class="calc-slider-lbl">
-        <span>Down Payment</span>
+        <span>${t('Down Payment')}</span>
         <span><b id="wa-dp-pct">${dpPct}%</b> · <span id="wa-dp-val" style="color:var(--teal)">OMR ${defaultDp.toLocaleString()}</span></span>
       </div>
       <input type="range" class="calc-slider" id="wa-dp-slider" min="10" max="50" step="5" value="${dpPct}" oninput="wizCalcFinance()"/>
 
       <div class="calc-slider-lbl">
-        <span>Loan Tenure</span>
-        <span><b id="wa-ten-val">${Math.min(tenure, selProd.max_term||30)} years</b></span>
+        <span>${t('Loan Tenure')}</span>
+        <span><b id="wa-ten-val">${Math.min(tenure, selProd.max_term||30)} ${isAr?'سنة':'years'}</b></span>
       </div>
       <input type="range" class="calc-slider" id="wa-ten" min="${selProd.min_term||5}" max="${selProd.max_term||30}" step="5" value="${Math.min(tenure, selProd.max_term||30)}" oninput="wizCalcFinance()"/>
 
@@ -2957,12 +3423,12 @@ function stepFinancing(){
       <input type="hidden" id="wa-rate"    value="${effRate}"/>
 
       <div class="calc-grid-out">
-        <div class="calc-out-chip"><div class="lbl">Loan Amount</div><div class="v" id="wa-loan-amt">OMR ${(propVal-defaultDp).toLocaleString()}</div></div>
-        <div class="calc-out-chip"><div class="lbl">Property Value</div><div class="v">OMR ${Number(propVal).toLocaleString()}</div></div>
-        <div class="calc-out-chip"><div class="lbl">DBR Ratio</div><div class="v" id="wa-dbr">—</div></div>
-        <div class="calc-out-chip"><div class="lbl">LTV Ratio</div><div class="v" id="wa-ltv">—</div></div>
-        <div class="calc-out-chip"><div class="lbl">vs. Std. Loan</div><div class="v" id="wa-sv" style="color:var(--ok)">—</div></div>
-        <div class="calc-out-chip"><div class="lbl">GSAS Score</div><div class="v" style="color:${gsasScoreColor}">${gsas||'—'}</div></div>
+        <div class="calc-out-chip"><div class="lbl">${t('Loan Amount')}</div><div class="v" id="wa-loan-amt">OMR ${(propVal-defaultDp).toLocaleString()}</div></div>
+        <div class="calc-out-chip"><div class="lbl">${t('Property Value')}</div><div class="v">OMR ${Number(propVal).toLocaleString()}</div></div>
+        <div class="calc-out-chip"><div class="lbl">${t('DBR Ratio')}</div><div class="v" id="wa-dbr">—</div></div>
+        <div class="calc-out-chip"><div class="lbl">${t('LTV Ratio')}</div><div class="v" id="wa-ltv">—</div></div>
+        <div class="calc-out-chip"><div class="lbl">${t('vs. Std. Loan')}</div><div class="v" id="wa-sv" style="color:var(--ok)">—</div></div>
+        <div class="calc-out-chip"><div class="lbl">${t('GSAS Score')}</div><div class="v" style="color:${gsasScoreColor}">${gsas||'—'}</div></div>
       </div>
 
       <div id="dbr-warn" style="display:none;margin-top:10px" class="warn-strip">⚠️ DBR exceeds ${selProd.max_dbr||40}% — reduce loan amount or increase down payment.</div>
@@ -3028,11 +3494,11 @@ function wizCalcFinance(){
 
   const isPrem  = gsas>=premGs && discP>0;
   const isGreen = gsas>=minGs  && (discP>0||discS>0);
-  const rateLbl = isPrem ? 'Green Premium 🌿' : isGreen ? 'Green Standard 🌿' : 'Standard';
+  const rateLbl = isPrem ? t('Green Premium 🌿') : isGreen ? t('Green Standard 🌿') : t('Standard');
   // Update slider labels
   if(el('wa-dp-pct'))  el('wa-dp-pct').textContent  = dpPct+'%';
   if(el('wa-dp-val'))  el('wa-dp-val').textContent  = 'OMR '+Math.round(dp).toLocaleString();
-  if(el('wa-ten-val')) el('wa-ten-val').textContent = ten+' years';
+  if(el('wa-ten-val')) el('wa-ten-val').textContent = ten+' '+(isAr?'سنة':'years');
   // Update outputs
   if(el('wa-m'))       el('wa-m').textContent        = fmtOMR(m);
   if(el('wa-loan-amt'))el('wa-loan-amt').textContent = 'OMR '+Math.round(amt).toLocaleString();
@@ -3073,8 +3539,8 @@ function stepIdentity(){
   const frontOk    = wizState.idFrontFile||false;
   const backOk     = wizState.idBackFile||false;
   return `
-    <div class="step-title">Identity Verification</div>
-    <div class="step-sub">Upload both sides of your Civil ID, then complete the liveness check.</div>
+    <div class="step-title">${t('Identity Verification')}</div>
+    <div class="step-sub">${t('Upload both sides of your Civil ID, then complete the liveness check.')}</div>
 
     <!-- Dual upload grid: Front + Back -->
     <div class="id-upload-grid">
@@ -3086,8 +3552,8 @@ function stepIdentity(){
         </div>
         <div id="id-front-placeholder" style="display:${frontOk?'none':'flex'};flex-direction:column;align-items:center;gap:4px">
           <div style="font-size:26px">🪪</div>
-          <div style="font-size:12px;font-weight:700;color:var(--navy)">Front Side</div>
-          <div style="font-size:10px;color:var(--g500)">Tap to upload</div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy)">${t('Front Side')}</div>
+          <div style="font-size:10px;color:var(--g500)">${t('Tap to upload')}</div>
         </div>
         <div id="id-front-name" style="font-size:10px;color:${frontOk?'var(--ok)':'var(--g500)'};margin-top:4px;word-break:break-all">${frontOk?'✅ '+wizState.idFrontName:'JPG · PNG · PDF'}</div>
       </div>
@@ -3100,13 +3566,13 @@ function stepIdentity(){
         </div>
         <div id="id-back-placeholder" style="display:${backOk?'none':'flex'};flex-direction:column;align-items:center;gap:4px">
           <div style="font-size:26px">🔄</div>
-          <div style="font-size:12px;font-weight:700;color:var(--navy)">Back Side</div>
-          <div style="font-size:10px;color:var(--g500)">Tap to upload</div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy)">${t('Back Side')}</div>
+          <div style="font-size:10px;color:var(--g500)">${t('Tap to upload')}</div>
         </div>
         <div id="id-back-name" style="font-size:10px;color:${backOk?'var(--ok)':'var(--g500)'};margin-top:4px;word-break:break-all">${backOk?'✅ '+wizState.idBackName:'JPG · PNG · PDF'}</div>
       </div>
     </div>
-    <div style="font-size:10px;color:var(--g500);margin-bottom:12px;text-align:center">Max 5 MB per file · Files are processed locally and not stored</div>
+    <div style="font-size:10px;color:var(--g500);margin-bottom:12px;text-align:center">${t('Max 5 MB per file · Files are processed locally and not stored')}</div>
 
     <!-- Validation progress + status -->
     <div id="id-val-progress" style="display:none;margin-top:4px">
@@ -3115,15 +3581,15 @@ function stepIdentity(){
     </div>
     <div id="id-val-status" style="margin-top:10px;display:${idVerified?'block':'none'}">
       <div class="info-strip" style="background:var(--ok-bg);border-color:rgba(22,132,91,.25)">
-        ✅ <strong>Identity Verified</strong> — Civil ID authenticated · OIEC database matched · Expiry valid
+        ✅ <strong>${t('Identity Verified')}</strong> — ${t('Civil ID authenticated · OIEC database matched · Expiry valid')}
       </div>
     </div>
 
     <div style="border-top:1px solid var(--g200);margin:20px 0"></div>
 
     <!-- Liveness check -->
-    <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px">Face Liveness Check</div>
-    <div style="font-size:12px;color:var(--g500);margin-bottom:14px">We need to verify you're a real person. Guided facial recognition — data is not stored.</div>
+    <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px">${t('Face Liveness Check')}</div>
+    <div style="font-size:12px;color:var(--g500);margin-bottom:14px">${t("We need to verify you're a real person. Guided facial recognition — data is not stored.")}</div>
 
     <div id="liveness-status-box" style="display:${livePassed?'block':'none'};margin-bottom:12px">
       <div class="info-strip" style="background:var(--ok-bg);border-color:rgba(22,132,91,.25)">
@@ -3131,12 +3597,12 @@ function stepIdentity(){
       </div>
     </div>
     <button class="btn btn-teal" id="liveness-btn" onclick="startLiveness()" style="${livePassed?'background:var(--ok);':''}">
-      ${livePassed?'✅ Re-run Liveness Check':'📸 Start Liveness Check'}
+      ${livePassed?'✅ '+t('Re-run Liveness Check'):'📸 '+t('Start Liveness Check')}
     </button>
     <div style="font-size:11px;color:var(--g500);margin-top:8px">Requires camera access · ~20 seconds</div>
 
     <div id="id-gate-msg" style="display:none;margin-top:12px" class="warn-strip">
-      ⚠️ Please complete both Identity Verification and Liveness Check before continuing.
+      ⚠️ ${t('Please complete both Identity Verification and Liveness Check before continuing.')}
     </div>`;
 }
 
@@ -3907,7 +4373,7 @@ async function processDocUpload(cardId, name, input){
     card.querySelector('.doc-st').className='doc-st ai';
     card.querySelector('.doc-st').textContent='⏳ Uploading…';
   }
-  toast(`Uploading ${name}…`,'info');
+  toast(`${t('Uploading')} ${name}…`,'info');
 
   const rec = await uploadWizDoc(docType, file);
   if(rec){
@@ -3982,41 +4448,41 @@ function stepReview(){
   const propValOrig = wizState.propertyValueOrig || (revCamp ? revCamp.original : amt+dp);
   const rows=[
     ['Product',        selProd?.name || 'Home Loan'],
-    ['Applicant',      name],
-    ['Civil ID',       wizState.civilId||'8827364'],
-    ['Property',       prop],
-    ['Property Source',srcLabel],
-    ['Contractor',     wizState.contractorName||'Al Jazeera Constructions LLC'],
+    [t('Applicant'),      name],
+    [t('Civil ID'),       wizState.civilId||'8827364'],
+    [isAr?'العقار':'Property',       prop],
+    [t('Property Source'),srcLabel],
+    [t('Contractor'),     wizState.contractorName||'Al Jazeera Constructions LLC'],
     ...(revCamp ? [
-      ['Listed Price',   `<span style="text-decoration:line-through;color:var(--g400)">OMR ${Number(revCamp.original).toLocaleString()}</span>`],
-      ['Campaign',       `<span style="color:#dc2626;font-weight:700">🏷 ${revCamp.campaignName} — ${revCamp.discountPct}% off</span>`],
-      ['Discounted Price',`<span style="color:#dc2626;font-weight:700">OMR ${Number(revCamp.final).toLocaleString()} <small style="font-weight:400;color:var(--g500)">(save OMR ${Number(revCamp.discountAmt).toLocaleString()})</small></span>`],
-      ['Offer Expires',  `<span style="color:var(--g600)">${revCampExpFmt}</span>`],
+      [t('Listed Price'),   `<span style="text-decoration:line-through;color:var(--g400)">OMR ${Number(revCamp.original).toLocaleString()}</span>`],
+      [t('Campaign'),       `<span style="color:#dc2626;font-weight:700">🏷 ${revCamp.campaignName} — ${revCamp.discountPct}% ${isAr?'خصم':'off'}</span>`],
+      [t('Discounted Price'),`<span style="color:#dc2626;font-weight:700">OMR ${Number(revCamp.final).toLocaleString()} <small style="font-weight:400;color:var(--g500)">(${isAr?'توفير':'save'} OMR ${Number(revCamp.discountAmt).toLocaleString()})</small></span>`],
+      [t('Offer Expires'),  `<span style="color:var(--g600)">${revCampExpFmt}</span>`],
     ] : [
-      ['Property Value', fmtOMR(amt+dp)],
+      [t('Property Value'), fmtOMR(amt+dp)],
     ]),
-    ['Loan Amount',    fmtOMR(amt)],
-    ['Down Payment',   fmtOMR(dp)],
-    ['Interest Rate',  rate.toFixed(2)+'% '+rateNote],
-    ['Tenure',         ten+' Years'],
-    ['Monthly Payment',fmtOMR(m)],
-    ['DBR Ratio',      dbr.toFixed(1)+'%'+(dbr<=40?' ✅':' ⚠️')],
-    ['LTV Ratio',      ltv.toFixed(1)+'%'],
-    ['GSAS Score',     gsas ? gsas+' / 100'+(gsas>=premGs?' 🏆':gsas>=minGs?' 🌿':'') : '—'],
-    ['Lifetime Saving',sv>0?fmtOMR(sv)+' vs standard rate':'—'],
-    ['Credit Bureau',  "MALA'A — Clear ✅"],
-    ['ID Verified',    wizState.idVerified?'✅ Yes':'⚠️ Pending'],
-    ['Liveness Check', wizState.livenessPassed?'✅ Passed':'⚠️ Pending'],
+    [t('Loan Amount'),    fmtOMR(amt)],
+    [t('Down Payment'),   fmtOMR(dp)],
+    [t('Interest Rate'),  rate.toFixed(2)+'% '+rateNote],
+    [t('Tenure'),         ten+' '+(isAr?'سنة':'Years')],
+    [t('Monthly Payment'),fmtOMR(m)],
+    [t('DBR Ratio'),      dbr.toFixed(1)+'%'+(dbr<=40?' ✅':' ⚠️')],
+    [t('LTV Ratio'),      ltv.toFixed(1)+'%'],
+    [t('GSAS Score'),     gsas ? gsas+' / 100'+(gsas>=premGs?' 🏆':gsas>=minGs?' 🌿':'') : '—'],
+    [t('Lifetime Saving'),sv>0?fmtOMR(sv)+' '+(isAr?'مقابل السعر القياسي':'vs standard rate'):'—'],
+    [t('Credit Bureau'),  isAr?'مَلاء — واضح ✅':"MALA'A — Clear ✅"],
+    [t('ID Verified'),    wizState.idVerified?(isAr?'✅ نعم':'✅ Yes'):(isAr?'⚠️ معلق':'⚠️ Pending')],
+    [t('Liveness Check'), wizState.livenessPassed?(isAr?'✅ اجتاز':'✅ Passed'):(isAr?'⚠️ معلق':'⚠️ Pending')],
   ];
   return `
-    <div class="step-title">Review &amp; Submit</div>
-    <div class="step-sub">Please review all details carefully before submitting your application.</div>
+    <div class="step-title">${isAr?'المراجعة والتقديم':'Review &amp; Submit'}</div>
+    <div class="step-sub">${isAr?'يرجى مراجعة جميع التفاصيل بعناية قبل تقديم طلبك.':'Please review all details carefully before submitting your application.'}</div>
     <div class="rev-table">
       ${rows.map(([k,v])=>`<div class="rev-row"><span class="rev-k">${k}</span><span class="rev-v">${v}</span></div>`).join('')}
     </div>
     <label style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--g700);cursor:pointer;margin-top:16px">
       <input type="checkbox" id="consent-chk" checked style="margin-top:2px;accent-color:var(--teal)"/>
-      I confirm the information is accurate and consent to credit bureau checks and data processing per Sohar International's Privacy Policy and CBO regulations.
+      ${isAr?'أؤكد صحة المعلومات وأوافق على فحوصات الائتمان ومعالجة البيانات وفق سياسة خصوصية بنك صحار الدولي وأنظمة البنك المركزي.':"I confirm the information is accurate and consent to credit bureau checks and data processing per Sohar International's Privacy Policy and CBO regulations."}
     </label>`;
 }
 
@@ -4025,7 +4491,7 @@ async function submitApp(){
   const consent=document.getElementById('consent-chk');
   if(consent&&!consent.checked){showToast('Please accept the consent checkbox.','warn');return;}
   const btn=document.getElementById('wiz-next');
-  if(btn){btn.disabled=true;btn.textContent='Submitting\u2026';}
+  if(btn){btn.disabled=true;btn.textContent=t('Submitting…');}
 
   // Build property address string from stored unit fields
   const addrParts=[];
@@ -4099,38 +4565,36 @@ function showAppAcknowledgement(resp, payload){
     wrap.innerHTML = `
       <div style="text-align:center;padding:28px 16px 8px">
         <div style="font-size:52px;margin-bottom:12px">✅</div>
-        <div style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:6px">Application Submitted!</div>
-        <div style="font-size:13px;color:var(--g500);margin-bottom:20px">Your home loan application has been received and is now under review.</div>
+        <div style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:6px">${isAr?'تم تقديم الطلب!':'Application Submitted!'}</div>
+        <div style="font-size:13px;color:var(--g500);margin-bottom:20px">${isAr?'تم استلام طلب قرض منزلك وهو الآن قيد المراجعة.':'Your home loan application has been received and is now under review.'}</div>
         <div style="background:linear-gradient(135deg,#003B5C,#007F86);color:#fff;border-radius:16px;padding:20px;margin-bottom:20px;text-align:left">
-          <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Application Reference</div>
+          <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${isAr?'مرجع الطلب':'Application Reference'}</div>
           <div style="font-size:24px;font-weight:800;letter-spacing:1px;margin-bottom:4px">${ref}</div>
           <div style="font-size:12px;opacity:.8">Submitted ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>
         </div>
         ${rate||mp?`<div style="display:grid;grid-template-columns:1fr 1fr${sv?` 1fr`:''};gap:12px;margin-bottom:20px">
           ${rate?`<div style="background:var(--g50);border-radius:12px;padding:14px">
-            <div style="font-size:11px;color:var(--g500);margin-bottom:4px">Applied Rate</div>
+            <div style="font-size:11px;color:var(--g500);margin-bottom:4px">${isAr?'السعر المطبق':'Applied Rate'}</div>
             <div style="font-size:18px;font-weight:800;color:var(--ok)">${Number(rate).toFixed(2)}%</div>
           </div>`:''}
           ${mp?`<div style="background:var(--g50);border-radius:12px;padding:14px">
-            <div style="font-size:11px;color:var(--g500);margin-bottom:4px">Monthly Payment</div>
+            <div style="font-size:11px;color:var(--g500);margin-bottom:4px">${isAr?'الدفعة الشهرية':'Monthly Payment'}</div>
             <div style="font-size:18px;font-weight:800;color:var(--navy)">${fmtOMR(mp)}</div>
           </div>`:''}
           ${sv?`<div style="background:rgba(22,132,91,.06);border:1px solid rgba(22,132,91,.15);border-radius:12px;padding:14px">
-            <div style="font-size:11px;color:var(--g500);margin-bottom:4px">Lifetime Saving 🌿</div>
+            <div style="font-size:11px;color:var(--g500);margin-bottom:4px">${isAr?'التوفير مدى الحياة 🌿':'Lifetime Saving 🌿'}</div>
             <div style="font-size:18px;font-weight:800;color:var(--ok)">${fmtOMR(sv)}</div>
           </div>`:''}
         </div>`:''}
       </div>
-      <div class="info-strip" style="margin:0 0 16px">
-        📋 <strong>What happens next?</strong><br/>
+        <div class="info-strip" style="margin:0 0 16px">
+        📋 <strong>${isAr?'ماذا يحدث بعد ذلك؟':'What happens next?'}</strong><br/>
         <span style="font-size:12px;color:var(--g600)">
-          Our compliance and risk teams have been notified and will review your application.
-          You can track the status here at any time. We aim to complete the initial review within <strong>2–3 business days</strong>.
-          You may receive a call or email if additional documents are required.
+          ${isAr?'تم إخطار فريقي الامتثال والمخاطر وسيراجعان طلبك. يمكنك تتبع الحالة هنا في أي وقت. نهدف لإكمال المراجعة الأولية خلال <strong>2-3 أيام عمل</strong>.':'Our compliance and risk teams have been notified and will review your application. You can track the status here at any time. We aim to complete the initial review within <strong>2–3 business days</strong>.'}
         </span>
       </div>
       <div id="tracking-timeline-wrap">
-        <div style="text-align:center;color:var(--g400);padding:20px"><span class="spin spin-teal"></span> Loading status…</div>
+        <div style="text-align:center;color:var(--g400);padding:20px"><span class="spin spin-teal"></span> ${isAr?'جارٍ تحميل الحالة…':'Loading status…'}</div>
       </div>`;
     // Load live timeline after a moment
     setTimeout(()=>loadTracking(ref), 600);
@@ -4166,24 +4630,24 @@ async function loadTracking(forceRef){
   const today = new Date();
   const fmt = (d,n)=>{const dt=new Date(d);dt.setDate(dt.getDate()+n);return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});};
   const steps=[
-    {label:'Application Received', date:today.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}), done:true,  active:false},
-    {label:'Initial Review',       date:fmt(today,1),   done:false, active:true},
-    {label:'Credit Assessment',    date:'Pending',       done:false, active:false},
-    {label:'Property Valuation',   date:'Pending',       done:false, active:false},
-    {label:'Final Approval',       date:'Pending',       done:false, active:false},
-    {label:'Disbursement',         date:'Pending',       done:false, active:false},
+    {label:t('Application Received'), date:today.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}), done:true,  active:false},
+    {label:t('Initial Review'),       date:fmt(today,1),   done:false, active:true},
+    {label:t('Credit Assessment'),    date:t('Pending'),       done:false, active:false},
+    {label:t('Property Valuation'),   date:t('Pending'),       done:false, active:false},
+    {label:t('Final Approval'),       date:t('Pending'),       done:false, active:false},
+    {label:t('Disbursement'),         date:t('Pending'),       done:false, active:false},
   ];
   const loanAmt = wizState.loanAmount||148000;
   const tranches=[
-    {label:'Foundation',       pct:25, status:'pending', date:'Pending', amount:Math.round(loanAmt*.25)},
-    {label:'Structural Frame', pct:30, status:'pending', date:'Pending', amount:Math.round(loanAmt*.30)},
-    {label:'Roofing & MEP',    pct:25, status:'pending', date:'Pending', amount:Math.round(loanAmt*.25)},
-    {label:'Finishing',        pct:20, status:'pending', date:'Pending', amount:Math.round(loanAmt*.20)},
+    {label:t('Foundation'),       pct:25, status:'pending', date:t('Pending'), amount:Math.round(loanAmt*.25)},
+    {label:t('Structural Frame'), pct:30, status:'pending', date:t('Pending'), amount:Math.round(loanAmt*.30)},
+    {label:t('Roofing & MEP'),    pct:25, status:'pending', date:t('Pending'), amount:Math.round(loanAmt*.25)},
+    {label:t('Finishing'),        pct:20, status:'pending', date:t('Pending'), amount:Math.round(loanAmt*.20)},
   ];
 
   wrap.innerHTML=`
-  <div class="track-ref">Reference: <strong>${demoRef}</strong>
-    <span class="track-badge">In Review</span>
+  <div class="track-ref">${t('Reference:')} <strong>${demoRef}</strong>
+    <span class="track-badge">${t('In Review')}</span>
   </div>
   <div class="track-timeline">
     ${steps.map((s,i)=>`
@@ -4196,13 +4660,13 @@ async function loadTracking(forceRef){
   <div style="margin-top:28px">
     <div class="seg-title" style="margin-bottom:14px">Disbursement Tranches</div>
     <div class="tranche-grid">
-      ${tranches.map(t=>`
-      <div class="tranche-card ${t.status}">
-        <div class="tc-label">${t.label}</div>
-        <div class="tc-pct">${t.pct}%</div>
-        <div class="tc-amount">${fmtOMR(t.amount)}</div>
-        <div class="tc-status ${t.status}">⏳ Pending</div>
-        <div class="tc-date">${t.date}</div>
+      ${tranches.map(tr=>`
+      <div class="tranche-card ${tr.status}">
+        <div class="tc-label">${tr.label}</div>
+        <div class="tc-pct">${tr.pct}%</div>
+        <div class="tc-amount">${fmtOMR(tr.amount)}</div>
+        <div class="tc-status ${tr.status}">⏳ ${isAr?'معلّق':'Pending'}</div>
+        <div class="tc-date">${tr.date}</div>
       </div>`).join('')}
     </div>
   </div>`;
@@ -4218,7 +4682,7 @@ function renderTrackingHTML(data, ref){
   // otherwise compute from status index — use <= so the current step is also marked done
   let steps;
   if(data.timeline && data.timeline.length){
-    const tlLabels = {submitted:'Application Received',credit_scoring:'Credit Assessment',esg_review:'ESG Verification',credit_review:'Maker-Checker Approval',approved:'Approved',disbursed:'Funds Disbursed'};
+    const tlLabels = {submitted:t('Application Received'),credit_scoring:t('Credit Assessment'),esg_review:t('ESG Verification'),credit_review:isAr?'موافقة المراجعة':'Maker-Checker Approval',approved:t('Approved'),disbursed:t('Funds Disbursed')};
     steps = data.timeline.map(t=>({
       label: tlLabels[t.key]||t.label||t.key,
       done:  t.done,
@@ -4234,8 +4698,8 @@ function renderTrackingHTML(data, ref){
     const stIdx = stMap.indexOf(app.status||'submitted');
     const isTerminal = ['approved','disbursed','completed','rejected'].includes(app.status);
     steps = [
-      'Application Received','Credit Assessment','ESG Verification',
-      'Maker-Checker Approval','Approved','Funds Disbursed'
+      t('Application Received'),t('Credit Assessment'),t('ESG Verification'),
+      isAr?'موافقة المراجعة':'Maker-Checker Approval',t('Approved'),t('Funds Disbursed')
     ].map((lbl,i)=>({
       label:lbl,
       done: isTerminal ? i<=stIdx : i<stIdx,
@@ -4254,8 +4718,9 @@ function renderTrackingHTML(data, ref){
       </div>`
     : '';
 
-  let html=`${approvedBanner}<div class="track-ref">Reference: <strong>${ref}</strong>
-    <span class="track-badge">${statusBadge[app.status]||'In Review'}</span>
+  const statusBadgeAr = {submitted:'قيد المراجعة',credit_scoring:'قيد التقييم',esg_review:'مراجعة ESG',credit_review:'قيد المراجعة',approved:'معتمد ✅',disbursed:'صُرف',completed:'مكتمل',rejected:'مرفوض'};
+  let html=`${approvedBanner}<div class="track-ref">${t('Reference:')} <strong>${ref}</strong>
+    <span class="track-badge">${isAr?(statusBadgeAr[app.status]||'قيد المراجعة'):(statusBadge[app.status]||'In Review')}</span>
   </div>
   <div class="track-timeline">
     ${steps.map((s,i)=>`<div class="track-step ${s.done?'done':''} ${s.active?'active':''}">
@@ -4266,13 +4731,13 @@ function renderTrackingHTML(data, ref){
 
   if(stages.length){
     html+=`<div style="margin-top:24px">
-      <div class="seg-title" style="margin-bottom:14px">Disbursement Tranches</div>
+      <div class="seg-title" style="margin-bottom:14px">${isAr?'أجزاء الصرف':'Disbursement Tranches'}</div>
       <div class="tranche-grid">
         ${stages.map(t=>`<div class="tranche-card ${t.status||'pending'}">
           <div class="tc-label">${t.stage_name||t.label}</div>
           <div class="tc-pct">${t.tranche_percentage||t.pct||0}%</div>
           <div class="tc-amount">${fmtOMR(t.tranche_amount||0)}</div>
-          <div class="tc-status ${t.status||'pending'}">${t.status==='completed'?'✅ Released':t.status==='active'?'⏳ Active':'🔒 Locked'}</div>
+          <div class="tc-status ${t.status||'pending'}">${t.status==='completed'?t('✅ Released'):t.status==='active'?t('⏳ Active'):t('🔒 Locked')}</div>
         </div>`).join('')}
       </div>
     </div>`;

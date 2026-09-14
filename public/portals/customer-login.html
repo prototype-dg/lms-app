@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Customer Portal — Sohar International</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;background:#0a1628;color:#fff}
@@ -61,10 +61,22 @@ input::placeholder{color:#9ca3af}
   border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:900px){.brand{display:none}.form-panel{width:100%;padding:48px 32px}}
+
+body.rtl{direction:rtl;font-family:'Noto Sans Arabic',sans-serif}
+body.rtl .form-panel{text-align:right}
+body.rtl .bank-logo{flex-direction:row-reverse}
+body.rtl .feature{flex-direction:row-reverse}
+.lang-toggle-login{position:absolute;top:20px;right:20px;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:6px 14px;
+  font-size:12px;font-weight:600;cursor:pointer;backdrop-filter:blur(4px);transition:background .2s}
+.lang-toggle-login:hover{background:rgba(255,255,255,.2)}
+body.rtl .lang-toggle-login{left:20px;right:auto}
 </style>
 </head>
 <body>
 <div class="split">
+
+  <button class="lang-toggle-login" id="lang-btn-login" onclick="toggleLoginLang()">عربي</button>
   <!-- Brand Panel -->
   <div class="brand">
     <div class="brand-inner">
@@ -72,16 +84,16 @@ input::placeholder{color:#9ca3af}
         <div class="bank-logo-mark">SI</div>
         <div class="bank-logo-name">Sohar International<span>Bank Sohar S.A.O.G</span></div>
       </div>
-      <h1 class="brand-headline">Your home.<br>Your <span class="accent">green future.</span></h1>
-      <p class="brand-sub">Apply for Sohar International's Green Home Loan — sustainable financing built for Oman's next generation of homeowners.</p>
+      <h1 class="brand-headline"><span data-en="Your home." data-ar="منزلك.">Your home.</span><br><span data-en="Your " data-ar="مستقبلك ">Your </span><span class="accent" data-en="green future." data-ar="الأخضر.">green future.</span></h1>
+      <p class="brand-sub" data-en="Apply for Sohar International's Green Home Loan — sustainable financing built for Oman's next generation of homeowners." data-ar="قدّم طلب الحصول على قرض المنزل الأخضر من بنك صحار الدولي — تمويل مستدام لجيل الشباب في عُمان.">Apply for Sohar International's Green Home Loan — sustainable financing built for Oman's next generation of homeowners.</p>
       <div class="features">
-        <div class="feature"><div class="feature-icon">🏡</div>Up to OMR 500,000 home financing</div>
-        <div class="feature"><div class="feature-icon">🌿</div>Green discount up to 0.75% off your rate</div>
-        <div class="feature"><div class="feature-icon">⚡</div>AI-powered instant GSAS eligibility check</div>
-        <div class="feature"><div class="feature-icon">🛡️</div>CBO-compliant, transparent terms</div>
+        <div class="feature"><div class="feature-icon">🏡</div><span data-en="Up to OMR 500,000 home financing" data-ar="تمويل عقاري يصل إلى 500,000 ريال عماني">Up to OMR 500,000 home financing</span></div>
+        <div class="feature"><div class="feature-icon">🌿</div><span data-en="Green discount up to 0.75% off your rate" data-ar="خصم أخضر يصل إلى 0.75% من معدلك">Green discount up to 0.75% off your rate</span></div>
+        <div class="feature"><div class="feature-icon">⚡</div><span data-en="AI-powered instant GSAS eligibility check" data-ar="فحص أهلية GSAS فوري بالذكاء الاصطناعي">AI-powered instant GSAS eligibility check</span></div>
+        <div class="feature"><div class="feature-icon">🛡️</div><span data-en="CBO-compliant, transparent terms" data-ar="شروط شفافة متوافقة مع البنك المركزي العُماني">CBO-compliant, transparent terms</span></div>
       </div>
     </div>
-    <div class="brand-footer">© 2025 Sohar International. Licensed by the Central Bank of Oman.</div>
+    <div class="brand-footer" data-en="© 2025 Sohar International. Licensed by the Central Bank of Oman." data-ar="© 2025 بنك صحار الدولي. مرخص من البنك المركزي العُماني.">© 2025 Sohar International. Licensed by the Central Bank of Oman.</div>
   </div>
 
   <!-- Form Panel -->
@@ -89,42 +101,69 @@ input::placeholder{color:#9ca3af}
     <div class="form-panel-header">
       <div class="portal-badge">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-        Customer Portal
+        <span data-en="Customer Portal" data-ar="بوابة العملاء">Customer Portal</span>
       </div>
-      <div class="form-title">Sign in to your account</div>
-      <div class="form-subtitle">Access your applications, track status, and manage your home loan journey.</div>
+      <div class="form-title" data-en="Sign in to your account" data-ar="تسجيل الدخول إلى حسابك">Sign in to your account</div>
+      <div class="form-subtitle" data-en="Access your applications, track status, and manage your home loan journey." data-ar="تابع طلباتك، وتتبع الحالة، وأدر رحلة قرض منزلك.">Access your applications, track status, and manage your home loan journey.</div>
     </div>
 
     <div class="error-msg" id="errMsg">⚠️ <span id="errText">Invalid credentials.</span></div>
 
     <form id="loginForm" onsubmit="doLogin(event)">
       <div class="form-group">
-        <label for="loginInput">Username</label>
-        <input type="text" id="loginInput" placeholder="Enter your username" autocomplete="username" required>
+        <label for="loginInput" data-en="Username" data-ar="اسم المستخدم">Username</label>
+        <input type="text" id="loginInput" data-ph-en="Enter your username" data-ph-ar="أدخل اسم المستخدم" placeholder="Enter your username" autocomplete="username" required>
       </div>
       <div class="form-group">
-        <label for="passInput">Password</label>
-        <input type="password" id="passInput" placeholder="Enter your password" autocomplete="current-password" required>
+        <label for="passInput" data-en="Password" data-ar="كلمة المرور">Password</label>
+        <input type="password" id="passInput" data-ph-en="Enter your password" data-ph-ar="أدخل كلمة المرور" placeholder="Enter your password" autocomplete="current-password" required>
       </div>
-      <button class="btn-login" type="submit" id="loginBtn">Sign In</button>
+      <button class="btn-login" type="submit" id="loginBtn" data-en="Sign In" data-ar="تسجيل الدخول">Sign In</button>
     </form>
 
-    <div class="divider">demo credentials</div>
+    <div class="divider" data-en="demo credentials" data-ar="بيانات تجريبية">demo credentials</div>
     <div class="demo-hint">
-      <strong>🔑 Demo Account</strong>
+      <strong data-en="🔑 Demo Account" data-ar="🔑 حساب تجريبي">🔑 Demo Account</strong>
       Username: <code>customer01</code> &nbsp;·&nbsp; Password: <code>password</code>
     </div>
   </div>
 </div>
 
 <script>
+let _loginIsAr = false;
+const LOGIN_AR = {
+  'Customer Portal':'بوابة العملاء',
+  'Sign in to your account':'تسجيل الدخول إلى حسابك',
+  'Username':'اسم المستخدم','Password':'كلمة المرور',
+  'Sign In':'تسجيل الدخول','Signing in…':'جارٍ تسجيل الدخول…',
+  'Invalid credentials.':'بيانات اعتماد غير صحيحة.',
+  'This account does not have customer portal access.':'هذا الحساب لا يملك صلاحية الوصول إلى بوابة العملاء.',
+  'demo credentials':'بيانات تجريبية','🔑 Demo Account':'🔑 حساب تجريبي',
+};
+function tL(key){ return _loginIsAr ? (LOGIN_AR[key] || key) : key; }
+function toggleLoginLang(){
+  _loginIsAr = !_loginIsAr;
+  document.body.classList.toggle('rtl', _loginIsAr);
+  document.documentElement.setAttribute('dir', _loginIsAr?'rtl':'ltr');
+  document.documentElement.setAttribute('lang', _loginIsAr?'ar':'en');
+  document.getElementById('lang-btn-login').textContent = _loginIsAr?'English':'عربي';
+  document.querySelectorAll('[data-en]').forEach(el=>{
+    el.textContent = _loginIsAr?(el.getAttribute('data-ar')||el.textContent):el.getAttribute('data-en');
+  });
+  document.querySelectorAll('[data-ph-en]').forEach(inp=>{
+    inp.placeholder = _loginIsAr?(inp.getAttribute('data-ph-ar')||''):inp.getAttribute('data-ph-en');
+  });
+  const btn = document.getElementById('loginBtn');
+  if(btn && !btn.disabled) btn.textContent = tL('Sign In');
+}
+
 async function doLogin(e) {
   e.preventDefault();
   const btn = document.getElementById('loginBtn');
   const err = document.getElementById('errMsg');
   err.style.display = 'none';
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Signing in…';
+  btn.innerHTML = '<span class="spinner"></span>'+tL('Signing in…');
 
   try {
     const r = await fetch('/api/v1/auth/login', {
@@ -148,7 +187,7 @@ async function doLogin(e) {
     document.getElementById('errText').textContent = e.message;
     err.style.display = 'flex';
     btn.disabled = false;
-    btn.textContent = 'Sign In';
+    btn.textContent = tL('Sign In');
   }
 }
 </script>
