@@ -2017,13 +2017,24 @@ function _renderDbDraftCard(product) {
   const stageLabels = ['', 'Stage 1 — Model', 'Stage 2 — Pricing', 'Stage 3 — Rules', 'Stage 4 — Workflow', 'Stage 5 — Compliance', 'Stage 6 — Simulation'];
   const stageColors = ['', '#6b7280', '#35C6C4', '#4ade80', '#f4b35b', '#a855f7', '#60a5fa'];
 
-  // ── FIX: Extract rule count and workflow count from product.configuration ──
-  // The backend stores rules and workflow nodes inside a JSON `configuration`
-  // column.  Parse it here so we can show real counts instead of a bare "✓".
+  // ── Extract confirmed data from product fields and configuration JSON ──────
+  // Rules    → product.configuration.rules        (written by Stage 3 backend)
+  // Workflow → product.workflow_nodes column       (written by Stage 4 backend
+  //            as a separate column, NOT inside configuration JSON)
+  // Compliance → product.configuration.compliance (written by Stage 5 backend)
   let cfg = {};
   try { cfg = (typeof product.configuration === 'string') ? JSON.parse(product.configuration) : (product.configuration || {}); } catch (_) {}
-  const dbRules    = Array.isArray(cfg.rules)          ? cfg.rules          : [];
-  const dbWorkflow = Array.isArray(cfg.workflow_nodes)  ? cfg.workflow_nodes : [];
+  const dbRules    = Array.isArray(cfg.rules) ? cfg.rules : [];
+  // Stage 4 writes to the `workflow_nodes` column, not into configuration JSON.
+  // Parse it from product.workflow_nodes (may be a JSON string or already an array).
+  const dbWorkflow = (() => {
+    try {
+      const raw = product.workflow_nodes;
+      if (!raw) return [];
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) { return []; }
+  })();
   const dbCompliance = cfg.compliance || null;
   const ruleCount  = dbRules.length;
   const wfCount    = dbWorkflow.length;
@@ -2061,13 +2072,15 @@ function _renderDbDraftCard(product) {
       .catch(() => {});
   }
   // Stage 1/2: never touch aiDraftRules — rules must not appear before Stage 3.
-  if (wfCount > 0 && aiDraftWorkflow.length === 0) {
+  // Workflow: always replace from DB when Stage 4 has confirmed nodes.
+  // (Same pattern as rules — DB is authoritative, overwrite any pre-Stage-4 state.)
+  if (wfCount > 0 && stageReached >= 4) {
     aiDraftWorkflow = dbWorkflow.slice();
     setTimeout(() => updateAiDraftCard(), 250);
   }
-  if (dbCompliance && !aiDraftConfig._compliance) {
+  // Compliance: always replace from DB when Stage 5 has confirmed data.
+  if (dbCompliance && stageReached >= 5) {
     aiDraftConfig._compliance = true;
-    // Store compliance data for display in the expanded card
     aiDraftConfig._complianceData = dbCompliance;
     setTimeout(() => updateAiDraftCard(), 250);
   }
