@@ -42,18 +42,44 @@
 .auth-status-text { color: rgba(255,255,255,.35); font-size: 12px; letter-spacing: .5px; }
 </style>
 <script>
-// Reveal the app and dismiss the loading screen after auth resolves.
-// Called from window.onload after authGuard() succeeds.
-window.__revealApp = function(statusText) {
+// __authConfirmed is set to true ONLY after authGuard() resolves with a valid user.
+// The safety-net timer checks this flag — if auth failed (unauthenticated), the
+// timer must NOT reveal the app (the redirect to login is in flight; revealing
+// the app behind an ongoing redirect would show a broken state).
+window.__authConfirmed = false;
+
+// Reveal the app and dismiss the loading screen — only called after auth succeeds.
+window.__revealApp = function() {
+  window.__authConfirmed = true;
   var el = document.getElementById('auth-loading-screen');
   if (!el) return;
   el.classList.add('fade-out');
   setTimeout(function(){ el.style.display = 'none'; }, 380);
 };
-// Safety net: if auth takes > 8 seconds (network issue), reveal anyway
-// so the user is never stuck on a permanent loading screen.
+
+// Safety net: only kicks in if auth succeeds but __revealApp was somehow not called
+// (e.g. a JS exception after authGuard but before the reveal line).
+// Does NOT reveal the app for unauthenticated users — they should be on the login page.
 (function(){
-  var _revealTimer = setTimeout(function(){ window.__revealApp(); }, 8000);
+  var _revealTimer = setTimeout(function(){
+    if (window.__authConfirmed) {
+      // Already revealed — nothing to do.
+    } else {
+      // Auth didn't succeed yet. The page may be mid-redirect to login.
+      // Only reveal if we're still on the backoffice page (not navigating away).
+      // We check by seeing if the loading screen is still present AND visible.
+      var el = document.getElementById('auth-loading-screen');
+      if (el && el.style.display !== 'none' && !el.classList.contains('fade-out')) {
+        // Something went wrong — likely a network error that prevented the redirect.
+        // Show an error inside the loading screen rather than revealing a broken app.
+        var st = document.getElementById('auth-status-text');
+        if (st) st.textContent = 'Session check timed out. Redirecting to login…';
+        setTimeout(function(){
+          window.location.href = '/portals/backoffice-login.html';
+        }, 1500);
+      }
+    }
+  }, 8000);
   window.__clearRevealTimer = function(){ clearTimeout(_revealTimer); };
 })();
 </script>

@@ -155,14 +155,20 @@ app.use('*', async (c, next) => {
     const base = c.req.url.startsWith('http') ? c.req.url : `http://localhost${c.req.url}`
     const url = new URL(base)
     url.searchParams.set('v', DEPLOY_VERSION)
-    // Return just path+search (no host) so it works behind any domain / proxy
-    // Clear-Site-Data wipes the entire browser cache for this origin on the
-    // redirect response itself — covers Chrome, Safari, Edge, Firefox.
-    return c.newResponse(null, 302, {
+    // Return just path+search (no host) so it works behind any domain / proxy.
+    // Clear-Site-Data is only sent on the main app pages (not login pages) to
+    // bust stale cached assets. Sending it on login-page redirects interferes
+    // with Chrome's navigation stack when authGuard does window.location.href
+    // to the login page — causing the redirect to appear to fail.
+    const isLoginPage = reqPath.includes('-login.html')
+    const headers: Record<string, string> = {
       'Location': url.pathname + url.search,
-      'Clear-Site-Data': '"cache"',
       'Cache-Control': 'no-store',
-    })
+    }
+    if (!isLoginPage) {
+      headers['Clear-Site-Data'] = '"cache"'
+    }
+    return c.newResponse(null, 302, headers)
   }
 
   // Correct version → serve with no-store (never cache again)
