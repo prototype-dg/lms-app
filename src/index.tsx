@@ -160,15 +160,15 @@ app.use('*', async (c, next) => {
     // bust stale cached assets. Sending it on login-page redirects interferes
     // with Chrome's navigation stack when authGuard does window.location.href
     // to the login page — causing the redirect to appear to fail.
-    const isLoginPage = reqPath.includes('-login.html')
-    const headers: Record<string, string> = {
+    // Do NOT send Clear-Site-Data on ANY redirect — Chrome treats it as
+    // clearing localStorage for the origin, wiping the auth token that was
+    // just stored by the login page before the browser can read it.
+    // The ?v=<DEPLOY_VERSION> query param is already a URL the browser has
+    // never cached, so the cache-miss is guaranteed without Clear-Site-Data.
+    return c.newResponse(null, 302, {
       'Location': url.pathname + url.search,
       'Cache-Control': 'no-store',
-    }
-    if (!isLoginPage) {
-      headers['Clear-Site-Data'] = '"cache"'
-    }
-    return c.newResponse(null, 302, headers)
+    })
   }
 
   // Correct version → serve with no-store (never cache again)

@@ -7023,7 +7023,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "086d4f3";
+var xt = "e55f371";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
@@ -7036,13 +7036,11 @@ $.use("*", async (e, t) => {
 		return;
 	}
 	if (e.req.query("v") !== xt) {
-		let t = e.req.url.startsWith("http") ? e.req.url : `http://localhost${e.req.url}`, r = new URL(t);
-		r.searchParams.set("v", xt);
-		let i = n.includes("-login.html"), a = {
-			Location: r.pathname + r.search,
+		let t = e.req.url.startsWith("http") ? e.req.url : `http://localhost${e.req.url}`, n = new URL(t);
+		return n.searchParams.set("v", xt), e.newResponse(null, 302, {
+			Location: n.pathname + n.search,
 			"Cache-Control": "no-store"
-		};
-		return i || (a["Clear-Site-Data"] = "\"cache\""), e.newResponse(null, 302, a);
+		});
 	}
 	let o = i.readFileSync(r, "utf-8");
 	return o = o.replaceAll("__PORTAL_JS_VERSION__", xt), e.html(o, 200, {
