@@ -7023,7 +7023,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "90a5a2f";
+var xt = "33c3ccc";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
@@ -7044,11 +7044,15 @@ $.use("*", async (e, t) => {
 		});
 	}
 	let o = i.readFileSync(r, "utf-8");
-	return e.html(o, 200, {
+	return o = o.replaceAll("__PORTAL_JS_VERSION__", xt), e.html(o, 200, {
 		"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
 		Pragma: "no-cache",
 		Expires: "0"
 	});
+}), $.use("/portals/js/*", async (e, t) => {
+	await t(), e.res.status === 200 && e.res.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+}), $.use("/assets/*", async (e, t) => {
+	await t(), e.res.status === 200 && e.res.headers.set("Cache-Control", "public, max-age=31536000, immutable");
 }), $.use("/*", e({ root: "./dist" }));
 //#endregion
 export { $ as default, bt as env };

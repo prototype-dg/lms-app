@@ -171,12 +171,32 @@ app.use('*', async (c, next) => {
   // response can clear localStorage in some browsers (Chrome treats "cache"
   // as including memory cache tied to the page context), which wipes the
   // auth token and causes a white screen on every page load.
-  const html = fs.readFileSync(filePath, 'utf-8')
+  let html = fs.readFileSync(filePath, 'utf-8')
+  // Inject the deploy version into __PORTAL_JS_VERSION__ placeholders so
+  // JS assets loaded by the HTML get proper cache-busting ?v= query params.
+  html = html.replaceAll('__PORTAL_JS_VERSION__', DEPLOY_VERSION)
   return c.html(html, 200, {
     'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
     'Pragma': 'no-cache',
     'Expires': '0',
   })
+})
+
+// ── Long-lived cache for versioned static assets ──────────────────────────────
+// /portals/js/*.js and /assets/* are loaded with ?v=<DEPLOY_VERSION> injected
+// by the HTML server above — a new deploy changes the token, busting the cache.
+// Between deploys the browser reuses the cached file without any round-trip.
+app.use('/portals/js/*', async (c, next) => {
+  await next()
+  if (c.res.status === 200) {
+    c.res.headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+  }
+})
+app.use('/assets/*', async (c, next) => {
+  await next()
+  if (c.res.status === 200) {
+    c.res.headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+  }
 })
 
 // ── Static file serving — non-HTML assets (JS, CSS, images, fonts) ────────────
