@@ -7,82 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
-<style>
-/* ── Auth loading screen — shown immediately, dismissed after auth resolves ── */
-#auth-loading-screen {
-  position: fixed; inset: 0; z-index: 99999;
-  background: #060f1e;
-  display: flex; align-items: center; justify-content: center; flex-direction: column;
-  gap: 18px;
-  transition: opacity 0.35s ease;
-}
-#auth-loading-screen.fade-out { opacity: 0; pointer-events: none; }
-.auth-loader-logo {
-  display: flex; align-items: center; gap: 12px;
-  margin-bottom: 8px;
-}
-.auth-loader-mark {
-  width: 48px; height: 48px;
-  background: linear-gradient(135deg,#007f86,#004f55);
-  border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -1px;
-  box-shadow: 0 6px 20px rgba(0,127,134,.45);
-}
-.auth-loader-name { color: #fff; font-size: 17px; font-weight: 700; letter-spacing: .2px; }
-.auth-loader-sub  { color: rgba(255,255,255,.3); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; margin-top: 2px; }
-.auth-spinner {
-  width: 32px; height: 32px;
-  border: 3px solid rgba(255,255,255,.12);
-  border-top-color: #35c6c4;
-  border-radius: 50%;
-  animation: auth-spin .75s linear infinite;
-}
-@keyframes auth-spin { to { transform: rotate(360deg); } }
-.auth-status-text { color: rgba(255,255,255,.35); font-size: 12px; letter-spacing: .5px; }
-</style>
-<script>
-// __authConfirmed is set to true ONLY after authGuard() resolves with a valid user.
-// The safety-net timer checks this flag — if auth failed (unauthenticated), the
-// timer must NOT reveal the app (the redirect to login is in flight; revealing
-// the app behind an ongoing redirect would show a broken state).
-window.__authConfirmed = false;
-
-// Reveal the app and dismiss the loading screen — only called after auth succeeds.
-window.__revealApp = function() {
-  window.__authConfirmed = true;
-  var el = document.getElementById('auth-loading-screen');
-  if (!el) return;
-  el.classList.add('fade-out');
-  setTimeout(function(){ el.style.display = 'none'; }, 380);
-};
-
-// Safety net: only kicks in if auth succeeds but __revealApp was somehow not called
-// (e.g. a JS exception after authGuard but before the reveal line).
-// Does NOT reveal the app for unauthenticated users — they should be on the login page.
-(function(){
-  var _revealTimer = setTimeout(function(){
-    if (window.__authConfirmed) {
-      // Already revealed — nothing to do.
-    } else {
-      // Auth didn't succeed yet. The page may be mid-redirect to login.
-      // Only reveal if we're still on the backoffice page (not navigating away).
-      // We check by seeing if the loading screen is still present AND visible.
-      var el = document.getElementById('auth-loading-screen');
-      if (el && el.style.display !== 'none' && !el.classList.contains('fade-out')) {
-        // Something went wrong — likely a network error that prevented the redirect.
-        // Show an error inside the loading screen rather than revealing a broken app.
-        var st = document.getElementById('auth-status-text');
-        if (st) st.textContent = 'Session check timed out. Redirecting to login…';
-        setTimeout(function(){
-          window.location.href = '/portals/backoffice-login.html';
-        }, 1500);
-      }
-    }
-  }, 8000);
-  window.__clearRevealTimer = function(){ clearTimeout(_revealTimer); };
-})();
-</script>
+<style>body{visibility:hidden}</style>
 <body>
 <div class="app-shell" id="app">
   <!-- SIDEBAR -->
@@ -152,24 +77,10 @@ window.__revealApp = function() {
 <div id="toastContainer" style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;"></div>
 <div id="modalContainer"></div>
 
-<!-- Loading screen — visible immediately while auth resolves -->
-<div id="auth-loading-screen">
-  <div class="auth-loader-logo">
-    <div class="auth-loader-mark">SI</div>
-    <div>
-      <div class="auth-loader-name">Sohar International</div>
-      <div class="auth-loader-sub">Back-Office Console</div>
-    </div>
-  </div>
-  <div class="auth-spinner"></div>
-  <div class="auth-status-text" id="auth-status-text">Verifying session…</div>
-</div>
-
-<!-- AI Studio draft modules — defer so they don't block HTML parsing -->
-<!-- ?v= param busts the browser cache on every new deploy -->
-<script src="/portals/js/auth-guard.js?v=__PORTAL_JS_VERSION__" defer></script>
-<script src="/portals/js/ai-draft.js?v=__PORTAL_JS_VERSION__" defer></script>
-<script src="/portals/js/ai-extract.js?v=__PORTAL_JS_VERSION__" defer></script>
+<!-- auth-guard must load before the inline script that calls authGuard() -->
+<script src="/portals/js/auth-guard.js"></script>
+<script src="/portals/js/ai-draft.js"></script>
+<script src="/portals/js/ai-extract.js"></script>
 
 <script>
 /* ======================== MARKDOWN RENDERER ======================== */
@@ -247,7 +158,7 @@ const NAV_ITEMS = {
 };
 
 /* ======================== INIT ======================== */
-window.onload = async () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Auth guard — redirect to login if no valid session
   const sessionUser = await authGuard('backoffice');
   if (!sessionUser) return;
@@ -264,10 +175,7 @@ window.onload = async () => {
   // Store session user for nav restriction
   window._sessionUser = sessionUser;
 
-  // Dismiss the auth loading screen now that auth is confirmed.
-  // Cancel the safety-net timer and fade out the overlay.
-  if (typeof window.__clearRevealTimer === 'function') window.__clearRevealTimer();
-  if (typeof window.__revealApp === 'function') window.__revealApp();
+  // Reveal page now that auth is confirmed (was hidden to prevent flash)
   document.body.style.visibility = 'visible';
 
   // Hide role-switcher tabs that don't match this user's session role
@@ -297,7 +205,7 @@ window.onload = async () => {
   await loadProducts();
   const defaultPage = ROLES[currentRole].nav[0] || 'products';
   renderPage(defaultPage);
-};
+});
 
 async function loadUsers() {
   try {
