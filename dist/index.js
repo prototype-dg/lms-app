@@ -1489,27 +1489,15 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 			metadata: { action: h.action }
 		};
 		if (c.push(g), !h.stage_update_hint) {
-			let e = h.current_stage || 1, t = (h.action || "none").toLowerCase(), n = (h.message || "").toLowerCase().replace(/<[^>]+>/g, ""), r = h.ui_events || [], i = t === "stage_update" || t === "ready_to_confirm", a = r.some((e) => e.type === "add_rule"), o = r.some((e) => e.type === "set_workflow"), s = r.some((e) => e.type === "set_field"), c = e === 2 && (i && s || n.includes("stage 2 complete") || n.includes("stage 3") || n.includes("arrangement fee") && s), l = e === 3 && (i && a || a && r.filter((e) => e.type === "add_rule").length >= 3 || n.includes("stage 3 complete") || n.includes("stage 4") && a), u = e === 4 && (i && o || o || n.includes("stage 4 complete") || n.includes("stage 5") && o), d = e === 5 && (i || n.includes("stage 5 complete") || n.includes("compliance parameters applied") || n.includes("basel iii") && n.includes("ifrs9") && n.includes("aml")), f = e === 6 && (t === "ready_to_confirm" || i || n.includes("confirm") || n.includes("ready to publish"));
-			if (c) {
-				let e = {};
-				for (let t of r) t.type === "set_field" && t.field && t.value != null && (e[t.field] = t.value);
-				h.stage_update_hint = {
-					stage: 2,
-					fields: e
-				}, i || (h.action = "stage_update");
-			} else if (l) {
-				let e = r.filter((e) => e.type === "add_rule" && e.rule).map((e) => e.rule);
-				h.stage_update_hint = {
-					stage: 3,
-					rules: e
-				}, i || (h.action = "stage_update");
-			} else if (u) {
-				let e = r.find((e) => e.type === "set_workflow"), t = e && Array.isArray(e.nodes) ? e.nodes : [];
-				h.stage_update_hint = {
-					stage: 4,
-					workflow_nodes: t
-				}, i || (h.action = "stage_update");
-			} else if (d) {
+			let e = (h.action || "none").toLowerCase(), t = h.message || "", n = t.toLowerCase().replace(/<[^>]+>/g, " "), r = h.ui_events || [], i = e === "stage_update" || e === "ready_to_confirm", a = r.some((e) => e.type === "add_rule"), o = r.some((e) => e.type === "set_workflow"), s = r.some((e) => e.type === "set_field"), l = c.filter((e) => e.role === "assistant").slice(-6).map((e) => (e.content || "").toLowerCase()), u = n.includes("stage 2 complete") || n.includes("stage 3") && n.includes("eligibility rule") || n.includes("gsas minimum") && (n.includes("70") || n.includes("75")) || i && s, d = n.includes("stage 3 complete") || a || n.includes("eligibility rule") && (n.includes("stage 4") || n.includes("workflow") || n.includes("10-step")) || n.includes("eligibility rule") && n.includes("dbr") && n.includes("ltv") || /\b(1[0-9]|[2-9])\s+eligibility rules?\b/i.test(t) || n.includes("credit risk") && n.includes("collateral") && n.includes("esg") && n.includes("rule") || i && a, f = n.includes("stage 4 complete") || o || n.includes("workflow") && (n.includes("stage 5") || n.includes("compliance")) || n.includes("10-step") || n.includes("10 step") || n.includes("ekyc") && n.includes("credit bureau") && n.includes("workflow") || n.includes("automate") && n.includes("step") && n.includes("workflow") || i && o, p = n.includes("stage 5 complete") || n.includes("compliance parameters applied") || n.includes("compliance classification applied") || n.includes("basel iii") && n.includes("ifrs9") || n.includes("stage 6") && n.includes("simulation") && l.some((e) => e.includes("compliance") || e.includes("shall i apply these compliance")) || i && !a && !o && !s, m = e === "ready_to_confirm" || n.includes("all 6 stages complete") || n.includes("confirm & publish") || n.includes("confirm and publish") || n.includes("click confirm") || n.includes("stage 6") && n.includes("simulation") && n.includes("portfolio"), g = l.some((e) => e.includes("stage 2 complete") || e.includes("eligibility rule") || e.includes("gsas minimum")), _ = l.some((e) => e.includes("stage 3 complete") || e.includes("10-step") || e.includes("ekyc") || e.includes("eligibility rule")), v = l.some((e) => e.includes("stage 4 complete") || e.includes("compliance") || e.includes("stage 5"));
+			if (m) {
+				let e = {}, t = h.product_draft?.simulation || {};
+				h.product_draft?.name && (e.name = h.product_draft.name), h.product_draft?.max_amount && (e.max_amount = h.product_draft.max_amount), h.product_draft?.min_amount && (e.min_amount = h.product_draft.min_amount), h.stage_update_hint = {
+					stage: 6,
+					fields: e,
+					simulation: t
+				}, h.action = "ready_to_confirm";
+			} else if (p && v) {
 				let e = {
 					tags: [
 						"CLIMATE-RISK",
@@ -1527,13 +1515,25 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 					stage: 5,
 					compliance: e
 				}, i || (h.action = "stage_update");
-			} else if (f) {
-				let e = h.product_draft?.simulation || {}, t = {};
-				h.product_draft?.name && (t.name = h.product_draft.name), h.product_draft?.max_amount && (t.max_amount = h.product_draft.max_amount), h.product_draft?.min_amount && (t.min_amount = h.product_draft.min_amount), h.stage_update_hint = {
-					stage: 6,
-					fields: t,
-					simulation: e
-				}, i || (h.action = "ready_to_confirm");
+			} else if (f && _) {
+				let e = r.find((e) => e.type === "set_workflow"), t = e && Array.isArray(e.nodes) ? e.nodes : [];
+				h.stage_update_hint = {
+					stage: 4,
+					workflow_nodes: t
+				}, i || (h.action = "stage_update");
+			} else if (d && g) {
+				let e = r.filter((e) => e.type === "add_rule" && e.rule).map((e) => e.rule);
+				h.stage_update_hint = {
+					stage: 3,
+					rules: e
+				}, i || (h.action = "stage_update");
+			} else if (u) {
+				let e = {};
+				for (let t of r) t.type === "set_field" && t.field && t.value != null && (e[t.field] = t.value);
+				h.stage_update_hint = {
+					stage: 2,
+					fields: e
+				}, i || (h.action = "stage_update");
 			}
 		}
 		let _ = W(), v = {};
@@ -7314,7 +7314,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "0ed2872";
+var xt = "a2b8be8";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

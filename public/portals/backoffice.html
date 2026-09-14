@@ -1754,46 +1754,50 @@ async function sendAiChat(productId) {
     // When action='stage_update', call the stage-update API with stage data.
     // Works for stages 2–6. The DB product is updated immediately on each confirm.
 
-    // ── RC-8 FIX: Client-side stage_update_hint synthesis (belt-and-suspenders) ─
-    // The server now synthesizes stage_update_hint when GPT omits it.  This block
-    // provides a second layer of defence: if stage_update_hint is STILL null after
-    // the server fix (e.g. cached response, network edge case), reconstruct it from
-    // the ui_events that were already dispatched to the form fields.
+    // ── RC-8 FIX (v2): Client-side stage_update_hint synthesis ──────────────
+    // Belt-and-suspenders: server synthesizes first; this catches any remaining gaps.
+    // Detection is purely text-based (matching real GPT patterns observed in production).
     if (!d.stage_update_hint) {
-      const csStage = d.current_stage || 1;
       const csAction = (d.action || 'none').toLowerCase();
       const csIsUpdate = csAction === 'stage_update' || csAction === 'ready_to_confirm';
       const csEvents = d.ui_events || [];
       const csHasAddRule     = csEvents.some(e => e.type === 'add_rule');
       const csHasSetWorkflow = csEvents.some(e => e.type === 'set_workflow');
-      const csHasSetField    = csEvents.some(e => e.type === 'set_field');
-      const csMsgLow = (d.reply || '').toLowerCase().replace(/<[^>]+>/g, '');
+      const csMsgLow = (d.reply || '').toLowerCase().replace(/<[^>]+>/g, ' ');
+      const csMsgRaw = d.reply || '';
 
-      if (csStage === 2 && (csIsUpdate || csMsgLow.includes('stage 2 complete') || csMsgLow.includes('stage 3')) && csHasSetField) {
-        const f2 = {}; csEvents.forEach(e => { if (e.type==='set_field' && e.field) f2[e.field] = e.value; });
-        d.stage_update_hint = { stage: 2, fields: f2 };
+      // Stage 6: "All 6 stages complete" / "Confirm & Publish"
+      if (csAction === 'ready_to_confirm' || csMsgLow.includes('all 6 stages complete') || csMsgLow.includes('confirm & publish') || csMsgLow.includes('click confirm')) {
+        const s6f = {}; if (aiDraftConfig.name) s6f.name = aiDraftConfig.name; if (aiDraftConfig.max_amount) s6f.max_amount = aiDraftConfig.max_amount;
+        d.stage_update_hint = { stage: 6, fields: s6f, simulation: {} };
+        d.action = 'ready_to_confirm';
+
+      // Stage 5: "Stage 5 complete" / "Basel III" + "IFRS9"
+      } else if (csMsgLow.includes('stage 5 complete') || csMsgLow.includes('compliance parameters applied') || csMsgLow.includes('compliance classification applied') || (csMsgLow.includes('basel iii') && csMsgLow.includes('ifrs9'))) {
+        d.stage_update_hint = { stage: 5, compliance: { tags:['CLIMATE-RISK','ESG-GREEN','OMAN-V2040','IFRS9-ECL','BASEL3-RW'], basel3_risk_weight:75, ifrs9_ecl_pct:1.5, aml_risk_tier:'LOW' } };
         if (!csIsUpdate) d.action = 'stage_update';
-      } else if (csStage === 3 && (csHasAddRule || csMsgLow.includes('stage 3 complete'))) {
-        const r3 = csEvents.filter(e => e.type==='add_rule' && e.rule).map(e => e.rule);
-        if (r3.length > 0 || csMsgLow.includes('stage 3 complete')) {
-          d.stage_update_hint = { stage: 3, rules: r3.length ? r3 : aiDraftRules };
-          if (!csIsUpdate) d.action = 'stage_update';
-        }
-      } else if (csStage === 4 && (csHasSetWorkflow || csMsgLow.includes('stage 4 complete'))) {
+
+      // Stage 4: workflow described (10-step, eKYC, automate first 5)
+      } else if (csMsgLow.includes('stage 4 complete') || csHasSetWorkflow || (csMsgLow.includes('workflow') && (csMsgLow.includes('10-step') || csMsgLow.includes('10 step') || csMsgLow.includes('ekyc'))) || (csMsgLow.includes('automate') && csMsgLow.includes('step') && csMsgLow.includes('workflow'))) {
         const wf4 = csEvents.find(e => e.type==='set_workflow');
         const wfNodes = (wf4 && Array.isArray(wf4.nodes)) ? wf4.nodes : aiDraftWorkflow;
         d.stage_update_hint = { stage: 4, workflow_nodes: wfNodes };
         if (!csIsUpdate) d.action = 'stage_update';
-      } else if (csStage === 5 && (csIsUpdate || csMsgLow.includes('stage 5 complete') || csMsgLow.includes('compliance parameters applied'))) {
-        d.stage_update_hint = { stage: 5, compliance: { tags:['CLIMATE-RISK','ESG-GREEN','OMAN-V2040','IFRS9-ECL','BASEL3-RW'], basel3_risk_weight:75, ifrs9_ecl_pct:1.5, aml_risk_tier:'LOW' } };
+
+      // Stage 3: rules generated (add_rule events, or "eligibility rules" + "workflow" or "stage 4" in text, or N rules pattern)
+      } else if (csMsgLow.includes('stage 3 complete') || csHasAddRule || (csMsgLow.includes('eligibility rule') && (csMsgLow.includes('stage 4') || csMsgLow.includes('workflow') || csMsgLow.includes('10-step'))) || /\b(1[0-9]|[2-9])\s+eligibility rules?\b/i.test(csMsgRaw) || (csMsgLow.includes('credit risk') && csMsgLow.includes('collateral') && csMsgLow.includes('esg') && csMsgLow.includes('rule'))) {
+        const r3 = csEvents.filter(e => e.type==='add_rule' && e.rule).map(e => e.rule);
+        d.stage_update_hint = { stage: 3, rules: r3.length ? r3 : aiDraftRules };
         if (!csIsUpdate) d.action = 'stage_update';
-      } else if (csStage === 6 && (csIsUpdate || csMsgLow.includes('confirm') || csMsgLow.includes('publish'))) {
-        const s6f = {}; if (aiDraftConfig.name) s6f.name = aiDraftConfig.name; if (aiDraftConfig.max_amount) s6f.max_amount = aiDraftConfig.max_amount;
-        d.stage_update_hint = { stage: 6, fields: s6f, simulation: {} };
-        if (d.action !== 'ready_to_confirm') d.action = 'ready_to_confirm';
+
+      // Stage 2: "Stage 2 complete" / transitioning to Stage 3 rules question
+      } else if (csMsgLow.includes('stage 2 complete') || (csMsgLow.includes('stage 3') && csMsgLow.includes('eligibility rule')) || (csMsgLow.includes('gsas minimum') && (csMsgLow.includes('70') || csMsgLow.includes('75'))) || (csIsUpdate && csEvents.some(e => e.type==='set_field'))) {
+        const f2 = {}; csEvents.forEach(e => { if (e.type==='set_field' && e.field) f2[e.field] = e.value; });
+        d.stage_update_hint = { stage: 2, fields: f2 };
+        if (!csIsUpdate) d.action = 'stage_update';
       }
     }
-    // ── END RC-8 FIX ─────────────────────────────────────────────────────────
+    // ── END RC-8 FIX (v2) ────────────────────────────────────────────────────
 
     // ── FIX: aiDraftProductId absent fallback ─────────────────────────────
     // If GPT emits stage_update_hint but never emitted create_draft (e.g. it
