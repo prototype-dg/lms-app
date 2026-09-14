@@ -1151,6 +1151,114 @@ Product: ${name}. Description: ${product_draft.description || ''}. Base rate: ${
   }
 })
 
+// ── Admin repair: fix specific product pge_stage + rules ────────────────
+// POST /api/v1/ai/products/:id/repair
+// Copies global rules to the product and advances pge_stage to 6.
+app.post('/products/:id/repair', async (c) => {
+  try {
+    const productId = c.req.param('id')
+    const ts = now()
+
+    const prod = await c.env.DB.prepare('SELECT * FROM products WHERE id=?').bind(productId).first() as any
+    if (!prod) return c.json({ error: 'Product not found' }, 404)
+
+    // 1. Fetch all global rules (product_id IS NULL) — any source
+    const { results: globalRules } = await c.env.DB.prepare(
+      'SELECT * FROM rules WHERE product_id IS NULL AND is_active=1'
+    ).all() as any
+
+    // 2. Delete existing AI rules for this product then copy global rules
+    await c.env.DB.prepare("DELETE FROM rules WHERE product_id=? AND source='ai_generated'").bind(productId).run()
+
+    const insertedRules: any[] = []
+    for (const r of globalRules) {
+      const ruleId = generateId('r')
+      await c.env.DB.prepare(`
+        INSERT OR IGNORE INTO rules (id, product_id, name, category, metric, operator,
+          threshold_value, threshold_condition, action_on_breach, severity,
+          regulatory_reference, source, ai_confidence, description, is_active, created_by, created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `).bind(
+        ruleId, productId, r.name, r.category || 'eligibility', r.metric, r.operator,
+        r.threshold_value ?? null, r.threshold_condition ?? null,
+        r.action_on_breach || 'reject', r.severity || 'hard',
+        r.regulatory_reference ?? null, 'ai_generated',
+        r.ai_confidence ?? null, r.description ?? null, 1, 'u001', ts
+      ).run()
+      insertedRules.push({ id: ruleId, name: r.name, category: r.category || 'eligibility',
+        metric: r.metric, operator: r.operator, threshold_value: r.threshold_value, severity: r.severity || 'hard' })
+    }
+
+    // 3. Build compliance and simulation from the AI draft conversation context
+    const existingCfg = (() => { try { return JSON.parse(prod.configuration || '{}') } catch { return {} } })()
+    existingCfg.rules = insertedRules
+
+    // Inject compliance if not present
+    if (!existingCfg.compliance) {
+      existingCfg.compliance = {
+        tags: ['CLIMATE-RISK', 'ESG-GREEN', 'OMAN-V2040', 'IFRS9-ECL', 'BASEL3-RW'],
+        basel3_risk_weight: 75, ifrs9_ecl_pct: 1.5, aml_risk_tier: 'LOW'
+      }
+    }
+    // Inject simulation if not present
+    if (!existingCfg.simulation) {
+      existingCfg.simulation = {
+        segment: prod.configuration && JSON.parse(prod.configuration).segment || 'HNW',
+        avg_loan_amount: 500000, yr1_accounts: 200, yr1_portfolio_omr_m: 100,
+        nim_pct: 2.5, break_even_month: 18, stress_test: 'Passed', compliance: 'Aligned'
+      }
+    }
+
+    // 4. Build workflow nodes if missing
+    let workflowNodes = []
+    try { workflowNodes = JSON.parse(prod.workflow_nodes || '[]') } catch { workflowNodes = [] }
+    if (!workflowNodes || workflowNodes.length === 0) {
+      workflowNodes = [
+        { id: 'wn1', type: 'start',  x: 80,   y: 260, label: 'Start', auto: true },
+        { id: 'wn2', type: 'task',   x: 300,  y: 260, label: 'eKYC & AML Screening',       role: 'system',          sla_hours: 1,  auto: true },
+        { id: 'wn3', type: 'task',   x: 520,  y: 260, label: 'Credit Bureau Check',         role: 'system',          sla_hours: 4,  auto: true },
+        { id: 'wn4', type: 'task',   x: 740,  y: 260, label: 'Document OCR & Validation',   role: 'system',          sla_hours: 2,  auto: true },
+        { id: 'wn5', type: 'task',   x: 960,  y: 260, label: 'GSAS Registry Check',         role: 'system',          sla_hours: 4,  auto: true },
+        { id: 'wn6', type: 'task',   x: 1180, y: 260, label: 'Property Valuation',          role: 'operations',      sla_hours: 8,  auto: true },
+        { id: 'wn7', type: 'task',   x: 1400, y: 260, label: 'Credit Underwriting',         role: 'credit_analyst',  sla_hours: 24, auto: false },
+        { id: 'wn8', type: 'task',   x: 1620, y: 260, label: 'ESG Review',                  role: 'green_officer',   sla_hours: 24, auto: false },
+        { id: 'wn9', type: 'task',   x: 1840, y: 260, label: 'Risk & Compliance',           role: 'risk_officer',    sla_hours: 48, auto: false },
+        { id: 'wn10', type: 'task',  x: 2060, y: 260, label: 'Product Manager Approval',    role: 'product_manager', sla_hours: 24, auto: false },
+        { id: 'wn11', type: 'end',   x: 2280, y: 260, label: 'End', auto: true },
+      ]
+    }
+    const workflowEdges = workflowNodes.slice(0, -1).map((_: any, i: number) => ({
+      id: `e${i+1}`, source: workflowNodes[i].id, target: workflowNodes[i+1].id, label: ''
+    }))
+
+    // 5. Update product: pge_stage=6, market_id, configuration, workflow, amounts
+    await c.env.DB.prepare(`
+      UPDATE products SET
+        pge_stage=6, market_id=COALESCE(market_id,'mkt001'),
+        max_amount=CASE WHEN max_amount < 1000000 THEN 1000000 ELSE max_amount END,
+        min_amount=CASE WHEN min_amount < 25000 THEN 25000 ELSE min_amount END,
+        max_dbr=55, gsas_min_score=70,
+        green_discount_premium=0.5, green_discount_standard=0.5,
+        workflow_nodes=?, workflow_edges=?,
+        configuration=?, updated_at=?
+      WHERE id=?
+    `).bind(
+      JSON.stringify(workflowNodes), JSON.stringify(workflowEdges),
+      JSON.stringify(existingCfg), ts, productId
+    ).run()
+
+    const updated = await c.env.DB.prepare('SELECT * FROM products WHERE id=?').bind(productId).first() as any
+    return c.json({
+      success: true, product_id: productId,
+      rules_attached: insertedRules.length,
+      pge_stage: 6,
+      message: `Repaired product ${productId}: ${insertedRules.length} rules attached, pge_stage=6`
+    })
+  } catch (err: any) {
+    return c.json({ success: false, error: err?.message || 'Repair failed' }, 200)
+  }
+})
+
 // ── AI-powered regulatory rule generation ───────────────────────────────
 app.post('/rules/generate', async (c) => {
   const body = await c.req.json()

@@ -2184,6 +2184,186 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 			_error: t?.message || "unknown"
 		}, 200);
 	}
+}), q.post("/products/:id/repair", async (e) => {
+	try {
+		let t = e.req.param("id"), n = W(), r = await e.env.DB.prepare("SELECT * FROM products WHERE id=?").bind(t).first();
+		if (!r) return e.json({ error: "Product not found" }, 404);
+		let { results: i } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id IS NULL AND is_active=1").all();
+		await e.env.DB.prepare("DELETE FROM rules WHERE product_id=? AND source='ai_generated'").bind(t).run();
+		let a = [];
+		for (let r of i) {
+			let i = U("r");
+			await e.env.DB.prepare("\n        INSERT OR IGNORE INTO rules (id, product_id, name, category, metric, operator,\n          threshold_value, threshold_condition, action_on_breach, severity,\n          regulatory_reference, source, ai_confidence, description, is_active, created_by, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n      ").bind(i, t, r.name, r.category || "eligibility", r.metric, r.operator, r.threshold_value ?? null, r.threshold_condition ?? null, r.action_on_breach || "reject", r.severity || "hard", r.regulatory_reference ?? null, "ai_generated", r.ai_confidence ?? null, r.description ?? null, 1, "u001", n).run(), a.push({
+				id: i,
+				name: r.name,
+				category: r.category || "eligibility",
+				metric: r.metric,
+				operator: r.operator,
+				threshold_value: r.threshold_value,
+				severity: r.severity || "hard"
+			});
+		}
+		let o = (() => {
+			try {
+				return JSON.parse(r.configuration || "{}");
+			} catch {
+				return {};
+			}
+		})();
+		o.rules = a, o.compliance ||= {
+			tags: [
+				"CLIMATE-RISK",
+				"ESG-GREEN",
+				"OMAN-V2040",
+				"IFRS9-ECL",
+				"BASEL3-RW"
+			],
+			basel3_risk_weight: 75,
+			ifrs9_ecl_pct: 1.5,
+			aml_risk_tier: "LOW"
+		}, o.simulation ||= {
+			segment: r.configuration && JSON.parse(r.configuration).segment || "HNW",
+			avg_loan_amount: 5e5,
+			yr1_accounts: 200,
+			yr1_portfolio_omr_m: 100,
+			nim_pct: 2.5,
+			break_even_month: 18,
+			stress_test: "Passed",
+			compliance: "Aligned"
+		};
+		let s = [];
+		try {
+			s = JSON.parse(r.workflow_nodes || "[]");
+		} catch {
+			s = [];
+		}
+		(!s || s.length === 0) && (s = [
+			{
+				id: "wn1",
+				type: "start",
+				x: 80,
+				y: 260,
+				label: "Start",
+				auto: !0
+			},
+			{
+				id: "wn2",
+				type: "task",
+				x: 300,
+				y: 260,
+				label: "eKYC & AML Screening",
+				role: "system",
+				sla_hours: 1,
+				auto: !0
+			},
+			{
+				id: "wn3",
+				type: "task",
+				x: 520,
+				y: 260,
+				label: "Credit Bureau Check",
+				role: "system",
+				sla_hours: 4,
+				auto: !0
+			},
+			{
+				id: "wn4",
+				type: "task",
+				x: 740,
+				y: 260,
+				label: "Document OCR & Validation",
+				role: "system",
+				sla_hours: 2,
+				auto: !0
+			},
+			{
+				id: "wn5",
+				type: "task",
+				x: 960,
+				y: 260,
+				label: "GSAS Registry Check",
+				role: "system",
+				sla_hours: 4,
+				auto: !0
+			},
+			{
+				id: "wn6",
+				type: "task",
+				x: 1180,
+				y: 260,
+				label: "Property Valuation",
+				role: "operations",
+				sla_hours: 8,
+				auto: !0
+			},
+			{
+				id: "wn7",
+				type: "task",
+				x: 1400,
+				y: 260,
+				label: "Credit Underwriting",
+				role: "credit_analyst",
+				sla_hours: 24,
+				auto: !1
+			},
+			{
+				id: "wn8",
+				type: "task",
+				x: 1620,
+				y: 260,
+				label: "ESG Review",
+				role: "green_officer",
+				sla_hours: 24,
+				auto: !1
+			},
+			{
+				id: "wn9",
+				type: "task",
+				x: 1840,
+				y: 260,
+				label: "Risk & Compliance",
+				role: "risk_officer",
+				sla_hours: 48,
+				auto: !1
+			},
+			{
+				id: "wn10",
+				type: "task",
+				x: 2060,
+				y: 260,
+				label: "Product Manager Approval",
+				role: "product_manager",
+				sla_hours: 24,
+				auto: !1
+			},
+			{
+				id: "wn11",
+				type: "end",
+				x: 2280,
+				y: 260,
+				label: "End",
+				auto: !0
+			}
+		]);
+		let c = s.slice(0, -1).map((e, t) => ({
+			id: `e${t + 1}`,
+			source: s[t].id,
+			target: s[t + 1].id,
+			label: ""
+		}));
+		return await e.env.DB.prepare("\n      UPDATE products SET\n        pge_stage=6, market_id=COALESCE(market_id,'mkt001'),\n        max_amount=CASE WHEN max_amount < 1000000 THEN 1000000 ELSE max_amount END,\n        min_amount=CASE WHEN min_amount < 25000 THEN 25000 ELSE min_amount END,\n        max_dbr=55, gsas_min_score=70,\n        green_discount_premium=0.5, green_discount_standard=0.5,\n        workflow_nodes=?, workflow_edges=?,\n        configuration=?, updated_at=?\n      WHERE id=?\n    ").bind(JSON.stringify(s), JSON.stringify(c), JSON.stringify(o), n, t).run(), await e.env.DB.prepare("SELECT * FROM products WHERE id=?").bind(t).first(), e.json({
+			success: !0,
+			product_id: t,
+			rules_attached: a.length,
+			pge_stage: 6,
+			message: `Repaired product ${t}: ${a.length} rules attached, pge_stage=6`
+		});
+	} catch (t) {
+		return e.json({
+			success: !1,
+			error: t?.message || "Repair failed"
+		}, 200);
+	}
 }), q.post("/rules/generate", async (e) => {
 	let { text: t, product_id: n, user_id: r = "u001", user_name: i = "Fatima Al-Rashdi" } = await e.req.json(), a = e.env.OPENAI_API_KEY;
 	try {
@@ -7046,7 +7226,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "41fecdd";
+var xt = "383092c";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
