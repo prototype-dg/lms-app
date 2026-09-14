@@ -3508,9 +3508,17 @@ function renderRiskPanel(fullD) {
     (ltv  !== null ? (ltv  <= 60 ? 0 : ltv  <= 75 ? 1 : ltv  <= maxLtv ? 2 : 3) : 1) +
     (malaa !== null ? (malaa >= 800 ? 0 : malaa >= 700 ? 1 : malaa >= 650 ? 2 : 3) : 1) +
     (stressPast ? 0 : 2);
-  const riskTier = riskScore <= 1 ? {label:'Low Risk',      color:'var(--success)', icon:'fa-shield-check'}  :
-                   riskScore <= 3 ? {label:'Moderate Risk',  color:'var(--amber)',   icon:'fa-shield'}        :
-                                    {label:'High Risk',       color:'var(--danger)',  icon:'fa-shield-exclamation'};
+  const _riskTierRaw = riskScore <= 1 ? {label:'Low Risk',      color:'var(--success)', icon:'fa-shield-check'}  :
+                       riskScore <= 3 ? {label:'Moderate Risk',  color:'var(--amber)',   icon:'fa-shield'}        :
+                                        {label:'High Risk',       color:'var(--danger)',  icon:'fa-shield-exclamation'};
+  // RC-FIX: When all evaluated rules pass and stress test passes, override to Low Risk.
+  // The rule-pass signal is the authoritative compliance verdict; the numeric score uses
+  // intentionally stricter thresholds and should not contradict a clean rule report.
+  const _allEvaluatedRules = allRules.filter(r => r.evaluation && r.evaluation.status !== 'unknown');
+  const _allRulesPass = _allEvaluatedRules.length === 0 || _allEvaluatedRules.every(r => r.evaluation.status === 'pass');
+  const riskTier = (_allRulesPass && stressPast)
+    ? {label:'Low Risk', color:'var(--success)', icon:'fa-shield-check'}
+    : _riskTierRaw;
 
   // Build credit + collateral rule checklist
   const ruleRows = ([...creditRules, ...collRules]).map(r => {
