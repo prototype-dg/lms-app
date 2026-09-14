@@ -68,6 +68,32 @@ app.route('/api/v1/campaigns', campaignsApi)
 // Product versions are nested under products path
 app.route('/api/v1', productVersionsApi)
 
+// ── Debug: thread inspector (temporary diagnostic) ───────────────────────────
+app.get('/api/v1/debug/thread/:id', async (c) => {
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT * FROM ai_threads WHERE id=?').bind(id).first() as any
+  if (!row) return c.json({ error: 'not found' }, 404)
+  let msgs: any[] = []
+  try { msgs = JSON.parse(row.messages || '[]') } catch { msgs = [] }
+  const summary = msgs.map((m: any, i: number) => ({
+    i, role: m.role, len: (m.content || '').length,
+    preview: (m.content || '').slice(0, 120).replace(/\n/g, ' '),
+    action: m.metadata?.action,
+  }))
+  return c.json({ id: row.id, product_id: row.product_id, status: row.status, msg_count: msgs.length, summary, result: row.result ? JSON.parse(row.result) : null })
+})
+
+app.get('/api/v1/debug/threads-by-product/:pid', async (c) => {
+  const pid = c.req.param('pid')
+  const rows = await c.env.DB.prepare('SELECT id, product_id, status, updated_at, messages FROM ai_threads WHERE product_id=? ORDER BY updated_at DESC LIMIT 5').bind(pid).all() as any
+  const result = (rows.results || []).map((r: any) => {
+    let msgs: any[] = []; try { msgs = JSON.parse(r.messages || '[]') } catch {}
+    return { id: r.id, product_id: r.product_id, status: r.status, updated_at: r.updated_at, msg_count: msgs.length,
+      last_assistant: msgs.filter((m: any) => m.role === 'assistant').slice(-1)[0]?.metadata }
+  })
+  return c.json({ threads: result })
+})
+
 // ── Image proxy ──────────────────────────────────────────────────────────────
 app.get('/api/v1/img-proxy', async (c) => {
   const url = c.req.query('url')

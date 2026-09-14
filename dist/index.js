@@ -7241,7 +7241,47 @@ var bt = {
 }, $ = new V();
 $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	e.set("env", bt), Object.assign(e, { env: bt }), await t();
-}), $.route("/api/v1/products", K), $.route("/api/v1/applications", Le), $.route("/api/v1/ai", q), $.route("/api/v1/compliance", J), $.route("/api/v1/projects", Y), $.route("/api/v1/documents", Ge), $.route("/api/v1/escrow", qe), $.route("/api/v1/audit", Je), $.route("/api/v1/users", X), $.route("/api/v1/auth", Xe), $.route("/api/v1/seed", lt), $.route("/api/v1/portal", Z), $.route("/api/v1/markets", pt), $.route("/api/v1/rule-matrices", mt), $.route("/api/v1/compliance-tags", Q), $.route("/api/v1/workflow-templates", _t), $.route("/api/v1/campaigns", yt), $.route("/api/v1", ht), $.get("/api/v1/img-proxy", async (e) => {
+}), $.route("/api/v1/products", K), $.route("/api/v1/applications", Le), $.route("/api/v1/ai", q), $.route("/api/v1/compliance", J), $.route("/api/v1/projects", Y), $.route("/api/v1/documents", Ge), $.route("/api/v1/escrow", qe), $.route("/api/v1/audit", Je), $.route("/api/v1/users", X), $.route("/api/v1/auth", Xe), $.route("/api/v1/seed", lt), $.route("/api/v1/portal", Z), $.route("/api/v1/markets", pt), $.route("/api/v1/rule-matrices", mt), $.route("/api/v1/compliance-tags", Q), $.route("/api/v1/workflow-templates", _t), $.route("/api/v1/campaigns", yt), $.route("/api/v1", ht), $.get("/api/v1/debug/thread/:id", async (e) => {
+	let t = e.req.param("id"), n = await e.env.DB.prepare("SELECT * FROM ai_threads WHERE id=?").bind(t).first();
+	if (!n) return e.json({ error: "not found" }, 404);
+	let r = [];
+	try {
+		r = JSON.parse(n.messages || "[]");
+	} catch {
+		r = [];
+	}
+	let i = r.map((e, t) => ({
+		i: t,
+		role: e.role,
+		len: (e.content || "").length,
+		preview: (e.content || "").slice(0, 120).replace(/\n/g, " "),
+		action: e.metadata?.action
+	}));
+	return e.json({
+		id: n.id,
+		product_id: n.product_id,
+		status: n.status,
+		msg_count: r.length,
+		summary: i,
+		result: n.result ? JSON.parse(n.result) : null
+	});
+}), $.get("/api/v1/debug/threads-by-product/:pid", async (e) => {
+	let t = e.req.param("pid"), n = ((await e.env.DB.prepare("SELECT id, product_id, status, updated_at, messages FROM ai_threads WHERE product_id=? ORDER BY updated_at DESC LIMIT 5").bind(t).all()).results || []).map((e) => {
+		let t = [];
+		try {
+			t = JSON.parse(e.messages || "[]");
+		} catch {}
+		return {
+			id: e.id,
+			product_id: e.product_id,
+			status: e.status,
+			updated_at: e.updated_at,
+			msg_count: t.length,
+			last_assistant: t.filter((e) => e.role === "assistant").slice(-1)[0]?.metadata
+		};
+	});
+	return e.json({ threads: n });
+}), $.get("/api/v1/img-proxy", async (e) => {
 	let t = e.req.query("url");
 	if (!t || !t.startsWith("https://www.genspark.ai/")) return e.text("Invalid URL", 400);
 	try {
@@ -7274,7 +7314,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "31269bb";
+var xt = "0ed2872";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
