@@ -639,7 +639,10 @@ app.post('/products/confirm', async (c) => {
     const ts = now()
 
     // Generate portal marketing content
-    const isGreen = (draft.esg_required_docs || '') !== '[]' && (draft.esg_required_docs || '') !== ''
+    // isGreen: true when ESG docs are set OR product name/description signals green/ESG/GSAS
+    const _esgDocsPopulated = (draft.esg_required_docs || '') !== '[]' && (draft.esg_required_docs || '') !== ''
+    const _nameOrDescGreen  = /green|esg|gsas|eco|sustain/i.test((draft.name || '') + ' ' + (draft.description || ''))
+    const isGreen = _esgDocsPopulated || _nameOrDescGreen
     let portalHeroTitle = `${draft.name} — From ${draft.base_rate}% p.a.`
     let portalHighlights: string[] = isGreen
       ? [`Up to ${draft.green_discount_premium}% rate discount`, 'GSAS-certified properties only', 'Supports Oman Vision 2040']
@@ -678,9 +681,9 @@ Product: ${draft.name}. Base rate: ${draft.base_rate}%. ${isGreen ? `Green disco
     await c.env.DB.prepare(`
       UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,
         portal_hero_title=?, portal_highlights=?, portal_card_badge=?,
-        pge_stage=?, is_demo_product=1, published_at=?, updated_at=? WHERE id=?
+        pge_stage=?, is_demo_product=1, is_green_product=?, published_at=?, updated_at=? WHERE id=?
     `).bind(isGreen ? 1 : 0, portalHeroTitle, JSON.stringify(portalHighlights), portalBadge,
-        finalPgeStage, ts, ts, draftProductId).run()
+        finalPgeStage, isGreen ? 1 : 0, ts, ts, draftProductId).run()
 
     // Mark thread as completed
     if (thread_id) {
@@ -788,14 +791,19 @@ Product: ${draft.name}. Base rate: ${draft.base_rate}%. ${isGreen ? `Green disco
   const name = product_draft.name || 'Green Home Loan – ESG'
   const code = `GHL-${Date.now().toString(36).toUpperCase()}`
 
+  // Determine green status: ESG docs OR keyword match in name/description
+  const _legacyEsgDocs = (product_draft.esg_required_docs || []).length > 0
+  const _legacyNameGreen = /green|esg|gsas|eco|sustain/i.test((name || '') + ' ' + (product_draft.description || ''))
+  const isGreenProductLegacy = _legacyEsgDocs || _legacyNameGreen ? 1 : 0
+
   await c.env.DB.prepare(`
     INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,
     green_dbr, min_term, max_term, min_amount, max_amount,
     gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,
     ai_confidence_threshold, allow_byop, allow_partner_inventory,
     required_docs, esg_required_docs, approved_materials, approved_vendors,
-    configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    configuration, portal_visible, developer_portal_visible, pge_stage, is_green_product, created_by, created_at, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `).bind(
     id, name, code,
     product_draft.description || (cloneSource?.description) || '',
@@ -819,6 +827,7 @@ Product: ${draft.name}. Base rate: ${draft.base_rate}%. ${isGreen ? `Green disco
     JSON.stringify(product_draft.approved_vendors || ['Oman Readymix LLC', 'Gulf Insulation Group', 'SunTech Oman', 'Green Build Oman', 'EcoMaterials Oman']),
     JSON.stringify(config), 0, 0,
     1,  // pge_stage=1 so PGE opens on Stage 1 with product data pre-filled
+    isGreenProductLegacy,
     user_id, ts, ts
   ).run()
 

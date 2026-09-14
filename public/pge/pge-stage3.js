@@ -93,7 +93,10 @@
   async function loadRules() {
     try {
       const d = await API.getRules(_productId);
-      _rules = (d.rules || []).filter(r => r.product_id === _productId);
+      // Accept rules that are product-specific OR global (product_id IS NULL).
+      // Previously this only matched product-specific rules, which caused 0 rules
+      // to appear for AI-created products whose rules were stored globally (null product_id).
+      _rules = (d.rules || []).filter(r => r.product_id === _productId || r.product_id === null || r.product_id === undefined);
     } catch(e) { _rules = []; }
   }
 

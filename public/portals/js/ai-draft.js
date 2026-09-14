@@ -168,15 +168,35 @@ function updateAiDraftCard() {
       expandedHtml += fr('Amount Range', amtStr);
     }
     if (rCount) {
-      expandedHtml += `<div style="font-size:.68rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em;margin:.5rem 0 .3rem">Eligibility Rules (${rCount})</div>`;
-      expandedHtml += aiDraftRules.map(r => {
+      // Split rules by category so both eligibility and compliance are shown distinctly
+      const _eligRules  = aiDraftRules.filter(r => (r.category || 'eligibility') === 'eligibility');
+      const _compRules  = aiDraftRules.filter(r => r.category === 'compliance');
+      const _otherRules = aiDraftRules.filter(r => r.category && r.category !== 'eligibility' && r.category !== 'compliance');
+      const renderRuleRow = r => {
         const sc = r.severity==='hard'?'#f87171':r.severity==='soft'?'#fbbf24':'#60a5fa';
         return `<div style="display:flex;align-items:center;gap:.35rem;padding:.2rem 0">
           <span style="width:6px;height:6px;border-radius:50%;background:${sc};flex-shrink:0"></span>
           <span style="font-size:.72rem;color:rgba(255,255,255,.75)">${r.name||r.metric||'Rule'}</span>
           ${r.threshold_value!=null?`<span style="font-size:.65rem;color:rgba(255,255,255,.35);margin-left:auto">${r.operator||''} ${r.threshold_value}</span>`:''}
         </div>`;
-      }).join('');
+      };
+      if (_eligRules.length) {
+        expandedHtml += `<div style="font-size:.68rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em;margin:.5rem 0 .3rem">Eligibility Rules (${_eligRules.length})</div>`;
+        expandedHtml += _eligRules.map(renderRuleRow).join('');
+      }
+      if (_compRules.length) {
+        expandedHtml += `<div style="font-size:.68rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em;margin:.5rem 0 .3rem">Compliance Rules (${_compRules.length})</div>`;
+        expandedHtml += _compRules.map(renderRuleRow).join('');
+      }
+      if (_otherRules.length) {
+        expandedHtml += `<div style="font-size:.68rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em;margin:.5rem 0 .3rem">Rules (${_otherRules.length})</div>`;
+        expandedHtml += _otherRules.map(renderRuleRow).join('');
+      }
+      // Fallback: if no category info, show all under a generic "Rules" header
+      if (!_eligRules.length && !_compRules.length && !_otherRules.length) {
+        expandedHtml += `<div style="font-size:.68rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em;margin:.5rem 0 .3rem">Rules (${rCount})</div>`;
+        expandedHtml += aiDraftRules.map(renderRuleRow).join('');
+      }
     }
     if (wCount) {
       expandedHtml += `<div style="font-size:.68rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em;margin:.5rem 0 .3rem">Workflow (${wCount} steps)</div>`;

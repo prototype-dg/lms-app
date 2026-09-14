@@ -440,7 +440,7 @@ async function renderProducts() {
   const STAGE_LABELS = ['','Model','Config','Rules','Workflow','Comply','Sim'];
   const productCard = p => {
     const meta = catMeta[p.category] || {icon:'fa-file', label:p.category, color:'#aaa'};
-    const isEsg = p.esg_required_docs && p.esg_required_docs !== '[]';
+    const isEsg = (p.esg_required_docs && p.esg_required_docs !== '[]') || p.is_green_product == 1 || p.is_green_product === true;
     const isAr = currentLang === 'ar';
     const stage = p.pge_stage || 0;
     const stagePct = Math.round((stage / 6) * 100);

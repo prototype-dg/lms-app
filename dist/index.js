@@ -888,7 +888,8 @@ var Me = [
 	"./migrations/0009_eco_units_seed.sql",
 	"./migrations/0010_gsas_discounts_and_rate_fix.sql",
 	"./migrations/0011_portal_auth.sql",
-	"./migrations/0012_sales_campaigns.sql"
+	"./migrations/0012_sales_campaigns.sql",
+	"./migrations/0013_is_green_product.sql"
 ];
 function Ne() {
 	let e = r.resolve("./migrations");
@@ -1708,7 +1709,7 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 				success: !1,
 				error: "Draft product not found"
 			}, 404);
-			let r = W(), i = (t.esg_required_docs || "") !== "[]" && (t.esg_required_docs || "") !== "", a = `${t.name} — From ${t.base_rate}% p.a.`, c = i ? [
+			let r = W(), i = (t.esg_required_docs || "") !== "[]" && (t.esg_required_docs || "") !== "", a = /green|esg|gsas|eco|sustain/i.test((t.name || "") + " " + (t.description || "")), c = i || a, u = `${t.name} — From ${t.base_rate}% p.a.`, d = c ? [
 				`Up to ${t.green_discount_premium}% rate discount`,
 				"GSAS-certified properties only",
 				"Supports Oman Vision 2040"
@@ -1716,13 +1717,13 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 				`From ${t.base_rate}% per annum`,
 				`Terms up to ${t.max_term} years`,
 				`Up to OMR ${Math.round((t.max_amount || 5e5) / 1e3)}K financing`
-			], u = i ? "ESG Premium" : "Home Finance", d = e.env.OPENAI_API_KEY;
-			if (d) try {
+			], f = c ? "ESG Premium" : "Home Finance", p = e.env.OPENAI_API_KEY;
+			if (p) try {
 				let e = `Generate marketing content for a bank loan product. Return JSON only: {"hero_title":"short tagline max 6 words","hero_subtitle":"one sentence benefit","card_badge":"2-3 word badge","highlights":["benefit 1","benefit 2","benefit 3"]}
-Product: ${t.name}. Base rate: ${t.base_rate}%. ${i ? `Green discount: up to ${t.green_discount_premium}% for GSAS ≥${t.gsas_premium_score}.` : ""}`, n = await fetch("https://api.openai.com/v1/chat/completions", {
+Product: ${t.name}. Base rate: ${t.base_rate}%. ${c ? `Green discount: up to ${t.green_discount_premium}% for GSAS ≥${t.gsas_premium_score}.` : ""}`, n = await fetch("https://api.openai.com/v1/chat/completions", {
 					method: "POST",
 					headers: {
-						Authorization: `Bearer ${d}`,
+						Authorization: `Bearer ${p}`,
 						"Content-Type": "application/json"
 					},
 					body: JSON.stringify({
@@ -1739,12 +1740,12 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${i ? `Green discount: up to ${t
 					let e = (r.choices[0].message.content || "").match(/\{[\s\S]*\}/);
 					if (e) {
 						let t = JSON.parse(e[0]);
-						t.hero_title && (a = t.hero_title), t.highlights?.length && (c = t.highlights);
+						t.hero_title && (u = t.hero_title), t.highlights?.length && (d = t.highlights);
 					}
 				}
 			} catch {}
-			let { results: f } = await e.env.DB.prepare("SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1").bind(l).all(), p = f?.length > 0 ? 6 : t.pge_stage || 1;
-			return await e.env.DB.prepare("\n      UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n        portal_hero_title=?, portal_highlights=?, portal_card_badge=?,\n        pge_stage=?, is_demo_product=1, published_at=?, updated_at=? WHERE id=?\n    ").bind(+!!i, a, JSON.stringify(c), u, p, r, r, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({ product_id: l }), r, n).run(), await G(e.env.DB, {
+			let { results: m } = await e.env.DB.prepare("SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1").bind(l).all(), h = m?.length > 0 ? 6 : t.pge_stage || 1;
+			return await e.env.DB.prepare("\n      UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n        portal_hero_title=?, portal_highlights=?, portal_card_badge=?,\n        pge_stage=?, is_demo_product=1, is_green_product=?, published_at=?, updated_at=? WHERE id=?\n    ").bind(+!!c, u, JSON.stringify(d), f, h, +!!c, r, r, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({ product_id: l }), r, n).run(), await G(e.env.DB, {
 				userId: o,
 				userName: s,
 				userRole: "product_manager",
@@ -1754,14 +1755,14 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${i ? `Green discount: up to ${t
 				details: {
 					name: t.name,
 					thread_id: n,
-					pge_stage: p
+					pge_stage: h
 				},
 				source: "ai_generated"
 			}), e.json({
 				success: !0,
 				product_id: l,
 				product_name: t.name,
-				portal_hero_title: a,
+				portal_hero_title: u,
 				portal_visible: !0,
 				rule_ids: []
 			});
@@ -1806,8 +1807,8 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${i ? `Green discount: up to ${t
 		}, 400);
 		let u = U("p"), d = W(), f = {};
 		a && (f.gsas_schema = a);
-		let p = r.clone_from_id ? await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(r.clone_from_id).first() : null, m = r.name || "Green Home Loan – ESG", h = `GHL-${Date.now().toString(36).toUpperCase()}`;
-		await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,\n    green_dbr, min_term, max_term, min_amount, max_amount,\n    gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n    ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors,\n    configuration, portal_visible, developer_portal_visible, pge_stage, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(u, m, h, r.description || p?.description || "", r.category || "home_loan", "draft", r.base_rate || p?.base_rate || 5.5, r.max_ltv || p?.max_ltv || 90, r.max_dbr || p?.max_dbr || 60, r.green_dbr || 55, r.min_term || p?.min_term || 5, r.max_term || p?.max_term || 25, r.min_amount || p?.min_amount || 1e4, r.max_amount || p?.max_amount || 5e5, r.gsas_min_score || 70, r.gsas_premium_score || 85, r.green_discount_premium || .75, r.green_discount_standard || .5, 90, 1, 1, JSON.stringify(r.required_docs || (p ? JSON.parse(p.required_docs || "[]") : [
+		let p = r.clone_from_id ? await e.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(r.clone_from_id).first() : null, m = r.name || "Green Home Loan – ESG", h = `GHL-${Date.now().toString(36).toUpperCase()}`, g = (r.esg_required_docs || []).length > 0, _ = /green|esg|gsas|eco|sustain/i.test((m || "") + " " + (r.description || "")), v = g || _ ? 1 : 0;
+		await e.env.DB.prepare("\n    INSERT INTO products (id, name, code, description, category, status, base_rate, max_ltv, max_dbr,\n    green_dbr, min_term, max_term, min_amount, max_amount,\n    gsas_min_score, gsas_premium_score, green_discount_premium, green_discount_standard,\n    ai_confidence_threshold, allow_byop, allow_partner_inventory,\n    required_docs, esg_required_docs, approved_materials, approved_vendors,\n    configuration, portal_visible, developer_portal_visible, pge_stage, is_green_product, created_by, created_at, updated_at)\n    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n  ").bind(u, m, h, r.description || p?.description || "", r.category || "home_loan", "draft", r.base_rate || p?.base_rate || 5.5, r.max_ltv || p?.max_ltv || 90, r.max_dbr || p?.max_dbr || 60, r.green_dbr || 55, r.min_term || p?.min_term || 5, r.max_term || p?.max_term || 25, r.min_amount || p?.min_amount || 1e4, r.max_amount || p?.max_amount || 5e5, r.gsas_min_score || 70, r.gsas_premium_score || 85, r.green_discount_premium || .75, r.green_discount_standard || .5, 90, 1, 1, JSON.stringify(r.required_docs || (p ? JSON.parse(p.required_docs || "[]") : [
 			"salary_cert",
 			"civil_id",
 			"property_deed",
@@ -1830,11 +1831,11 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${i ? `Green discount: up to ${t
 			"SunTech Oman",
 			"Green Build Oman",
 			"EcoMaterials Oman"
-		]), JSON.stringify(f), 0, 0, 1, o, d, d).run();
-		let g = [];
+		]), JSON.stringify(f), 0, 0, 1, v, o, d, d).run();
+		let y = [];
 		if (i && Array.isArray(i)) for (let t of i) {
 			let n = U("r");
-			await e.env.DB.prepare("\n        INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value,\n        threshold_condition, action_on_breach, severity, regulatory_reference, source,\n        ai_confidence, description, is_active, created_by, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n      ").bind(n, u, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach || "reject", t.severity || "hard", t.regulatory_reference || null, "ai_generated", t.ai_confidence || null, t.description || null, 1, o, d).run(), g.push(n);
+			await e.env.DB.prepare("\n        INSERT INTO rules (id, product_id, name, category, metric, operator, threshold_value,\n        threshold_condition, action_on_breach, severity, regulatory_reference, source,\n        ai_confidence, description, is_active, created_by, created_at)\n        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n      ").bind(n, u, t.name, t.category, t.metric, t.operator, t.threshold_value || null, t.threshold_condition || null, t.action_on_breach || "reject", t.severity || "hard", t.regulatory_reference || null, "ai_generated", t.ai_confidence || null, t.description || null, 1, o, d).run(), y.push(n);
 		}
 		try {
 			let t = (r.esg_required_docs || []).length > 0, i = [];
@@ -2089,14 +2090,14 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${i ? `Green discount: up to ${t
 				label: ""
 			}
 		]), d, u).run();
-		let _ = e.env.OPENAI_API_KEY, v = m, y = [], b = "", x = (r.esg_required_docs || []).length > 0;
-		if (_) try {
+		let b = e.env.OPENAI_API_KEY, x = m, S = [], C = "", w = (r.esg_required_docs || []).length > 0;
+		if (b) try {
 			let e = `Generate marketing content for a bank loan product. Return JSON only, no markdown:
 {"hero_title":"short compelling tagline (max 6 words)","hero_subtitle":"one sentence benefit statement","card_badge":"2-3 word category badge","highlights":["benefit 1","benefit 2","benefit 3","benefit 4"]}
-Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 5.5}%.${x ? ` Green discount: up to ${r.green_discount_premium || .75}% for GSAS score ≥${r.gsas_premium_score || 85}. ESG/green product.` : ""}`, t = await fetch("https://api.openai.com/v1/chat/completions", {
+Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 5.5}%.${w ? ` Green discount: up to ${r.green_discount_premium || .75}% for GSAS score ≥${r.gsas_premium_score || 85}. ESG/green product.` : ""}`, t = await fetch("https://api.openai.com/v1/chat/completions", {
 				method: "POST",
 				headers: {
-					Authorization: `Bearer ${_}`,
+					Authorization: `Bearer ${b}`,
 					"Content-Type": "application/json"
 				},
 				body: JSON.stringify({
@@ -2113,24 +2114,24 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 				let e = n.choices[0].message.content.match(/\{[\s\S]*\}/);
 				if (e) {
 					let t = JSON.parse(e[0]);
-					v = t.hero_title || v, y = t.highlights || [], b = t.card_badge || "";
+					x = t.hero_title || x, S = t.highlights || [], C = t.card_badge || "";
 				}
 			}
 		} catch {}
-		y.length || (x ? (y = [
+		S.length || (w ? (S = [
 			`Up to ${r.green_discount_premium || .75}% rate discount`,
 			"GSAS-certified properties only",
 			"Supports Oman Vision 2040",
 			"Maker-checker ESG approval"
-		], b = "ESG Premium") : y = [
+		], C = "ESG Premium") : S = [
 			`From ${r.base_rate || 5.5}% per annum`,
 			`Terms up to ${r.max_term || 25} years`,
 			`Up to OMR ${Math.round((r.max_amount || 5e5) / 1e3)}K financing`
 		]);
-		let S = g.length > 0 ? 6 : 1;
-		return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?,\n     pge_stage=?, is_demo_product=1, updated_at=? WHERE id=?").bind(+!!x, v, JSON.stringify(y), b, d, S, d, u).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(u, JSON.stringify({
+		let T = y.length > 0 ? 6 : 1;
+		return await e.env.DB.prepare("UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n     portal_hero_title=?, portal_highlights=?, portal_card_badge=?, published_at=?,\n     pge_stage=?, is_demo_product=1, updated_at=? WHERE id=?").bind(+!!w, x, JSON.stringify(S), C, d, T, d, u).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(u, JSON.stringify({
 			product_id: u,
-			rule_ids: g
+			rule_ids: y
 		}), d, n).run(), await G(e.env.DB, {
 			userId: o,
 			userName: s,
@@ -2140,7 +2141,7 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 			entityId: u,
 			details: {
 				name: m,
-				rules_created: g.length,
+				rules_created: y.length,
 				cloned_from: r.clone_from_id || null,
 				thread_id: n,
 				portal_visible: !0
@@ -2150,8 +2151,8 @@ Product: ${m}. Description: ${r.description || ""}. Base rate: ${r.base_rate || 
 			success: !0,
 			product_id: u,
 			product_name: m,
-			rule_ids: g,
-			portal_hero_title: v,
+			rule_ids: y,
+			portal_hero_title: x,
 			portal_visible: !0
 		});
 	} catch (t) {
@@ -7023,7 +7024,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "b8e4578";
+var xt = "bbb6a0c";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
