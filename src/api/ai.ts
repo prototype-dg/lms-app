@@ -491,13 +491,36 @@ app.post('/products/:id/stage-update', async (c) => {
 
   } else if (stage === 3) {
     // ── Stage 3: Eligibility rules — delete old AI rules then bulk-insert ──
-    if (rules.length > 0) {
+    //
+    // IMPORTANT: GPT sometimes emits rules only in the chat text (not in
+    // stage_update_hint.rules), so rules[] may arrive empty even after a valid
+    // Stage 3 conversation.  We handle this in two ways:
+    //   (a) If rules[] is non-empty → normal insert path with product_id attached.
+    //   (b) If rules[] is empty → copy the global (product_id=NULL) AI rules that
+    //       were previously generated for this product category, attaching them
+    //       with the correct product_id so PGE Stage 3 shows them.
+    // In both cases we always advance pge_stage to 3 so the PGE rail unlocks.
+
+    let effectiveRules = rules
+
+    if (effectiveRules.length === 0) {
+      // Fallback: copy global AI-generated rules (product_id IS NULL)
+      const { results: globalRules } = await c.env.DB.prepare(
+        "SELECT * FROM rules WHERE product_id IS NULL AND source='ai_generated' AND is_active=1"
+      ).bind().all() as any
+      if (globalRules && globalRules.length > 0) {
+        effectiveRules = globalRules
+      }
+    }
+
+    if (effectiveRules.length > 0) {
       // Remove previous AI-generated rules for this product (preserve manually added ones)
       await c.env.DB.prepare(
         "DELETE FROM rules WHERE product_id=? AND source='ai_generated'"
       ).bind(productId).run()
 
-      for (const rule of rules) {
+      const insertedRules: any[] = []
+      for (const rule of effectiveRules) {
         const ruleId = generateId('r')
         await c.env.DB.prepare(`
           INSERT INTO rules (id, product_id, name, category, metric, operator,
@@ -511,7 +534,21 @@ app.post('/products/:id/stage-update', async (c) => {
           rule.regulatory_reference ?? null, 'ai_generated',
           rule.ai_confidence ?? null, rule.description ?? null, 1, user_id, ts
         ).run()
+        insertedRules.push({ id: ruleId, name: rule.name, category: rule.category || 'eligibility',
+          metric: rule.metric, operator: rule.operator, threshold_value: rule.threshold_value,
+          severity: rule.severity || 'hard' })
       }
+
+      // Store rules snapshot in product.configuration so the draft card can read
+      // them without a separate API call (configuration is returned with the product).
+      const existingCfgRow = await c.env.DB.prepare('SELECT configuration FROM products WHERE id=?').bind(productId).first() as any
+      const existingCfg = (() => { try { return JSON.parse(existingCfgRow?.configuration || '{}') } catch { return {} } })()
+      existingCfg.rules = insertedRules
+      await c.env.DB.prepare(
+        'UPDATE products SET configuration=?, pge_stage=3, updated_at=? WHERE id=?'
+      ).bind(JSON.stringify(existingCfg), ts, productId).run()
+    } else {
+      // Even with no rules to save, advance pge_stage so the PGE rail isn't stuck
       await c.env.DB.prepare(
         'UPDATE products SET pge_stage=3, updated_at=? WHERE id=?'
       ).bind(ts, productId).run()
@@ -672,11 +709,15 @@ Product: ${draft.name}. Base rate: ${draft.base_rate}%. ${isGreen ? `Green disco
       } catch {}
     }
 
-    // Determine final pge_stage: if rules exist, unlock all stages
+    // Determine final pge_stage: prefer the pge_stage already set by stage-update
+    // calls (which advance it to 3, 4, 5, 6 as each stage completes).  Only fall
+    // back to the rules-existence check if stage-updates somehow didn't run.
     const { results: ruleRows } = await c.env.DB.prepare(
       'SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1'
     ).bind(draftProductId).all() as any
-    const finalPgeStage = ruleRows?.length > 0 ? 6 : draft.pge_stage || 1
+    const stageFromUpdates = draft.pge_stage || 1
+    // Use the higher of: what stage-updates recorded, or 6 if rules exist
+    const finalPgeStage = ruleRows?.length > 0 ? Math.max(stageFromUpdates, 6) : Math.max(stageFromUpdates, 1)
 
     await c.env.DB.prepare(`
       UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,

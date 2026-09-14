@@ -148,7 +148,7 @@ function updateAiDraftCard() {
   const wfPart    = wCount   ? `<span style="background:rgba(244,179,91,.12);color:#fbbf24;padding:.1rem .4rem;border-radius:10px;font-size:.68rem">${flashSpan('_wCount', wCount + '-step workflow')}</span>` : '';
   const cmpPart   = cfg._compliance ? `<span style="background:rgba(22,132,91,.15);color:#4ade80;padding:.1rem .4rem;border-radius:10px;font-size:.68rem">Basel III</span>` : '';
 
-  const expandBtn = (rCount > 0 || wCount > 0)
+  const expandBtn = (rCount > 0 || wCount > 0 || cfg._compliance)
     ? `<button onclick="aiDraftCardExpanded=!aiDraftCardExpanded;updateAiDraftCard()" style="margin-left:auto;background:rgba(53,198,196,.12);border:1px solid rgba(53,198,196,.25);color:var(--sea-glass);border-radius:5px;padding:.1rem .45rem;font-size:.62rem;cursor:pointer;white-space:nowrap"><i class="fas fa-${exp?'compress-alt':'expand-alt'}" style="margin-right:.18rem"></i>${exp?'Collapse':'Expand'}</button>` : '';
 
   let html = `<div style="padding:.5rem .85rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;border-bottom:${exp?'1px solid rgba(255,255,255,.07)':'none'}">
@@ -209,7 +209,25 @@ function updateAiDraftCard() {
         (idx < wCount-1 ? `<div style="width:1px;height:8px;background:rgba(255,255,255,.1);margin:.03rem 0 .03rem 7px"></div>` : '')
       ).join('');
     }
-    if (!rCount && !wCount && Object.keys(cfg).filter(k=>!k.startsWith('_')).length < 3) {
+    // Compliance section — shown when Stage 5 data is available
+    if (cfg._compliance) {
+      const cpl = cfg._complianceData || {};
+      expandedHtml += `<div style="font-size:.68rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.06em;margin:.5rem 0 .3rem">Compliance</div>`;
+      const cRow = (label, val, color) => val != null
+        ? `<div style="display:flex;justify-content:space-between;padding:.14rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+            <span style="color:rgba(255,255,255,.42);font-size:.72rem">${label}</span>
+            <span style="color:${color||'#c084fc'};font-weight:600;font-size:.73rem">${val}</span>
+           </div>` : '';
+      expandedHtml += cRow('Basel III Risk Weight', cpl.basel3_risk_weight != null ? cpl.basel3_risk_weight + '%' : '75%');
+      expandedHtml += cRow('IFRS9 Stage 1 ECL', cpl.ifrs9_ecl_pct != null ? cpl.ifrs9_ecl_pct + '%' : '1.5%');
+      expandedHtml += cRow('AML Risk Tier', cpl.aml_risk_tier || 'LOW');
+      if (Array.isArray(cpl.tags) && cpl.tags.length) {
+        expandedHtml += `<div style="display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.35rem">` +
+          cpl.tags.map(t => `<span style="font-size:.62rem;padding:.08rem .32rem;border-radius:8px;background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3)">${t}</span>`).join('') +
+          `</div>`;
+      }
+    }
+    if (!rCount && !wCount && !cfg._compliance && Object.keys(cfg).filter(k=>!k.startsWith('_')).length < 3) {
       expandedHtml += `<div style="font-size:.72rem;color:rgba(255,255,255,.3);text-align:center;padding:.75rem 0">More details will appear as we progress.</div>`;
     }
     expandedHtml += `</div>`;

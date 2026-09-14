@@ -1887,6 +1887,7 @@ async function sendAiChat(productId) {
           // bubble is ever rendered for it.  Inject a concise compliance card.
           if (hint.stage === 5 && hint.compliance) {
             aiDraftConfig._compliance = true;
+            aiDraftConfig._complianceData = hint.compliance; // stored for expanded card display
             const cpl = hint.compliance;
             const tags = Array.isArray(cpl.tags) ? cpl.tags : [];
             const tagHtml = tags.map(t =>
@@ -2029,9 +2030,27 @@ function _renderDbDraftCard(product) {
   // same data as the DB card — critical when _renderDbDraftCard is called
   // from create-draft (Stage 1) or from stage-update after the fallback
   // auto-create path runs before the hint sync block fires.
+  //
+  // Rules are stored in BOTH configuration.rules (snapshot, for fast card render)
+  // AND the rules table (authoritative).  Try configuration.rules first; if empty,
+  // fetch from the rules API (handles products created before the configuration
+  // snapshot was added, e.g. pmu16ikvs2hlepg).
   if (ruleCount > 0 && aiDraftRules.length === 0) {
     aiDraftRules = dbRules.slice();
     setTimeout(() => updateAiDraftCard(), 250);
+  } else if (ruleCount === 0 && aiDraftRules.length === 0 && product.id) {
+    // Fallback: fetch rules from the rules table — covers products where
+    // configuration.rules was not yet populated (pre-fix sessions).
+    fetch('/api/v1/rules?product_id=' + product.id)
+      .then(r => r.json())
+      .then(rd => {
+        const fetched = (rd.rules || []).filter(r => r.product_id === product.id);
+        if (fetched.length > 0 && aiDraftRules.length === 0) {
+          aiDraftRules = fetched;
+          setTimeout(() => updateAiDraftCard(), 150);
+        }
+      })
+      .catch(() => {});
   }
   if (wfCount > 0 && aiDraftWorkflow.length === 0) {
     aiDraftWorkflow = dbWorkflow.slice();
@@ -2039,6 +2058,8 @@ function _renderDbDraftCard(product) {
   }
   if (dbCompliance && !aiDraftConfig._compliance) {
     aiDraftConfig._compliance = true;
+    // Store compliance data for display in the expanded card
+    aiDraftConfig._complianceData = dbCompliance;
     setTimeout(() => updateAiDraftCard(), 250);
   }
 

@@ -40,3 +40,4 @@ deploy.zip
 
 # Unrelated services
 vps-ocr-service/
+deploy-*.zip

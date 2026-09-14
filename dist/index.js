@@ -889,7 +889,8 @@ var Me = [
 	"./migrations/0010_gsas_discounts_and_rate_fix.sql",
 	"./migrations/0011_portal_auth.sql",
 	"./migrations/0012_sales_campaigns.sql",
-	"./migrations/0013_is_green_product.sql"
+	"./migrations/0013_is_green_product.sql",
+	"./migrations/0014_fix_ai_studio_products_pge_stage.sql"
 ];
 function Ne() {
 	let e = r.resolve("./migrations");
@@ -1598,14 +1599,35 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 			]) r[e] != null && (n.push(`${e}=?`), i.push(r[e]));
 			n.length > 0 && await e.env.DB.prepare(`UPDATE products SET ${n.join(",")}, pge_stage=2, updated_at=? WHERE id=?`).bind(...i, d, t).run();
 		} else if (n === 3) {
-			if (i.length > 0) {
-				await e.env.DB.prepare("DELETE FROM rules WHERE product_id=? AND source='ai_generated'").bind(t).run();
-				for (let n of i) {
-					let r = U("r");
-					await e.env.DB.prepare("\n          INSERT INTO rules (id, product_id, name, category, metric, operator,\n            threshold_value, threshold_condition, action_on_breach, severity,\n            regulatory_reference, source, ai_confidence, description, is_active, created_by, created_at)\n          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n        ").bind(r, t, n.name, n.category || "eligibility", n.metric, n.operator, n.threshold_value ?? null, n.threshold_condition ?? null, n.action_on_breach || "reject", n.severity || "hard", n.regulatory_reference ?? null, "ai_generated", n.ai_confidence ?? null, n.description ?? null, 1, l, d).run();
-				}
-				await e.env.DB.prepare("UPDATE products SET pge_stage=3, updated_at=? WHERE id=?").bind(d, t).run();
+			let n = i;
+			if (n.length === 0) {
+				let { results: t } = await e.env.DB.prepare("SELECT * FROM rules WHERE product_id IS NULL AND source='ai_generated' AND is_active=1").bind().all();
+				t && t.length > 0 && (n = t);
 			}
+			if (n.length > 0) {
+				await e.env.DB.prepare("DELETE FROM rules WHERE product_id=? AND source='ai_generated'").bind(t).run();
+				let r = [];
+				for (let i of n) {
+					let n = U("r");
+					await e.env.DB.prepare("\n          INSERT INTO rules (id, product_id, name, category, metric, operator,\n            threshold_value, threshold_condition, action_on_breach, severity,\n            regulatory_reference, source, ai_confidence, description, is_active, created_by, created_at)\n          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\n        ").bind(n, t, i.name, i.category || "eligibility", i.metric, i.operator, i.threshold_value ?? null, i.threshold_condition ?? null, i.action_on_breach || "reject", i.severity || "hard", i.regulatory_reference ?? null, "ai_generated", i.ai_confidence ?? null, i.description ?? null, 1, l, d).run(), r.push({
+						id: n,
+						name: i.name,
+						category: i.category || "eligibility",
+						metric: i.metric,
+						operator: i.operator,
+						threshold_value: i.threshold_value,
+						severity: i.severity || "hard"
+					});
+				}
+				let i = await e.env.DB.prepare("SELECT configuration FROM products WHERE id=?").bind(t).first(), a = (() => {
+					try {
+						return JSON.parse(i?.configuration || "{}");
+					} catch {
+						return {};
+					}
+				})();
+				a.rules = r, await e.env.DB.prepare("UPDATE products SET configuration=?, pge_stage=3, updated_at=? WHERE id=?").bind(JSON.stringify(a), d, t).run();
+			} else await e.env.DB.prepare("UPDATE products SET pge_stage=3, updated_at=? WHERE id=?").bind(d, t).run();
 		} else if (n === 4) {
 			if (a.length > 0) {
 				let n = 80, r = [], i = [], o = null;
@@ -1744,8 +1766,8 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${c ? `Green discount: up to ${t
 					}
 				}
 			} catch {}
-			let { results: m } = await e.env.DB.prepare("SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1").bind(l).all(), h = m?.length > 0 ? 6 : t.pge_stage || 1;
-			return await e.env.DB.prepare("\n      UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n        portal_hero_title=?, portal_highlights=?, portal_card_badge=?,\n        pge_stage=?, is_demo_product=1, is_green_product=?, published_at=?, updated_at=? WHERE id=?\n    ").bind(+!!c, u, JSON.stringify(d), f, h, +!!c, r, r, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({ product_id: l }), r, n).run(), await G(e.env.DB, {
+			let { results: m } = await e.env.DB.prepare("SELECT id FROM rules WHERE product_id=? AND is_active=1 LIMIT 1").bind(l).all(), h = t.pge_stage || 1, g = m?.length > 0 ? Math.max(h, 6) : Math.max(h, 1);
+			return await e.env.DB.prepare("\n      UPDATE products SET status='active', portal_visible=1, developer_portal_visible=?,\n        portal_hero_title=?, portal_highlights=?, portal_card_badge=?,\n        pge_stage=?, is_demo_product=1, is_green_product=?, published_at=?, updated_at=? WHERE id=?\n    ").bind(+!!c, u, JSON.stringify(d), f, g, +!!c, r, r, l).run(), n && await e.env.DB.prepare("UPDATE ai_threads SET status='completed', product_id=?, result=?, updated_at=? WHERE id=?").bind(l, JSON.stringify({ product_id: l }), r, n).run(), await G(e.env.DB, {
 				userId: o,
 				userName: s,
 				userRole: "product_manager",
@@ -1755,7 +1777,7 @@ Product: ${t.name}. Base rate: ${t.base_rate}%. ${c ? `Green discount: up to ${t
 				details: {
 					name: t.name,
 					thread_id: n,
-					pge_stage: h
+					pge_stage: g
 				},
 				source: "ai_generated"
 			}), e.json({
@@ -7024,7 +7046,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "bbb6a0c";
+var xt = "41fecdd";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {
