@@ -1491,8 +1491,41 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 		if (c.push(g), !h.stage_update_hint) {
 			let e = (h.action || "none").toLowerCase(), t = h.message || "", n = t.toLowerCase().replace(/<[^>]+>/g, " "), r = h.ui_events || [], i = e === "stage_update" || e === "ready_to_confirm", a = r.some((e) => e.type === "add_rule"), o = r.some((e) => e.type === "set_workflow"), s = r.some((e) => e.type === "set_field"), l = c.filter((e) => e.role === "assistant").slice(-6).map((e) => (e.content || "").toLowerCase()), u = n.includes("stage 2 complete") || n.includes("stage 3") && n.includes("eligibility rule") || n.includes("gsas minimum") && (n.includes("70") || n.includes("75")) || i && s, d = n.includes("stage 3 complete") || a || n.includes("eligibility rule") && (n.includes("stage 4") || n.includes("workflow") || n.includes("10-step")) || n.includes("eligibility rule") && n.includes("dbr") && n.includes("ltv") || /\b(1[0-9]|[2-9])\s+eligibility rules?\b/i.test(t) || n.includes("credit risk") && n.includes("collateral") && n.includes("esg") && n.includes("rule") || i && a, f = n.includes("stage 4 complete") || o || n.includes("workflow") && (n.includes("stage 5") || n.includes("compliance")) || n.includes("10-step") || n.includes("10 step") || n.includes("ekyc") && n.includes("credit bureau") && n.includes("workflow") || n.includes("automate") && n.includes("step") && n.includes("workflow") || i && o, p = n.includes("stage 5 complete") || n.includes("compliance parameters applied") || n.includes("compliance classification applied") || n.includes("basel iii") && n.includes("ifrs9") || n.includes("stage 6") && n.includes("simulation") && l.some((e) => e.includes("compliance") || e.includes("shall i apply these compliance")) || i && !a && !o && !s, m = e === "ready_to_confirm" || n.includes("all 6 stages complete") || n.includes("confirm & publish") || n.includes("confirm and publish") || n.includes("click confirm") || n.includes("stage 6") && n.includes("simulation") && n.includes("portfolio"), g = l.some((e) => e.includes("stage 2 complete") || e.includes("eligibility rule") || e.includes("gsas minimum")), _ = l.some((e) => e.includes("stage 3 complete") || e.includes("10-step") || e.includes("ekyc") || e.includes("eligibility rule")), v = l.some((e) => e.includes("stage 4 complete") || e.includes("compliance") || e.includes("stage 5"));
 			if (m) {
-				let e = {}, t = h.product_draft?.simulation || {};
-				h.product_draft?.name && (e.name = h.product_draft.name), h.product_draft?.max_amount && (e.max_amount = h.product_draft.max_amount), h.product_draft?.min_amount && (e.min_amount = h.product_draft.min_amount), h.stage_update_hint = {
+				let e = {};
+				h.product_draft?.name && (e.name = h.product_draft.name), h.product_draft?.max_amount && (e.max_amount = h.product_draft.max_amount), h.product_draft?.min_amount && (e.min_amount = h.product_draft.min_amount);
+				let t = h.product_draft?.simulation || {};
+				if (!t.yr1_portfolio_omr_m) {
+					let e = c.map((e) => (e.content || "").toLowerCase()), n = e.some((e) => e.includes("hnw") || e.includes("high net worth") || e.includes("5,000") || e.includes("5k+ income")), r = !n && e.some((e) => e.includes("affluent") || e.includes("wealth") || e.includes("2,000") || e.includes("2k")), i = n ? 28e4 : r ? 15e4 : 9e4, a = n ? 8 : r ? 12 : 18, o = Math.round(795 * a / 100), s = Math.round(o * i / 1e6 * 10) / 10, l = Math.round(s * 1.25 * 10) / 10, u = Math.round(l * 1.25 * 10) / 10, d = 5.25;
+					for (let t of e) {
+						let e = t.match(/base rate[^%]*?(\d+\.?\d*)\s*%/);
+						if (e) {
+							d = parseFloat(e[1]);
+							break;
+						}
+					}
+					let f = Math.round((d - 3.5) * 100) / 100, p = n ? 13e4 : r ? 95e3 : 65e3, m = Math.round(s * 1e6 * .015 / 1e3) * 1e3, h = Math.round(s * 1e6 * .004 / 1e3) * 1e3, g = Math.round(p * .22 / 1e3) * 1e3, _ = Math.round(s * 1e6 * f / 100 / 1e3) * 1e3;
+					_ - m - h - g;
+					let v = _ > 0 ? Math.max(1, Math.round(p / (_ / 12))) : n ? 5 : r ? 8 : 11;
+					t = {
+						segment: n ? "HNW (OMR 5K+ income)" : r ? "Affluent (OMR 2K–5K)" : "Mass market",
+						avg_loan_amount: i,
+						avg_property_value: n ? 38e4 : r ? 2e5 : 12e4,
+						pipeline_green_eligible: 795,
+						yr1_accounts: o,
+						yr1_portfolio_omr_m: s,
+						yr2_portfolio_omr_m: l,
+						yr3_portfolio_omr_m: u,
+						conversion_pct: a,
+						base_rate: d,
+						nim_pct: f,
+						break_even_month: v,
+						setup_cost_omr_k: Math.round(p / 1e3),
+						stress_test: "+200bps — 98% pass DBR ≤55%",
+						compliance: "Basel III 75% · IFRS9 1.5% · CBO Green Finance",
+						generated_at: (/* @__PURE__ */ new Date()).toISOString()
+					};
+				}
+				h.stage_update_hint = {
 					stage: 6,
 					fields: e,
 					simulation: t
@@ -1694,13 +1727,143 @@ RESPONSE FORMAT — ONLY valid JSON, NO markdown, NO code fences. ALL fields req
 						api_integration: t.api_integration || null
 					}), o && i.push({
 						id: `e${e}`,
-						source: o,
-						target: t.id || `n${e + 1}`,
+						from: o,
+						to: t.id || `n${e + 1}`,
 						label: ""
 					}), o = t.id || `n${e + 1}`, n += 220;
 				}
 				await e.env.DB.prepare("UPDATE products SET workflow_nodes=?, workflow_edges=?, pge_stage=4, updated_at=? WHERE id=?").bind(JSON.stringify(r), JSON.stringify(i), d, t).run();
-			} else await e.env.DB.prepare("UPDATE products SET pge_stage=4, updated_at=? WHERE id=?").bind(d, t).run();
+			} else {
+				let n = W(), r = [
+					{
+						id: "n1",
+						type: "start",
+						label: "Start",
+						role: null,
+						sla_hours: null,
+						auto: !1,
+						x: 80,
+						y: 260,
+						description: ""
+					},
+					{
+						id: "n2",
+						type: "task",
+						label: "eKYC Verification",
+						role: "system",
+						sla_hours: 1,
+						auto: !0,
+						x: 280,
+						y: 260,
+						description: "Automated digital identity check via national ID / residency permit API."
+					},
+					{
+						id: "n3",
+						type: "task",
+						label: "Credit Bureau Check",
+						role: "system",
+						sla_hours: 1,
+						auto: !0,
+						x: 480,
+						y: 260,
+						description: "Pull CBO credit report; validate credit score ≥ 620 and no defaults in 24 months."
+					},
+					{
+						id: "n4",
+						type: "task",
+						label: "Income Verification",
+						role: "system",
+						sla_hours: 2,
+						auto: !0,
+						x: 680,
+						y: 260,
+						description: "Salary certificate + bank statements auto-validation; DBR calculation."
+					},
+					{
+						id: "n5",
+						type: "task",
+						label: "GSAS / EPC Assessment",
+						role: "system",
+						sla_hours: 4,
+						auto: !0,
+						x: 880,
+						y: 260,
+						description: "GORD API: validate GSAS certificate number, score ≥ threshold, expiry ≥ 90 days. Confirm EPC ≥ C."
+					},
+					{
+						id: "n6",
+						type: "task",
+						label: "Property Valuation",
+						role: "valuer",
+						sla_hours: 24,
+						auto: !1,
+						x: 1080,
+						y: 260,
+						description: "Approved panel valuer inspects property and issues formal valuation report."
+					},
+					{
+						id: "n7",
+						type: "task",
+						label: "Credit Officer Review",
+						role: "credit_officer",
+						sla_hours: 8,
+						auto: !1,
+						x: 1280,
+						y: 260,
+						description: "Credit Officer: review application, valuation, eligibility rules scorecard, ESG docs."
+					},
+					{
+						id: "n8",
+						type: "task",
+						label: "Risk & Compliance Sign-off",
+						role: "risk_officer",
+						sla_hours: 4,
+						auto: !1,
+						x: 1480,
+						y: 260,
+						description: "Risk Officer: IFRS9 Stage 1 ECL, Basel III RW 75%, CBO Green Finance flag, AML check."
+					},
+					{
+						id: "n9",
+						type: "task",
+						label: "Branch Manager Approval",
+						role: "branch_manager",
+						sla_hours: 2,
+						auto: !1,
+						x: 1680,
+						y: 260,
+						description: "Final credit approval; sign-off on offer letter."
+					},
+					{
+						id: "n10",
+						type: "task",
+						label: "Offer & Disbursement",
+						role: "operations",
+						sla_hours: 4,
+						auto: !1,
+						x: 1880,
+						y: 260,
+						description: "Generate formal offer letter, customer acceptance, disbursement to developer/seller."
+					},
+					{
+						id: "n11",
+						type: "end",
+						label: "End",
+						role: null,
+						sla_hours: null,
+						auto: !1,
+						x: 2080,
+						y: 260,
+						description: ""
+					}
+				], i = r.slice(0, -1).map((e, t) => ({
+					id: `e${t + 1}`,
+					from: e.id,
+					to: r[t + 1].id,
+					label: ""
+				}));
+				await e.env.DB.prepare("UPDATE products SET workflow_nodes=?, workflow_edges=?, pge_stage=4, updated_at=? WHERE id=?").bind(JSON.stringify(r), JSON.stringify(i), n, t).run();
+			}
 		} else if (n === 5) {
 			let n = await e.env.DB.prepare("SELECT configuration FROM products WHERE id=?").bind(t).first(), r = (() => {
 				try {
@@ -7314,7 +7477,7 @@ $.use("/api/*", ke()), $.use("*", async (e, t) => {
 	let t = e.req.param("id"), n = await Ie.prepare("SELECT * FROM customers WHERE id = ?").bind(t).first();
 	return n ? e.json({ customer: n }) : e.json({ error: "Not found" }, 404);
 });
-var xt = "768738d";
+var xt = "1806ebf";
 $.use("*", async (e, t) => {
 	let n = e.req.path;
 	if (!(n.endsWith(".html") && n.startsWith("/portals/"))) {

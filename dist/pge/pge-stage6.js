@@ -208,21 +208,33 @@
     const yr2Income = yr2GrossIncome - yr2FundingCost;
     const yr3Income = yr3GrossIncome - yr3FundingCost;
 
-    // IFRS9 ECL Stage 1 provisioning: 1.5% of outstanding portfolio per year
-    const ecl1 = r(yr1Portfolio * 1e6 * 0.015);
-    const ecl2 = r(yr2Portfolio * 1e6 * 0.015);
-    const ecl3 = r(yr3Portfolio * 1e6 * 0.015);
+    // IFRS9 ECL Stage 1: provision charged at origination of NEW disbursements only.
+    // Mortgage books are long-dated (15–25yr) — provision is set aside once at inception,
+    // not recharged each year against the full outstanding balance.
+    // New originations: all of Yr1 is new; Yr2/Yr3 = incremental growth only.
+    const newOrig1 = yr1Portfolio;
+    const newOrig2 = Math.max(0, yr2Portfolio - yr1Portfolio);
+    const newOrig3 = Math.max(0, yr3Portfolio - yr2Portfolio);
+    const ecl1 = r(newOrig1 * 1e6 * 0.015);
+    const ecl2 = r(newOrig2 * 1e6 * 0.015);
+    const ecl3 = r(newOrig3 * 1e6 * 0.015);
 
-    // Fixed product setup cost (systems, compliance, marketing, staff) — one-time
-    const setupCost = isHNW ? 180000 : isAffluent ? 120000 : 85000;
+    // Portfolio admin/servicing cost: 40 bps of full book per year
+    // (credit ops, digital servicing, compliance reporting, CBO Green Finance returns)
+    const admin1 = r(yr1Portfolio * 1e6 * 0.004);
+    const admin2 = r(yr2Portfolio * 1e6 * 0.004);
+    const admin3 = r(yr3Portfolio * 1e6 * 0.004);
 
-    // Ongoing operating expense: ~15% of setup per year (maintenance, compliance run-rate)
-    const ongoingOpex = Math.round(setupCost * 0.15 / 1000) * 1000;
+    // Fixed product setup cost (systems integration, GORD API, Green Finance Officer, marketing)
+    const setupCost = isHNW ? 130000 : isAffluent ? 95000 : 65000;
 
-    // Net revenue = NII − ECL − ongoing opex
-    const netRev1 = yr1Income - ecl1 - ongoingOpex;
-    const netRev2 = yr2Income - ecl2 - ongoingOpex;
-    const netRev3 = yr3Income - ecl3 - ongoingOpex;
+    // Ongoing fixed opex: ~22% of setup per year (compliance run-rate, staff, digital maintenance)
+    const ongoingOpex = Math.round(setupCost * 0.22 / 1000) * 1000;
+
+    // Net revenue = NII − ECL (new originations) − admin − ongoing opex
+    const netRev1 = yr1Income - ecl1 - admin1 - ongoingOpex;
+    const netRev2 = yr2Income - ecl2 - admin2 - ongoingOpex;
+    const netRev3 = yr3Income - ecl3 - admin3 - ongoingOpex;
 
     // Break-even: month when cumulative NII covers setup cost
     // monthly NII = yr1Income / 12; months = setupCost / (yr1Income/12)
@@ -251,6 +263,7 @@
       yr1FundingCost, yr2FundingCost, yr3FundingCost,
       yr1Income, yr2Income, yr3Income,
       ecl1, ecl2, ecl3,
+      admin1, admin2, admin3,
       ongoingOpex, netRev1, netRev2, netRev3,
       setupCost, breakEvenMonth, roi3,
       stressRate, dbrAtRisk, maxDBR,
@@ -620,9 +633,10 @@
       { label: t('Gross Interest Income','إجمالي دخل الفائدة'),         yr1: p.yr1GrossIncome,  yr2: p.yr2GrossIncome,  yr3: p.yr3GrossIncome,  type:'income' },
       { label: t('Cost of Funds ('+p.costOfFunds+'%)','تكلفة التمويل ('+p.costOfFunds+'٪)'), yr1: -p.yr1FundingCost, yr2: -p.yr2FundingCost, yr3: -p.yr3FundingCost, type:'cost' },
       { label: t('Net Interest Income (NII)','صافي دخل الفائدة (NII)'), yr1: p.yr1Income,        yr2: p.yr2Income,        yr3: p.yr3Income,        type:'nim' },
-      { label: t('IFRS9 ECL Provision (1.5%)','مخصص IFRS9 (١.٥٪)'),    yr1: -p.ecl1,           yr2: -p.ecl2,           yr3: -p.ecl3,           type:'cost' },
-      { label: t('Ongoing Opex','المصاريف التشغيلية الجارية'),           yr1: -p.ongoingOpex,    yr2: -p.ongoingOpex,    yr3: -p.ongoingOpex,    type:'cost' },
-      { label: t('Net Revenue','الإيرادات الصافية'),                      yr1: p.netRev1,         yr2: p.netRev2,         yr3: p.netRev3,         type:'net' },
+      { label: t('IFRS9 ECL (new originations, 1.5%)','مخصص IFRS9 (إصدارات جديدة، ١.٥٪)'), yr1: -p.ecl1,        yr2: -p.ecl2,        yr3: -p.ecl3,        type:'cost' },
+      { label: t('Admin & Servicing (40bps)','إدارة وخدمة المحفظة (٤٠ نقطة)'),           yr1: -p.admin1,      yr2: -p.admin2,      yr3: -p.admin3,      type:'cost' },
+      { label: t('Fixed Opex','المصاريف التشغيلية الثابتة'),                               yr1: -p.ongoingOpex, yr2: -p.ongoingOpex, yr3: -p.ongoingOpex, type:'cost' },
+      { label: t('Net Revenue','الإيرادات الصافية'),                                        yr1: p.netRev1,      yr2: p.netRev2,      yr3: p.netRev3,      type:'net' },
     ];
 
     tc.innerHTML = `
@@ -1549,7 +1563,7 @@ PORTFOLIO PROJECTIONS:
   Year 1 Accounts: ${pf.yr1Accounts} | Portfolio: OMR ${pf.yr1Portfolio}M | NII: OMR ${Math.round(pf.yr1Income/1000)}K
   Year 2 Accounts: ${Math.round(pf.yr1Accounts*1.25)} | Portfolio: OMR ${pf.yr2Portfolio}M | NII: OMR ${Math.round(pf.yr2Income/1000)}K
   Year 3 Accounts: ${Math.round(pf.yr1Accounts*1.56)} | Portfolio: OMR ${pf.yr3Portfolio}M | NII: OMR ${Math.round(pf.yr3Income/1000)}K
-  IFRS9 ECL (1.5%): OMR ${Math.round(pf.ecl1/1000)}K / ${Math.round(pf.ecl2/1000)}K / ${Math.round(pf.ecl3/1000)}K
+  IFRS9 ECL (new originations, 1.5%): OMR ${Math.round(pf.ecl1/1000)}K / ${Math.round(pf.ecl2/1000)}K / ${Math.round(pf.ecl3/1000)}K
   Net Revenue: OMR ${Math.round(pf.netRev1/1000)}K / ${Math.round(pf.netRev2/1000)}K / ${Math.round(pf.netRev3/1000)}K
   Break-even: Month ${pf.breakEvenMonth}  |  3-Year ROI: ${pf.roi3}%
   Rate Shock (+200bps): ${pf.dbrAtRisk} accounts at DBR risk
