@@ -579,6 +579,7 @@ function filterProducts(q) {
 function openAiStudio() {
   // Reset state
   aiThreadId = null; aiProductDraft = null; aiDraftProductId = null;
+  sessionStorage.removeItem('ai_thread_id'); sessionStorage.removeItem('ai_draft_product_id'); // RC-9
   aiCurrentStage = 0; aiProductIdContext = null;
   openPanel('AI Product Studio', { narrow: true });
   document.getElementById('panelBody').innerHTML = `
@@ -1317,13 +1318,14 @@ function switchProductTab(tab, productId) {
 }
 
 /* ======================== AI PRODUCT STUDIO (multi-turn) ======================== */
-let aiThreadId = null;
+let aiThreadId = sessionStorage.getItem('ai_thread_id') || null;  // RC-9: restored on reload
 let aiProductDraft = null;
 let aiCurrentStage = 0;       // tracks which stage we're on (0 = not started)
 let aiProductIdContext = null; // productId this session is operating on
-// NEW: aiDraftProductId — DB product id created at Stage 1 confirm (create-draft).
-// Set once; all subsequent stage-update calls and the final Confirm & Publish use it.
-let aiDraftProductId = null;
+// RC-9 FIX: aiDraftProductId persisted to sessionStorage so a tab sleep/reload never
+// loses the product ID.  Without this, all stage-update calls silently fail after
+// any page reload because aiDraftProductId reverts to null.
+let aiDraftProductId = sessionStorage.getItem('ai_draft_product_id') || null;
 
 /* ── Stage names ─────────────────────────────────────────────────────────── */
 const AI_STAGE_LABELS = ['Product Model','Core Config','Rules','Workflow','Compliance','Simulation'];
@@ -1332,6 +1334,7 @@ const AI_STAGE_ICONS  = ['fa-layer-group','fa-sliders','fa-list-check','fa-sitem
 /* ── resetAiChat ─────────────────────────────────────────────────────────── */
 function resetAiChat(productId) {
   aiThreadId = null; aiProductDraft = null; aiDraftProductId = null;
+  sessionStorage.removeItem('ai_thread_id'); sessionStorage.removeItem('ai_draft_product_id'); // RC-9
   aiCurrentStage = 0; aiProductIdContext = productId || null;
   resetDraftState(); // clears aiDraftConfig/Rules/Workflow + pending buffers + removes card
   const log = document.getElementById('ai-chat-log');
@@ -1586,7 +1589,7 @@ async function sendAiChat(productId) {
     // Remove thinking bubble
     if (thinkEl && thinkEl.parentNode) thinkEl.parentNode.removeChild(thinkEl);
 
-    if (d.thread_id) aiThreadId = d.thread_id;
+    if (d.thread_id) { aiThreadId = d.thread_id; sessionStorage.setItem('ai_thread_id', aiThreadId); } // RC-9
 
     // ── Infer stage from message text as a client-side safety net ─────────
     // GPT sometimes returns current_stage:1 even for Stage 2/3 sub-questions.
@@ -1733,7 +1736,7 @@ async function sendAiChat(productId) {
         });
         const dd = await dr.json();
         if (dd.success && dd.product_id) {
-          aiDraftProductId = dd.product_id;
+          aiDraftProductId = dd.product_id; sessionStorage.setItem('ai_draft_product_id', aiDraftProductId); // RC-9
           // Show a small confirmation in chat — product is now in DB
           appendChatBubble('assistant',
             '<div style="margin-top:6px;padding:7px 10px;background:rgba(22,132,91,.15);border:1px solid rgba(22,132,91,.3);border-radius:6px;font-size:.77rem">' +
@@ -1826,7 +1829,7 @@ async function sendAiChat(productId) {
         });
         const ad = await ar.json();
         if (ad.success && ad.product_id) {
-          aiDraftProductId = ad.product_id;
+          aiDraftProductId = ad.product_id; sessionStorage.setItem('ai_draft_product_id', aiDraftProductId); // RC-9
           // Show an unobtrusive notice in chat so users know the product was auto-created
           appendChatBubble('assistant',
             '<div style="margin-top:4px;padding:6px 10px;background:rgba(22,132,91,.12);border:1px solid rgba(22,132,91,.25);border-radius:6px;font-size:.73rem">' +
@@ -2244,6 +2247,7 @@ async function confirmAiProduct(productId) {
         const bar = document.getElementById('ai-confirm-bar');
         if (bar) bar.style.display = 'none';
         aiThreadId = null; aiProductDraft = null; aiDraftProductId = null;
+        sessionStorage.removeItem('ai_thread_id'); sessionStorage.removeItem('ai_draft_product_id'); // RC-9
         await loadProducts();
         await renderProducts();
       } else { toast(d.error || 'Confirm failed', 'error'); }
